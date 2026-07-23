@@ -1,0 +1,9 @@
+or <:T>!<null> : (value <T><null>, else <T>!<null>) 'scope {
+    | value <null> | {
+        'scope -> else;
+        'scope.leave();
+    }
+    -> value<T>!<null>;
+}
+
+or<string>(null, "")

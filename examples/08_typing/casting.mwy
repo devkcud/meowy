@@ -1,0 +1,10 @@
+value <:T> : "Hello"
+value<string>
+
+object : {
+    -> string <:T> : {
+        -> "Hello"
+    }
+}
+
+object.string<string>()

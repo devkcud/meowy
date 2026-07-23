@@ -1,0 +1,57 @@
+user : {
+    -> "Dev" # we call this an unnamed value #
+    -> id : "abc123" # while this is a named value #
+}
+
+# scopes can only emit one unnamed value and n other named values #
+
+user # "Dev" #
+user.id # "abc123" #
+
+# unnamed values can be very useful for pipelines #
+
+db : {
+    pgx : @"pgx"
+
+    conn : pgx.connect("postgres://...")
+
+    -> conn
+
+    -> is_available : conn.ping()
+
+    | is_available <error><pgx.ErrTimeout> | { # ... # }
+}
+
+#--------------------------#
+
+object : {
+    -> debug : {
+        -> local : {
+            -> "hello!"
+        }
+    }
+}
+
+object.debug.local # "hello!" #
+
+# note that every block is a function. so you can call object(), which returns debug(), which returns local(), which returns "hello!".
+you can omit the parentheses if there are no arguments or there all arguments are nullable (<null>) #
+
+#--------------------------#
+
+they_dont_return_btw : {
+    -> name : "Dev"
+
+    fullname : "Cool {name}"
+    -> fullname
+}
+
+#--------------------------#
+
+func : (a <string><null>) { 
+    -> debug : { ... }
+}
+
+func("Hello!").debug()
+func.debug()
+func # null #

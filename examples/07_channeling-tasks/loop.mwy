@@ -1,0 +1,22 @@
+db : @"./database.mwy"
+async : @"async"
+user : << db.get_user_by_id(10)
+
+&projects<db.Project[10]>
+
+i := 0
+'loop {
+    i = i + 1
+
+    project : user.projects.get(i)
+    &projects >1000> project.process()
+
+    | i != user.projects.size() | 'loop.restart()
+}
+
+result : <10000< &projects
+| result <async.Panic> | async.panicked(result).{ # self = panicked trace # }
+| result <async.Timeout> | {
+    # ... #
+}
+&projects[1].name # FIFO #

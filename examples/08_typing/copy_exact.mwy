@@ -1,0 +1,13 @@
+<User> : <{
+    id <string>;
+    name <string>;
+    age <uint8>;
+}>
+
+user <User><error><null> : create_user()
+
+correct_user : user<>!<error>!<null> # "<>" will copy from the variable behind it. Prefixing a type with "!" will omit it from the current union. #
+
+# The above implementation works exactly the same as: #
+
+correct_user user<>!<error>!<null> : user

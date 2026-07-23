@@ -1,0 +1,11 @@
+magic : {
+    -> wizards : {
+        -> ["Merlin", "Gandalf", "Albus", "Balthazar"].{
+            -> self
+            -> greatest : self[1]
+        }
+    }
+}
+
+magic.wizards[2] # "Gandalf" #
+magic.wizards.greatest # Merlin #

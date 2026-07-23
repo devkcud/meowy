@@ -1,0 +1,56 @@
+print <null> : @"debug".print;
+strconv <uint8> : @"strings".convert.to_uint8;
+
+<Options> : <{
+    min_age <uint8>;
+    max_age <uint8>;
+}>
+
+options <Options> : {
+    -> min_age <uint8> : 18;
+    -> max_age <uint8> : 100;
+}
+
+is_valid_age <boolean> : (age <uint8><null><error>) 'scope {
+    | age <null><error> | {
+        'scope -> false;
+        'scope.leave();
+    }
+
+    | age > options.max_age | {
+        'scope -> false;
+        'scope.leave();
+    }
+
+    -> true;
+}
+
+'entry {
+    name <string> : @"cli".ask("What is your name? ");
+    age <string> : @"cli".ask("What is your age? ");
+
+    # avoid calling matcher on a boolean `self` #
+    | !age.(strconv).(is_valid_age) | {
+        print.panic("{age} is not a valid number! Maximum age: {options.max_age}");
+    };
+
+    # the above matcher is the same as:
+
+    | !is_valid_age(strconv(age)) | { ... }
+
+    or:
+
+    | !age.{ -> strconv(self) }.{ -> is_valid_age(self) } | { ... }
+
+    or:
+
+    age.(strconv).(is_valid_age).| !self | { ... }
+    #
+
+    | age < options.min_age | {
+        print("Access denied! Minimum age is {options.min_age}!");
+        'entry.leave();
+    };
+
+    print("Hello, {name}!");
+}

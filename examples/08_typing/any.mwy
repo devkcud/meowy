@@ -1,0 +1,15 @@
+# Under the hood, <any> means "anything with a value". <null>, naturally, doesn't fit this description. The current implementation of <any> is: #
+
+<type> : <string><int8><int16><int32><int64><int128><int256><uint8><uint16><uint32><uint64><uint128><uint256><float16><float32><float64><float128><boolean><error>
+-> <any> : <type><type[]>
+
+# In older versions that didn't support generics, it was common to find: #
+
+-> or <any> : (value <any><null>, else <any>) 's {
+    | value <null> | {
+        's -> else;
+        's.leave();
+    };
+
+    -> value;
+};

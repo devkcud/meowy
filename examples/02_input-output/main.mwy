@@ -1,0 +1,17 @@
+print : @"debug".print
+strconv : @"strings".convert.to_int8
+
+'entry {
+    name : @"cli".ask("What is your name? ")
+    age : @"cli".ask("What is your age? ").(strconv).{
+        | self <error> | print.panic("{self} is not a valid number!")
+        -> self
+    }
+
+    | age < 18 | {
+        print("Access denied!")
+        'entry.leave()
+    }
+
+    print("Hello, {name}!")
+}

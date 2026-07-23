@@ -1,0 +1,14 @@
+name <string><null> : "Jeff"
+
+get <string>!<null> : (n <string><null>) 's {
+    | n <null> | {
+        's -> "Dev";
+        's.leave();
+    };
+    -> n;
+};
+
+name.(get) # "Jeff" #
+get() # "Dev" #
+name.(get)<> # <string> #
+get()<> # <string> #
