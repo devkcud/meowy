@@ -4,8 +4,8 @@ This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to ordinary local storage, including guarded
-block results and last-use checks for mutable owners. It is not the complete
-v0.0.1 language.
+block results, immutable records carrying references and last-use checks for
+mutable owners. It is not the complete v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -22,6 +22,7 @@ compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
+compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -35,6 +36,9 @@ copies values through shared references. The [borrowed results example](examples
 selects between surviving owners and discards an iteration-local borrow on restart.
 The [borrow liveness example](examples/borrow-liveness.mwy) updates scalar and record
 owners after the final use of their shared references, including loop iterations.
+The [borrowed records example](examples/borrowed-records.mwy) copies nested reference
+fields, projects selected fields and a primary reference, and releases each loan
+after that component's last use.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -73,6 +77,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   Mutable owners can be assigned after the last use of every overlapping shared
   reference. Live aliases, reference operands and retained block results protect
   their owners from writes; conflicting assignments report E302.
+- Immutable records with shared-reference primary, named and nested components.
+  Whole-record copies preserve every reference; field and scalar-primary access
+  track only the selected components. All retained components must outlive their
+  receiving block. Record equality compares the full shape, including addresses.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - `debug.print`, streamed interpolation at output calls, `debug.panic`, string
@@ -92,14 +100,18 @@ The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining s
 References can pass through local blocks and immutable aliases while their owners
 remain alive. The checker reuses branch/completion proofs and checks all possible
 borrow origins. Retained local escapes report E303; discarded emissions still
-evaluate their operands and effects. Reference-bearing signatures, aggregates,
-reassignment, dispatch and direct formatting require future analysis. Parameter,
+evaluate their operands and effects. References can also be stored in immutable
+record components. Reference-bearing unions, signatures, mutable record bindings,
+reassignment, dispatch and direct reference formatting require future analysis. Parameter,
 receiver and named-emission storage remain unavailable as borrow roots. Missing
 origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
 record overlaps references to any of its fields.
+Copying a record counts as a use of all its references, even if a later operation
+selects only one field. Direct projection, scalar comparison and scalar-primary
+formatting do not keep unrelated component loans alive.
 See [the storage design](OWNERSHIP.md) for the remaining analysis stages.
 
 Union literals receive a numeric width when the expected union has one matching
@@ -159,8 +171,8 @@ the fixture catalog and does not execute the compiler.
 | `src/lexer.rs`, `src/parser.rs`, `src/ast.rs` | Lossless tokens and punctuation-aware syntax |
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
 | `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
-| `src/borrow.rs` | Guarded immutable origins, block-result transfers and lexical lifetime checks |
-| `src/loans.rs` | Guarded CFG, backwards reference liveness and shared-loan/write conflicts |
+| `src/borrow.rs` | Guarded component origins, block-result transfers and lexical lifetime checks |
+| `src/loans.rs` | Guarded CFG, per-component reference liveness and shared-loan/write conflicts |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
 | `src/backend.rs` | Typed LLVM IR lowering and bridge interface |
 | `native/bridge.cpp` | LLVM verification, optimization and object emission |

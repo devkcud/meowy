@@ -1,0 +1,30 @@
+debug : @"debug"
+
+left := 11
+right := 22
+pair : {
+    -> left : &left
+    -> nested : { -> right : &right }
+}
+copy : pair
+chosen : copy.left
+right = 33
+debug.print(*chosen)
+left = 44
+debug.print(left)
+debug.print(right)
+
+primary : { -> &left; -> tag : "value" }
+view <&int32> : primary
+debug.print(*view)
+left = 45
+debug.print(primary.tag)
+
+count := 0
+'loop {
+    record : { -> view : &count; -> step : count }
+    debug.print(*record.view)
+    count = count + 1
+    | count < 3 | 'loop.restart()
+}
+debug.print(count)
