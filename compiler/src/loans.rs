@@ -1,14 +1,14 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::ast::Span;
-use crate::borrow::{Facts, Origin, Proofs};
+use crate::borrow::{Facts, Origin, Path, Proofs, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
 use crate::hir::{Block, BlockId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Live = BTreeMap<usize, Guard>;
-pub(crate) type Bundle = BTreeMap<Vec<usize>, usize>;
+pub(crate) type Bundle = BTreeMap<Path, usize>;
 pub(crate) const MAX_NODES: usize = 65_536;
 pub(crate) const MAX_VALUES: usize = 65_536;
 pub(crate) const MAX_WORK: usize = 1_048_576;
@@ -105,7 +105,7 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn charge(&mut self, work: usize) -> Result<()> {
-        self.work += work;
+        self.work = self.work.saturating_add(work);
         if self.work > MAX_WORK || self.guards.exceeded() {
             Err(Self::budget())
         } else {
@@ -139,18 +139,31 @@ impl<'a> Graph<'a> {
         Ok(id)
     }
 
+    pub(crate) fn assume(&mut self, proof: Guard) -> Result<()> {
+        if proof != TRUE && !self.current.is_empty() {
+            let id = self.node(Node::default())?;
+            self.connect(id, proof, false);
+            self.current.push(id);
+        }
+        Ok(())
+    }
+
     pub(crate) fn value(&mut self, origins: Vec<Origin>) -> Result<usize> {
-        if self.values.len() == MAX_VALUES || self.origins + origins.len() > MAX_ORIGINS {
+        let weight = origins
+            .iter()
+            .map(|origin| 1 + origin.component.len() + origin.place.fields.len())
+            .sum::<usize>();
+        if self.values.len() == MAX_VALUES || self.origins + weight > MAX_ORIGINS {
             return Err(Self::budget());
         }
-        self.origins += origins.len();
+        self.origins += weight;
         let id = self.values.len();
         self.values.push(origins);
         Ok(id)
     }
 
     pub(crate) fn bundle(&mut self, origins: Vec<Origin>) -> Result<Bundle> {
-        let mut groups = BTreeMap::<Vec<usize>, Vec<Origin>>::new();
+        let mut groups = BTreeMap::<Path, Vec<Origin>>::new();
         for origin in origins {
             groups
                 .entry(origin.component.clone())
@@ -163,7 +176,7 @@ impl<'a> Graph<'a> {
             .collect()
     }
 
-    pub(crate) fn select(value: Bundle, path: &[usize]) -> Bundle {
+    pub(crate) fn select(value: Bundle, path: &[Step]) -> Bundle {
         value
             .into_iter()
             .filter_map(|(key, id)| key.strip_prefix(path).map(|path| (path.to_vec(), id)))
@@ -173,6 +186,11 @@ impl<'a> Graph<'a> {
     pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
         let mut value = Bundle::new();
         for (path, id) in &source {
+            let weight = self.values[*id]
+                .iter()
+                .map(|origin| 1 + origin.component.len() + origin.place.fields.len())
+                .sum::<usize>();
+            self.charge(weight + path.len() + 1)?;
             value.insert(path.clone(), self.value(self.values[*id].clone())?);
         }
         self.append(Node {
@@ -187,7 +205,12 @@ impl<'a> Graph<'a> {
         if let Some(value) = self.locals.get(&id) {
             return Ok(value.clone());
         }
-        let origins = self.facts.locals.get(&id).cloned().unwrap_or_default();
+        let origins = self
+            .facts
+            .locals
+            .get(&id)
+            .map(|state| state.origins.clone())
+            .unwrap_or_default();
         let value = self.bundle(origins)?;
         self.locals.insert(id, value.clone());
         Ok(value)
@@ -232,7 +255,7 @@ impl<'a> Graph<'a> {
             .facts
             .blocks
             .get(&block.id)
-            .cloned()
+            .map(|state| state.origins.clone())
             .unwrap_or_default();
         let result = self.bundle(origins.clone())?;
         let value = self.bundle(origins)?;
@@ -258,6 +281,9 @@ impl<'a> Graph<'a> {
         self.connect(end, TRUE, false);
         self.blocks.remove(&block.id);
         self.current.push(end);
+        if let Some(state) = self.facts.blocks.get(&block.id) {
+            self.assume(state.proof)?;
+        }
         if block.ty == Type::Never {
             self.current.clear();
         }
@@ -282,6 +308,9 @@ impl<'a> Graph<'a> {
                         defs: target.into_values().collect(),
                         ..Node::default()
                     })?;
+                    if let Some(state) = self.facts.locals.get(id) {
+                        self.assume(state.proof)?;
+                    }
                 }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
@@ -350,7 +379,104 @@ impl<'a> Graph<'a> {
         self.project(expr, &[])
     }
 
-    pub(crate) fn project(&mut self, expr: &Expr, path: &[usize]) -> Result<Bundle> {
+    pub(crate) fn inspect(&mut self, expr: &Expr) -> Result<()> {
+        self.tick()?;
+        match &expr.kind {
+            ExprKind::Local(_) => {}
+            ExprKind::Field { value, .. }
+            | ExprKind::Primary(value)
+            | ExprKind::Coerce { value } => self.inspect(value)?,
+            ExprKind::Block(block) => {
+                self.block(block)?;
+            }
+            _ => {
+                self.expression(expr)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn convert(&mut self, value: &Expr, to: &Type, path: &[Step]) -> Result<Bundle> {
+        let from = &value.ty;
+        self.charge(path.len() + from.members().len() + to.members().len() + 1)?;
+        if from == to {
+            return self.project(value, path);
+        }
+        if *from == Type::Never {
+            self.inspect(value)?;
+            return Ok(Bundle::new());
+        }
+        let unsupported =
+            || Diagnostic::unsupported("unknown borrowed union projection", value.span);
+        if let Type::Union(sources) = from {
+            if let Type::Union(targets) = to {
+                if let Some((Step::Variant(index), tail)) = path.split_first() {
+                    let member = targets.get(*index).ok_or_else(unsupported)?;
+                    let Some(index) = sources.iter().position(|ty| ty == member) else {
+                        self.inspect(value)?;
+                        return Ok(Bundle::new());
+                    };
+                    let path = std::iter::once(Step::Variant(index))
+                        .chain(tail.iter().copied())
+                        .collect::<Vec<_>>();
+                    return self.project(value, &path);
+                }
+                if !path.is_empty() {
+                    return Err(unsupported());
+                }
+                let source = self.expression(value)?;
+                let mut result = Bundle::new();
+                for (mut component, id) in source {
+                    self.charge(component.len() + targets.len() + 1)?;
+                    let Some(Step::Variant(index)) = component.first() else {
+                        return Err(unsupported());
+                    };
+                    let member = sources.get(*index).ok_or_else(unsupported)?;
+                    if let Some(index) = targets.iter().position(|ty| ty == member) {
+                        component[0] = Step::Variant(index);
+                        result.insert(component, id);
+                    }
+                }
+                return Ok(result);
+            }
+            let index = sources
+                .iter()
+                .position(|ty| ty == to)
+                .ok_or_else(unsupported)?;
+            let path = std::iter::once(Step::Variant(index))
+                .chain(path.iter().copied())
+                .collect::<Vec<_>>();
+            return self.project(value, &path);
+        }
+        if let Type::Union(targets) = to {
+            let member = targets
+                .iter()
+                .position(|ty| ty == from)
+                .ok_or_else(unsupported)?;
+            if let Some((Step::Variant(index), tail)) = path.split_first() {
+                if *index == member {
+                    return self.project(value, tail);
+                }
+                self.inspect(value)?;
+                return Ok(Bundle::new());
+            }
+            if !path.is_empty() {
+                return Err(unsupported());
+            }
+            let source = self.expression(value)?;
+            let mut result = Bundle::new();
+            for (mut component, id) in source {
+                self.charge(component.len() + 1)?;
+                component.insert(0, Step::Variant(member));
+                result.insert(component, id);
+            }
+            return Ok(result);
+        }
+        Err(unsupported())
+    }
+
+    pub(crate) fn project(&mut self, expr: &Expr, path: &[Step]) -> Result<Bundle> {
+        self.charge(path.len() + 1)?;
         let value = match &expr.kind {
             ExprKind::Borrow(place) => {
                 let value = self.value(vec![Origin {
@@ -368,27 +494,32 @@ impl<'a> Graph<'a> {
                 let local = Self::select(self.local(*id)?, path);
                 self.copy(local)?
             }
-            ExprKind::Coerce { value } => self.project(value, path)?,
+            ExprKind::Coerce { value } => self.convert(value, &expr.ty, path)?,
             ExprKind::Block(block) => Self::select(self.block(block)?, path),
             ExprKind::Field { value, index } => {
-                let prefix: Vec<_> = std::iter::once(index + 1)
+                let prefix: Vec<_> = std::iter::once(Step::Slot(index + 1))
                     .chain(path.iter().copied())
                     .collect();
                 self.project(value, &prefix)?
             }
             ExprKind::Primary(value) => {
-                let prefix: Vec<_> = std::iter::once(0).chain(path.iter().copied()).collect();
+                let prefix: Vec<_> = std::iter::once(Step::Slot(0))
+                    .chain(path.iter().copied())
+                    .collect();
                 self.project(value, &prefix)?
             }
             ExprKind::Deref(value)
             | ExprKind::Unary { value, .. }
-            | ExprKind::StringSize(value)
-            | ExprKind::TypeTest { value, .. } => {
+            | ExprKind::StringSize(value) => {
                 let value = self.expression(value)?;
                 self.append(Node {
                     uses: value.into_values().collect(),
                     ..Node::default()
                 })?;
+                Bundle::new()
+            }
+            ExprKind::TypeTest { value, .. } => {
+                self.inspect(value)?;
                 Bundle::new()
             }
             ExprKind::Binary { op, left, right } if ["&&", "||"].contains(&op.as_str()) => {
@@ -756,6 +887,44 @@ mod tests {
         assert!(
             errors[0].message.contains("loan-analysis budget"),
             "{errors:?}"
+        );
+    }
+
+    #[test]
+    pub(crate) fn union_tag_inspection_does_not_read_payloads_or_skip_construction() {
+        accepts("a:=1;r<&int32><null>:&a;a=2;|r<null>|{}");
+        accepts("a:=1;r:{->view<&int32><null>:&a};a=2;|r.view<&int32>|{}");
+        accepts("a:=1;r<&int32><null>:&a;a=2;|r<&int32>|{}");
+        rejects("a:=1;flag:=true;|({|flag|->&a;a=2})<null>|{}", "E302");
+        rejects("a:=1;r<&int32><null>:&a;a=2;copy:r", "E302");
+    }
+
+    #[test]
+    pub(crate) fn union_extraction_and_retagging_preserve_projection_demand() {
+        accepts(
+            "<Row>:<{left<&int32>;right<&int32>}>;a:=1;b:=2;row<Row>:{->left:&a;->right:&b};r<Row><null>:row;|r<Row>|{b=3;x:*r.left}",
+        );
+        accepts(
+            "<Row>:<{left<&int32>;right<&int32>}>;a:=1;b:=2;row<Row>:{->left:&a;->right:&b};r<Row><null>:row;wide<Row><null><boolean>:r;|wide<Row>|{b=3;x:*wide.left}",
+        );
+        rejects(
+            "<Row>:<{left<&int32>;right<&int32>}>;a:=1;b:=2;row<Row>:{->left:&a;->right:&b};r<Row><null>:row;|r<Row>|{b=3;copy:r;x:*copy.left}",
+            "E302",
+        );
+        rejects(
+            "<Row>:<{left<&int32>;right<&int32>}>;a:=1;b:=2;row<Row>:{->left:&a;->right:&b};r<Row><null>:row;wide<Row><null><boolean>:r;|wide<Row>|{a=3;x:*wide.left}",
+            "E302",
+        );
+    }
+
+    #[test]
+    pub(crate) fn union_activity_assumptions_are_reestablished_after_restart() {
+        accepts(
+            "a:=0;i:=0;'loop {r<&int32><null>:{|i<2|->&a};|r<&int32>|{x:*r<&int32>};a=a+1;i=i+1;|i<3|'loop.restart()}",
+        );
+        rejects(
+            "a:=1;r<&int32><null>:&a;first:=true;i:=0;'loop {|!first&&r<&int32>|{x:*r<&int32>};|first|a=2;first=false;i=i+1;|i<2|'loop.restart()}",
+            "E302",
         );
     }
 }

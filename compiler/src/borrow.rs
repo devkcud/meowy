@@ -1,11 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::Span;
+pub(crate) use crate::borrow_value::{Origin, Path, State, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow as Guards, Guard, TRUE};
 use crate::hir::{Block, BlockId, EmitId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
+pub(crate) type Tags = BTreeMap<((LocalId, Vec<String>), Type), Vec<(Type, Guard)>>;
 pub(crate) const MAX_ORIGINS: usize = 4_096;
 pub(crate) const MAX_FACT_ORIGINS: usize = 262_144;
 
@@ -14,73 +16,34 @@ pub(crate) struct Proofs {
     pub(crate) completions: BTreeMap<BlockId, Guard>,
     pub(crate) emissions: BTreeMap<EmitId, Guard>,
     pub(crate) conditions: BTreeMap<(usize, usize), Guard>,
+    pub(crate) bindings: BTreeMap<LocalId, Guard>,
+    pub(crate) tags: Tags,
+    pub(crate) mutable: BTreeSet<LocalId>,
 }
 
-#[derive(Clone)]
-pub(crate) struct Origin {
-    pub(crate) component: Vec<usize>,
-    pub(crate) place: Place,
-    pub(crate) guard: Guard,
-}
-
-pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Vec<usize>, &'a Type)> {
+pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Path, &'a Type)> {
     match (ty, field) {
-        (Type::Record { primary, .. }, None) => Some((vec![0], primary)),
+        (Type::Record { primary, .. }, None) => Some((vec![Step::Slot(0)], primary)),
         (Type::Record { fields, .. }, Some(name)) => fields
             .iter()
             .enumerate()
             .find(|(_, (field, _))| field == name)
-            .map(|(index, (_, ty))| (vec![index + 1], ty)),
+            .map(|(index, (_, ty))| (vec![Step::Slot(index + 1)], ty)),
         (ty, None) => Some((Vec::new(), ty)),
         _ => None,
     }
 }
 
-pub(crate) fn components(ty: &Type, span: Span) -> Result<BTreeSet<Vec<usize>>> {
-    let mut paths = BTreeSet::new();
-    let mut pending = vec![(ty, Vec::new())];
-    while let Some((ty, path)) = pending.pop() {
-        match ty {
-            Type::Reference(_) => {
-                paths.insert(path);
-            }
-            Type::Record { primary, fields } => {
-                for (index, ty) in std::iter::once(primary.as_ref())
-                    .chain(fields.iter().map(|(_, ty)| ty))
-                    .enumerate()
-                {
-                    if ty.has_reference() {
-                        let mut path = path.clone();
-                        path.push(index);
-                        pending.push((ty, path));
-                        if pending.len() + paths.len() > MAX_ORIGINS {
-                            return Err(Diagnostic::unsupported(
-                                "borrow-component budget exhausted",
-                                span,
-                            ));
-                        }
-                    }
-                }
-            }
-            Type::Union(_) if ty.has_reference() => {
-                return Err(Diagnostic::unsupported("reference-carrying unions", span));
-            }
-            _ => {}
-        }
-    }
-    Ok(paths)
-}
-
 #[derive(Default)]
 pub(crate) struct Facts {
-    pub(crate) locals: BTreeMap<LocalId, Vec<Origin>>,
-    pub(crate) blocks: BTreeMap<BlockId, Vec<Origin>>,
+    pub(crate) locals: BTreeMap<LocalId, State>,
+    pub(crate) blocks: BTreeMap<BlockId, State>,
 }
 
 #[derive(Clone)]
 pub(crate) struct Storage {
     pub(crate) block: BlockId,
-    pub(crate) origins: Vec<Origin>,
+    pub(crate) state: State,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -114,7 +77,7 @@ impl Flow {
 }
 
 pub(crate) struct Value {
-    pub(crate) origins: Vec<Origin>,
+    pub(crate) state: State,
     pub(crate) flow: Flow,
 }
 
@@ -125,10 +88,13 @@ pub(crate) struct Checker<'a> {
     pub(crate) locals: BTreeMap<LocalId, Storage>,
     pub(crate) blocks: Vec<BlockId>,
     pub(crate) types: BTreeMap<BlockId, Type>,
-    pub(crate) results: BTreeMap<BlockId, Vec<Origin>>,
+    pub(crate) results: BTreeMap<BlockId, State>,
+    pub(crate) writes: BTreeMap<(BlockId, Option<String>), Guard>,
     pub(crate) scopes: Vec<Vec<LocalId>>,
     pub(crate) facts: Facts,
     pub(crate) origins: usize,
+    pub(crate) assumed: Guard,
+    pub(crate) assumed_scopes: Vec<Guard>,
 }
 
 pub(crate) fn check(
@@ -144,9 +110,12 @@ pub(crate) fn check(
         blocks: Vec::new(),
         types: BTreeMap::new(),
         results: BTreeMap::new(),
+        writes: BTreeMap::new(),
         scopes: Vec::new(),
         facts: Facts::default(),
         origins: 0,
+        assumed: TRUE,
+        assumed_scopes: Vec::new(),
     };
     let result = (|| {
         checker.block(&program.body)?;
@@ -157,7 +126,11 @@ pub(crate) fn check(
                     *id,
                     Storage {
                         block: function.body.id,
-                        origins: Vec::new(),
+                        state: State::unknown(
+                            &program.locals[*id],
+                            checker.guards,
+                            Span { start: 0, end: 0 },
+                        )?,
                     },
                 );
             }
@@ -195,6 +168,7 @@ impl Checker<'_> {
         for id in self.scopes.pop().expect("storage scope") {
             self.locals.remove(&id);
         }
+        self.assumed = self.assumed_scopes.pop().expect("assumption scope");
     }
 
     pub(crate) fn reserve_origins(&mut self, count: usize, span: Span) -> Result<()> {
@@ -208,26 +182,37 @@ impl Checker<'_> {
         Ok(())
     }
 
-    pub(crate) fn bind(&mut self, id: LocalId, origins: Vec<Origin>, span: Span) -> Result<()> {
+    pub(crate) fn assumptions(&mut self) -> Guard {
+        self.assumed
+    }
+
+    pub(crate) fn bind(&mut self, id: LocalId, mut state: State, span: Span) -> Result<()> {
         let ty = self
             .program
             .locals
             .get(id)
-            .ok_or_else(|| Self::unsupported(span))?;
+            .ok_or_else(|| Self::unsupported(span))?
+            .clone();
         if self.locals.contains_key(&id) {
             return Err(Self::unsupported(span));
         }
-        Self::complete(ty, &origins, span)?;
-        self.reserve_origins(origins.len(), span)?;
+        self.complete(&ty, &state, span)?;
+        if !self.proofs.mutable.contains(&id) {
+            self.link_tags(id, &ty, &mut state, span)?;
+        } else {
+            state = State::unknown(&ty, self.guards, span)?;
+        }
+        self.reserve_origins(state.weight() + 1, span)?;
+        self.assumed = self.guards.and(self.assumed, state.proof);
         self.locals.insert(
             id,
             Storage {
                 block: *self.blocks.last().expect("storage block"),
-                origins: origins.clone(),
+                state: state.clone(),
             },
         );
-        if !origins.is_empty() {
-            self.facts.locals.insert(id, origins);
+        if state.size() != 0 || state.proof != TRUE {
+            self.facts.locals.insert(id, state);
         }
         self.scopes.last_mut().expect("storage scope").push(id);
         Ok(())
@@ -239,13 +224,157 @@ impl Checker<'_> {
         })
     }
 
-    pub(crate) fn complete(ty: &Type, origins: &[Origin], span: Span) -> Result<()> {
-        let paths = components(ty, span)?;
-        let actual: BTreeSet<_> = origins
+    pub(crate) fn link_tags(
+        &mut self,
+        id: LocalId,
+        ty: &Type,
+        state: &mut State,
+        span: Span,
+    ) -> Result<()> {
+        let entered = self
+            .proofs
+            .bindings
+            .get(&id)
+            .copied()
+            .ok_or_else(|| Self::unsupported(span))?;
+        let present = self.guards.and(entered, state.present);
+        let mut pending = vec![(ty, Path::new(), Vec::<String>::new(), present)];
+        while let Some((ty, path, names, present)) = pending.pop() {
+            if !self.guards.spend(path.len() + names.len() + 1) {
+                return Err(State::budget(span));
+            }
+            match ty {
+                Type::Record { primary, fields } => {
+                    for (index, ty) in std::iter::once(primary.as_ref())
+                        .chain(fields.iter().map(|(_, ty)| ty))
+                        .enumerate()
+                    {
+                        let mut nested = path.clone();
+                        nested.push(Step::Slot(index));
+                        let mut names = names.clone();
+                        if index != 0 {
+                            names.push(fields[index - 1].0.clone());
+                        }
+                        pending.push((ty, nested, names, present));
+                        if pending.len() > MAX_ORIGINS {
+                            return Err(State::budget(span));
+                        }
+                    }
+                }
+                Type::Union(members) => {
+                    let tags = self.proofs.tags.get(&((id, names.clone()), ty.clone()));
+                    for (index, member) in members.iter().enumerate() {
+                        let actual = state.member(&path, index, self.guards);
+                        if let Some(tag) = tags.and_then(|tags| {
+                            tags.iter()
+                                .find(|(ty, _)| ty == member)
+                                .map(|(_, guard)| *guard)
+                        }) {
+                            let both = self.guards.and(tag, actual);
+                            let neither = self
+                                .guards
+                                .and(self.guards.not(tag), self.guards.not(actual));
+                            let equal = self.guards.or(both, neither);
+                            let relation = self.guards.or(self.guards.not(present), equal);
+                            state.proof = self.guards.and(state.proof, relation);
+                        }
+                        let nested_guard = self.guards.and(present, actual);
+                        let mut nested = path.clone();
+                        nested.push(Step::Variant(index));
+                        pending.push((member, nested, names.clone(), nested_guard));
+                        if pending.len() > MAX_ORIGINS {
+                            return Err(State::budget(span));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn complete(&mut self, ty: &Type, state: &State, span: Span) -> Result<()> {
+        let assumptions = self.assumptions();
+        let proof = self.guards.and(state.proof, assumptions);
+        let present = self.guards.and(state.present, proof);
+        if present == FALSE {
+            return Ok(());
+        }
+        if !self.guards.spend(state.weight()) {
+            return Err(State::budget(span));
+        }
+        let mut origins = BTreeMap::new();
+        for origin in &state.origins {
+            let prior = origins.get(&origin.component).copied().unwrap_or(FALSE);
+            origins.insert(
+                origin.component.clone(),
+                self.guards.or(prior, origin.guard),
+            );
+        }
+        let mut valid = BTreeSet::new();
+        let mut unions = BTreeMap::new();
+        let mut pending = vec![(ty, Path::new(), present)];
+        while let Some((ty, path, present)) = pending.pop() {
+            if !self.guards.spend(path.len() + 1) {
+                return Err(State::budget(span));
+            }
+            match ty {
+                Type::Reference(_) => {
+                    valid.insert(path.clone());
+                    if !self
+                        .guards
+                        .implies(present, origins.get(&path).copied().unwrap_or(FALSE))
+                    {
+                        return Err(Self::unsupported(span));
+                    }
+                }
+                Type::Record { primary, fields } => {
+                    for (index, ty) in std::iter::once(primary.as_ref())
+                        .chain(fields.iter().map(|(_, ty)| ty))
+                        .enumerate()
+                    {
+                        let mut path = path.clone();
+                        path.push(Step::Slot(index));
+                        pending.push((ty, path, present));
+                        if pending.len() + valid.len() + unions.len() > MAX_ORIGINS {
+                            return Err(State::budget(span));
+                        }
+                    }
+                }
+                Type::Union(members) => {
+                    unions.insert(path.clone(), members.len());
+                    let mut covered = FALSE;
+                    for (index, ty) in members.iter().enumerate() {
+                        let active = state.member(&path, index, self.guards);
+                        let guard = self.guards.and(present, active);
+                        if self.guards.overlap(guard, covered) {
+                            return Err(Self::unsupported(span));
+                        }
+                        covered = self.guards.or(covered, active);
+                        let mut nested = path.clone();
+                        nested.push(Step::Variant(index));
+                        pending.push((ty, nested, guard));
+                        if pending.len() + valid.len() + unions.len() > MAX_ORIGINS {
+                            return Err(State::budget(span));
+                        }
+                    }
+                    if !self.guards.implies(present, covered) {
+                        return Err(Self::unsupported(span));
+                    }
+                }
+                _ => {}
+            }
+        }
+        if state
+            .origins
             .iter()
-            .map(|origin| origin.component.clone())
-            .collect();
-        if paths != actual {
+            .any(|origin| !valid.contains(&origin.component))
+            || state.active.iter().any(|active| {
+                unions
+                    .get(&active.component)
+                    .is_none_or(|count| active.member >= *count)
+            })
+        {
             return Err(Self::unsupported(span));
         }
         Ok(())
@@ -256,7 +385,8 @@ impl Checker<'_> {
         id: EmitId,
         target: BlockId,
         field: &Option<String>,
-        origins: Vec<Origin>,
+        value: State,
+        ty: &Type,
         span: Span,
     ) -> Result<()> {
         let written = self
@@ -278,28 +408,35 @@ impl Checker<'_> {
         let target_type = self
             .types
             .get(&target)
-            .ok_or_else(|| Self::unsupported(span))?;
-        let (prefix, ty) = slot(target_type, field).ok_or_else(|| Self::unsupported(span))?;
-        let paths = components(ty, span)?;
+            .ok_or_else(|| Self::unsupported(span))?
+            .clone();
+        let Some((prefix, destination)) = slot(&target_type, field) else {
+            return Ok(());
+        };
+        if !destination.accepts(ty) {
+            return Ok(());
+        }
+        let mut state = value
+            .convert(ty, destination, self.guards, span)?
+            .under(retained, self.guards);
+        let assumptions = self.assumptions();
+        state.proof = self.guards.and(state.proof, assumptions);
+        self.complete(destination, &state, span)?;
+        let key = (target, field.clone());
+        let prior = self.writes.get(&key).copied().unwrap_or(FALSE);
+        self.writes
+            .insert(key, self.guards.or(prior, state.present));
         let target_index = self
             .blocks
             .iter()
             .position(|id| *id == target)
             .ok_or_else(|| Self::unsupported(span))?;
-        let mut covered = BTreeMap::new();
-        for mut origin in origins {
-            origin.guard = self.guards.and(origin.guard, retained);
-            if origin.guard == FALSE {
+        let effective = self.guards.and(state.present, state.proof);
+        let mut origins = Vec::new();
+        for origin in state.origins {
+            if !self.guards.overlap(origin.guard, effective) {
                 continue;
             }
-            if !paths.contains(&origin.component) {
-                return Err(Self::unsupported(span));
-            }
-            let prior = covered.get(&origin.component).copied().unwrap_or(FALSE);
-            covered.insert(
-                origin.component.clone(),
-                self.guards.or(prior, origin.guard),
-            );
             let storage = self.live(&origin.place, span)?;
             let source = self
                 .blocks
@@ -313,60 +450,75 @@ impl Checker<'_> {
                     span,
                 ));
             }
-            let result = self.results.get_mut(&target).expect("result origins");
-            origin.component.splice(0..0, prefix.iter().copied());
-            if let Some(existing) = result
-                .iter_mut()
-                .find(|item| item.place == origin.place && item.component == origin.component)
-            {
-                existing.guard = self.guards.or(existing.guard, origin.guard);
-            } else if result.len() == MAX_ORIGINS {
-                return Err(Diagnostic::unsupported(
-                    "borrow-origin budget exhausted",
-                    span,
-                ));
-            } else {
-                result.push(origin);
-            }
+            origins.push(origin);
         }
-        if paths.iter().any(|path| {
-            !self
-                .guards
-                .implies(retained, covered.get(path).copied().unwrap_or(FALSE))
-        }) {
-            return Err(Self::unsupported(span));
-        }
-        Ok(())
+        state.origins = origins;
+        self.guards
+            .spend(state.weight() + prefix.len() * state.size());
+        self.results.get_mut(&target).expect("result state").merge(
+            state.prefix(&prefix),
+            self.guards,
+            span,
+        )
     }
 
     pub(crate) fn block(&mut self, block: &Block) -> Result<Value> {
         self.blocks.push(block.id);
         self.types.insert(block.id, block.ty.clone());
-        self.results.insert(block.id, Vec::new());
+        self.results.insert(block.id, State::absent());
         self.scopes.push(Vec::new());
+        self.assumed_scopes.push(self.assumed);
         let mut flow = self.statements(&block.stmts)?;
+        let span = Span { start: 0, end: 0 };
         let complete = self
             .proofs
             .completions
             .get(&block.id)
             .copied()
-            .ok_or_else(|| Self::unsupported(Span { start: 0, end: 0 }))?;
-        let origins = self.results.remove(&block.id).expect("result origins");
-        if !origins.is_empty() {
-            self.reserve_origins(origins.len(), Span { start: 0, end: 0 })?;
-            self.facts.blocks.insert(block.id, origins.clone());
+            .ok_or_else(|| Self::unsupported(span))?;
+        let mut state = self.results.remove(&block.id).expect("result state");
+        let slots: Vec<_> = match &block.ty {
+            Type::Record { primary, fields } => std::iter::once((None, primary.as_ref()))
+                .chain(fields.iter().map(|(name, ty)| (Some(name.clone()), ty)))
+                .collect(),
+            ty => vec![(None, ty)],
+        };
+        for (field, ty) in slots {
+            let written = self
+                .writes
+                .remove(&(block.id, field.clone()))
+                .unwrap_or(FALSE);
+            let missing = self.guards.and(complete, self.guards.not(written));
+            if missing != FALSE && ty.accepts(&Type::Null) {
+                let prefix = slot(&block.ty, &field).expect("result slot").0;
+                let default = State::default()
+                    .convert(&Type::Null, ty, self.guards, span)?
+                    .under(missing, self.guards)
+                    .prefix(&prefix);
+                state.merge(default, self.guards, span)?;
+            }
+        }
+        state.present = complete;
+        let assumptions = self.assumptions();
+        state.proof = self.guards.and(state.proof, assumptions);
+        self.complete(&block.ty, &state, span)?;
+        if state.size() != 0 || state.proof != TRUE {
+            self.reserve_origins(state.weight() + 1, span)?;
+            self.facts.blocks.insert(block.id, state.clone());
         }
         self.close_scope();
         self.blocks.pop();
         self.types.remove(&block.id);
-        flow.next = complete != FALSE;
+        let effective = self.guards.and(state.present, state.proof);
+        flow.next = effective != FALSE;
         flow.exits.remove(&Exit::Leave(block.id));
         flow.exits.remove(&Exit::Restart(block.id));
-        Ok(Value { origins, flow })
+        Ok(Value { state, flow })
     }
 
     pub(crate) fn branch(&mut self, stmts: &[Stmt]) -> Result<Flow> {
         self.scopes.push(Vec::new());
+        self.assumed_scopes.push(self.assumed);
         let flow = self.statements(stmts)?;
         self.close_scope();
         Ok(flow)
@@ -382,14 +534,15 @@ impl Checker<'_> {
                 Stmt::Bind { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next {
-                        self.bind(*id, result.origins, value.span)?;
+                        self.bind(*id, result.state, value.span)?;
                     }
                     result.flow
                 }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next
-                        && (!result.origins.is_empty() || self.program.locals[*id].has_reference())
+                        && (!result.state.origins.is_empty()
+                            || self.program.locals[*id].has_reference())
                     {
                         return Err(Self::unsupported(value.span));
                     }
@@ -402,8 +555,8 @@ impl Checker<'_> {
                     value,
                 } => {
                     let result = self.expression(value)?;
-                    if result.flow.next && value.ty.has_reference() {
-                        self.emit(*id, *target, field, result.origins, value.span)?;
+                    if result.flow.next {
+                        self.emit(*id, *target, field, result.state, &value.ty, value.span)?;
                     }
                     result.flow
                 }
@@ -444,7 +597,7 @@ impl Checker<'_> {
 
     pub(crate) fn expression(&mut self, expr: &Expr) -> Result<Value> {
         let mut flow = Flow::new();
-        let origins = match &expr.kind {
+        let state = match &expr.kind {
             ExprKind::Borrow(place) => {
                 if !self.locals.contains_key(&place.root) {
                     return Err(Self::unsupported(expr.span));
@@ -466,78 +619,72 @@ impl Checker<'_> {
                 if ty.has_reference() || expr.ty != Type::Reference(Box::new(ty.clone())) {
                     return Err(Self::unsupported(expr.span));
                 }
-                vec![Origin {
-                    component: Vec::new(),
-                    place: place.clone(),
-                    guard: TRUE,
-                }]
-            }
-            ExprKind::Local(id) if expr.ty.has_reference() => {
-                let origins = self
-                    .locals
-                    .get(id)
-                    .map(|storage| storage.origins.clone())
-                    .ok_or_else(|| Self::unsupported(expr.span))?;
-                for origin in &origins {
-                    self.live(&origin.place, expr.span)?;
+                State {
+                    origins: vec![Origin {
+                        component: Vec::new(),
+                        place: place.clone(),
+                        guard: TRUE,
+                    }],
+                    ..State::default()
                 }
-                origins
+            }
+            ExprKind::Local(id) => {
+                if self.proofs.mutable.contains(id) {
+                    State::unknown(&expr.ty, self.guards, expr.span)?
+                } else {
+                    let state = self
+                        .locals
+                        .get(id)
+                        .map(|storage| storage.state.clone())
+                        .ok_or_else(|| Self::unsupported(expr.span))?;
+                    let assumptions = self.assumptions();
+                    let proof = self.guards.and(state.proof, assumptions);
+                    for origin in &state.origins {
+                        if self.guards.overlap(origin.guard, proof) {
+                            self.live(&origin.place, expr.span)?;
+                        }
+                    }
+                    state
+                }
             }
             ExprKind::Coerce { value } => {
-                let value = self.expression(value)?;
-                flow = value.flow;
-                value.origins
+                let result = self.expression(value)?;
+                flow = result.flow;
+                result
+                    .state
+                    .convert(&value.ty, &expr.ty, self.guards, expr.span)?
             }
             ExprKind::Deref(value) => {
-                let value = self.expression(value)?;
-                flow = value.flow;
+                let result = self.expression(value)?;
+                flow = result.flow;
                 if flow.next {
-                    if value.origins.is_empty() {
+                    if result.state.origins.is_empty() {
                         return Err(Self::unsupported(expr.span));
                     }
-                    for origin in &value.origins {
-                        self.live(&origin.place, expr.span)?;
+                    let proof = self.guards.and(result.state.present, result.state.proof);
+                    for origin in &result.state.origins {
+                        if self.guards.overlap(origin.guard, proof) {
+                            self.live(&origin.place, expr.span)?;
+                        }
                     }
                 }
-                Vec::new()
+                State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::Field { value, index } => {
                 let value = self.expression(value)?;
                 flow = value.flow;
-                value
-                    .origins
-                    .into_iter()
-                    .filter_map(|mut origin| {
-                        if origin.component.first() == Some(&(index + 1)) {
-                            origin.component.remove(0);
-                            Some(origin)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
+                value.state.select(&[Step::Slot(index + 1)], self.guards)
             }
             ExprKind::Primary(value) => {
                 let value = self.expression(value)?;
                 flow = value.flow;
-                value
-                    .origins
-                    .into_iter()
-                    .filter_map(|mut origin| {
-                        if origin.component.first() == Some(&0) {
-                            origin.component.remove(0);
-                            Some(origin)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
+                value.state.select(&[Step::Slot(0)], self.guards)
             }
             ExprKind::Unary { value, .. }
             | ExprKind::StringSize(value)
             | ExprKind::TypeTest { value, .. } => {
                 flow = self.expression(value)?.flow;
-                Vec::new()
+                State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::Binary { op, left, right } => {
                 flow = self.expression(left)?.flow;
@@ -555,7 +702,7 @@ impl Checker<'_> {
                         flow.append(next);
                     }
                 }
-                Vec::new()
+                State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::Call { args, .. } => {
                 for arg in args {
@@ -571,7 +718,7 @@ impl Checker<'_> {
                     }
                     flow.append(value.flow);
                 }
-                Vec::new()
+                State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {
@@ -583,27 +730,31 @@ impl Checker<'_> {
                 if matches!(expr.kind, ExprKind::Panic { .. }) {
                     flow.next = false;
                 }
-                Vec::new()
+                State::default()
             }
             ExprKind::Block(block) => {
                 let value = self.block(block)?;
                 flow = value.flow;
-                value.origins
+                value.state
             }
             ExprKind::Null
             | ExprKind::Bool(_)
             | ExprKind::Int(_)
             | ExprKind::Float(_)
-            | ExprKind::String(_)
-            | ExprKind::Local(_) => Vec::new(),
+            | ExprKind::String(_) => State::default(),
         };
+        let assumptions = self.assumptions();
+        let proof = self.guards.and(state.proof, assumptions);
+        if self.guards.and(state.present, proof) == FALSE {
+            flow.next = false;
+        }
         if flow.next {
-            Self::complete(&expr.ty, &origins, expr.span)?;
+            self.complete(&expr.ty, &state, expr.span)?;
         }
         if expr.ty == Type::Never {
             flow.next = false;
         }
-        Ok(Value { origins, flow })
+        Ok(Value { state, flow })
     }
 }
 
@@ -702,7 +853,7 @@ mod tests {
     pub(crate) fn reference_aggregates_mutation_and_function_contracts_remain_explicit() {
         for source in [
             "a:1;r:={->field:&a}",
-            "a:1;flag:=true;r:{|flag|->&a}",
+            "a:1;flag:=true;r:={|flag|->&a}",
             "a:1;r:=&a",
             "a:=1;r:&!a",
             "r:&(1+2)",
@@ -753,10 +904,10 @@ mod tests {
     }
 
     #[test]
-    pub(crate) fn reference_union_and_carrier_borrows_remain_explicit_boundaries() {
+    pub(crate) fn carrier_borrows_and_mutation_remain_explicit_boundaries() {
         for source in [
-            "<R>:<{view<&int32>}><null>",
-            "a:1;flag:=true;r:{|flag|->view:&a}",
+            "a:1;r<{view<&int32>}><null>:=null",
+            "a:1;flag:=true;r:={|flag|->view:&a}",
             "a:1;r:{->view:&a};alias:&r",
             "a:1;r:{->view:&a};alias:&r.view",
             "a:1;r:={->view:&a}",
@@ -765,5 +916,44 @@ mod tests {
         ] {
             rejects(source, "B001");
         }
+    }
+
+    #[test]
+    pub(crate) fn nullable_references_preserve_active_and_absent_origins() {
+        accepts("a:1;u<&int32><null>:&a;copy:u;|copy<&int32>|{r<&int32>:copy;x:*r}");
+        accepts("u<&int32><null>:null;|u<&int32>|{r<&int32>:u;x:*r}");
+        accepts("a:1;flag:=true;u<&int32><null>:{|flag|->&a};|u<&int32>|x:*u<&int32>");
+        accepts(
+            "a:1;r<{view<&int32><null>;count<int32>}>:{->count:1};|r.view<&int32>|x:*r.view<&int32>",
+        );
+        rejects("u<&int32><null>:{a:1;->&a}", "E303");
+        rejects("flag:=true;u:{a:1;|flag|->view:&a}", "E303");
+    }
+
+    #[test]
+    pub(crate) fn retagging_maps_reference_origins_by_member_type() {
+        accepts(
+            "a:1;u<&int32><null>:&a;wide<boolean><&int32><null>:u;|wide<&int32>|{r<&int32>:wide;x:*r}",
+        );
+        accepts(
+            "a:1;b<int64>:2;flag:=true;u<&int32><&int64><null>:{|flag|->&a;|!flag|->&b};|u<&int32>|x:*u<&int32>;|u<&int64>|y:*u<&int64>",
+        );
+        accepts(
+            "a:1;flag:=true;u<&int32><null>:{inner<&int32><null>:{|flag|->&a};|inner<&int32>|->inner<&int32>};copy:u;|copy<&int32>|x:*copy<&int32>",
+        );
+    }
+
+    #[test]
+    pub(crate) fn nested_union_fields_preserve_variant_specific_activity() {
+        accepts(
+            "<A>:<{kind<boolean>;view<&int32><null>}>;<B>:<{kind<int32>;view<&int32><null>}>;f<null>:(flag<boolean>){a:1;left<A>:{->kind:true;->view:&a};right<B>:{->kind:2};u<A><B>:{|flag|->left;|!flag|->right};|u<A>|{|u.view<&int32>|x:*u.view<&int32>};|u<B>|{|u.view<null>|{}}}",
+        );
+        rejects(
+            "<A>:<{view<&int32>}>;u<A><null>:{a:1;r<A>:{->view:&a};->r}",
+            "E303",
+        );
+        accepts(
+            "a:1;again:=true;u<{view<&int32><null>}>:'out {|again|{b:2;'out->view:&b;again=false;'out.restart()}};|u.view<&int32>|x:*u.view<&int32>",
+        );
     }
 }

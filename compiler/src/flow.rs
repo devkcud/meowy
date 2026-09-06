@@ -8,6 +8,7 @@ pub(crate) const MAX_NODES: usize = 65_536;
 pub(crate) const MAX_CACHE: usize = 131_072;
 pub(crate) const MAX_TASKS: usize = 131_072;
 pub(crate) const MAX_STEPS: usize = 1_048_576;
+pub(crate) const MAX_PROOF_WORK: usize = 4_194_304;
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub(crate) struct Node {
@@ -27,6 +28,7 @@ pub(crate) struct Flow {
     pub(crate) cache: HashMap<(Guard, Guard), Guard>,
     pub(crate) vars: usize,
     pub(crate) full: bool,
+    pub(crate) work: usize,
 }
 
 impl Default for Flow {
@@ -47,6 +49,7 @@ impl Flow {
             cache: HashMap::new(),
             vars: 0,
             full: false,
+            work: 0,
         }
     }
 
@@ -56,6 +59,12 @@ impl Flow {
         }
         self.vars += 1;
         self.node(self.vars, FALSE, TRUE)
+    }
+
+    pub(crate) fn spend(&mut self, work: usize) -> bool {
+        self.work = self.work.saturating_add(work);
+        self.full |= self.work > MAX_PROOF_WORK;
+        !self.full
     }
 
     pub(crate) fn and(&mut self, a: Guard, b: Guard) -> Guard {

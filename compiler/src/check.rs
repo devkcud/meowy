@@ -103,6 +103,7 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
                 locals: checker.locals,
             };
             checker.proofs.conditions = checker.guards;
+            checker.proofs.tags = checker.tags;
             let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
             crate::loans::check(&program, &facts, &checker.proofs, &mut checker.flow)?;
             Ok(program)
@@ -225,6 +226,7 @@ impl Checker {
     pub(crate) fn local(&mut self, ty: Type) -> usize {
         let id = self.locals.len();
         self.locals.push(ty);
+        self.proofs.bindings.insert(id, self.reach);
         id
     }
 
@@ -317,12 +319,6 @@ impl Checker {
                     .iter()
                     .map(|ty| self.ty(ty))
                     .collect::<Result<Vec<_>>>()?;
-                if types.iter().any(Type::has_reference) {
-                    return Err(Diagnostic::unsupported(
-                        "reference-carrying unions",
-                        expr.span,
-                    ));
-                }
                 Ok(Spec::Data(Type::union(types)))
             }
             TypeKind::List { .. } => {
@@ -748,7 +744,9 @@ impl Checker {
             }
             slots.insert(name.clone(), (Type::union(types), initialized));
         }
-        if let Some(expected) = expected.filter(|_| !frame.partial) {
+        let constructor =
+            expected.is_some_and(Self::record_union) && slots.keys().any(Option::is_some);
+        if let Some(expected) = expected.filter(|_| !frame.partial && !constructor) {
             let required: Vec<(Option<String>, Type)> = match expected {
                 Type::Record { primary, fields } => std::iter::once((None, *primary.clone()))
                     .chain(
@@ -789,14 +787,79 @@ impl Checker {
             .into_iter()
             .filter_map(|(name, (ty, _))| name.map(|name| (name, ty)))
             .collect();
-        Ok(if fields.is_empty() {
+        let actual = if fields.is_empty() {
             primary
         } else {
             Type::Record {
                 primary: Box::new(primary),
                 fields,
             }
-        })
+        };
+        if constructor && !frame.partial {
+            let expected = expected.expect("record union");
+            let choices: Vec<_> = expected
+                .members()
+                .iter()
+                .filter(|member| Self::record_fits(member, &actual))
+                .collect();
+            if choices.len() != 1 {
+                return Err(Self::error(
+                    "E207",
+                    "record constructor does not select one compatible union member",
+                    span,
+                ));
+            }
+            return Ok(choices[0].clone());
+        }
+        Ok(actual)
+    }
+
+    pub(crate) fn record_union(ty: &Type) -> bool {
+        matches!(ty, Type::Union(members) if members.iter().any(|ty| matches!(ty, Type::Record { .. })))
+    }
+
+    pub(crate) fn record_fits(expected: &Type, actual: &Type) -> bool {
+        let (
+            Type::Record { primary, fields },
+            Type::Record {
+                primary: value,
+                fields: values,
+            },
+        ) = (expected, actual)
+        else {
+            return false;
+        };
+        primary.accepts(value)
+            && values.iter().all(|(name, ty)| {
+                fields
+                    .iter()
+                    .any(|(field, expected)| field == name && expected.accepts(ty))
+            })
+            && fields.iter().all(|(name, ty)| {
+                values.iter().any(|(field, _)| field == name) || ty.accepts(&Type::Null)
+            })
+    }
+
+    pub(crate) fn union_slot(ty: &Type, name: Option<&str>) -> Option<Type> {
+        let mut types = Vec::new();
+        if name.is_none() {
+            types.extend(ty.members().iter().cloned());
+        }
+        for member in ty.members() {
+            if let Type::Record { primary, fields } = member {
+                if let Some(name) = name {
+                    types.extend(
+                        fields
+                            .iter()
+                            .filter(|(field, _)| field == name)
+                            .map(|(_, ty)| ty.clone()),
+                    );
+                } else {
+                    types.push(*primary.clone());
+                }
+            }
+        }
+        (!types.is_empty()).then(|| Type::union(types))
     }
 
     pub(crate) fn forward(&mut self, stmts: &[ast::Stmt], start: usize) -> Result<usize> {
@@ -1013,6 +1076,9 @@ impl Checker {
                     ));
                 }
                 let id = self.local(ty.clone());
+                if *mutable {
+                    self.proofs.mutable.insert(id);
+                }
                 self.places.insert(id);
                 let constant = if *mutable {
                     None
@@ -1206,12 +1272,18 @@ impl Checker {
             .iter()
             .find(|frame| frame.id == target)
             .expect("frame");
+        let union = frame
+            .expected
+            .as_ref()
+            .filter(|ty| Self::record_union(ty))
+            .cloned();
         let record = if name.is_none() && matches!(frame.expected, Some(Type::Record { .. })) {
             frame.expected.clone()
         } else {
             None
         };
         let expected = match (&frame.expected, name) {
+            (Some(ty), name) if Self::record_union(ty) => Self::union_slot(ty, name),
             (Some(Type::Record { primary, .. }), None) => Some(*primary.clone()),
             (Some(Type::Record { fields, .. }), Some(name)) => Some(
                 fields
@@ -1248,6 +1320,12 @@ impl Checker {
         }
         let value = if let Some(record) = record {
             self.composed(value, record, annotated.as_ref().or(expected.as_ref()))?
+        } else if union.is_some() {
+            if let Some(annotated) = annotated.as_ref() {
+                self.expr(value, Some(annotated))?
+            } else {
+                self.expression(value, expected.as_ref())?
+            }
         } else {
             self.expr(value, annotated.as_ref().or(expected.as_ref()))?
         };
@@ -1255,7 +1333,10 @@ impl Checker {
             return Ok(vec![hir::Stmt::Expr(value)]);
         }
         let mut stmts = Vec::new();
-        if name.is_none() && matches!(value.ty, Type::Record { .. }) {
+        if name.is_none()
+            && matches!(value.ty, Type::Record { .. })
+            && !union.as_ref().is_some_and(|ty| ty.accepts(&value.ty))
+        {
             let ty = value.ty.clone();
             let id = self.local(ty.clone());
             let local = hir::Expr {
@@ -1367,6 +1448,7 @@ impl Checker {
         };
         if let Some(expected) = expected
             && !expected.accepts(&ty)
+            && !frame.expected.as_ref().is_some_and(Self::record_union)
         {
             return Err(Self::error(
                 "E207",
@@ -1374,7 +1456,10 @@ impl Checker {
                 span,
             ));
         }
-        if frame.expected.is_some() && expected.is_none() {
+        if frame.expected.is_some()
+            && expected.is_none()
+            && !frame.expected.as_ref().is_some_and(Self::record_union)
+        {
             return Err(Self::error(
                 "E207",
                 "result field is absent from the expected type",
@@ -2602,6 +2687,39 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn union_record_constructors_keep_member_context_and_defaults() {
+        accepts(
+            "<R>:<{view<&int32><null>}>;a:1;u<R><null>:{->view:&a};|u<R>|{|u.view<&int32>|x:*u.view<&int32>}",
+        );
+        accepts("<R>:<{view<&int32><null>;count<int64>}>;u<R><null>:{->count:7};|u<R>|x:u.count");
+        accepts("<R>:<{-><int64>;tag<string>}>;u<R><null>:{->7;->tag:\"ok\"};|u<R>|x<int64>:u");
+        accepts("<R>:<{value<uint8>;view<&int32>}>;a:1;u<R><null>:{->value:255;->view:&a}");
+        rejects("<R>:<{value<uint8>}>;u<R><null>:{->value:256}", "E216");
+        rejects(
+            "<A>:<{value<int32>}>;<B>:<{value<int64>}>;u<A><B>:{->value:7}",
+            "E207",
+        );
+        rejects(
+            "<A>:<{value<int32>}>;<B>:<{value<int32><null>}>;u<A><B>:{->value:7}",
+            "E207",
+        );
+        rejects(
+            "<A>:<{view<&int32>}>;<B>:<{view<&string>}>;s:\"x\";u<A><B>:{->view<&int32>:&s}",
+            "E207",
+        );
+    }
+
+    #[test]
+    pub(crate) fn union_equality_requires_the_same_normalized_union_type() {
+        accepts("a:1;u<&int32><null>:&a;empty<&int32><null>:null;same:u==empty");
+        rejects("a:1;u<&int32><null>:&a;same:u==null", "E222");
+        rejects("a:1;u<&int32><null>:&a;same:null==u", "E222");
+        rejects("a:1;u<&int32><null>:&a;same:u==&a", "E222");
+        rejects("u<int8><null>:7;same:u==7", "E222");
+        rejects("u<int8><null>:7;value<int32>:7;same:u==value", "E222");
+    }
+
+    #[test]
     pub(crate) fn reference_capability_boundaries_are_explicit() {
         for source in [
             "x:1;r:=&x",
@@ -2611,8 +2729,8 @@ mod tests {
             "x:{->a:1;r:&a}",
             "f<int32>:(x<int32>){r:&x;->*r}",
             "f<int32>:(x<&int32>){->*x}",
-            "<R>:<{x<&int32>}><null>",
-            "<R>:<&int32><null>",
+            "f<null>:(x<{value<&int32>}><null>){->null}",
+            "f<null>:(x<&int32><null>){->null}",
             "x:1;r:&x;r.{v:*self}",
             "x:1;r:&x;debug:@\"debug\";debug.print(r)",
             "x:1;r:&x;s:&*r",

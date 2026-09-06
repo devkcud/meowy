@@ -18,7 +18,7 @@ implementation boundary; it does not change language rules.
   unreachable writes. Private tables associate those IDs and block IDs with the
   existing guard arena; lowering does not reinterpret source spans as identities.
 - The borrow-origin pass preserves every possible `(component, place, guard)`
-  alternative through immutable references and records carrying references. It checks
+  alternative through immutable references, records and unions carrying references. It checks
   the intersection of origin, write and target completion guards. A retained root
   must live strictly outside the receiving block; otherwise the escape is E303.
 - Completion proofs include named leave and exclude discarded restart, panic and
@@ -30,8 +30,8 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans, reference-carrying unions
-  and signatures, temporary borrows and reference dispatch are B001.
+- Mutable reference-bearing bindings, exclusive loans, reference-bearing
+  signatures, temporary borrows and reference dispatch are B001.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
   milestone implements moves, owner destruction or panic unwinding.
@@ -39,8 +39,8 @@ implementation boundary; it does not change language rules.
 ## Records carrying references
 
 - Immutable record primaries, named fields and nested records can contain shared
-  references. Each origin path uses index 0 for the primary and the HIR field
-  index plus one for a named field. Component paths are distinct from physical
+  references. Each origin path uses `Slot(0)` for the primary and `Slot(index + 1)`
+  for a named field. Component paths are distinct from physical
   referent field paths and are preserved independently through aliases and copies.
 - Emitting a record composes its primary and named components without collapsing
   their origins. Named/nested emissions prefix origin paths; field or primary
@@ -58,11 +58,49 @@ implementation boundary; it does not change language rules.
   reference still requires explicit dereference for formatting. Record equality
   retains known full-record context through block operands instead of silently
   comparing their scalar primaries; scalar literals retain numeric-primary width.
-- Union wrappers containing references, including omitted optional reference
-  fields, remain B001. Borrowing storage rooted in a reference-carrying record,
+- Union wrappers containing references and omitted optional reference fields are
+  supported. Borrowing storage rooted in a reference-carrying record or union,
   mutable carriers and reference-carrying function signatures remain separate
   work; this milestone copies contained shared references rather than reborrowing
   the carrier or inventing a transitive lifetime contract.
+
+## Active union variants
+
+- `src/borrow_value.rs` stores explicit active-member facts alongside reference
+  origins, including null and members without references. `Variant(index)` path
+  steps differ from record slots. Injection adds the step, extraction removes it,
+  and widening/narrowing maps member types to the destination union's normalized
+  indices. Reusing an old numeric tag index would change the origin's identity.
+- Omitted nullable result slots receive explicit null activity on completing paths
+  without writes. Completeness requires origins for every reference leaf of each
+  active member; inactive leaves require none. Unknown activity is represented by
+  a bounded disjoint guard partition, never by an unexplained empty origin set.
+- Each immutable local/field tag domain is linked to its constructor or copied
+  activity at the binding. The link is conditional on binding execution and the
+  enclosing active variant, so same-named optional fields in different record
+  members cannot impose contradictory unconditional tag facts.
+- Value snapshots retain the proofs needed by copied or emitted origins after a
+  local carrier ends. Origin checking uses cached lexical assumptions; the CFG
+  applies snapshots at binding and completed-result edges. There is no global
+  assumption reapplied after restart. Reset edges erase those relations along
+  with other iteration facts; analyses needing stronger temporal relations remain
+  conservative.
+- Reads of mutable non-reference storage receive unknown activity. They do not
+  reuse initializer tags after assignment or branch joins. Mutable carriers of
+  references remain B001, so this does not introduce reference reassignment.
+- A type predicate inspects tags without reading payload references. Effectful
+  operands still run, and fresh record/block construction still has its normal
+  result-transfer uses. Whole copies and equality consume their active payloads;
+  projection after extraction reads only demanded components of the selected arm.
+- Contextual record constructors infer an actual shape from completing named
+  emissions and must select exactly one compatible union member. Candidate field
+  and primary types supply literal widths; omitted nullable fields receive member
+  defaults. Multiple possible widths or member identities report E207, and
+  explicit annotations remain enforced. Already typed record emissions remain
+  whole alternatives rather than merging their fields across branches.
+- Union equality requires the same normalized union type. Compare a nullable
+  union against an explicitly typed null value of that union, or inspect its null
+  tag; equality does not introduce a new member conversion.
 
 ## Control-flow and last use
 
@@ -92,24 +130,30 @@ implementation boundary; it does not change language rules.
   block end, so its result slot remains live throughout completing construction.
   Restart, panic and enclosing-leave paths that discard construction have no such
   result use. This preserves the existing result-origin lifetime boundary.
-- Bounds are 65,536 graph nodes, 65,536 reference value IDs, 262,144 stored origin
-  alternatives, 262,144 retained liveness entries and 1,048,576 analysis work steps
+- Bounds are 65,536 graph nodes, 65,536 reference value IDs, 262,144 weighted origin
+  entries, 262,144 retained liveness entries and 1,048,576 analysis work steps
   per body, including final origin-overlap scans. Exhaustion reports
   B001; guard arena exhaustion overrides tentative E302/E303 diagnostics. The
   preceding origin pass also caps its persistent local/block fact cache at 262,144
-  alternatives for the whole program. Dense-reference and many-origin alias
+  weighted entries for the whole program, counting active-member facts and path
+  lengths as well as origins. Each value has at most 4,096 origin/activity parts.
+  The shared proof ledger limits snapshot/variant work to 4,194,304 charged steps,
+  including path copies and growing merge scans. Fanout stops inside each push,
+  before a whole oversized type is expanded. Dense-reference and many-origin alias
   source regressions exercise each stage's rejection before unbounded growth.
   A many-component carrier with repeated copies also verifies the per-leaf value
   budget; sharing one physical owner does not bypass component accounting.
+  Wide unknown tag domains and repeated inactive-payload copies also exercise the
+  activity/proof limits, even when no reference origin is currently active.
 - This graph currently enforces shared-loan/write conflicts only. Field writes,
   exclusive references and reborrows, reference reassignment, owner moves,
-  temporary owners, unions carrying references and cleanup edges remain
+  temporary owners, reference-bearing function contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
 ## Next analysis stages
 
-1. Extend result-origin support to reference-carrying unions and verified
-   function/call contracts, preserving component and branch identity. Keep unknown
+1. Extend result-origin support to verified function/call contracts, preserving
+   component and branch identity. Keep unknown
    origins rejected until complete caller/callee lifetime evidence exists.
 2. Extend the existing graph with owned initialization, moves, scope ends,
    verified call effects and cleanup edges. Keep storage IDs distinct from values.

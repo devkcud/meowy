@@ -743,7 +743,7 @@ pub fn guarded_local_escapes_are_rejected_before_lowering() {
         ("'result{{local:1;'result->&local;'result.leave()}}", "E303"),
         ("owner:1;view:={->field:&owner}", "B001"),
         (
-            "f<null>:(flag<boolean>){owner:1;view:{|flag|->&owner}}",
+            "f<null>:(flag<boolean>){owner:1;view:={|flag|->&owner}}",
             "B001",
         ),
     ] {
@@ -1025,7 +1025,7 @@ pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() 
         ("owner:1;pair:{->view:&owner};view:&pair", "B001"),
         ("f<null>:(pair<{view<&int32>}>){value:*pair.view}", "B001"),
         (
-            "f<null>:(flag<boolean>){owner:1;pair:{|flag|->view:&owner}}",
+            "f<null>:(flag<boolean>){owner:1;pair:={|flag|->view:&owner}}",
             "B001",
         ),
     ] {
