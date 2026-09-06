@@ -135,6 +135,21 @@ without running them. Debug and release both preserve dynamic arithmetic checks.
 The initial panic runtime reports failure and exits; recoverable unwinding and
 owned-resource cleanup remain unimplemented.
 
+Dynamic integer failures report P002 with the source operator, original operands,
+integer width/signedness, numeric range and half-open source byte span. Overflow
+and a zero divisor are distinguished; signed minimum remainder by `-1` remains zero.
+For example, an `int8` addition can report:
+
+```text
+panic[P002]: int8 + overflow (left 127, right 1; range -128..127) at bytes 14..17
+```
+
+Explicit `debug.panic` streams its supplied message once, then appends its P006
+call-site byte span. If message evaluation itself panics or leaves the scope,
+the outer panic does not append a misleading site or terminator. A completed panic
+exits with status 1. These are bootstrap text diagnostics, not the
+release panic artifact format or a recovery/unwind implementation.
+
 Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, element mutation/borrowing, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
