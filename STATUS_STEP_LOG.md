@@ -6,6 +6,125 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete loan-liveness and guarded-stack handoff
+
+- Completed: compiler implementation is `94b9160`, native coverage/example is
+  `e557d63`, and guarded runtime/tooling is `7a5d286`. Current status now records
+  supported behavior, precise limits, verification and ordered continuation work.
+- Validation: all 14 combined checks pass, including 106 Rust and 28 Python tests,
+  native/runtime profiles, 836 local links and the optimized compiler example.
+  The release guard audit passes all 196 combinations. Final diff checks pass.
+- Blockers: no active workers, incomplete code or failing checks. Conformance still
+  has 14 unsupported cases; task switching and DWARF unwinding are not implemented.
+- Next steps: add exclusive access/read/reborrow analysis and aggregate/function
+  borrow contracts; connect guarded allocation to the pinned context wrapper,
+  then advance structured cleanup, modules and real library sources.
+
+### 2026-09-06 — Commit guarded runtime and verification integration
+
+- State: Guarded StackMemory allocation, native/Python coverage, runtime rules and repository verification descriptions are committed as 7a5d286. Compiler implementation and coverage are 94b9160 and e557d63. Only final tracker edits remain uncommitted.
+- Validation: Combined verification and every runtime profile passed before commit, including strict fault evidence and sanitizer checks. Runtime commit staged whitespace checks passed; no implementation edits or active workers remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize current status with the three commit IDs, exact validation and remaining compiler/runtime boundaries; check links and whitespace, then commit the documentation handoff.
+
+### 2026-09-06 — Commit native loan and divergence coverage
+
+- State: Native borrowing and short-circuit regression coverage, borrow-liveness.mwy and compiler usage documentation are committed as e557d63, following implementation 94b9160. Runtime/tooling and final tracker updates remain.
+- Validation: All 34 native groups passed in debug/release; the optimized compiler example and 196 guard combinations passed. Native commit staged whitespace checks passed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit bounded guarded stack allocation with runtime harness and verification descriptions; finalize current limits, evidence and ordered next steps in both status files.
+
+### 2026-09-06 — Commit shared-loan implementation
+
+- State: Compiler CFG, guarded origins, last-use checking, short-circuit lowering and analysis bounds are committed as 94b9160. The existing unsupported-boundary test changed with the implementation so the commit does not retain a stale mutable-root rejection.
+- Validation: The integrated 14-check gate, optimized example, 196-case release guard audit and staged whitespace checks passed before commit. Only native/example docs, runtime/tooling and tracker slices remain uncommitted.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native regression coverage and borrow-liveness example, then guarded runtime integration, then refresh and commit the final handoff.
+
+### 2026-09-06 — Verify optimized compiler and stage a coherent implementation slice
+
+- State: The release compiler and borrow-liveness executable pass with exact output; the final release compiler also passes the 196-case guard oracle. The first staged slice contains CFG/origin/frontend/backend changes, ownership design and the existing mutable-borrow capability-test correction; new native coverage remains separate.
+- Validation: Release output is exactly 41, 42, 7, 9, 0, 1, 2, 3 on separate lines. Initial probe incorrectly used run --output and hit the documented CLI restriction; corrected to build then execute. Release guard oracle: 114 accepts, 82 expected E302, no other results. Staged whitespace checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the staged compiler slice, then native examples/coverage, guarded runtime/tooling and current handoff; finish with local link and Git integrity checks.
+
+### 2026-09-06 — Pass the combined compiler and runtime gate
+
+- State: All 14 repository checks pass on the integrated implementation. No active worker edits or failing test remains. Root is building the release compiler and preparing dependency-ordered commits; the full language and task-switching milestones remain incomplete.
+- Validation: Combined gate: 72 library plus 34 native Rust tests, 28 Python tests, 836 local links, schemas/catalog, Vim/Neovim, formatting/Clippy/build and conformance pass. Each runtime profile passes 14 cleanup cases plus 2 fatal probes, 10 stack cases plus kernel ENOMEM and 2 exact guard faults. Conformance remains 9 passed, 14 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify the optimized compiler against borrow-liveness.mwy, update current handoff/remaining priorities, then commit implementation, native coverage, runtime integration and trackers in separate focused slices.
+
+### 2026-09-06 — Bound both origin caches and start final integration
+
+- State: Compiler hardening is complete: both the CFG origin store and preceding borrow-fact cache have cumulative limits, and final overlap scans consume the analysis work budget. Compiler/runtime workers have finished edits; root is running final integration and preparing focused commits.
+- Validation: Dense liveness and guarded-origin alias stress sources reject with B001 at the intended limits. Formatting and all-target Clippy pass. All 34 native groups, the 196-case guard oracle, independent probes and runtime profiles passed before this final integration run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the combined repository gate with LSan-compatible access and the release borrow-liveness example; record exact results, inspect staged slices, then commit compiler, coverage, runtime/tooling and handoff separately.
+
+### 2026-09-06 — Review loan semantics and bound origin storage
+
+- State: Independent review found no semantic blocker in CFG temporaries, result slots, guarded writes, loop resets or backend Never termination. It identified an unbounded aggregate of cloned origin entries and uncharged final overlap scans; the compiler worker is adding explicit storage/work accounting before the final gate.
+- Validation: All 34 native groups and 196 guard combinations pass; 10 extra independent source probes match acceptance/E302 expectations. Formatting and Clippy pass. Dense 512-reference input reports B001 budget exhaustion; the additional origin accounting is not yet qualified.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish origin-storage and overlap-work bounds, rerun affected compiler checks, then execute the combined 14-check gate and release example before focused commits.
+
+### 2026-09-06 — Pass last-use execution and short-circuit regression coverage
+
+- State: All 34 native test groups now pass. The short-circuit fix accepts nonreturning operands and emits valid unreachable block endings without running skipped effects. Runtime and tooling edits are complete; compiler source budget coverage, ownership documentation and final independent review are finishing.
+- Validation: Native execution passes in debug/release, including alias last-use writes, guarded non-overlap, retained result conflicts, equality temporaries, loop backedges, skipped blocks and panic/leave operands. The 196-case guard oracle also passes. Full integration gate has not run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish loan-analysis budget regression and formatting/Clippy; run the 14-check combined gate with sanitizer access, review the complete diff and create focused local commits.
+
+### 2026-09-06 — Verify guard matrix and finish stack-allocation handoff
+
+- State: The runtime implementation and documentation are ready for integration with no active runtime edits. The independent compiler oracle completed all 196 combinations of origin selection, conditional writes and conditional uses. Compiler short-circuit correction and final CFG review remain active.
+- Validation: Guard oracle: 114 accepted programs and 82 expected E302 rejections, zero conservative rejections and zero unsafe acceptances. Runtime profile checks and 8 Python regressions pass; runtime handoff reports 836 valid local links. One compiler native short-circuit case still awaits the fix.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete the compiler correction and independent review; run full formatting, lint, native/runtime/conformance gate, then split compiler implementation, coverage, runtime integration and tracker commits.
+
+### 2026-09-06 — Run integrated native and guarded-stack checks
+
+- State: The CFG implementation now passes 32 of 33 native test groups, including live-loan rejections, guarded origins, named control flow and the new example. One accepted short-circuit case exposed an existing Bool/Never typing mismatch and is assigned to the compiler worker. Runtime guarded stacks passed their first complete profile run.
+- Validation: Runtime: 10 allocation cases, real ENOMEM and 2 exact guard faults pass per debug/release/sanitized profile, alongside 14 cleanup cases and 2 fatal probes; 8 Python regressions pass. Compiler failure: false && a block with effects is typed Bool versus Never (E222). Guard oracle and code review are in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix short-circuit typing without evaluating skipped effects; finish the guard oracle and independent CFG/runtime review, then run the combined repository gate.
+
+### 2026-09-06 — Implement guarded stack ownership and review loop conflicts
+
+- State: Runtime now has a noncopyable StackMemory owner and ten native allocation cases, including injected OS failures and explicit cleanup integration. Isolated probes cover real allocation failure and both guard boundaries. Compiler native coverage adds cross-iteration conflicts whose source guards look disjoint; CFG integration is still in progress.
+- Validation: Runtime harness/profile execution is pending. The existing implementation gate remains the baseline; new compiler acceptance tests still require the loans module to be completed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run guarded-stack debug/release/sanitizer profiles and their strict subprocess evidence checks; complete compiler CFG and verify that loop backedges cannot hide a live reference conflict.
+
+### 2026-09-06 — Cover conditional origins and document final-use writes
+
+- State: Native coverage now includes safe writes to unselected origins and disjoint use/write guards. The compiler README and example describe shared mutable-owner borrows, final-use RHS evaluation and whole-record overlap; these claims await the implementation gate.
+- Validation: New mutable-root execution remains pending the CFG implementation. A temporary independent oracle is ready to audit 196 guarded origin/write/use combinations against both Boolean input values. Tooling regressions remain green.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the native cases and the guard oracle against the integrated compiler; review loop fixed points and held reference operands before accepting the milestone, then validate runtime and combined checks.
+
+### 2026-09-06 — Add native last-use regression cases
+
+- State: Root added the borrow-liveness example and native cases for mutable local/record roots, aliases, operand evaluation, result slots, named leave and loop backedges. Tooling descriptions now include the pending guarded stack checks. Compiler and runtime implementation workers remain active.
+- Validation: The first new native test fails at the existing mutable-root B001 boundary as expected before integration. All 16 tooling regressions pass. Baseline 93 Rust/native tests and 9 supported conformance cases passed before these edits.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Integrate CFG analysis, rerun new native cases and correct real failures; qualify bounded stack allocation and guard faults in all profiles, then run the combined gate.
+
+### 2026-09-06 — Define last-use and stack-allocation boundaries
+
+- State: Compiler work will track reference temporaries and result slots as well as local aliases, with bounded CFG liveness and scoped leave/restart edges. Runtime will add explicit fallible Linux stack mappings with two guard pages; context switching remains pending. Root is adding native accepted/rejected cases.
+- Validation: Baseline cargo tests pass: 64 library and 29 native. Conformance passes 9 cases with 14 unsupported and 0 failures in debug/release. Independent review identified reference temporaries across RHS effects as an essential conflict case.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement CFG and guarded stack mappings; exercise final-use assignments, retained emissions, aliases, restarted loops and reference equality operand lifetimes, then run focused suites.
+
+### 2026-09-06 — Begin loan liveness and bounded stack work
+
+- State: Compiler CFG and backwards loan liveness are assigned to borrow_design; root owns native coverage and both trackers. Runtime bounded stack allocation is assigned to unwind_runtime; storage_review independently reviews compiler soundness. No new behavior is qualified yet.
+- Validation: The tree began clean at 89767ef. Baseline 64 library tests pass; native tests are running. Reference memory and compiler/runtime plans were reviewed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish baseline checks; implement shared borrows of mutable roots with E302 conflicts and last-use acceptance, plus guarded native stacks. Verify aliases, result transfers, loops and assignment ordering before integration.
+
 ### 2026-09-06 — Verify tracker split and continuation rules
 
 - Completed: current status and historical logs link to each other. Repository,

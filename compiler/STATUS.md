@@ -1,24 +1,19 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Guarded reference results and native cleanup integration pass.
-Full v0.0.1 remains incomplete. The implementation milestone is complete; its remaining limits are recorded below.
+Updated: 2026-09-06. Shared mutable-owner loans and guarded stack allocation pass.
+Full v0.0.1 remains incomplete. No active workers, incomplete code or failing checks remain.
+Implementation: `94b9160`; native coverage/example: `e557d63`; runtime/tooling: `7a5d286`.
 This file tracks compiler implementation; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints and completed checklists are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
-Tracker split verified: historical entries and checklists are preserved exactly;
-834 local links and diff whitespace checks pass. No implementation changed.
-Baseline commits: `54080b1` (compiler), `c82354f` (tests/examples), `f2feea2` (docs).
-Union commits: `8209163` (compiler/guard behavior), `177169e` (native coverage/example),
-`f749708` (handoff). Reference commits: `71a7baf` (compiler), `064e305` (coverage).
-Repository work: `122b022` (schema examples), `6f6a0c1` (verification tooling).
-Guarded results: `5e7ad41`. Native cleanup prototype: `e0987be`. Runtime gate: `1ba3c65`.
 
 ## Current objective
 
-Completed: guarded bare-reference block results preserve every origin and exclude
-proven discarded emissions. Native and release examples pass. The independent
-`../runtime/` cleanup prototype and combined repository gate also pass. Next:
-CFG loan liveness, aggregate/function borrow contracts and native context/unwind
-qualification before mutable/exclusive loans, owners or generated cleanup.
+Completed: bounded CFG and backwards liveness protect shared loans of mutable
+ordinary locals through aliases, reference operands, result slots and named loops.
+E302 rejects overlapping writes; final-use assignments and disjoint guarded writes
+execute. Short-circuit blocks preserve skipped effects and nonreturning control flow.
+Next: aggregate/function borrow contracts, exclusive access and native context work.
+The independent runtime qualifies guarded allocation, not task switching or DWARF.
 The existing reference remains authoritative. Do not change fixtures to make tests pass.
 
 ## Resume here
@@ -43,10 +38,10 @@ Linux 5.4/glibc 2.31 execution baseline from this workstation build.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Builds offline with no external Rust dependencies |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Implemented for the documented bootstrap subset; malformed-input and depth checks pass |
 | Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, branch narrowing and guarded emissions; 21 checker and 5 guard tests pass |
-| Shared storage/borrow origins | `src/hir.rs`, `src/borrow.rs`, `OWNERSHIP.md` | Immutable local/record places, guarded block results and all-root escape checks; 8 source-test groups pass |
+| Shared storage and loans | `src/hir.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Local/record places, guarded origins, E303 escapes and backwards E302 loan liveness |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM → ELF pipeline including tagged unions; 14 focused backend tests pass |
 | CLI and diagnostic rendering | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Implemented and exercised through native tests |
-| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 29 native tests, 4 harness tests and 7 runnable examples |
+| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 34 native tests, 4 harness tests and 8 runnable examples |
 
 Agents share this checkout. After a sudden stop, file existence is not proof that
 a component compiles. The interfaces are `parser::parse`, `check::check`,
@@ -66,7 +61,7 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | All type and callable fixtures plus negative boundary cases |
 | Required evaluation | Type-producing helpers, effect analysis, cycle checks, logical budgets, specialization | E211/E219/E220 cases and determinism/budget tests |
-| Ownership | Mutable/exclusive borrows, returned/temporary views, moves, partial initialization, captures and cleanup | Use-after-move and borrow rejection; exact-once cleanup on every exit |
+| Ownership | Exclusive borrows, reference reassignment, returned/temporary views, moves, partial initialization, captures and cleanup | Use-after-move and borrow rejection; exact-once cleanup on every exit |
 | Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation-failure behavior |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Task/unwind prototype, one-worker progress, cleanup and sanitizer tests |
 | Modules/projects | Relative imports, manifest policy, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds, duplicate/revision identity tests |
@@ -79,18 +74,22 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 
 ## Known bootstrap limits worth preserving during handoff
 
-- Shared borrowing is limited to immutable ordinary local roots and concrete
-  record fields. Parameter/receiver/emission places, mutable roots, temporary
-  owners, exclusive loans, reference-carrying aggregates/signatures and reference
-  reassignment are B001. `OWNERSHIP.md` records the remaining stages.
+- Shared borrowing supports immutable and mutable ordinary local roots and concrete
+  record fields. Parameter/receiver/emission places, temporary owners, exclusive
+  loans, reference-carrying aggregates/signatures and reference reassignment are B001. `OWNERSHIP.md` records the remaining stages.
 - Bare-reference block results support guarded alternatives and named exits.
   Every retained origin must outlive its receiving block. Discarded emissions keep
   operand effects but do not escape. Reference-carrying aggregates are still B001.
+- Shared-loan liveness preserves guards within an iteration and clears correlations
+  across restart edges. Some safe programs needing cross-iteration relationships
+  can be conservatively rejected with E302. Reads may overlap shared loans.
+- Origin fact storage and CFG origin copies each have a 262,144-entry bound; graph
+  nodes, values, live entries and work are also bounded. Exhaustion is B001.
 - Assigning predicates invalidates prior facts. Audit found 15 safe mutated-predicate
   combinations conservatively rejected with E303; stronger relation/dataflow
   tracking is pending. No unsafe acceptance was found in 288 bounded combinations.
-- `../runtime/` proves an explicit cleanup protocol only. Generated programs still
-  use the scalar runtime. Task stacks, Meowy personality/landing pads, child joins
+- `../runtime/` proves explicit cleanup and guarded stack allocation. Generated
+  programs still use the scalar runtime. Task stacks, Meowy personality/landing pads, child joins
   and cross-stack partial-result ordering must be implemented before integration.
 
 - Only direct, noncapturing functions are lowered. A function declaration can be
@@ -112,7 +111,7 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 - Shared boolean guards replace the former 4096-path enumeration limit. Node,
   cache and work budgets in `src/flow.rs` produce B001 when exhausted. Named-block
   entry conservatively forgets mutable proofs; restart with writes into surviving
-  outer result slots reports B001. Full loop fixed points and ownership MIR remain pending.
+  outer result slots reports B001. Shared-loan loop fixed points exist; ownership and emission-flow fixed points remain pending.
 - The compiler embeds its runtime archive but depends on the installed LLVM shared
   library and exact native tool paths. It is not relocatable/offline distribution packaging.
 - LLVM IR is verified before and after optimization. The bridge copies explicitly
@@ -133,14 +132,17 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 - 2026-09-06: repository was clean before implementation; no prior compiler existed.
 - 2026-09-06: detected Rust 1.98.1, LLVM/Clang/LLD 22.1.8, CMake 4.4.3,
   Ninja 1.13.2, Python 3.14.7 on the current host.
-- Previous implementation gate: `python3 -B tools/verify.py --all` passed all 14 checks outside
-  ptrace supervision. It pins the Cargo target/output path and freshly built compiler.
-- Cargo tests: 64 library and 29 native tests passed, including both output profiles.
-- Repository checks: 16 tooling and 5 runtime Python tests, 829 local links,
+- Final `python3 -B tools/verify.py --all` passed all 14 checks outside ptrace
+  supervision. It pins the Cargo target/output path and freshly built compiler.
+- Cargo tests: 72 library and 34 native tests passed, including both output profiles.
+- Repository checks: 16 tooling and 8 runtime Python tests, 836 local links,
   schema/catalog integrity, Vim and Neovim passed. Native cleanup passed 14 normal
-  cases plus 2 fatal probes in each debug/release/ASan/UBSan/LSan profile.
-- Sandbox LeakSanitizer failed due to ptrace; the unchanged full gate passed with
-  the required outside-sandbox execution. No sanitizer check was disabled.
+  cases plus 2 fatal probes in each debug/release/ASan/UBSan/LSan profile. Guarded
+  stack allocation passed 10 cases, real kernel ENOMEM and 2 exact guard faults per
+  profile. Direct guard writes verify protected addresses and alternate signal
+  stacks; they do not qualify sanitizer context-switch hooks or task overflow.
+- Earlier sandbox LeakSanitizer failed due to ptrace. This full gate ran outside
+  ptrace with sanitizers enabled; the normal allocation cases include LSan.
 - Final `python3 -m unittest discover -s compiler/tests -p 'test_*.py'`: 4 harness tests passed.
 - Final `cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings`
   and `cargo fmt --manifest-path compiler/Cargo.toml --check` both passed.
@@ -157,24 +159,31 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
   complementary predicates, field narrowing, assignment invalidation, record composition
   and restart boundaries. Eight borrow source-test groups cover all candidate
   roots, lexical aliases, retained escapes, function isolation and discarded paths. Five guard tests
-  include 16,384 independent variables.
+  include 16,384 independent variables. Eight loan groups cover aliases, operand
+  lifetimes, guarded writes, loops, scope exits, field overlap and B001 resource bounds.
+- Independent guard audit: all 196 combinations pass on the optimized compiler
+  (114 accepted, 82 E302; no unsafe acceptance or conservative rejection in this
+  matrix). Ten additional review probes also match expected acceptance/E302.
+- The optimized compiler built the borrow-liveness example with exact output
+  `41\n42\n7\n9\n0\n1\n2\n3\n`. Short-circuit native cases also verify
+  skipped effectful blocks, nonreturning operands and named leave in both profiles.
 - The reference catalog validator passed all 23 records; this was metadata validation only.
-- Release compiler build with the explicit host target succeeded. Its borrowed
-  results example prints exactly `11\n22\n42\ntrue\n` in release. The earlier
+- Earlier release compiler builds with the explicit host target ran the borrowed
+  results example with exactly `11\n22\n42\ntrue\n` in release. The earlier
   references example also passed with `true\nfalse\n42\nmeowy\n`.
   The prior release compiler also ran `examples/nullable.mwy` with exact stdout
   `meowy\nnull\nmeowy\nguest\n`. The earlier records example also passed.
-- Actual `readelf -h/-d/--version-info` inspection of `build/records` found ELF64
+- Earlier `readelf -h/-d/--version-info` inspection of `build/records` found ELF64
   x86-64 PIE, interpreter `/lib64/ld-linux-x86-64.so.2`, and only `libc.so.6` in
   DT_NEEDED. It requires GLIBC_2.34; the documented glibc 2.31 target is NOT qualified.
   No LLVM, Rust, or C++ runtime library appears in that executable's dependency list.
 
 ## Next steps
 
-1. Add an explicit storage/control-flow graph for `src/borrow.rs` with backwards
-   last-use liveness and loop fixed points. Preserve current guards and improve
-   predicate assignment relations. Test valid post-use mutation and exact E302
-   conflicts before accepting mutable/exclusive roots or reference reassignment.
+1. Extend `src/loans.rs` with explicit reads, reborrows and cleanup edges before
+   accepting exclusive loans or reference reassignment. Improve predicate assignment
+   and loop precision. Verify E302 read/write conflicts and post-use access; preserve
+   B001 on missing proofs or exhausted budgets.
 2. Extend origin sets to reference-carrying record/union components and function
    input/result contracts. Verify all-input lifetime bounds and caller substitution
    with accepted nested returns and E303 rejections; keep unknown origins B001.
@@ -183,8 +192,8 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
    and temporary-owner rejection. Do not mark unsupported tests as passing rejections.
 4. Add required evaluation, effects, logical budgets and constrained specialization.
    Then enable the type-helper, compile-effect/budget, and callable fixtures.
-5. Extend `../runtime/` beyond explicit cleanup: qualify the pinned context wrapper
-   with bounded stacks/guard pages and sanitizer hooks, then Meowy DWARF personality
+5. Connect `../runtime/` guarded stack allocation to the pinned context wrapper;
+   qualify register preservation and sanitizer hooks, then Meowy DWARF personality
    and landing pads. Test a suspended borrowing child that is cancelled and joined
    before parent cleanup. Preserve interleaved partial-result/local cleanup order.
 6. Implement project/module graphs, native adapters and Meowy standard-library
