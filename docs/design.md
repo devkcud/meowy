@@ -97,6 +97,21 @@ Formatting is whitespace and presentation. It cannot collapse bindings, reorder
 expressions, insert guessed values, or change when a function executes. The
 language reference does not depend on a formatter-specific configuration surface.
 
+## Keep failures executable and explainable
+
+A diagnostic should survive the terminal session that printed it. Numbered
+occurrences keep their source spans, repair candidates, and an executable replay
+capsule containing the failing inputs and tools. A single replay command can show
+the violated type constraint, ownership path, concrete storage cost, or recorded
+task and channel events that explain the failure.
+
+The capsule preserves the failing phase: checking errors replay checking, native
+link failures replay linking, and runtime failures replay the built program.
+Recorded evidence stays distinct from facts derived during replay. Capturing a
+schedule or external input has an explicit cost and a stated completeness limit.
+The [diagnostic contract](reference/diagnostics.md#replay-capsules) and
+[CLI workflows](cli/README.md) define those boundaries.
+
 ## Extension boundaries
 
 The following belong behind explicit library contracts or a separate language
