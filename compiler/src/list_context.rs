@@ -13,6 +13,8 @@ pub(crate) struct Scalar {
     pub(crate) checker: Checker,
     pub(crate) nodes: usize,
     pub(crate) bytes: usize,
+    pub(crate) unknown: bool,
+    pub(crate) controls: Vec<(Span, Span)>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -482,6 +484,8 @@ impl Checker {
             checker: Self::new(),
             nodes: 0,
             bytes: 0,
+            unknown: false,
+            controls: Vec::new(),
         };
         scalar.checker.scopes[0].values.clear();
         let mut pending = vec![value];
@@ -568,6 +572,19 @@ impl Checker {
                     ]
                     .contains(&op.as_str()) =>
                 {
+                    if aggregate && ["&&", "||"].contains(&op.as_str()) {
+                        let mut condition = left.as_ref();
+                        while let ExprKind::Group(value) = &condition.kind {
+                            if !self.flow.spend(1) {
+                                return Err(Diagnostic::unsupported(
+                                    "suffix control probe budget exhausted",
+                                    condition.span,
+                                ));
+                            }
+                            condition = value;
+                        }
+                        scalar.controls.push((condition.span, right.span));
+                    }
                     pending.push(right);
                     pending.push(left);
                     0
@@ -600,14 +617,15 @@ impl Checker {
                         return Ok(None);
                     };
                     let constant = match symbol {
-                        Value::Constant(value) => value,
+                        Value::Constant(value) => Some(value),
                         Value::Local {
                             ty,
-                            mutable: false,
+                            mutable,
                             owner,
-                            constant: Some(value),
+                            constant,
                             ..
                         } if *owner == self.owner
+                            && (aggregate || !mutable && constant.is_some())
                             && matches!(
                                 ty,
                                 Type::Null
@@ -617,12 +635,16 @@ impl Checker {
                                     | Type::String
                             ) =>
                         {
-                            value
+                            if *mutable {
+                                None
+                            } else {
+                                constant.as_ref()
+                            }
                         }
                         _ => return Ok(None),
                     };
                     let bytes = name.len().saturating_add(match constant {
-                        Constant::String(value) => value.len(),
+                        Some(Constant::String(value)) => value.len(),
                         _ => 0,
                     });
                     if !self.flow.spend(bytes) {
@@ -640,11 +662,12 @@ impl Checker {
                                 ty: ty.clone(),
                                 mutable: false,
                                 owner: 0,
-                                constant: Some(constant.clone()),
+                                constant: constant.cloned(),
                             }
                         }
-                        _ => Value::Constant(constant.clone()),
+                        _ => Value::Constant(constant.expect("compiler constant").clone()),
                     };
+                    scalar.unknown |= constant.is_none();
                     scalar.checker.scopes[0].values.insert(name.clone(), symbol);
                     bytes
                 }
@@ -706,6 +729,34 @@ impl Checker {
                 "scalar list checking budget exhausted",
                 value.span,
             ));
+        }
+        if scalar.unknown
+            && reach != FALSE
+            && let Err(error) = &result
+        {
+            if !self.flow.spend(scalar.controls.len() + 1) {
+                return Err(Diagnostic::unsupported(
+                    "suffix control probe budget exhausted",
+                    value.span,
+                ));
+            }
+            let uncertain = scalar.controls.iter().any(|(condition, right)| {
+                right.start <= error.span.start
+                    && error.span.end <= right.end
+                    && scalar
+                        .checker
+                        .guards
+                        .get(&(condition.start, condition.end))
+                        .is_some_and(|guard| *guard > TRUE)
+            });
+            if uncertain && error.code != "B001" {
+                let retry = self.list_pure(value, true)?.expect("validated pure suffix");
+                match self.list_pure_probe(retry, value, expected, FALSE) {
+                    Ok(Fit::Yes | Fit::Unknown) => return Ok(Fit::Unknown),
+                    Err(error) if error.code == "B001" => return Err(error),
+                    _ => {}
+                }
+            }
         }
         Ok(match result {
             Ok(_) => Fit::Yes,
@@ -1195,13 +1246,109 @@ mod tests {
             "B001",
         );
         rejects(
-            "d:@\"debug\";values<int32[1]><string[1]>:[{x:=1;d.print(1);->x}]",
+            "d:@\"debug\";values<int32[1]><string[1]>:[{x:{->n:1};d.print(1);->x}]",
             "B001",
         );
         rejects(
             "d:@\"debug\";x<uint8>:1;<A>:<{x<uint16>;y<uint8>}>;<B>:<{x<uint16>;y<uint16>}>;values<A[1]><B[1]>:[{d.print(1);->x:300;->y:x}]",
             "B001",
         );
+    }
+
+    #[test]
+    pub(crate) fn effectful_suffix_unknown_locals_keep_their_primitive_types() {
+        for source in [
+            "f<null>:(x<uint8>,flag<boolean>,text<string>,real<float32>,empty<null>){a<uint8[1]><uint16[1]>:[{0;->x}];b<boolean[1]><int32[1]>:[{0;->flag}];c<string[1]><int32[1]>:[{0;->text}];d<float32[1]><float64[1]>:[{0;->real}];e<null[1]><int32[1]>:[{0;->empty}]}",
+            "read<uint8>:(){->1};values<uint8[1]><uint16[1]>:[{x:read();->x+1}]",
+            "d:@\"debug\";values<int32[1]><string[1]>:[{x:=1;d.print(1);->x}]",
+            "text:=\"old\";values<string[1]><int32[1]>:[{text=\"new\";->text}]",
+            "<A>:<{n<uint8>}>;<B>:<{n<uint16>}>;read<uint8>:(){->1};values<A[1]><B[1]>:[{x:read();->n:x}]",
+        ] {
+            let result = crate::compile(source);
+            assert!(result.is_ok(), "{source}: {result:?}");
+        }
+        for (source, code) in [
+            ("x<uint8>:=1;values<uint16[1]><string[1]>:[{0;->x}]", "E207"),
+            (
+                "x:=1;f<null>:(){values<int32[1]><string[1]>:[{0;->x}]}",
+                "B001",
+            ),
+            (
+                "<U>:<int32><string>;x<U>:=1;values<int32[1]><string[1]>:[{0;->x}]",
+                "B001",
+            ),
+            (
+                "x:=1;r:&x;values<int32[1]><string[1]>:[{x=2;->x}];v:*r",
+                "E302",
+            ),
+        ] {
+            rejects(source, code);
+        }
+    }
+
+    #[test]
+    pub(crate) fn unknown_suffix_control_does_not_discard_live_proof_possibilities() {
+        for source in [
+            "f<null>:(flag<boolean>){|!flag|{v<boolean[1]><int32[1]>:[{0;->flag&&(1/0==0)}]}}",
+            "f<null>:(flag<boolean>){|!flag|{v<boolean[1]><int32[1]>:[{0;->(flag)&&(1/0==0)}]}}",
+            "f<null>:(flag<boolean>){|flag|{v<boolean[1]><int32[1]>:[{0;->flag||(1/0==0)}]}}",
+            "f<null>:(flag<boolean>){|flag|{v<boolean[1]><int32[1]>:[{0;->((flag))||(1/0==0)}]}}",
+            "f<null>:(flag<boolean>){|!flag|{v<boolean[1]><int32[1]>:[{0;->flag&&{->true;->false}}]}}",
+            "f<null>:(flag<boolean>){|!flag|{v<boolean[1]><int32[1]>:[{0;->(flag)&&{->true;->false}}]}}",
+            "f<null>:(flag<boolean>){|flag|{v<boolean[1]><int32[1]>:[{0;->flag||{}}]}}",
+            "d:@\"debug\";flag:=false;v<boolean[1]><string[1]>:[{d.panic(\"stop\");->flag&&(1/0==0)}]",
+        ] {
+            let result = crate::compile(source);
+            assert!(result.is_ok(), "{source}: {result:?}");
+        }
+        for (source, code) in [
+            (
+                "flag:=false;|!flag|{v<boolean[1]><int32[1]>:[{flag=true;->flag&&(1/0==0)}]}",
+                "E107",
+            ),
+            (
+                "f<null>:(flag<boolean>){v<boolean[1]><int32[1]>:[{0;->flag&&(1/0==0)}]}",
+                "E107",
+            ),
+            (
+                "<A>:<{state<boolean>;n<int8>}>;<B>:<{state<boolean>;n<int16>}>;f<null>:(flag<boolean>){v<A[1]><B[1]>:[{0;->state:true||flag;->n:1;->n:2}]}",
+                "E205",
+            ),
+            (
+                "<A>:<{state<boolean>;n<int8>}>;<B>:<{state<boolean>;n<int16>}>;f<null>:(flag<boolean>){|!flag|{v<A[1]><B[1]>:[{0;->state:flag&&(1/0==0);->n:1}]}}",
+                "B001",
+            ),
+        ] {
+            rejects(source, code);
+        }
+    }
+
+    #[test]
+    pub(crate) fn ordinary_unknown_reads_are_never_deferred_as_constants() {
+        let program = crate::compile("x:=1;v<int32[2]><string[2]>:[x+1,{x=9;->3}]").unwrap();
+        let crate::hir::Stmt::Bind { value, .. } = &program.body.stmts[1] else {
+            panic!("list binding")
+        };
+        let mut value = value;
+        while let crate::hir::ExprKind::Coerce { value: inner } = &value.kind {
+            value = inner;
+        }
+        let crate::hir::ExprKind::List { values, .. } = &value.kind else {
+            panic!("list value")
+        };
+        assert!(matches!(
+            values[0].kind,
+            crate::hir::ExprKind::Binary { .. }
+        ));
+        assert!(matches!(values[1].kind, crate::hir::ExprKind::Block(_)));
+        let tree = crate::parser::parse("x:=1;x+1").unwrap();
+        let mut checker = crate::check::Checker::new();
+        checker.stmt(&tree.stmts[0]).unwrap();
+        let crate::ast::StmtKind::Expr(value) = &tree.stmts[1].kind else {
+            panic!("scalar expression")
+        };
+        assert!(checker.list_scalar(value).unwrap().is_none());
+        assert!(!checker.list_deferred(value).unwrap());
     }
 
     #[test]

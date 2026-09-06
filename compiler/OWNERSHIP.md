@@ -298,8 +298,11 @@ implementation boundary; it does not change language rules.
   and normal block finalization. The prefix is never replayed or deferred past a
   later list element, and no synthetic union substitutes for the candidates.
 - Suffix probes admit pure scalar/list/fresh-record construction and same-owner
-  immutable primitive constants from the prefix or surrounding scope, preserving
-  their exact types. Mutable/nonconstant names, captures, typed-record names,
+  primitive locals from the prefix or surrounding scope, preserving exact types.
+  Nonconstant/mutable locals use typed unknown values with normalized local IDs;
+  mutable initializer values, narrowings and live guard/borrow identities are not
+  copied. Ordinary scalar probes and deferral stay constant-only, so these reads
+  cannot move across later effects. Captures, reference/record/union names,
   references to names emitted by the suffix, direct matcher prefixes and effects
   after the first emission remain B001 when context is unresolved. These limits
   do not restrict ordinary checking after earlier constraints select one type.
@@ -310,6 +313,14 @@ implementation boundary; it does not change language rules.
   earlier deferred or later element constraints remain; otherwise this bounded
   path returns B001 without moving later effects ahead. Pure suffix AST size/bytes
   are charged before copying, and all candidate/context work shares existing caps.
+- Unknown suffix locals can lose enclosing Boolean proof relationships. If a
+  failing diagnostic lies within an `&&`/`||` RHS whose scratch condition remains
+  symbolic, one fresh dead-reach probe checks whether that failure is conditional.
+  Group wrappers use the condition's actual lowered span. A disappearing failure
+  preserves an Unknown candidate; ordinary live checking still decides a sole
+  candidate, while unresolved alternatives remain B001. Unconditional structural
+  failures are unchanged. Both probes and the bounded control scan share the same
+  work budget; no placeholder is assigned a fabricated zero/false/string value.
 - Multiple proved candidates report E207, as does no element-compatible candidate;
   when every capacity is too small, E103 applies. There is no smallest-capacity or
   default-width preference. Single-candidate literal failures retain their existing
