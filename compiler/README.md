@@ -29,6 +29,7 @@ compiler/target/debug/meowy run compiler/examples/borrow-functions.mwy
 compiler/target/debug/meowy run compiler/examples/reborrows.mwy
 compiler/target/debug/meowy run compiler/examples/scope-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/bounded-lists.mwy
+compiler/target/debug/meowy run compiler/examples/list-unions.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -56,6 +57,8 @@ and receiver copies with shared receivers that keep the original owner alive.
 The [bounded lists example](examples/bounded-lists.mwy) preserves an original list
 while appending to its copy, checks one-based positions and compares initialized
 elements within an unchanged inline capacity.
+The [list unions example](examples/list-unions.mwy) chooses list alternatives by
+element type, literal range and capacity while preserving concrete element widths.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -78,6 +81,8 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   and borrowed literal strings. Numeric operations preserve the operand types.
 - Immutable and mutable local bindings; checked integer arithmetic, bitwise
   operations, comparisons, and short-circuit boolean operators.
+  Unary operators keep their operand type before the result enters an expected
+  union, preserving checked widths and boolean operations.
 - Blocks with primary and immutable named emissions, record composition,
   scalar-primary projection, dispatch, and duplicate/uninitialized slot checks.
 - Normalized scalar/record unions, nullable field and primary defaults, and
@@ -143,8 +148,14 @@ unavailable. Bootstrap limits are 65,536 slots and 1 MiB of inline layout per li
 exceeding those implementation budgets reports B001. Dynamic bounds/fullness
 failures report P001/P003 with the position or capacity, initialized length and
 source byte span. They exit through the initial panic runtime.
-Literal inference across multiple expected list alternatives remains B001; bind
-the literal with one concrete list type first, then inject that value into the union.
+With several expected list alternatives, capacity and compatible element types
+must select exactly one. Multiple viable choices report E207; all capacities being
+too small reports E103. Literal range can select a width, but no preference is given
+to a smaller capacity or a default numeric width. Pure contextual literals may wait
+for typed elements; other expressions are checked once in source order.
+Unresolved contextual effects or nested candidate constraints remain B001: provide
+an explicit element/list annotation. Candidate selection allows up to 256 list
+alternatives and charges the existing analysis work budget.
 
 References can pass through local blocks and immutable aliases while their owners
 remain alive. The checker reuses branch/completion proofs and checks all possible
@@ -224,6 +235,7 @@ the fixture catalog and does not execute the compiler.
 | --- | --- |
 | `src/lexer.rs`, `src/parser.rs`, `src/ast.rs` | Lossless tokens and punctuation-aware syntax |
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
+| `src/list.rs`, `src/list_context.rs` | Bounded lists, literal candidate constraints and inference work budgets |
 | `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
 | `src/borrow.rs` | Guarded component origins, block-result transfers and lexical lifetime checks |
 | `src/borrow_contract.rs` | Symbolic function inputs, caller origin substitution and all-input lifetime bounds |

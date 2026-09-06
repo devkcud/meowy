@@ -1,0 +1,15 @@
+debug : @"debug"
+
+<Numbers> : <int32[2]>
+<Words> : <string[2]>
+
+numbers<Numbers><Words> : [10, 20]
+words<Numbers><Words> : ["meowy"]
+|numbers<Numbers>| debug.print(numbers[2])
+|words<Words>| debug.print(words[1])
+
+amount<uint8[1]><uint16[1]> : [300]
+|amount<uint16[1]>| debug.print(amount[1])
+
+selected<int32[1]><int32[2]> : [1, 2]
+|selected<int32[2]>| debug.print(selected.size())

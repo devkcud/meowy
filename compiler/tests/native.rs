@@ -101,6 +101,10 @@ pub fn examples_execute_in_both_profiles() {
             "2\n3\nAda\nLin\ntrue\n0\n",
         ),
         (
+            include_str!("../examples/list-unions.mwy"),
+            "20\nmeowy\n300\n2\n",
+        ),
+        (
             include_str!("../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
@@ -2163,4 +2167,172 @@ d.print(longer[2])
     let result = Case::new(source).command("check", &["--json"]);
     assert_eq!(result.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&result.stderr).contains("\"code\":\"E101\""));
+}
+
+#[test]
+pub fn list_union_literals_select_unique_types_capacities_and_widths() {
+    Case::new(
+        r#"
+d:@"debug"
+values<int32[1]><string[1]>:[1]
+words<int32[1]><string[1]>:["one"]
+|values<int32[1]>|d.print(values[1])
+|words<string[1]>|d.print(words[1])
+two<int32[1]><int32[2]>:[11,22]
+|two<int32[2]>|{d.print(two.size());d.print(two[2])}
+wide<uint8[1]><uint16[1]>:[300]
+|wide<uint16[1]>|d.print(wide[1])
+byte<uint8>:7
+typed<uint8[2]><uint16[2]>:[8,byte]
+|typed<uint8[2]>|{d.print(typed[1]);d.print(typed[2])}
+large<uint64>:9
+late<int32[2]><uint64[2]>:[4294967295,large]
+|late<uint64[2]>|{d.print(late[1]);d.print(late[2])}
+optional<int32[1]><string[1]><null>:[4]
+|optional<int32[1]>|d.print(optional[1])
+<Value>:<int32><string>
+member<Value>:5
+existing<Value[1]><int32[1]>:[member]
+|existing<Value[1]>|{element:existing[1];|element<int32>|d.print(element<int32>)}
+record:{->23;->tag:"record"}
+projected<int32[1]><string[1]>:[record]
+|projected<int32[1]>|d.print(projected[1])
+empty<uint8[0]><uint8[0]>:[]
+d.print(empty.size())
+"#,
+    )
+    .runs(b"1\none\n2\n22\n300\n8\n7\n4294967295\n9\n4\n5\n23\n0\n");
+}
+
+#[test]
+pub fn list_union_literals_preserve_nested_and_record_contexts() {
+    Case::new(
+        r#"
+d:@"debug"
+nested<int32[2][2]><string[2][2]>:[[1],[2,3]]
+|nested<int32[2][2]>|{d.print(nested[2][2]);d.print(nested[1].size())}
+inner<int32[2]>:[7]
+typed<int32[1][1]><int32[2][1]>:[inner]
+|typed<int32[2][1]>|d.print(typed[1][1])
+numeric<uint8[2][1]><uint16[2][1]>:[[300]]
+|numeric<uint16[2][1]>|d.print(numeric[1][1])
+<Row>:<{value<int32>;name<string>}>
+<Other>:<{message<string>}>
+row<Row>:{->value:17;->name:"row"}
+rows<Row[2]><Other[2]>:[row]
+|rows<Row[2]>|{d.print(rows[1].name);d.print(rows[1].value)}
+records<Row[1]><Row[2]>:[{->value:1;->name:"first"},{->value:2;->name:"second"}]
+|records<Row[2]>|d.print(records[2].name)
+<A>:<{value<int64>;tag<string><null>}>
+<B>:<{value<string>}>
+fresh<A[1]><B[1]>:[{->value:7}]
+accept64<int64>:(value<int64>){->value}
+|fresh<A[1]>|{d.print(accept64(fresh[1].value));|fresh[1].tag<null>|d.print("missing tag")}
+"#,
+    )
+    .runs(b"3\n1\n7\n300\nrow\n17\nsecond\n7\nmissing tag\n");
+}
+
+#[test]
+pub fn list_union_literals_reject_ambiguous_or_impossible_contexts() {
+    for (source, code) in [
+        ("values<uint8[1]><uint16[1]>:[1]", "E207"),
+        ("values<int32[2]><int32[3]>:[1]", "E207"),
+        ("values<int32[0]><string[2]>:[]", "E207"),
+        ("values<int32[2]><string[2]>:[true]", "E207"),
+        ("byte<uint8>:7;values<uint16[1]><string[1]>:[byte]", "E207"),
+        ("values<int32[1]><string[2]>:[1,2,3]", "E103"),
+        ("values<int32[1]><string[2]>:[1,2]", "E207"),
+        ("values<uint8[1]><int8[1]>:[256]", "E207"),
+        ("values<uint8[1]>:[256]", "E216"),
+        ("values<int32[1][1]><int32[2][1]>:[[1]]", "E207"),
+        (
+            "<Value>:<int32><string>;values<Value[1]><int32[1]>:[1]",
+            "E207",
+        ),
+        ("values<int32[2]><string[2]>:[1,missing]", "E201"),
+        ("values<int32[2]><string[2]>:[1,1/0]", "E107"),
+    ] {
+        let case = Case::new(source);
+        for profile in ["debug", "release"] {
+            let result = case.command("build", &["--json", "--profile", profile]);
+            assert_eq!(result.status.code(), Some(1), "{source}");
+            let error = String::from_utf8_lossy(&result.stderr);
+            assert!(
+                error.contains(&format!("\"code\":\"{code}\"")),
+                "{source}: {error}"
+            );
+            assert!(!case.path.join("build").exists());
+        }
+    }
+}
+
+#[test]
+pub fn list_union_candidate_checks_preserve_effect_order_and_single_evaluation() {
+    Case::new(
+        r#"
+d:@"debug"
+mark<int32>:(value<int32>){d.print(value);->value}
+selected<int32[3]><string[3]>:[mark(1),mark(2)]
+|selected<int32[3]>|d.print(selected[1]+selected[2])
+wide<uint64>:(){d.print("wide");->7}
+large<uint64[2]><string[2]>:[4294967295,wide()]
+|large<uint64[2]>|{d.print(large[1]);d.print(large[2])}
+count:=0
+ordered<int32[1]><int32[2]>:[{d.print("first");count=count+1;->count},{d.print("second");count=count+1;->count}]
+|ordered<int32[2]>|{d.print(ordered[1]);d.print(ordered[2])}
+d.print(count)
+"#,
+    )
+    .runs(b"1\n2\n3\nwide\n4294967295\n7\nfirst\nsecond\n1\n2\n2\n");
+}
+
+#[test]
+pub fn list_union_candidate_checks_preserve_early_exits_and_panics() {
+    Case::new(
+        r#"
+d:@"debug"
+'out {
+    unused<int32[1]><int32[2]>:[{d.print("before");'out.leave();->1},2]
+    d.print("unreachable")
+}
+d.print("done")
+"#,
+    )
+    .runs(b"before\ndone\n");
+    let source =
+        "d:@\"debug\";values<int32[1]><int32[2]>:[1,{d.print(\"element\");d.panic(\"stop\")}]";
+    let case = Case::new(source);
+    for profile in ["debug", "release"] {
+        let result = case.command("run", &["--profile", profile]);
+        assert_eq!(result.status.code(), Some(1));
+        assert_eq!(result.stdout, b"element\n");
+        assert_eq!(result.stderr, b"panic[P006]: stop\n");
+    }
+}
+
+#[test]
+pub fn unary_results_enter_expected_unions_after_operand_evaluation() {
+    Case::new(
+        r#"
+d:@"debug"
+<Logic>:<boolean><null>
+logic<Logic[1]>:[!true]
+choice<int32[1]><Logic[1]>:[!true]
+first:logic[1]
+|first<boolean>|d.print(first<boolean>)
+|choice<Logic[1]>|{value:choice[1];|value<boolean>|d.print(value<boolean>)}
+<Number>:<int8><null>
+number<int8>:5
+single<Number[2]>:[-number,~number]
+selected<Number[2]><string[2]>:[-number,~number]
+negative:single[1]
+|negative<int8>|d.print(negative<int8>)
+|selected<Number[2]>|{value:selected[2];|value<int8>|d.print(value<int8>)}
+<Float>:<float32><null>
+value<Float>:-({->1.5})
+|value<float32>|d.print(value<float32>)
+"#,
+    )
+    .runs(b"false\nfalse\n-5\n-6\n-1.5\n");
 }
