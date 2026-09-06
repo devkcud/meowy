@@ -30,6 +30,7 @@ compiler/target/debug/meowy run compiler/examples/reborrows.mwy
 compiler/target/debug/meowy run compiler/examples/scope-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/bounded-lists.mwy
 compiler/target/debug/meowy run compiler/examples/list-unions.mwy
+compiler/target/debug/meowy run compiler/examples/compound-lists.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -59,6 +60,8 @@ while appending to its copy, checks one-based positions and compares initialized
 elements within an unchanged inline capacity.
 The [list unions example](examples/list-unions.mwy) chooses list alternatives by
 element type, literal range and capacity while preserving concrete element widths.
+The [compound lists example](examples/compound-lists.mwy) selects element widths
+using checked intermediate values, grouped negation and short-circuit expressions.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -168,9 +171,17 @@ must select exactly one. Multiple viable choices report E207; all capacities bei
 too small reports E103. Literal range can select a width, but no preference is given
 to a smaller capacity or a default numeric width. Pure contextual literals may wait
 for typed elements; other expressions are checked once in source order.
+Pure scalar unary/binary expressions can also constrain candidates, including
+grouped negation, arithmetic, bitwise operations and Boolean comparisons. Their
+intermediate values use each candidate's exact width: `(127+1)-1` cannot select
+`int8` merely because its final mathematical result is 127. Immutable scalar
+constants retain their declared types. Short circuits and the expression's original
+reach determine whether arithmetic executes; later effects are never replayed.
+Unannotated lists keep their existing common-type rules for compound expressions.
 Unresolved contextual effects or nested candidate constraints remain B001: provide
 an explicit element/list annotation. Candidate selection allows up to 256 list
-alternatives and charges the existing analysis work budget.
+alternatives and 4,096 nodes per pure scalar tree, charging constant bytes and
+repeated checking work to the existing shared analysis budget.
 
 References can pass through local blocks and immutable aliases while their owners
 remain alive. The checker reuses branch/completion proofs and checks all possible

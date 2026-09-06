@@ -105,6 +105,10 @@ pub fn examples_execute_in_both_profiles() {
             "20\nmeowy\n300\n2\n",
         ),
         (
+            include_str!("../examples/compound-lists.mwy"),
+            "128\n-128\nfalse\n260\n",
+        ),
+        (
             include_str!("../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
@@ -2540,4 +2544,149 @@ value<Float>:-({->1.5})
 "#,
     )
     .runs(b"false\nfalse\n-5\n-6\n-1.5\n");
+}
+
+#[test]
+pub fn compound_list_candidates_preserve_intermediate_widths_and_typed_leaves() {
+    Case::new(
+        r#"
+d:@"debug"
+grouped<int8[1]><int16[1]>:[-(128)]
+|grouped<int16[1]>|d.print(grouped[1])
+intermediate<int8[1]><int16[1]>:[(127+1)-1]
+|intermediate<int16[1]>|d.print(intermediate[1])
+negative<int8[1]><int16[1]>:[-(-128)]
+|negative<int16[1]>|d.print(negative[1])
+bits<int8[1]><uint8[1]>:[~128]
+|bits<uint8[1]>|d.print(bits[1])
+byte<uint8>:1
+typed<uint8[1]><int16[1]>:[byte+1]
+|typed<uint8[1]>|d.print(typed[1])
+wide<uint64>:18446744073709551615
+exact<uint64[1]><int64[1]>:[wide-1]
+|exact<uint64[1]>|d.print(exact[1])
+"#,
+    )
+    .runs(b"-128\n127\n128\n127\n2\n18446744073709551614\n");
+}
+
+#[test]
+pub fn compound_list_candidates_keep_short_circuit_and_float_rules() {
+    Case::new(
+        r#"
+d:@"debug"
+flags<boolean[2]><int32[2]>:[false&&(1/0==0),true||(1/0==0)]
+|flags<boolean[2]>|{d.print(flags[1]);d.print(flags[2])}
+core:@"core"
+yes:core.true
+logic<boolean[1]><string[1]>:[yes&&("a"<"b")]
+|logic<boolean[1]>|d.print(logic[1])
+wide<float32[1]><float64[1]>:[1e39-1e39]
+|wide<float64[1]>|d.print(wide[1]==0.0)
+seed<float32>:1.0
+rounded<float32[2]><float64[2]>:[1.0000000596046447753906250000000001+0.0,seed]
+expected<float32>:1.00000011920928955078125
+|rounded<float32[2]>|d.print(rounded[1]==expected)
+"#,
+    )
+    .runs(b"false\ntrue\ntrue\ntrue\ntrue\n");
+}
+
+#[test]
+pub fn compound_list_candidates_resolve_nested_literals_and_record_fields() {
+    Case::new(
+        r#"
+d:@"debug"
+values<uint8[1][1]><uint16[1][1]>:[[250+10]]
+|values<uint16[1][1]>|d.print(values[1][1])
+<Small>:<{value<int8>}>
+<Wide>:<{value<int16>}>
+rows<Small[1]><Wide[1]>:[{->value:(127+1)-1}]
+|rows<Wide[1]>|d.print(rows[1].value)
+"#,
+    )
+    .runs(b"260\n127\n");
+}
+
+#[test]
+pub fn compound_list_resolution_does_not_replay_effectful_elements() {
+    Case::new(
+        r#"
+d:@"debug"
+count:=0
+values<int8[2]><uint8[2]>:[127+1,{d.print("after");count=count+1;->1}]
+|values<uint8[2]>|{d.print(values[1]);d.print(values[2])}
+d.print(count)
+mark<uint8>:(){d.print("typed");->7}
+later<uint8[2]><uint16[2]>:[1+1,mark()]
+|later<uint8[2]>|{d.print(later[1]);d.print(later[2])}
+"#,
+    )
+    .runs(b"after\n128\n1\n1\ntyped\n2\n7\n");
+}
+
+#[test]
+pub fn compound_list_candidates_preserve_ambiguity_and_source_errors() {
+    for (source, code) in [
+        ("values<int8[1]><int16[1]>:[1+1]", "E207"),
+        ("values<int8[1]><uint8[1]>:[~1]", "E207"),
+        ("values<int8[1]><uint8[1]>:[-(128)]", "E207"),
+        ("values<int8[1]><int16[1]>:[1/0]", "E207"),
+        ("values<float32[1]><float64[1]>:[3e38+3e38]", "E207"),
+        ("byte<int8>:127;values<int8[1]><int16[1]>:[byte+1]", "E107"),
+        ("values<int8[1]>:[(127+1)-1]", "E107"),
+        ("values<int8[1]>:[-(128)]", "E216"),
+        ("values<int8[2]><string[2]>:[1,missing+1]", "E201"),
+        (
+            "value<uint8>:1;values<uint8[1]><uint16[1]>:[{d:@\"debug\";d.print(1);->1}]",
+            "B001",
+        ),
+        (
+            "outer<int8>:1;f<null>:(){values<int8[1]><int16[1]>:[outer+1]}",
+            "B001",
+        ),
+    ] {
+        let case = Case::new(source);
+        for profile in ["debug", "release"] {
+            let output = case.command("build", &["--json", "--profile", profile]);
+            assert_eq!(output.status.code(), Some(1), "{source}");
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(
+                error.contains(&format!("\"code\":\"{code}\"")),
+                "{source}: {error}"
+            );
+            assert!(!case.path.join("build").exists());
+        }
+    }
+}
+
+#[test]
+pub fn compound_list_probes_respect_saved_reach_and_runtime_inputs() {
+    let prefix = r#"d:@"debug";stop<never>:(){d.print("stop");d.panic("end")};"#;
+    let source = format!("{prefix}values<int8[2]><int16[2]>:[stop(),(127+1)-1]");
+    let output = Case::new(&source).command("check", &["--json"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E207\""));
+    let source = format!("{prefix}values<int8[2]><int16[2]>:[(127+1)-1,stop()]");
+    let start = source.find("d.panic(\"end\")").unwrap();
+    let end = start + "d.panic(\"end\")".len();
+    let case = Case::new(&source);
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(output.stdout, b"stop\n");
+        assert_eq!(
+            output.stderr,
+            format!("panic[P006]: end at bytes {start}..{end}\n").as_bytes()
+        );
+    }
+    let source = "number<int8>:=127;values<int8[1]><int16[1]>:[number+1]";
+    let start = source.find("number+1").unwrap();
+    let case = Case::new(source);
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert_eq!(output.stderr, format!("panic[P002]: int8 + overflow (left 127, right 1; range -128..127) at bytes {start}..{}\n", start + "number+1".len()).as_bytes());
+    }
 }
