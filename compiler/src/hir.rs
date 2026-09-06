@@ -3,6 +3,7 @@ use crate::ast::Span;
 pub type LocalId = usize;
 pub type FunctionId = usize;
 pub type BlockId = usize;
+pub type EmitId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -120,6 +121,7 @@ pub enum Stmt {
         value: Expr,
     },
     Emit {
+        id: EmitId,
         target: BlockId,
         field: Option<String>,
         value: Expr,

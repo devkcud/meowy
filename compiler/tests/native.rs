@@ -69,6 +69,10 @@ pub fn examples_execute_in_both_profiles() {
         ),
         (include_str!("../examples/loop.mwy"), "5050\n"),
         (
+            include_str!("../examples/borrow-results.mwy"),
+            "11\n22\n42\ntrue\n",
+        ),
+        (
             include_str!("../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
@@ -638,7 +642,6 @@ pub fn shared_reference_scope_checks_run_before_native_lowering() {
     for (source, code) in [
         ("view:{owner:1;->&owner}", "E303"),
         ("bad:(){owner:1;ref:&owner;alias:ref;->alias}", "E303"),
-        ("owner:1;view:{->&owner}", "B001"),
         ("owner:=1;view:&owner", "B001"),
         ("view:&(1+2)", "B001"),
         ("owner:1;view:&owner;view.{->*self}", "B001"),
@@ -654,5 +657,95 @@ pub fn shared_reference_scope_checks_run_before_native_lowering() {
             );
             assert!(!case.path.join("build").exists());
         }
+    }
+}
+
+#[test]
+pub fn guarded_block_results_preserve_all_reference_origins() {
+    Case::new(
+        r#"
+debug:@"debug"
+choose<int32>:(flag<boolean>){
+    left:11
+    right:22
+    view:{|flag|->&left;|!flag|->&right}
+    alias:{->view}
+    debug.print(alias==&left)
+    ->*alias
+}
+debug.print(choose(true))
+debug.print(choose(false))
+owner:{->value:37}
+view:'result{{'result->&owner.value;'result.leave()}}
+debug.print(*view)
+copy:{->view}
+debug.print(copy==view)
+"#,
+    )
+    .runs(b"true\n11\nfalse\n22\n37\ntrue\n");
+}
+
+#[test]
+pub fn discarded_reference_results_preserve_effects_and_owner_lifetimes() {
+    Case::new(
+        r#"
+debug:@"debug"
+owner:42
+again:=true
+view:'result {
+    |again|{
+        local:1
+        debug.print("retry")
+        'result->&local
+        again=false
+        'result.restart()
+    }
+    ->&owner
+}
+debug.print(*view)
+debug.print(view==&owner)
+'outer {
+    {local:8;->&local;debug.print("leave");'outer.leave()}
+}
+flag:false
+'scope {local:1;|flag|->&local}
+debug.print("done")
+"#,
+    )
+    .runs(b"retry\n42\ntrue\nleave\ndone\n");
+    let case = Case::new("debug:@\"debug\";{local:1;->&local;debug.panic(\"stop\")}");
+    for profile in ["debug", "release"] {
+        let result = case.command("run", &["--profile", profile]);
+        assert_eq!(result.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&result.stderr).contains("P006"));
+    }
+}
+
+#[test]
+pub fn guarded_local_escapes_are_rejected_before_lowering() {
+    for (source, code) in [
+        (
+            "bad:(flag<boolean>){outer:1;view:'result{|flag|{local:2;'result->&local};|!flag|->&outer};->*view}",
+            "E303",
+        ),
+        (
+            "bad:(flag<boolean>){view:{local:2;|flag|->&local;|!flag|->&local};->*view}",
+            "E303",
+        ),
+        ("'result{{local:1;'result->&local;'result.leave()}}", "E303"),
+        ("owner:1;view:{->field:&owner}", "B001"),
+        (
+            "f<null>:(flag<boolean>){owner:1;view:{|flag|->&owner}}",
+            "B001",
+        ),
+    ] {
+        let case = Case::new(source);
+        let result = case.command("check", &["--json"]);
+        assert_eq!(result.status.code(), Some(1), "{source}");
+        let errors = String::from_utf8_lossy(&result.stderr);
+        assert!(
+            errors.contains(&format!("\"code\":\"{code}\"")),
+            "{source}: {errors}"
+        );
     }
 }

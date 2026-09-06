@@ -1,0 +1,26 @@
+debug : @"debug"
+
+number <int32> : (first <boolean>) {
+    left : 11
+    right : 22
+    view : { | first | -> &left; | !first | -> &right }
+    -> *view
+}
+
+debug.print(number(true))
+debug.print(number(false))
+
+owner : 42
+again := true
+view : 'result {
+    | again | {
+        local : 1
+        'result -> &local
+        again = false
+        'result.restart()
+    }
+    -> &owner
+}
+
+debug.print(*view)
+debug.print(view == &owner)

@@ -466,6 +466,7 @@ impl<'a> Generator<'a> {
                     target,
                     field,
                     value,
+                    ..
                 } => {
                     let result = self.expression(value)?;
                     if self.ended {
@@ -1297,11 +1298,13 @@ mod tests {
                 ty: ty.clone(),
                 stmts: vec![
                     Stmt::Emit {
+                        id: 0,
                         target: id,
                         field: None,
                         value: primary,
                     },
                     Stmt::Emit {
+                        id: 0,
                         target: id,
                         field: Some("field".into()),
                         value: field,
@@ -1504,6 +1507,7 @@ mod tests {
                     stmts: vec![Stmt::If {
                         condition: expr(ExprKind::Bool(present), Type::Bool),
                         then: vec![Stmt::Emit {
+                            id: 0,
                             target: id,
                             field: Some("name".into()),
                             value: expr(ExprKind::String("hello".into()), Type::String),
@@ -1537,6 +1541,7 @@ mod tests {
                             id: 4,
                             ty: ty.clone(),
                             stmts: vec![Stmt::Emit {
+                                id: 0,
                                 target: 4,
                                 field: None,
                                 value: expr(ExprKind::String("primary".into()), Type::String),
@@ -1578,6 +1583,7 @@ mod tests {
                     ),
                     then: vec![
                         Stmt::Emit {
+                            id: 0,
                             target: 1,
                             field: Some("name".into()),
                             value: expr(ExprKind::String("discarded".into()), Type::String),
@@ -1666,6 +1672,7 @@ mod tests {
                         Type::Null,
                     )),
                     Stmt::Emit {
+                        id: 0,
                         target: 1,
                         field: None,
                         value: expr(ExprKind::String("value".into()), Type::String),
@@ -1733,6 +1740,7 @@ mod tests {
                     id: 1,
                     ty: wide,
                     stmts: vec![Stmt::Emit {
+                        id: 0,
                         target: 1,
                         field: None,
                         value: expr(ExprKind::Local(0), small.clone()),
@@ -1768,6 +1776,7 @@ mod tests {
                             Type::Null,
                         )),
                         Stmt::Emit {
+                            id: 0,
                             target: id,
                             field: None,
                             value: expr(ExprKind::String("discarded".into()), Type::String),
@@ -1796,6 +1805,7 @@ mod tests {
                         ),
                         then: vec![
                             Stmt::Emit {
+                                id: 0,
                                 target: 1,
                                 field: None,
                                 value: coerce(
@@ -1804,6 +1814,7 @@ mod tests {
                                 ),
                             },
                             Stmt::Emit {
+                                id: 0,
                                 target: 1,
                                 field: Some("absent".into()),
                                 value: effect(3, "field:"),
@@ -1817,6 +1828,7 @@ mod tests {
                         otherwise: Vec::new(),
                     },
                     Stmt::Emit {
+                        id: 0,
                         target: 1,
                         field: None,
                         value: integer(7, 32, true),

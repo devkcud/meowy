@@ -87,6 +87,7 @@ pub(crate) struct Checker {
     pub(crate) functions: Vec<Option<hir::Function>>,
     pub(crate) locals: Vec<Type>,
     pub(crate) places: BTreeSet<usize>,
+    pub(crate) proofs: crate::borrow::Proofs,
     pub(crate) constants: BTreeMap<usize, Constant>,
     pub(crate) block: usize,
     pub(crate) owner: usize,
@@ -101,7 +102,7 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
                 functions: checker.functions.into_iter().flatten().collect(),
                 locals: checker.locals,
             };
-            crate::borrow::check(&program)?;
+            crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
             Ok(program)
         }
         Err(error) => Err(vec![if checker.flow.exceeded() {
@@ -144,6 +145,7 @@ impl Checker {
             functions: Vec::new(),
             locals: Vec::new(),
             places: BTreeSet::new(),
+            proofs: crate::borrow::Proofs::default(),
             constants: BTreeMap::new(),
             block: 0,
             owner: 0,
@@ -702,6 +704,7 @@ impl Checker {
         let frame = self.frames.pop().expect("frame");
         self.reach = self.flow.or(self.reach, frame.leaves);
         let ty = self.block_type(&frame, expected.as_ref(), block.span)?;
+        self.proofs.completions.insert(id, self.reach);
         if self.flow.exceeded() {
             return Err(Diagnostic::unsupported(
                 "control-flow proof budget exhausted",
@@ -1271,21 +1274,21 @@ impl Checker {
                 unreachable!()
             };
             self.write_slot(target, None, *primary.clone(), mutable, span)?;
-            stmts.push(hir::Stmt::Emit {
+            stmts.push(self.emission(
                 target,
-                field: None,
-                value: hir::Expr {
+                None,
+                hir::Expr {
                     kind: hir::ExprKind::Primary(Box::new(local.clone())),
                     ty: *primary,
                     span,
                 },
-            });
+            ));
             for (index, (field, ty)) in fields.into_iter().enumerate() {
                 self.write_slot(target, Some(field.clone()), ty.clone(), mutable, span)?;
-                stmts.push(hir::Stmt::Emit {
+                stmts.push(self.emission(
                     target,
-                    field: Some(field),
-                    value: hir::Expr {
+                    Some(field),
+                    hir::Expr {
                         kind: hir::ExprKind::Field {
                             value: Box::new(local.clone()),
                             index,
@@ -1293,7 +1296,7 @@ impl Checker {
                         ty,
                         span,
                     },
-                });
+                ));
             }
         } else if let Some(name) = name {
             let ty = value.ty.clone();
@@ -1311,24 +1314,36 @@ impl Checker {
                 span,
             )?;
             stmts.push(hir::Stmt::Bind { id, value });
-            stmts.push(hir::Stmt::Emit {
+            stmts.push(self.emission(
                 target,
-                field: Some(name.into()),
-                value: hir::Expr {
+                Some(name.into()),
+                hir::Expr {
                     kind: hir::ExprKind::Local(id),
                     ty,
                     span,
                 },
-            });
+            ));
         } else {
             self.write_slot(target, None, value.ty.clone(), mutable, span)?;
-            stmts.push(hir::Stmt::Emit {
-                target,
-                field: None,
-                value,
-            });
+            stmts.push(self.emission(target, None, value));
         }
         Ok(stmts)
+    }
+
+    pub(crate) fn emission(
+        &mut self,
+        target: hir::BlockId,
+        field: Option<String>,
+        value: hir::Expr,
+    ) -> hir::Stmt {
+        let id = self.proofs.emissions.len();
+        self.proofs.emissions.insert(id, self.reach);
+        hir::Stmt::Emit {
+            id,
+            target,
+            field,
+            value,
+        }
     }
 
     pub(crate) fn write_slot(
@@ -2405,6 +2420,7 @@ impl Checker {
                                 target,
                                 field: None,
                                 value,
+                                ..
                             },
                         ] if *target == block.id => self.constant(value),
                         _ => None,
