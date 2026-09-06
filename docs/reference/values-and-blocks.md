@@ -90,6 +90,23 @@ type. A declared non-null result must emit on every normally completing path.
 Every declared non-null field must also be initialized on every such path. A
 nullable field omitted on a path is initialized to `null`.
 
+Without an expected record type, the block's shape contains every named slot
+emitted on any reachable normally completing path. Infer each slot's type as the
+normalized union of its emitted expression types, adding `null` when a completing
+path omits it. Thus `{|flag|->name:"hello"}` has `name<string><null>` and a null
+primary; the field exists on both paths. The same join rule applies to the primary.
+There is no numeric widening between different already typed values. A slot's
+mutability must agree at all of its emissions (`E206` otherwise).
+
+With an expected type, check each emission against that slot's declared type;
+do not first infer a wider union. Non-completing paths (`never`, leave to an outer
+scope, or an iteration discarded by restart) contribute no completed value.
+A block with no normally completing path has type `never`. Flow analysis uses
+the control-flow graph, boolean constants, stable type predicates and their
+negations, and short-circuit edges; it need not prove arbitrary arithmetic
+identities to accept mutually exclusive emissions. When that proof is absent,
+use an explicit leaving arm as above. A same-slot second emission remains `E205`.
+
 An emission into an unnamed nested block stays in that block. It does not become
 an emission into the parent by proximity. Use a label to target the parent, or
 emit the completed nested value explicitly.

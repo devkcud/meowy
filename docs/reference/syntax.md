@@ -4,7 +4,14 @@
 
 Source files use UTF-8 and the `.mwy` extension. Names are case-sensitive. The
 portable identifier set is ASCII letters, digits, and `_`, with a letter or `_`
-first. Type aliases conventionally start with an uppercase letter.
+first. This revision accepts exactly that identifier set; non-ASCII text remains
+valid in strings and comments. Type aliases conventionally start with an uppercase letter.
+
+Outside strings/comments, whitespace is ASCII space, tab, LF, or CRLF. CRLF is
+one statement-ending newline; a bare CR, a leading UTF-8 BOM, and other Unicode
+spacing characters are invalid tokens (`E001`). Source offsets still count the
+original bytes. Inside strings, CRLF is retained as two bytes. Comments act as
+token separators; newlines inside a comment do not terminate a statement.
 
 ## No keywords
 
@@ -70,6 +77,25 @@ default to `<int32>` and unconstrained decimals to `<float64>`. A default that
 cannot represent a literal is a diagnostic, not an automatic promotion. Negative
 numbers use unary `-`.
 
+Digit separators are single `_` characters between two digits of the literal's
+base. Decimal leading zeroes are decimal, not octal. Hexadecimal prefixes are
+`0x`/`0X`, binary prefixes `0b`/`0B`; each needs a digit. Decimal floats have
+digits on both sides of `.` and/or an `e`/`E` exponent with optional sign and at
+least one decimal digit. `1.`, `.5`, `1__0`, and `0x_ff` are not numeric literals;
+there are no numeric suffixes. A digit-starting malformed number such as `12cat`
+is one invalid token, not a number followed by a name. `1.(f)` is instead an
+integer followed by dispatch. Float literals round once to the expected binary
+precision, ties to even; overflow to infinity is `E216`, and underflow to a
+subnormal or signed zero is allowed.
+
+Unary `-` immediately applied to an integer literal, with only whitespace or
+comments between them, checks the **negated mathematical value** against the
+expected signed type. Thus `x<int8>:-128` is valid. `128` alone as `int8` and
+`x<int8>:-(128)` are `E216`; parentheses end this literal rule. Negating an
+already typed signed minimum is checked arithmetic (`E107` or runtime panic).
+Unsigned negation is not defined, including a negated literal with an unsigned
+expected type. A leading sign remains an operator, never part of the token.
+
 ## Statements and delimiters
 
 A newline terminates a complete statement. `;` explicitly separates statements,
@@ -113,6 +139,7 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `-> name := value`                      | Mutable named emission                                           |
 | `(x <T>) { ... }`                       | Function value                                                   |
 | `f <R> : (x <T>) { ... }`               | Function declaration with result type `R`                        |
+| `f <(T)->R>;`                           | Forward signature, completed by the following definition group   |
 | `f(value)`                              | Function call                                                    |
 | `value.name`                            | Field selection                                                  |
 | `value.(f)`                             | Call `f` with `value` as its first argument                      |
@@ -218,6 +245,11 @@ to separate two identifiers. A function type instead contains an arrow after its
 parameter list: `<(T)->R>`. Bare computed annotations such as `other name<>:value`
 are not part of the grammar. See [type queries](types.md#type-queries).
 
+A computed type atom accepts ordinary extent suffixes before the final type
+delimiter: `<(element)[capacity]>` and `<(element)[]>`. The expression must
+produce `core.Type`; see [compile-time evaluation](compile-time.md). This does
+not change the contextual rule for a type suffix after a runtime expression.
+
 ## Operators and evaluation order
 
 From highest to lowest precedence:
@@ -268,3 +300,39 @@ constraints use punctuation in their type binders; returned borrows follow the
 [lifetime rules](memory.md#lifetimes); native layout is selected by a normal
 compile-time call to `ffi.record`. `!{ ... }` marks a boundary for operations
 requiring a safety proof; it does not disable type checking.
+
+### Forward function groups
+
+An annotation-only statement `name<(Parameters)->Result>;` reserves an immutable,
+non-capturing function in the current value scope. It is recognized at statement
+start when an identifier and a complete function-type annotation reach a statement
+terminator without a binding operator. It is not an ascription expression statement;
+parenthesize such an expression to discard an ascribed function value instead.
+
+One or more consecutive forward signatures must be followed immediately by exactly
+one function definition for each reserved name, in any order. Comments and blank
+lines may intervene; no other statement may interrupt this group. Each definition
+must have the exact parameter/result types and safety requirement promised by its
+signature. The whole group is initialized together before subsequent statements.
+Bodies see all signatures in the group; no partially initialized pointer can be
+called or escape. A definition may use `->` to export its completed function.
+This fulfills the reservation rather than redeclaring the name.
+
+```meowy
+even<(uint32)->boolean>;
+odd<(uint32)->boolean>;
+even<boolean>:(n<uint32>) 'answer {
+    |n==0|{'answer->true;'answer.leave()}
+    ->odd(n-1)
+}
+odd<boolean>:(n<uint32>) 'answer {
+    |n==0|{'answer->false;'answer.leave()}
+    ->even(n-1)
+}
+```
+
+The first revision permits concrete, non-capturing groups only. Generic or
+capturing forward declarations, unfinished groups, and mismatched definitions
+use `E221`. Ordinary single-function recursion still uses its own declared
+signature without a forward group. Nonfunction bindings require initializers;
+this syntax does not introduce general uninitialized storage.

@@ -35,6 +35,16 @@ promise exactly four initialized elements. An unannotated nonempty literal has
 capacity equal to its element count and a common inferred element type. Use an
 annotation when you want extra capacity or a union element type.
 
+For an unannotated literal, all already typed elements must have one identical
+normalized type. Check untyped scalar literals against that type; if there are
+no typed elements, apply the ordinary scalar defaults and require the resulting
+types to agree. No new union, numeric promotion, or primary projection is invented
+to reconcile elements. Thus `[1,2]` is `int32[2]`, a typed `uint8` beside literal
+`2` produces `uint8[2]`, and `[1,"two"]` requires an explicit union element
+annotation (`E207` otherwise). If the existing common type is already a union,
+ordinary assignment of a member into that union is allowed. An expected list
+type checks every element against its declared element type and capacity instead.
+
 `.add(value)` consumes a list and returns the updated list of the same type. A
 full list panics; if fullness is known at compile time, the operation is rejected.
 For recoverable capacity checks, `.try_add(value)` returns the updated list or

@@ -103,26 +103,30 @@ owner simply by deleting `N`.
 
 See [types](types.md) and [values and blocks](values-and-blocks.md).
 
-| Code   | Diagnostic and trigger                               | Evidence and repair direction                                                                                                               |
-| ------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `E201` | Unknown value name or member                         | Show the lookup and its scope or receiver type; identify a missing import or binding without treating the spelling as syntax                |
-| `E202` | Unknown type name                                    | Show the type lookup and available namespace; import, qualify, or declare the intended type                                                 |
-| `E203` | Binding already declared in this scope               | Mark both declarations in the same namespace; choose another name or an intentional inner scope                                             |
-| `E204` | Required result component is uninitialized           | Show the required primary or field and a completing path that does not initialize it or provide a permitted default                         |
-| `E205` | Result component may be emitted twice                | Mark both emissions and the path connecting them; emit once or use control flow that excludes the second write                              |
-| `E206` | Conflicting expanded fields                          | Show each origin and incompatible field declarations; give the composition one unambiguous shape                                            |
-| `E207` | Incompatible initializer or assignment               | Show the required binding type and actual value type; choose a compatible value or explicitly change the contract                           |
-| `E208` | Type ascription lacks a proof                        | Show the current flow type and requested type; establish narrowing before using `value<T>`                                                  |
-| `E209` | Type subtraction cannot represent the result         | Show the source set and removed alternative; use a predicate when subtracting a literal from an unrestricted primitive                      |
-| `E210` | Generic capability requirement is not satisfied      | Show the instantiated type, constrained binder, and operation needing `Copy`, `Send`, or another declared capability                        |
-| `E211` | Type depends on a runtime value                      | Show the runtime dependency reaching a type expression; supply a compile-time argument or keep the choice in ordinary value storage         |
-| `E212` | Call or generic arguments do not match the signature | Show required arity/types or unresolved/conflicting type binders beside the supplied arguments; nullable parameters still require arguments |
-| `E213` | Numeric operands require an explicit conversion      | Show both already-typed operand types; convert deliberately rather than silently changing width or signedness                               |
-| `E214` | Public function signature is incomplete              | Mark missing parameter or result annotations at the exported boundary; state the public contract                                            |
-| `E215` | Matcher condition is not boolean                     | Show the condition type; use an explicit comparison or type predicate rather than implicit truthiness                                       |
-| `E216` | Literal is not representable in its expected type    | Show the literal and target range; choose the intended width or a representable value                                                       |
-| `E217` | Invalid custom error definition                      | Mark the offending `errors.define` descriptor field or code and show the required static metadata contract                                  |
-| `E218` | Invalid testing descriptor or callback               | Mark invalid Suite/Case shape, callback result/captures, panic expectation, skip reason, or runtime-dependent metadata                      |
+| Code   | Diagnostic and trigger                                  | Evidence and repair direction                                                                                                                     |
+| ------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `E201` | Unknown value name or member                            | Show the lookup and its scope or receiver type; identify a missing import or binding without treating the spelling as syntax                      |
+| `E202` | Unknown type name                                       | Show the type lookup and available namespace; import, qualify, or declare the intended type                                                       |
+| `E203` | Binding already declared in this scope                  | Mark both declarations in the same namespace; choose another name or an intentional inner scope                                                   |
+| `E204` | Required result component is uninitialized              | Show the required primary or field and a completing path that does not initialize it or provide a permitted default                               |
+| `E205` | Result component may be emitted twice                   | Mark both emissions and the path connecting them; emit once or use control flow that excludes the second write                                    |
+| `E206` | Conflicting expanded fields                             | Show each origin and incompatible field declarations; give the composition one unambiguous shape                                                  |
+| `E207` | Incompatible initializer or assignment                  | Show the required binding type and actual value type; choose a compatible value or explicitly change the contract                                 |
+| `E208` | Type ascription lacks a proof                           | Show the current flow type and requested type; establish narrowing before using `value<T>`                                                        |
+| `E209` | Type subtraction cannot represent the result            | Show the source set and removed alternative; use a predicate when subtracting a literal from an unrestricted primitive                            |
+| `E210` | Generic capability requirement is not satisfied         | Show the instantiated type, constrained binder, and operation needing `Copy`, `Send`, or another declared capability                              |
+| `E211` | Type depends on a runtime value                         | Show the runtime dependency reaching a type expression; supply a compile-time argument or keep the choice in ordinary value storage               |
+| `E212` | Call or generic arguments do not match the signature    | Show required arity/types or unresolved/conflicting type binders beside the supplied arguments; nullable parameters still require arguments       |
+| `E213` | Numeric operands require an explicit conversion         | Show both already-typed operand types; convert deliberately rather than silently changing width or signedness                                     |
+| `E214` | Public function signature is incomplete                 | Mark missing parameter or result annotations at the exported boundary; state the public contract                                                  |
+| `E215` | Matcher condition is not boolean                        | Show the condition type; use an explicit comparison or type predicate rather than implicit truthiness                                             |
+| `E216` | Literal is not representable in its expected type       | Show the literal and target range; choose the intended width or a representable value                                                             |
+| `E217` | Invalid error definition or static constructor metadata | Mark the offending error descriptor field, code or static-message constructor argument and show the required metadata contract                    |
+| `E218` | Invalid testing descriptor or callback                  | Mark invalid Suite/Case shape, callback result/captures, panic expectation, skip reason, or runtime-dependent metadata                            |
+| `E219` | Forbidden compile-time effect                           | Show the required evaluation root and transitive call reaching I/O, runtime resources, mutation of external storage, or another forbidden effect. |
+| `E220` | Compile-time evaluation budget exceeded                 | Show the root, exhausted logical counter, limit and active helper stack; bounded evaluation does not depend on wall-clock time.                   |
+| `E221` | Invalid forward function group                          | Show the reserved signature and missing, mismatched, capturing or generic definition, or the statement interrupting the group.                    |
+| `E222` | Operator is not defined for these operands              | Show the operation and complete operand types; use a supported comparison or explicit library operation.                                          |
 
 `E207` covers initialization as well as later assignment. Changing `"twenty"` to
 `20` is not a type conversion defined by the language. `E208` concerns a value
@@ -137,8 +141,9 @@ and missing exported result annotations `E214`. See
 Flow evidence invalidated by a write or mutating call must be shown at that
 operation, so a programmer can see why an earlier type test no longer suffices.
 
-`E217` covers malformed static [error definitions](stdlib/errors.md#define-and-construct-an-error);
-runtime-dependent type construction remains `E211`. A custom application's
+`E217` covers malformed static [error definitions](stdlib/errors.md#define-and-construct-an-error)
+and static metadata for `cli.invalid`/`io.error`. Runtime-dependent type
+construction or a runtime value supplied as static metadata remains `E211`. A custom application's
 error code is metadata on a returned value, not an entry in this compiler catalog.
 
 ## Ownership, borrows, and storage

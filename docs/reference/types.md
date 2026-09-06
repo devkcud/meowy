@@ -6,6 +6,9 @@ meowy is statically typed. Every binding, field, parameter, emission, and task
 result has a type before execution. Type expressions are compile-time values;
 ordinary runtime control flow cannot change a type or specialize a function.
 
+The [compile-time reference](compile-time.md) defines the `core.Type` value kind,
+user-defined type-producing helpers, purity, and deterministic evaluation limits.
+
 ## Primitive and storage types
 
 | Type                     | Meaning                                                    |
@@ -75,7 +78,8 @@ be passed as `<error>` without allocation. An error retaining arbitrary inline
 owners must stay concrete or have its payload explicitly boxed before erasure.
 In a matcher, the predicate `value<error>` recognizes either representation
 without converting it. References may shorten their lifetimes, and an exclusive
-reference may be reborrowed as shared. Other storage conversions are explicit.
+reference may be reborrowed as shared. A non-capturing function item may coerce
+to its expected full pointer signature as described below. Other storage conversions are explicit.
 In particular, making a slice of a bounded list uses `list.slice()`.
 
 On an erased `<error>`, a concrete matcher tests the retained nominal tag. It
@@ -218,8 +222,27 @@ function type. Function parameters are required, including nullable parameters;
 `<null>` permits a value, not an omitted argument. Parameter and result types of
 public functions must be explicit. Local function results may be inferred.
 
+An inferred non-capturing function value has a concrete **function-item type**,
+identified by its declaration and concrete generic substitution. This retains its
+signature and proven capabilities such as `core.Pure`. Aliasing without an
+annotation preserves that type. Its runtime storage is a code pointer; definition
+identity is static information, not an allocated environment or an observable
+address-comparison API. Two functions with the same signature can have different
+item types and effects.
+
+An expected full function-pointer type, as on `callback`, permits an allocation-free
+item-to-pointer coercion with the same signature and safety requirement. That
+coercion forgets definition identity and purity. A mutable pointer binding may
+then hold another pointer of the same signature; an inferred item binding cannot
+change to a different item type. This is the only implicit callable representation
+conversion. Capturing closures never undergo it. Generic inference from an
+unannotated function item preserves its concrete type and capabilities instead
+of first converting it to a pointer. A forward group reserves these item signatures;
+its completed definitions establish their capabilities together before use.
+
 `(parameters) !{ ... }` creates a function with a caller-proven safety contract.
-Its type is `<!(Parameters) -> Result>` and its calls require a `!{ ... }` block.
+Its callable signature carries `!`, and a non-capturing item may coerce to
+`<!(Parameters) -> Result>`. Its calls require a `!{ ... }` block.
 Assigning it to an ordinary function pointer cannot erase that requirement.
 An ordinary function may use an inner `!{ ... }` block after checking the necessary
 preconditions itself. Neither form introduces a keyword.
@@ -458,12 +481,118 @@ word-based modifier on a declaration.
 ### Callable environments
 
 Capturing functions have an inferred, concrete environment type. They are not
-function pointers and do not implicitly allocate. A closure borrows captures
-when possible; an escaping closure must move the required owners into its
-environment. Consuming a capture makes the closure callable only once. A closure
-that mutates captures needs exclusive access to its environment on every call.
-Generic function parameters can preserve a closure's concrete type; converting
-it into a dynamically dispatched callable requires explicit allocated storage.
+function pointers and do not implicitly allocate. Statically resolved function
+items (including self and forward-group calls), module identities, and type or
+capability values are compile-time references and do not create runtime captures.
+This exception does not turn an ordinary outer scalar binding into a static
+reference merely because an optimizer can fold it. A selected runtime module
+field still follows its access and lifetime rules.
+A capture mutated by the body must originate from a mutable binding, whether
+its mode is copy, borrow, or move. Each copyable capture is copied; mutation of
+that capture changes a mutable environment slot, not the original binding.
+Read-only copies stay immutable.
+For other captures, consuming use moves the owner into the environment; read-only
+use borrows shared, and mutation borrows exclusively when the environment stays
+within the owner's lifetime. If that cannot be proven, capture an owning binding
+by move instead, with a mutable environment slot when needed. A borrowed binding
+remains a borrow: escaping never manufactures ownership of its referent. Reject
+an environment whose retained borrows would outlive their storage.
+
+Capture analysis uses the whole function value's uses and chooses one concrete
+environment and mode per capture; modes never change at runtime or after an
+earlier use. Passing only a reference to a callable through a lifetime-bounded
+call does not itself escape the environment. Creation performs captures once in
+first lexical occurrence order. Moving a capture invalidates its original binding
+at creation, not at first invocation. Consuming an environment field makes the
+closure callable once; mutating it requires exclusive access on every call.
+
+The following well-known capabilities express callable requirements. `S` is one
+concrete function signature, for example `(int32)->int32`; it can also include
+the existing `!` safety requirement. They inspect a callable's actual signature
+and capture behavior, never invoke it, and never allocate a dictionary.
+
+| Capability         | Call contract                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `core.Call<S>`     | Repeated calls through shared access to the environment.                                             |
+| `core.CallMut<S>`  | Repeated calls through exclusive access.                                                             |
+| `core.CallOnce<S>` | One call consuming the environment and its remaining owners.                                         |
+| `core.Pure`        | A callable has no external effects, as defined in [compile-time evaluation](compile-time.md#purity). |
+
+`Call<S>` implies `CallMut<S>` and `CallOnce<S>`; `CallMut<S>` implies
+`CallOnce<S>`. A non-capturing function pointer satisfies all three for its exact
+signature, as does a function item. Only the item retains a body's purity proof.
+Calling through `&F` requires `Call`, through `&!F` requires `CallMut`,
+and consuming `F` requires `CallOnce`. A call needing `CallMut` because `Call` is
+unavailable requires a mutable location. Calling a `CallOnce`-only binding moves it; calling a repeatable
+binding borrows it. These rules also apply to statically typed direct closures.
+A `!` signature still requires an unchecked block at the eventual call site.
+
+```meowy
+core:@"core"
+apply<:F:core.Call<(int32)->int32>><int32>:(f<&F>,value<int32>){
+    ->f(value)
+}
+offset:7
+add_offset:(value<int32>){->value+offset}
+answer:apply(&add_offset,3) # 10; concrete capture, no box #
+```
+
+An unconstrained `F` cannot be called (`E210`). Signatures are invariant: no implicit
+argument conversion, result widening, or safety-requirement removal. A closure
+is `memory.Copy` exactly when it satisfies `Call` and every captured constituent
+is copyable. Its `Send`/`Sync` properties follow the [transfer table](tasks-and-channels.md#transfer-and-synchronization).
+
+Library method selection such as `file.read` constructs a concrete bound callable
+without invoking the method. A borrowing method captures its receiver reference
+at selection; a consuming method captures it by move. Retained bound callables
+therefore keep their receiver borrow active. Stateful methods require exclusive
+access; `file.read` cannot be selected twice while those borrows overlap. Ordinary
+record function fields remain ordinary fields and receive no implicit receiver.
+
+Generic functions are templates, not first-class runtime values. To pass a
+specialization, use a wrapper such as `f:(x<int32>){->identity<int32>(x)}`; `identity<int32>`
+without call parentheses remains an ascription. No hidden specialization or
+boxing is inferred from an expected callback type. Public functions accepting
+closures use the capability constraints above; local adapter results may preserve
+their inferred environment type. No general dynamically dispatched callable
+conversion is provided by this revision.
+
+## Ordinary operator domains
+
+Operators borrow operands for inspection; they do not consume resource owners.
+Arithmetic returns a bare numeric scalar even when it projects an aggregate's
+primary. It does not carry metadata fields into the result. Numeric operands
+obey the same-type rule above; untyped literals receive the other operand's
+expected type before defaulting.
+
+| Operation                             | Accepted types and result                                                                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `+`, `-`, `*`, `/`                    | Same integer or float type; result has that type.                                                                                        |
+| `%`, binary `&`, `^`, `\|`, unary `~` | Integers; binary operands have the same type and the result preserves it.                                                                |
+| Unary `-`                             | Signed integers or floats; same result type.                                                                                             |
+| `!`, `&&`, `\|\|`                     | Booleans; boolean result, with short-circuiting as specified by syntax.                                                                  |
+| `<`, `<=`, `>`, `>=`                  | Same numeric type or two strings; boolean result. Strings compare unsigned UTF-8 bytes lexicographically; floats with NaN compare false. |
+| `==`, `!=`                            | Compatible equality types below; boolean result, and `!=` negates `==`.                                                                  |
+
+Equality is defined for null, booleans, numbers, strings (exact bytes), and safe
+references/raw pointers of the same type (address equality, no dereference).
+Zero-sized referents need not have distinct addresses. Slices compare lengths
+and initialized elements in order; bounded lists of the same capacity and arrays
+of the same length do likewise. Their elements must support equality. Record
+types must have the same exact shape, and every field and primary must support
+equality. Unions require the same normalized union type: different alternatives
+compare false, and equal alternatives compare their payloads. Every alternative
+must itself support equality, even if a particular value holds null.
+
+Two aggregates use full-shape equality. An aggregate compared with a compatible
+scalar projects its primary; predicates and type queries still inspect its full
+type. These comparison projections do not define record width subtyping.
+Function pointers, closures, erased `any`/`error`, and opaque library types do not
+support ordinary equality unless their module explicitly declares it. Numeric
+NaN behavior is unchanged; equality is not promised to be an equivalence relation
+for every eligible type. Use an explicit library operation for a resource's domain
+comparison. Unsupported operators use `E222`; no user-defined operator lookup is
+performed. `testing.equal` uses this exact eligibility and comparison contract.
 
 ## Conversion and type erasure
 

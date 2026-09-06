@@ -136,3 +136,9 @@ after_string : 44
 TODO >> <{ nested { [ ( and another "
 #
 after_comment : 45
+
+forward<(int32)->boolean>;
+apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}
+type_factory<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}
+smallest<int8>:-128
+after_contracts : 46

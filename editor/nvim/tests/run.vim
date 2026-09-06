@@ -199,6 +199,18 @@ call s:At('TODO >> <{ nested { [ ( and another "', 'TODO', 'meowyTodo')
 call s:At('TODO >> <{ nested { [ ( and another "', '>>', 'meowyComment')
 call s:At('after_comment : 45', 'after_comment', 'meowyBinding')
 
+" Forward signatures, callable capabilities and type-producing helpers.
+call s:At('forward<(int32)->boolean>;', 'int32', 'meowyTypeName')
+call s:At('forward<(int32)->boolean>;', ';', 'meowyPunctuation')
+call s:At('apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}', 'Call', 'meowyTypeName')
+call s:At('apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}', 'Pure', 'meowyTypeName')
+call s:At('type_factory<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}', 'Type', 'meowyTypeName')
+call s:At('type_factory<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}', '[capacity]', 'meowyTypeDelimiter')
+call s:At('type_factory<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}', '[capacity]', 'meowyTypeName', 1)
+call s:At('smallest<int8>:-128', '-', 'meowyOperator')
+call s:At('smallest<int8>:-128', '128', 'meowyNumber')
+call s:At('after_contracts : 46', 'after_contracts', 'meowyBinding')
+
 " Explicit opt-out for users who do not want lexical emphasis on prelude names.
 let g:meowy_highlight_builtin_values = 0
 syntax clear
