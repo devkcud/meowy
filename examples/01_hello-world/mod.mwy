@@ -1,6 +1,0 @@
--> import : {
-    -> debug : {
-        -> fetch : "codeberg.org/meowy-lang/debug"
-        -> tag : "v2.0.1"
-    }
-}

@@ -1,0 +1,101 @@
+# Design decisions
+
+[Documentation index](README.md)
+
+meowy's small vocabulary is useful only when its combinations have predictable
+meaning. These decisions keep the composable surface while making storage,
+execution, and failure visible.
+
+## Preserve the core
+
+Blocks construct values with a primary and named fields. Emitters initialize
+those components without ending execution. Dispatch composes transformations.
+Independent matchers control which statements run. Named scopes express early
+completion and repetition.
+
+This provides the common vocabulary for functions, records, modules, and
+configuration. It does not make their execution rules interchangeable: a block
+evaluates now, a function evaluates on a call, a field access reads data, and a
+module initializes once. Parentheses are required for calls, including zero-argument
+calls. Reading a value must never accidentally repeat I/O.
+
+## Make the type system explain the storage
+
+A mutable binding retains its declared or inferred type. Unions represent actual
+alternatives; subtraction operates on types, and narrowing requires control-flow
+evidence. Generic parameters describe compile-time specialization rather than a
+placeholder that can turn any string into any requested type.
+
+Record shape is structural and exact. A record with a null primary remains a
+record. Type predicates inspect the complete value, while scalar operations can
+inspect a compatible primary. Named composition cannot conceal collisions.
+Owned type erasure is explicit and preserves destruction information.
+
+Fixed-width numbers, checked arithmetic, concrete union storage, and explicit
+native layout allow a programmer to reason about costs before running a program.
+The native ABI is a boundary, not a property inferred from similar-looking syntax.
+
+## Distinguish capacity from allocation
+
+`T[N]` preserves the bounded-list meaning: up to `N` initialized elements inline.
+An exact-size array is a different type. `T[]` is a borrowed slice; a growable
+vector takes an allocator. Named list positions remain bounded literal aliases,
+while runtime key lookup uses a map with its own storage and ordering contract.
+
+One-based indexing remains part of the language. Binary offsets are translated
+explicitly, and raw pointers do not reuse list indexing as unchecked arithmetic.
+Large value copies are possible and visible; references avoid them when needed.
+
+## Give work an owner
+
+`>>` starts a task and `<<` joins it. A task has one result owner and a lexical
+lifetime. A group is bounded, returns outcomes in submission order, and retains
+slots for errors and cancellation. Groups are not globals or implicitly lazy
+iterators. A function cannot hide an escaping child behind an ordinary result.
+
+Cancellation requests cleanup; it does not destroy a running thread. A deadline
+is a monotonic value with explicit units and does not waive a join's lifetime
+obligation. The compact timed forms `>1000>` and `<1000<` are replaced by
+`.deadline(time.after(time.ms(...)))`, keeping timing policy out of punctuation.
+
+Channels carry many messages, use explicit capacity for backpressure, and move
+message ownership. Separate sender and receiver endpoints make shutdown precise.
+The receiver gets `Item<T>` or `Closed`, so sending a nullable payload does not
+make end-of-stream ambiguous. Failed sends return their unsent owner.
+
+## Keep ordinary programs safe at a low level
+
+Inline storage and explicit allocators avoid automatic garbage collection.
+Moves, borrows, and deterministic cleanup keep ownership inspectable. Unsafe
+blocks permit native memory operations with stated preconditions; they cannot
+excuse a data race or extend a dead allocation's lifetime.
+
+Formatting can stream output. Allocated strings, vectors, erased owners, task
+storage, and channel queues have visible construction boundaries. A library
+cannot promise allocation-free behavior while hiding a dynamic lookup table
+behind field syntax.
+
+## Keep configuration and tools small
+
+A manifest declares a graph of inputs and exports. Dependency selectors resolve
+to locked immutable content. Compile-time evaluation is pure and bounded; it
+cannot execute arbitrary dependency-provided build scripts.
+
+Formatting is whitespace and presentation. It cannot collapse bindings, reorder
+expressions, insert guessed values, or change when a function executes. The
+language reference does not depend on a formatter-specific configuration surface.
+
+## Extension boundaries
+
+The following belong behind explicit library contracts or a separate language
+proposal, rather than unspecified behavior inside the core:
+
+- Shared ownership and user-defined destruction protocols, including cycle policy.
+- Completion-order selection over several channels, including fairness rules.
+- Lazy streams and iterators with pull-based cancellation and borrowing.
+- Dynamic library loading, managed callbacks, and foreign exception translation.
+- Extra numeric formats, SIMD, packed data, and platform-specific intrinsics.
+
+Any extension must state its representation, lifetime, allocation behavior,
+failure outcomes, and interaction with scope cleanup. Surface shorthand comes
+after those rules are clear.

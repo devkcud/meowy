@@ -1,9 +1,0 @@
-name : "Hello"
-
-name<> # <string> #
-
-# -------- #
-
-name <string><null> : null
-
-new_name name<>!<null> # <string> # : null # compile-time error #
