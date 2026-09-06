@@ -1,0 +1,558 @@
+# mod.full.mwy -- the knobs, with the volume turned down. #
+# Every setting below is commented out. Nothing is enabled by this file. #
+# Copy selected sections into your project's mod.mwy, then uncomment the code #
+# lines and their enclosing braces by removing the paired comment delimiters. #
+# Keep the explanation lines commented. Edit example paths before enabling them. #
+# This filename is a reference; only mod.mwy is discovered as a manifest. #
+# Paths below resolve from the installed manifest, not from this guide. #
+# See mod.md for the walkthrough and mod.sample.mwy for a small active template. #
+# Default means the value used when omitted; Example means a deliberate choice. #
+# Leave profile- and preset-dependent settings omitted to follow those defaults. #
+# Unknown fields/options are errors. All configuration is pure compile-time data. #
+
+# IMPORT -- local source aliases and package dependencies. #
+# Reference: ../reference/modules-and-ffi.md and mod.md. #
+# Omitted import: no project aliases or package dependencies. Foundational #
+# modules such as time, errors, and testing need no dependency declaration. #
+# -> import : { #
+#     Alias names are arbitrary identifiers, unique across aliases/dependencies. #
+#     Foundational names cannot be shadowed. Default: no aliases. #
+#     -> aliases : { #
+#         Example: @"wire/header.mwy" resolves to ./codec/header.mwy. #
+#         Targets are relative source directories; ../shared is also allowed. #
+#         No URLs, absolute paths, environment expansion, or alias substitution. #
+#         -> wire : "./codec" #
+#     } #
+
+#     Example local package: it needs its own mod.mwy and export facade. #
+#     Import it as @"geometry". path cannot combine with fetch/hash/tag/ref. #
+#     -> geometry : { #
+#         -> path : "../geometry" #
+#     } #
+
+#     Remote examples: replace the illustrative URL and revision before use. #
+#     Choose one dependency record, with fetch and exactly one selector. #
+#     -> geometry_commit : { #
+#         -> fetch : "https://example.com/geometry.git" #
+#         Example full commit identifier; never a shortened hash or version range. #
+#         -> hash : "0123456789abcdef0123456789abcdef01234567" #
+#     } #
+#     -> geometry_release : { #
+#         -> fetch : "https://example.com/geometry.git" #
+#         Example release tag; resolves to an immutable revision in mod.lock. #
+#         -> tag : "v1.0.0" #
+#     } #
+#     -> geometry_branch : { #
+#         -> fetch : "https://example.com/geometry.git" #
+#         Example branch/reference; mod.lock pins the resolved revision. #
+#         -> ref : "main" #
+#     } #
+# } #
+# Run meowy deps resolve after adding remote dependencies; deps update NAME #
+# deliberately advances a selected lock. Ordinary builds do not rewrite it. #
+
+# EXPORT -- the public package facade. #
+# Reference: mod.md, Choose the public exports. No fixed list of export names. #
+# Omitted export: no declared package facade. Keep the application entry separate. #
+# -> export : { #
+#     Example from the packet project's layout, using the alias above. #
+#     -> packet : @"wire/header.mwy" #
+#     Example public metadata; this is a package value, not tool configuration. #
+#     -> package_version : "0.1.0" #
+# } #
+
+# BUILD -- target, optimization, native inputs, and task runtime. #
+# References: ../reference/modules-and-ffi.md, Build settings; #
+# ../reference/optimization.md, Select build policy in mod.mwy. #
+# -> build : { #
+#     Example source path; no implicit entry. A library/test-only project may #
+#     omit it. An explicit CLI entry overrides it; import aliases do not apply. #
+#     -> entry : "./main.mwy" #
+
+#     Default: "debug". Options: "debug", "release". Both retain safety checks. #
+#     -> profile : "debug" #
+#     Example cross target; omitted means the recorded host target, not null. #
+#     The selected toolchain must supply the target and required runtime inputs. #
+#     -> target : "x86_64-unknown-linux-musl" #
+#     Default: "baseline". Or a CPU name supported by the selected target. #
+#     "native" and automatic probing of the builder's CPU are not accepted. #
+#     -> cpu : "baseline" #
+
+#     Default: "none" in debug, "speed" in release. #
+#     Options: "none", "speed", "size", "smallest". #
+#     -> optimize : "none" #
+#     Default: 1. Positive uint32 compilation/LTO backend concurrency limit. #
+#     This limits build jobs, not task workers, test processes, or memory bytes. #
+#     -> jobs : 1 #
+#     Default: "embedded" in debug, "separate" in release. #
+#     Options: "embedded", "separate", "none". Required unwind/diagnostic #
+#     metadata remains in all modes; separate companions match the exact binary. #
+#     -> debug_info : "embedded" #
+
+#     Omitted link fields use the defaults below. #
+#     -> link : { #
+#         Default: "platform". Options: "platform", "static", "shared". #
+#         This selects runtime linkage, not a monolithic stdlib or output kind. #
+#         Static must satisfy every native input; no fallback to shared inputs. #
+#         -> mode : "platform" #
+#         Default: true. false retains emitted sections for investigation; #
+#         it does not force every unused generic or stdlib item to be generated. #
+#         -> dead_strip : true #
+#         Default: "off". Options: "off", "thin", "full". #
+#         A requested but unavailable LTO capability is an error. #
+#         -> lto : "off" #
+#         Default: "off" in debug, "safe" in release. Options: "off", "safe". #
+#         Safe folding must preserve observable identity. #
+#         -> icf : "off" #
+#     } #
+
+#     Default: no additional native artifacts. Provide exact selected link #
+#     artifacts required by foreign bindings; no implicit library-name search. #
+#     Example list: ["./native/libcodec.a"], relative to this manifest. #
+#     An empty list adds none. Native inputs must match the target/link policy. #
+#     -> native : [] #
+
+#     Optional: no standalone executor is created when this record is omitted. #
+#     All four values below are an EXAMPLE budget, not inferred defaults. #
+#     Standalone code using tasks must explicitly supply an executor; an embedded #
+#     host may instead provide one through its runtime boundary. #
+#     -> executor : { #
+#         Positive worker count; blocked foreign calls can occupy workers. #
+#         -> workers : 2 #
+#         Positive admitted-but-unjoined task limit; includes queued and #
+#         settled-but-unjoined children. Joining releases admission capacity. #
+#         -> max_tasks : 64 #
+#         Positive per-task stack byte budget; not the executor's total memory. #
+#         -> stack_bytes : 65_536 #
+#         Standalone allocator option: "system" for stacks and scheduler state. #
+#         -> allocator : "system" #
+#     } #
+# } #
+# Effective profile defaults follow CLI --profile; explicit values stay explicit. #
+# CLI --target overrides target for one invocation. No setting disables the #
+# ownership, bounds, arithmetic, or cleanup rules. Unused stdlib code follows #
+# reachability, so there is no separate list of stdlib packages to link. #
+
+# TEST -- discovery and isolated case execution. #
+# Reference: ../reference/stdlib/testing.md. #
+# Omitted test block selects schema 1 defaults. All shown values are defaults. #
+# -> test : { #
+#     Required when the block is present; supported schema: 1. #
+#     -> version : 1 #
+#     Relative directories or exact _test.mwy files. No globs/import aliases. #
+#     Discovery stays within this project; nested manifests and build are skipped. #
+#     CLI paths narrow these roots. An absent implicit ./tests means no cases; #
+#     an explicitly declared missing path is a resolution error. #
+#     -> paths : ["./tests"] #
+#     Positive uint32 maximum concurrent case processes, each with fresh state. #
+#     Separate from build.jobs and the per-case build.executor. #
+#     -> processes : 1 #
+#     Positive uint32 milliseconds from launch through cleanup, or null to #
+#     disable the watchdog. Hard termination cannot guarantee cleanup/replay. #
+#     -> timeout_ms : 30_000 #
+#     Positive uint32 combined stdout/stderr byte cap per case. Exceeding it #
+#     fails the case and retains a marked incomplete output prefix. #
+#     -> output_bytes : 1_048_576 #
+#     true stops new launches after failure; already started cases are reaped. #
+#     -> fail_fast : false #
+#     true permits zero selected cases; false reports E509 for an empty run. #
+#     -> allow_empty : false #
+#     uint64 base seed. testing.seed() derives a stable seed per case ID; #
+#     explicitly use random.seeded. This does not freeze clocks or scheduling. #
+#     -> seed : 0 #
+# } #
+# Use meowy test --list, meowy test, and meowy test --no-run for discovery, #
+# execution, and build-only checks. meowy err ... --test selects test failures. #
+# Runner policy lives here; selection flags do not override these budgets. #
+
+# GATOSTYLE -- formatting, coding style, and code quality. #
+# See gatostyle.md for policy resolution, rewrite proofs, and source allowances. #
+# The values below reproduce structured defaults unless labeled EXAMPLE. #
+# No gatostyle.version field exists. Pin the meowy distribution for stable policy. #
+
+# -> gatostyle : { #
+#     Preset: "structured" (default), "compact", "minimal", or "none". #
+#     Compact changes blocks to "small". Minimal also sets indent "none", #
+#     spacing false, line_width null, and blank_lines 0. None disables layout #
+#     and every rule but retains structured option values for later enabling. #
+#     Explicit settings below override the preset, including a CLI --preset. #
+#     -> preset : "structured" #
+
+#     Findings at this severity or above fail a style check: "hint", "warning", "error". #
+#     Layout finding G001 always uses this severity when formatting is enabled. #
+#     -> fail_on : "warning" #
+
+#     -> format : { #
+#         -> enabled : true #
+#         "spaces", "tabs", or "none"; tabs use one tab per nesting level. #
+#         -> indent : "spaces" #
+#         Positive uint32; indentation width or tab-stop width. #
+#         -> indent_size : 4 #
+#         Positive uint32 column target, or null to disable width wrapping. #
+#         -> line_width : 100 #
+
+#         A boolean sets every category at once. A record overlays inherited values. #
+#         -> spacing : { #
+#             Around :, :=, and assignment =; also generic binders and named entries. #
+#             -> bindings : true #
+#             Before a declaration's type annotation. #
+#             -> annotations : true #
+#             Before a matcher condition's type suffix; spacing never changes parsing. #
+#             -> type_tests : true #
+#             Before a proven type suffix in an ordinary value expression. #
+#             -> ascriptions : false #
+#             Before generic argument lists. #
+#             -> type_arguments : false #
+#             Around binary operators, capability constraints, and function-type arrows. #
+#             -> binary : true #
+#             After -> and between a scope label and its emission arrow. #
+#             -> emissions : true #
+#             Between >> / << and operands, and around group submission >>. #
+#             -> tasks : true #
+#             After commas. #
+#             -> commas : true #
+#             Inside matcher pipes and between the closing pipe and its body. #
+#             -> matchers : true #
+#             Before block openers and inside nonempty inline blocks. #
+#             -> blocks : true #
+#             Inside nonempty call/grouping parentheses and list brackets. #
+#             -> delimiters : false #
+#         } #
+
+#         "needed", "always", or "preserve" for optional statement separators. #
+#         -> semicolons : "needed" #
+#         "expanded", "single", "small", or "preserve". #
+#         -> blocks : "single" #
+#         Positive uint32; used only with blocks "small". #
+#         -> max_inline_statements : 2 #
+#         "same_line" or "next_line" for multiline block braces. #
+#         -> braces : "same_line" #
+#         "fit", "vertical", or "preserve" for dispatch chains. #
+#         -> chains : "fit" #
+#         Nonnegative uint32 maximum consecutive blank lines between groups. #
+#         -> blank_lines : 1 #
+#         "lf", "crlf", or "preserve" outside strings/comments/protected regions. #
+#         -> line_endings : "lf" #
+#         Whether a nonempty file receives a final newline; an empty file stays empty. #
+#         -> final_newline : true #
+#         "remove" or "preserve" outside protected text. #
+#         -> trailing_whitespace : "remove" #
+#     } #
+
+#     Every built-in level accepts "off", "hint", "warning", or "error". #
+#     Every built-in fix accepts "manual"; only repairable rules also accept "safe". #
+#     Safe means a proven equivalent edit, never permission to change behavior. #
+#     Recommended presets enable the five rules whose levels below are not "off". #
+#     -> rules : { #
+#         G101: ordinary calls versus first-argument dispatch. #
+#         -> call_form : { #
+#             -> level : "off" #
+#             "call" or "dispatch"; safe fixes require a resolved stable callee. #
+#             -> prefer : "call" #
+#             -> fix : "manual" #
+#         } #
+#         G102: intermediate names versus inline expressions. #
+#         -> bindings : { #
+#             -> level : "off" #
+#             "named" or "inline"; only inline form can have a safe fix. #
+#             -> prefer : "named" #
+#             Positive uint32; nested-call depth threshold for named form, outer call = 1. #
+#             -> min_depth : 2 #
+#             -> fix : "manual" #
+#         } #
+#         G103: explicit local annotations versus inference. #
+#         -> type_annotations : { #
+#             -> level : "off" #
+#             "explicit" or "inferred"; safe only with identical types/public contracts. #
+#             -> prefer : "explicit" #
+#             -> fix : "manual" #
+#         } #
+#         G104: remove ascriptions that contribute no proof or type information. #
+#         -> redundant_ascription : { #
+#             -> level : "hint" #
+#             -> fix : "safe" #
+#         } #
+#         G105: unnecessary mutability; safe tightening cannot change exposed types. #
+#         -> immutable_bindings : { #
+#             -> level : "warning" #
+#             -> fix : "safe" #
+#         } #
+#         G106: spelling conventions; report only, never automatically rename APIs. #
+#         -> naming : { #
+#             -> level : "off" #
+#             -> fix : "manual" #
+#             Each spelling option accepts "snake_case", "lowerCamelCase", #
+#             "UpperCamelCase", "UPPER_SNAKE_CASE", or "any". #
+#             -> values : "snake_case" #
+#             -> fields : "snake_case" #
+#             -> types : "UpperCamelCase" #
+#             -> parameters : "UPPER_SNAKE_CASE" #
+#             Exact spellings exempt from this rule, e.g. ["URL", "HTTP"]. #
+#             -> allow : [] #
+#         } #
+#         G201: unread local bindings; report only because initialization/cleanup matter. #
+#         -> unused_binding : { #
+#             -> level : "warning" #
+#             -> fix : "manual" #
+#             Prefix exempting intentional names; underscore is still an ordinary name. #
+#             -> ignore_prefix : "_" #
+#         } #
+#         G202: discarded non-null primary results; report only. #
+#         -> discarded_primary : { #
+#             -> level : "warning" #
+#             -> fix : "manual" #
+#         } #
+#         G203: names hiding an existing binding in the same namespace; report only. #
+#         -> shadowing : { #
+#             -> level : "hint" #
+#             -> fix : "manual" #
+#             Exact names allowed to shadow. #
+#             -> allow : ["self"] #
+#         } #
+#         G204: lexical nesting below the file, starting at depth one; report only. #
+#         -> scope_depth : { #
+#             -> level : "off" #
+#             -> fix : "manual" #
+#             Positive uint32. #
+#             -> max : 4 #
+#         } #
+#         G205: explanatory comment immediately before or first inside unchecked code. #
+#         -> unchecked_reason : { #
+#             -> level : "off" #
+#             -> fix : "manual" #
+#             A comment documents an unchecked proof; it never supplies that proof. #
+#             -> require_comment : true #
+#         } #
+#         G206: potentially allocating calls, including unproven effects; report only. #
+#         -> allocation : { #
+#             -> level : "off" #
+#             -> fix : "manual" #
+#             Resolved-callee exemptions; empty by default. #
+#             Example entry: { -> module : "strings"; -> export : "copy" } #
+#             module is a literal import operand; export is a named field path. #
+#             -> allow : [] #
+#         } #
+#         G207: observable effects in parent-side arguments of call-form tasks. #
+#         -> task_capture : { #
+#             -> level : "off" #
+#             -> fix : "manual" #
+#         } #
+#     } #
+
+#     Custom rules default to empty. These named rules are EXAMPLES, initially off. #
+#     Custom rules are report-only: no fix or replacement-text field is accepted. #
+#     Each requires select and a nonempty message; omitted level defaults to "warning". #
+#     A selector has node plus applicable predicates, OR exactly one of all/any/not. #
+#     Missing optional leaf predicates impose no condition; present predicates use AND. #
+#     Unknown resolved facts produce G002 at the enabled rule's severity, even under not. #
+#     -> custom : { #
+#         EXAMPLE call leaf: both available call predicates, including resolved identity. #
+#         -> project_allocation : { #
+#             -> level : "off" #
+#             -> select : { #
+#                 -> node : "call" #
+#                 -> callee : { #
+#                     Import operands resolve in this project's import map. #
+#                     -> module : "strings" #
+#                     Named field path; aliases of the same symbol still match. #
+#                     -> export : "copy" #
+#                 } #
+#                 Boolean; unknown effects are unresolved rather than assumed false. #
+#                 -> allocates : true #
+#             } #
+#             -> message : "Consider whether this owned copy needs a fresh allocation." #
+#         } #
+#         EXAMPLE binding leaf: both available binding predicates. #
+#         -> public_mutability : { #
+#             -> level : "off" #
+#             -> select : { #
+#                 -> node : "binding" #
+#                 -> mutable : true #
+#                 -> exported : true #
+#             } #
+#             -> message : "Keep public mutation deliberate." #
+#         } #
+#         EXAMPLE block leaf: both available block predicates. #
+#         -> deep_unchecked_scope : { #
+#             -> level : "off" #
+#             -> select : { #
+#                 -> node : "block" #
+#                 -> unchecked : true #
+#                 Depth threshold is an example, not a default; numeric options fit uint32. #
+#                 -> depth_above : 4 #
+#             } #
+#             -> message : "Move the unchecked proof closer to a small boundary." #
+#         } #
+#         EXAMPLE matcher leaf: a condition containing a type predicate. #
+#         -> matcher_types : { #
+#             -> level : "off" #
+#             -> select : { #
+#                 -> node : "matcher" #
+#                 -> type_test : true #
+#             } #
+#             -> message : "Review whether this type branch belongs in a shared helper." #
+#         } #
+#         EXAMPLE combinators: all/any take nonempty lists; not takes one selector. #
+#         Every operand inspects the same candidate node; combinators may nest. #
+#         -> project_boundary : { #
+#             -> level : "off" #
+#             -> select : { #
+#                 -> any : [ #
+#                     { #
+#                         -> all : [ #
+#                             { -> node : "binding"; -> exported : true }, #
+#                             { -> not : { -> node : "binding"; -> mutable : false } } #
+#                         ] #
+#                     }, #
+#                     { -> node : "block"; -> unchecked : true } #
+#                 ] #
+#             } #
+#             -> message : "Explain why this boundary belongs in the public surface." #
+#         } #
+#     } #
+
+#     Relative literal file/directory paths; no globs or import aliases. #
+#     Paths, including symlinks, must stay within the project. Directories include descendants. #
+#     Exclusions affect directory discovery; explicitly selected files can still be checked. #
+#     Empty by default; EXAMPLE exclusions would be ["./generated", "./vendor"]. #
+#     -> exclude : [] #
+
+#     Overrides default to empty. This record is an EXAMPLE for a tests directory. #
+#     Apply matching overrides in list order; a later explicit leaf wins. #
+#     Records merge by field; lists replace; a spacing boolean replaces all categories. #
+#     paths is required; only format, rules, custom, and fail_on may accompany it. #
+#     Those four records/values accept the same settings shown above, including every rule. #
+#     Overrides cannot add preset, exclude, or another overrides list. #
+#     -> overrides : [ #
+#         { #
+#             -> paths : ["./tests"] #
+#             -> format : { #
+#                 -> line_width : 100 #
+#             } #
+#             -> rules : { #
+#                 -> scope_depth : { #
+#                     -> level : "warning" #
+#                     -> max : 6 #
+#                     -> fix : "manual" #
+#                 } #
+#             } #
+#             -> custom : { #
+#                 Example: enable one of the custom rules defined above for this path. #
+#                 -> matcher_types : { #
+#                     -> level : "hint" #
+#                 } #
+#             } #
+#             -> fail_on : "warning" #
+#         } #
+#     ] #
+# } #
+
+# LANGUAGE SERVER -- schema 1; see ../reference/lsp.md. #
+# All values below are defaults. Edit this project's mod.mwy, not editor settings. #
+# Omitted nested records use defaults; lists replace lists. No ancestor/dependency inheritance. #
+# Unknown/duplicate fields and invalid values are E505, even when enabled is false. #
+# -> lsp : { #
+#     version is REQUIRED whenever this block is present; only schema 1 is accepted. #
+#     -> version : 1 #
+
+#     false disables project features but keeps synchronization and manifest recovery. #
+#     -> enabled : true #
+
+#     null accepts the launched distribution; alternatively use an exact nonempty version. #
+#     Example pin: "0.0.1" (illustrative). No ranges, latest, downloads, or executable switching. #
+#     A mismatch is E507 and stops semantic answers/edits for this project. #
+#     -> toolchain : null #
+
+#     -> check : { #
+#         "change", "save", or "manual". Interactive requests still analyze current facts. #
+#         -> trigger : "change" #
+
+#         "project": entry, exports, configured test graphs, and open source modules. #
+#         "open": needed graphs, with primary diagnostics only for open files and mod.mwy. #
+#         Neither scope runs tests or application initialization. #
+#         -> scope : "project" #
+
+#         Integer 0..5000 ms; 0 schedules immediately. Applies to change-triggered checks. #
+#         Does not delay saves, Check project, or interactive requests. #
+#         -> debounce_ms : 150 #
+#     } #
+
+#     -> diagnostics : { #
+#         Include gatostyle findings; their policies/severities still come from gatostyle. #
+#         -> style : true #
+
+#         Integer 1..10000. A presentation cap per file, not an analysis limit. #
+#         -> max_per_file : 200 #
+#     } #
+
+#     -> index : { #
+#         Relative file/directory paths only; directories include descendants. No globs/aliases. #
+#         Paths must remain inside this project and cannot exclude mod.mwy. #
+#         Example list: ["./generated", "./vendor"]. Default is empty. #
+#         Exclusions skip background discovery, never required imports/test graphs or open files. #
+#         -> exclude : [] #
+
+#         Positive uint32 bytes per admitted source file/buffer; no partial-prefix analysis. #
+#         Oversized required inputs make affected analysis incomplete. Default: 4 MiB. #
+#         -> max_file_bytes : 4_194_304 #
+#     } #
+
+#     Every feature is boolean; actual availability also needs client capabilities/current facts. #
+#     -> features : { #
+#         Visible bindings, callable signatures, fields, types, and declared import paths. #
+#         -> completion : true #
+
+#         Type, narrowing, ownership, definitions, and documentation; layout when established. #
+#         -> hover : true #
+
+#         Generic binders, parameters, return alternatives, and dispatch's first argument. #
+#         -> signature_help : true #
+
+#         Resolved definitions/types and exact imported sources or package facades. #
+#         -> definition : true #
+
+#         Resolved uses within the available workspace graph, respecting shadowing. #
+#         -> references : true #
+
+#         Private/local binding rename requires complete coverage and collision checks. #
+#         Public API, manifest schema, import alias/path, and file renames are excluded. #
+#         -> rename : true #
+
+#         Bindings, exports, types, functions, and named scopes in the current document. #
+#         -> document_symbols : true #
+
+#         Indexed declarations in selected workspace roots; exclusions limit coverage. #
+#         -> workspace_symbols : true #
+
+#         Resolved token classifications; full results when the client lacks delta support. #
+#         -> semantic_tokens : true #
+
+#         Inferred binding types and omitted argument labels; no speculative runtime values. #
+#         -> inlay_hints : false #
+
+#         Syntax-based blocks, record types, and delimited comments. #
+#         -> folding : true #
+
+#         Parsed enclosing expressions and statements for selection expansion. #
+#         -> selection_ranges : true #
+
+#         Gatostyle layout, requiring a parsable document and effective format.enabled. #
+#         -> formatting : true #
+
+#         Compiler repair alternatives and proven gatostyle changes, with required client support. #
+#         -> code_actions : true #
+
+#         Explicit static-failure capture; requires extension 1 and a valid entry snapshot. #
+#         Test-only failures use meowy test --no-run and meowy err ... --test instead. #
+#         -> capture : false #
+#     } #
+
+#     true needs features.formatting true; otherwise E505. The path must allow gatostyle layout. #
+#     Requires client willSaveWaitUntil support; best effort before save, never semantic fixes. #
+#     -> format_on_save : false #
+
+#     "off": essential startup/failure messages; "messages": methods/IDs/timing/root/state. #
+#     "verbose" adds invalidation/analysis summaries. Logs go to stderr, never a trace file. #
+#     No source bodies, literals, environment values, or complete protocol payloads are dumped. #
+#     -> trace : "off" #
+# } #

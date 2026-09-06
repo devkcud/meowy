@@ -408,8 +408,8 @@ using `/`, with no globs or import-alias expansion. A directory includes its
 descendants. Normalize `.` and `..` and require every path to stay within the
 project root, including symlinks. Exclusions affect directory discovery; an
 explicitly named file can still be checked. Overrides never cross project roots.
-The [sample manifest](mod.sample.mwy) excludes the editor's deliberately invalid
-lexical fixtures from ordinary style runs.
+The [fully commented manifest](mod.full.mwy) includes every exclusion and override
+setting, with examples for adapting policy to selected source directories.
 
 ### Preserve layout or suppress one finding
 

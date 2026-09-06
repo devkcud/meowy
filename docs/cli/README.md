@@ -80,7 +80,8 @@ The saved session records the selected entry, arguments, target, and profile.
 
 For a project, put its configuration in `mod.mwy`; the
 [manifest guide](../guide/mod.md) explains each section and its
-[sample](../guide/mod.sample.mwy). Then use:
+[sample](../guide/mod.sample.mwy); the
+[fully commented manifest](../guide/mod.full.mwy) lists every setting. Then use:
 
 ```sh
 meowy check

@@ -1,6 +1,7 @@
 # Copy this template to mod.mwy in a project containing main.mwy and codec/header.mwy.
   Paths are relative to that project root, not to this guide directory.
   The worked packet project already includes its own manifest.
+  For every setting, its defaults, and alternatives, see mod.full.mwy beside this file.
 #
 
 -> import : {

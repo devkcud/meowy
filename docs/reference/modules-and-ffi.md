@@ -177,6 +177,8 @@ exports, runtime settings, test suites, and editor policy. Its [sample manifest]
 can be installed as `mod.mwy` in a project with the documented
 [packet project's layout](../programs/packet/README.md); that worked project
 already has its own manifest. The
+[fully commented manifest](../guide/mod.full.mwy) catalogs every setting and its
+defaults or example values. The
 [CLI guide](../cli/README.md#projects-and-entry-selection) defines manifest
 discovery, entry overrides, and command-line build options.
 
@@ -221,7 +223,9 @@ must include their exact contents and digest.
 `"release"`; both profiles preserve overflow checks, bounds checks, ownership,
 and task cleanup. `build.target` identifies the architecture, operating system,
 and ABI when cross-compiling. Omitting it selects the host target, recorded as a
-build input. `build.native` lists explicitly selected native link artifacts.
+build input. `build.native` lists exact native artifact paths relative to the
+manifest, such as `["./native/libcodec.a"]`; omitting it adds no native artifacts.
+These are selected link inputs, not library names for an ambient search path.
 
 `build.optimize`, `build.cpu`, `build.jobs`, `build.debug_info`, and the
 `build.link` record configure optimization goals, target CPU requirements,

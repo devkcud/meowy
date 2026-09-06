@@ -10,6 +10,14 @@ are configuration values, not language keywords.
 
 ## Start with the sample
 
+The [fully commented manifest](mod.full.mwy) lists every documented setting,
+including nested style rules, LSP features, build/link options, and test policy.
+Each code line has its own paired `# ... #` comment. Copy the sections you need
+into `mod.mwy`, then uncomment their code lines and enclosing braces; leave the
+explanations commented. Defaults and example-only choices are labeled separately.
+Leave profile/preset-dependent settings omitted when they should follow the
+selected profile or preset. `mod.full.mwy` is not discovered automatically.
+
 The [sample manifest](mod.sample.mwy) describes the worked packet project's
 entry, decoder export, and `wire` path alias. That [project](../programs/packet/README.md)
 already has its own `mod.mwy`; from the repository root:
