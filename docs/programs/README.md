@@ -7,6 +7,10 @@ source files, and README. There is no shared manifest to copy or edit before
 switching examples. Foundational imports need no package installation, and local
 helper modules stay inside their project.
 
+For smaller recipes you can mix into your own project, visit
+[Pawterns](../pawterns/README.md). These worked projects show how the pieces fit
+together across a complete application.
+
 ## Pick a project
 
 | Project                                    | What it combines                                                                    | Inputs and effects                                         |

@@ -2,6 +2,9 @@
 
 [Documentation index](../README.md) · [Configure mod.mwy](mod.md) · [gatostyle](gatostyle.md)
 
+Prefer to learn by making something? [Pawterns](../pawterns/README.md) turns
+these rules into recipes for projects, data, tools, and concurrent work.
+
 meowy programs describe values and their transformations. Start with a file named
 `main.mwy`:
 

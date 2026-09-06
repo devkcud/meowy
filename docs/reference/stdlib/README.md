@@ -46,6 +46,9 @@ All library API chapters live in this directory. The surrounding reference defin
 language rules such as [ownership](../memory.md), [collection representation](../collections.md),
 and [task lifetimes](../tasks-and-channels.md); a library call follows those rules.
 
+[Pawterns](../../pawterns/README.md) puts these APIs to work in small recipes:
+text, typed errors, CLI apps, files, calendars, owned batches, and orderly shutdown.
+
 ## Read the contracts
 
 In API tables, `T` is a compile-time type parameter and `N` is a compile-time

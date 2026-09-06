@@ -47,6 +47,11 @@ or automatic dictionary allocation. For example, pass `file.read` and
 callable environments keep their concrete types. Storing an adapter does not
 start a thread or read ahead before an operation is requested.
 
+Reader cursors and adapters expose `.read(buffer)` with the `io.Read` contract;
+the buffer writer exposes `.write(bytes)` with the `io.Write` contract. Pass those
+bound callables to other I/O helpers, retaining their owners and captured borrows
+until the helper finishes.
+
 Mutable readers/writers require exclusive access to their state. Standard-stream
 handles synchronize each host operation; different writes may interleave, so one
 write_all is not a promise that a complete multi-write message is atomic.

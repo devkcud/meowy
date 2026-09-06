@@ -4,6 +4,11 @@ This documentation defines the language's semantics and the foundational library
 contracts used in its programs. The reference is authoritative; the guide teaches
 those rules by building small programs, and the design notes explain their intent.
 
+[Pawterns](pawterns/README.md) is the practical cookbook: 35 recipes for the
+language and its ecosystem, from your first project to a greeting that survives
+its own concurrency design. Pick a problem, follow the code, and learn why the
+working version works.
+
 ## Learn the language
 
 1. Read the [guide](guide/README.md) for bindings, functions, blocks, and loops.

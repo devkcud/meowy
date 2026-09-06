@@ -49,6 +49,10 @@ Current version: v0.0.1
 Start with the [guide](docs/guide/README.md), or use the
 [documentation index](docs/README.md) to browse the full reference.
 
+For something to build, open [Pawterns](docs/pawterns/README.md), the meowy
+cookbook: 35 recipes from a first greeting through owned buffers, CLI tools,
+calendar surprises, and getting concurrent work to actually finish.
+
 | Topic                                                            | What it covers                                                                      |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | [Syntax](docs/reference/syntax.md)                               | Bindings, literals, operators, functions, and scopes                                |
