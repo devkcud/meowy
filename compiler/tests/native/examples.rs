@@ -87,6 +87,10 @@ pub fn examples_execute_in_both_profiles() {
             "1\n3\n2\n9\n7\n",
         ),
         (
+            include_str!("../../examples/immutable-slots.mwy"),
+            "7\n2\nready\n7\n2\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

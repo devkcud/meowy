@@ -3,7 +3,7 @@
 This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
-narrowing and shared references to local and mutable emitted storage, including guarded
+narrowing and shared references to local and emitted storage, including guarded
 block results, immutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
@@ -40,6 +40,7 @@ compiler/target/debug/meowy run compiler/examples/mutable-fields.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-writes.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-slots.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/immutable-slots.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -91,6 +92,8 @@ construction; later reads and the returned record observe the same updated stora
 The [emitted borrows example](examples/emitted-borrows.mwy) reads those fields through
 shared references and writes after their last use. An inner block can pass out a
 reference when its emitted owner belongs to a still-active outer result.
+The [immutable slots example](examples/immutable-slots.mwy) borrows immutable emitted
+fields and list elements while preserving constant and initialized-length facts.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -148,6 +151,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   list elements. References use the slot's target-block lifetime and retain their
   declared pointee type. Overlapping writes are allowed only after the final shared
   use; publication cannot carry a reference into its own construction storage.
+- Immutable reference-free emitted names use the same result storage and shared
+  borrow lifetimes. Their constant, variant and initialized-length facts remain
+  available. The immutable name cannot be assigned or used to write a nested field
+  or element, including mutable fields inside its value; those writes report E305.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -214,7 +221,7 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
-fields, mutable primary slots, borrows of immutable emitted names and borrowed alias
+fields, mutable primary slots, borrows of reference-bearing emitted storage and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
@@ -262,10 +269,11 @@ remain alive. The checker reuses branch/completion proofs and checks all possibl
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Mutable reference carriers,
-reference reassignment and direct reference formatting require future analysis. Immutable
-named-emission storage remains unavailable as a borrow root; parameter and receiver
-copies may be borrowed only while their local storage survives. Missing origin proofs
-or exhausted analysis budgets produce B001.
+reference reassignment and direct reference formatting require future analysis.
+Reference-free named emissions support slot borrows; reference-bearing emitted names
+retain their copied reference origins, with their own storage still unavailable as
+a borrow root. Parameter and receiver copies may be borrowed only while their local
+storage survives. Missing origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
@@ -276,9 +284,10 @@ are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field
 mutability in declared construction or completing branches reports E206. Shared
 reference targets and temporary roots remain B001.
-Mutable named emissions register an alias after initialization. Later reads and
-assignments resolve the actual result cell, with conversion between the declared
-local type and a wider final slot type. Mixed paths address the compatible payload.
+Reference-free named emissions register an alias after initialization. Later reads
+and permitted mutable assignments resolve the actual result cell, with conversion
+between the declared local type and a wider final slot type. Matching field mutability
+is required for that backing; mixed paths address the compatible payload.
 When an emission is proved discarded, an initialized local cell preserves its
 remaining effects without projecting into an absent or incompatible result field.
 Shared borrows use the target block as their storage owner even when the alias name
@@ -287,9 +296,9 @@ result storage. Exact slot types and concrete members of a wider union are addre
 proper subunion views remain B001 because borrowing cannot retag a copied value.
 References may pass through inner results, but escaping their target's publication
 reports E303. Live overlapping writes report E302, including uses across an inner
-restart. Restarting the target ends its iteration's storage. Alias mutations publish
-unknown variant activity, preserving unrelated reference origins and preventing stale
-initializer facts from hiding a conflicting access.
+restart. Restarting the target ends its iteration's storage. Mutable aliases publish
+unknown variant activity, preventing stale initializer facts from hiding a conflict.
+Immutable aliases retain their constant, variant and initialized-length facts.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the
