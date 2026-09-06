@@ -7,35 +7,34 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `a978c8b` implements checked initialized-element assignment to direct
-  mutable local Copy lists: `values[index] = value`. It captures the original
-  initialized length, evaluates/checks the index before the RHS, then stores only
-  the selected element. Length, other elements and earlier list copies survive.
-- Internal parent-storage reservations reject owner/element writes during returning
-  index/RHS evaluation. Shared reads may finish before the store; any later shared
-  use conflicts with the final exclusive access (E302). All indices conservatively
-  overlap. No source-level exclusive reference or owned-element support is implied.
-- Bounds remain E101/P001 with the target byte span. Bounds failure skips RHS;
-  leave/restart/panic operands skip the remaining assignment. Dead paths do not
-  invent accesses. Direct root writes preserve existing Copy-read snapshots.
-- Coverage/example: `2a15a37` adds seven native groups and
-  `compiler/examples/element-writes.mwy`. Library coverage adds three backend,
-  one list and one loan group. E305, E207 and B001 boundaries remain explicit.
-- All 14 combined checks pass: 238 Rust tests, 35 Python tests, 854 local
+- Compiler: `2eb9d1f` extends initialized assignment through nested lists, such as
+  `matrix[row][column] = value`. SetElement carries an ordered IndexStep path;
+  each layer reads its own initialized length and checks its index before the next.
+  The final store changes only the selected leaf, preserving copies and other rows.
+- P001 identifies the failing target prefix. A failed outer check skips later
+  indices and RHS; panic/leave/restart paths stop at their actual last phase.
+  Captured indices cannot be retargeted by later index-variable assignments.
+- Parent reservations remain live at every returning bounds/address phase and the
+  final store. Last-use shared reads are allowed; later root/row/element views and
+  intervening returning writes fail E302. All root-list indices still overlap.
+- Coverage/example: `06bdee8` adds seven native groups and
+  `compiler/examples/nested-writes.mwy`. Three backend groups plus frontend/loan
+  evidence cover nested layouts, unequal lengths, prefix spans and bounded paths.
+- All 14 combined checks pass: 250 Rust tests, 35 Python tests, 855 local
   links, editors, schemas/catalog, formatting, Clippy, build and conformance.
   Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs the element-writes example with exact output.
-  Independent ownership review found no remaining blocker. Runtime debug/release/
-  sanitizer checks pass unchanged; generated task cleanup remains separate work.
+- The optimized compiler runs the nested-writes example with exact output.
+  Independent review passed 11 directed cases without finding a blocker. Runtime
+  debug/release/sanitizer checks pass unchanged; generated cleanup is still pending.
 - No active implementation workers, unfinished code or failing checks remain.
-  Nested write targets, field/reference/temporary targets, exclusive references,
+  Mutable fields, writes through references/temporaries, exclusive references,
   slices, owned/reference elements, cancellation and DWARF remain future work.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Checked element borrows and direct local element writes | Nested write paths, exclusive references, moves/cleanup and contextual constraints |
+| Compiler | Checked element borrows and nested local element writes | Contextual constraints, mutable fields, exclusive references and moves/cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -45,12 +44,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend checked write paths to nested list targets in the HIR, checker, loans and
-   backend. Evaluate each index/bounds check once from root to leaf, retain parent
-   reservations, and test aliases plus early exits. Immutable field/reference owners
-   stay excluded until their mutability/exclusive contracts are implemented.
-2. Extend remaining effectful/non-scalar contextual constraints without replaying
-   effects or weakening budgets. Keep annotations/B001 for unproved candidates.
+1. Extend remaining contextual list constraints in `compiler/src/list_context.rs`.
+   Start with effectful blocks whose result shape can be proved without executing
+   or lowering effects during candidate selection. Preserve ambiguity and budget
+   diagnostics; verify once-only effects, early exits and candidate widths.
+2. Define mutable field shapes and exclusive-reference contracts before permitting
+   field/reference write targets. Keep initialized Copy writes distinct from the
+   move/drop state required by owned elements, slices and removal.
 3. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

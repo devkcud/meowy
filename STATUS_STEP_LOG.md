@@ -6,6 +6,55 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Nested checked-write handoff
+
+- State: Nested assignment is complete: implementation 2eb9d1f and native coverage/example/README 06bdee8. Every list layer uses its own initialized length and prefix span, keeps parent reservations through returning phases, and preserves captured indices. All workers are finished; no failing checks or unfinished source edits remain. The final tracker commit follows.
+- Validation: All 14 checks pass: 135 library and 115 native Rust tests, 35 Python tests, 855 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Debug/release/sanitized runtime checks pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed. The optimized release compiler example output is exact; 11 independent review checks passed. The existing parser limit is preserved after correcting one initial depth-test expectation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Improve contextual list inference for effectful blocks without replaying effects, preserving ambiguity and budgets. Mutable field shapes and exclusive-reference contracts must precede field/reference write targets; owned elements still require move/drop state. Keep generated cleanup/runtime integration, module/library work and full qualification visible. Finalize the handoff commit and confirm a clean tree.
+
+### 2026-09-06 — Nested assignment implementation commit
+
+- State: Committed the ordered-path implementation, ownership rules and obsolete B001 removal. The optimized compiler release example also passes with exact output; native acceptance coverage and final trackers remain for separate commits.
+- Validation: All 14 combined checks passed; optimized nested-writes output is exactly 20, 11, 2, 1, 2, 99 on separate lines with empty stderr. Cached diff and split boundaries were reviewed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native coverage/example/README, finalize both STATUS files with evidence and contextual inference as the next step, then commit handoffs and verify Git integrity.
+
+### 2026-09-06 — Nested assignment combined gate
+
+- State: The full repository/runtime/compiler gate passes on the frozen nested-write source. All workers are finished, no unsafe acceptance or outstanding implementation issue was found, and the implementation split is staged independently from native coverage and final handoffs.
+- Validation: All 14 checks pass: 135 library plus 115 native Rust tests, 35 Python tests, 855 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime sanitizer contexts completed successfully; debug/release/sanitized suites all pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build and run the optimized nested-writes example with exact output, commit implementation and coverage separately, finalize both handoffs/logs, and verify a clean Git tree.
+
+### 2026-09-06 — Nested assignment source freeze
+
+- State: All source owners and independent review are finished. Ordered paths preserve per-layer bounds and prefix spans, with root reservations through actual returning uses. OWNERSHIP requires mutable field shapes before field writes. Source is frozen for the combined gate.
+- Validation: Two new frontend/loan groups, all 26 backend groups (24 new debug/release cases), seven new native groups and 11 directed review checks pass. Clippy, formatting and whitespace pass. One frontend stress test initially expected 64 nested literal levels to bypass the existing parser limit; corrected to accept 32 levels and verify the 64-level B001 boundary without changing limits.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the full repository/runtime/compiler gate, then build the optimized compiler and execute nested-writes with exact output. Split implementation, native coverage and final handoff commits; continue next with unresolved contextual list constraints.
+
+### 2026-09-06 — Nested assignment native integration
+
+- State: All seven new native groups pass against the integrated ordered-path implementation. Nested writes preserve other rows and Copy leaves; each child length and target-prefix diagnostic is exact. Final shared reads work, all retained root/row/element aliases remain protected, and divergence stops every later phase. No implementation or fixture failures occurred in this focused run.
+- Validation: cargo test --test native nested_write: 7 passed, 0 failed, including debug/release execution and rejection checks. Full suite and independent final probes remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete backend and frontend focused coverage, finish the independent audit, freeze source, then run the combined repository/runtime/compiler gate and optimized example before split commits.
+
+### 2026-09-06 — Nested assignment acceptance cases
+
+- State: Added seven native groups and a nested-writes example covering nested Copy layouts, unequal row lengths, prefix panic spans, captured indices, shared last use, independent owners, retained aliases, leave/restart and panic paths. README describes each selected child length and per-prefix bounds order. Frontend/backend agreed on an ordered IndexStep path in SetElement.
+- Validation: Acceptance cases and documentation are written; execution is pending the revised HIR consumers. Existing reference fixtures are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish integrated path lowering and focused tests, resolve any fixture or implementation failures, complete independent review, then run the combined gate and optimized compiler smoke.
+
+### 2026-09-06 — Nested element assignment design
+
+- State: Nested list assignment is active, rooted in direct mutable local reference-free Copy lists. Extend SetElement to an ordered path with a bounds/address phase for each list layer before the next index or RHS. Keep root reservations through returning phases; preserve actual prefix source spans and each selected child length. Frontend, backend and independent review are delegated; root owns both handoffs.
+- Validation: Read current handoffs, rules and collection/memory/evaluation contracts. Tree starts clean at 72edaf9. No new implementation checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement the typed path and all consumers, add native nested-order/bounds/alias/exit evidence and documentation, then run full verification and split focused commits.
+
 ### 2026-09-06 — Checked element assignment handoff
 
 - State: Implementation is committed as a978c8b and native coverage/example/README as 2a15a37. Direct mutable local Copy list writes are complete, with protected target/index/RHS ordering, E101/P001 bounds, E302 aliases and no aggregate writeback. Independent review and all workers are finished. No unfinished implementation or failing checks remain; final tracker commit follows.
