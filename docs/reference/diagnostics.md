@@ -415,6 +415,7 @@ selects a view explicitly and is repeatable. The same selectors work with
 | `lowering`  | Available lowered IR, source mappings, pass identity, and native call boundary                 |
 | `tasks`     | Parent/child IDs, submission, admission, joins, cancellation, deadlines, and cleanup events    |
 | `channels`  | Endpoint ownership, send/receive events, capacity, occupancy, and closure                      |
+| `clocks`    | Monotonic/civil readings, clock domains, timer slots, wakeups, and zone/calendar rule identities |
 
 Every view labels evidence as **recorded**, **derived from saved inputs**,
 **derived from recorded events**, or **unavailable**. Recorded observations are
@@ -465,6 +466,18 @@ threads are not made deterministic by copying an executable. For recorded
 boundaries, replay consumes the event log instead of repeating external effects.
 If an uncaptured effect is required, replay stops and identifies it; the explicit
 `--allow-live-io` option permits a best-effort rerun and labels it as such.
+
+Recorded standard-library clock reads and timer deliveries advance a virtual
+clock during replay. Replay does not wait out the original elapsed interval or
+substitute today's civil clock. The `clocks` view connects scheduled deadlines,
+observed wakeups, and coalesced ticker slots with task events. Clock resolution
+and suspend behavior are captured properties; sequence and causal edges still
+establish ordering. Missing required timing events make a recording incomplete.
+
+Unicode, zone, calendar, and pseudorandom rule versions and their data digests are
+build inputs. A replay uses the bundled versions. Date conversions derived from
+those inputs are labeled derived, while an observed clock read is recorded.
+See the [standard library](stdlib/README.md) for the individual effect boundaries.
 
 A replay runner never silently substitutes the host compiler, downloads a
 dependency, uses the live project files, or treats a different error as a match.

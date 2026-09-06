@@ -448,9 +448,16 @@ meowy err reproduce 1 --trace ownership
 ```
 
 Available trace areas are `types`, `ownership`, `layout`, `lowering`, `tasks`,
-and `channels`. Each reports whether evidence was recorded, derived, or unavailable.
+`channels`, and `clocks`. Each reports whether evidence was recorded, derived,
+or unavailable.
 `inspect` reads previously stored views; computing a new derived view requires
 `reproduce`. Selecting a trace never manufactures missing historical events.
+
+Use `--trace clocks` for monotonic and civil readings, scheduled deadlines, timer
+wakeups, skipped ticker slots, and the captured time-zone/calendar data versions.
+Recorded replay advances a virtual clock instead of waiting through the original
+delays. The [time contract](../reference/stdlib/time-and-date.md#failures-storage-and-replay)
+defines which timing inputs must be present.
 
 For concurrency investigations, enable recording before the failing run:
 
