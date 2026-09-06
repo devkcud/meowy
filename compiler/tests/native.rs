@@ -69,6 +69,10 @@ pub fn examples_execute_in_both_profiles() {
         ),
         (include_str!("../examples/loop.mwy"), "5050\n"),
         (
+            include_str!("../examples/references.mwy"),
+            "true\nfalse\n42\nmeowy\n",
+        ),
+        (
             include_str!("../examples/nullable.mwy"),
             "meowy\nnull\nmeowy\nguest\n",
         ),
@@ -591,4 +595,64 @@ pub fn independent_matchers_do_not_enumerate_every_path() {
         params.join(",")
     );
     Case::new(&source).runs(b"7\n");
+}
+
+#[test]
+pub fn shared_references_preserve_identity_and_copy_referents() {
+    Case::new(include_str!(
+        "../../docs/conformance/sources/reference_identity.mwy"
+    ))
+    .runs(b"true\nfalse\n");
+    Case::new(
+        r#"
+debug:@"debug"
+a:41
+b:41
+left<&int32>:&a
+copy:left
+debug.print(copy==left)
+debug.print(copy==&b)
+debug.print(*copy+1)
+record:{->small<uint8>:7;->nested:{->value<int64>:99;->active:true}}
+view:&record
+field:&record.nested.value
+same:&record.nested.value
+other:&record.nested.active
+debug.print(field==same)
+debug.print(*field)
+debug.print(*other)
+debug.print(view.small)
+snapshot:*view
+debug.print(snapshot.nested.value)
+|true|{a:17;inner:&a;debug.print(*inner);debug.print(copy==&a)}
+debug.print(*copy)
+read<int32>:(){owner:12;ref:&owner;->*ref}
+debug.print(read())
+"#,
+    )
+    .runs(b"true\nfalse\n42\ntrue\n99\ntrue\n7\n99\n17\nfalse\n41\n12\n");
+}
+
+#[test]
+pub fn shared_reference_scope_checks_run_before_native_lowering() {
+    for (source, code) in [
+        ("view:{owner:1;->&owner}", "E303"),
+        ("bad:(){owner:1;ref:&owner;alias:ref;->alias}", "E303"),
+        ("owner:1;view:{->&owner}", "B001"),
+        ("owner:=1;view:&owner", "B001"),
+        ("view:&(1+2)", "B001"),
+        ("owner:1;view:&owner;view.{->*self}", "B001"),
+    ] {
+        let case = Case::new(source);
+        for profile in ["debug", "release"] {
+            let result = case.command("build", &["--json", "--profile", profile]);
+            assert_eq!(result.status.code(), Some(1), "{source}");
+            let error = String::from_utf8_lossy(&result.stderr);
+            assert!(
+                error.contains(&format!("\"code\":\"{code}\"")),
+                "{source}: {error}"
+            );
+            assert!(!case.path.join("build").exists());
+        }
+    }
 }

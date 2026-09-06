@@ -18,6 +18,7 @@ REQUIRED = {
     "scalar_projection",
     "function_equality",
     "conditional_field",
+    "reference_identity",
 }
 
 
