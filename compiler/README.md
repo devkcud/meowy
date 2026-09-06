@@ -34,6 +34,7 @@ compiler/target/debug/meowy run compiler/examples/compound-lists.mwy
 compiler/target/debug/meowy run compiler/examples/element-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/element-writes.mwy
 compiler/target/debug/meowy run compiler/examples/nested-writes.mwy
+compiler/target/debug/meowy run compiler/examples/effectful-lists.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -72,6 +73,8 @@ The [element writes example](examples/element-writes.mwy) replaces initialized
 elements after the final use of a shared view, preserving the list's length and copies.
 The [nested writes example](examples/nested-writes.mwy) updates a selected matrix
 element while preserving other rows and retaining the indices chosen before the RHS.
+The [effectful lists example](examples/effectful-lists.mwy) selects numeric and
+record element widths after checking each block's effects once in source order.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -201,9 +204,19 @@ intermediate values use each candidate's exact width: `(127+1)-1` cannot select
 constants retain their declared types. Short circuits and the expression's original
 reach determine whether arithmetic executes; later effects are never replayed.
 Unannotated lists keep their existing common-type rules for compound expressions.
-Unresolved contextual effects or nested candidate constraints remain B001: provide
-an explicit element/list annotation. Candidate selection allows up to 256 list
-alternatives and 4,096 nodes per pure scalar tree, charging constant bytes and
+When list candidates remain unresolved, an unlabeled element block may check its
+context-independent prefix once, then select a type from a terminal sequence of
+unconditional emissions. Candidate probes use the prefix's resulting reach and
+bindings. The same block continues with the selected type; effects are neither
+replayed nor deferred across later list elements. Immutable primitive constants
+in the prefix keep their ordinary inferred types, and local shadowing resolves
+before result probing.
+Ambiguous proved shapes report E207. Result constraints that depend on earlier
+emitted names, mutable/nonconstant locals, unresolved primary composition or more
+complex control flow remain B001 until their inference is implemented. An explicit
+element/list annotation supplies context for the existing ordinary block checker.
+Candidate selection allows up to 256 list alternatives and 4,096 nodes per pure
+scalar tree, charging constant bytes and
 repeated checking work to the existing shared analysis budget.
 
 References can pass through local blocks and immutable aliases while their owners
