@@ -1717,7 +1717,8 @@ impl Checker {
                 if ["&!", ">>", "<<"].contains(&op.as_str()) {
                     return Err(Diagnostic::unsupported(format!("unary `{op}`"), expr.span));
                 }
-                let mut value = self.expr(value, expected)?;
+                let context = self.unary_context(op, value, expected)?;
+                let mut value = self.expr(value, context.as_ref())?;
                 if matches!(value.ty, Type::Record { .. }) {
                     value = Self::project(value);
                 }
@@ -2054,6 +2055,41 @@ impl Checker {
                 expr.span,
             )),
         }
+    }
+
+    pub(crate) fn unary_context(
+        &mut self,
+        op: &str,
+        value: &ast::Expr,
+        expected: Option<&Type>,
+    ) -> Result<Option<Type>> {
+        if let Some(ty) = self.hint(value) {
+            return Ok(Some(Self::primary_type(&ty)));
+        }
+        if op == "!" {
+            return Ok(None);
+        }
+        let literal = self.literal_default(value);
+        let types: Vec<_> = expected
+            .into_iter()
+            .flat_map(Type::members)
+            .filter(|ty| match (op, ty, &literal) {
+                ("-" | "~", Type::Int { .. }, Some(Type::Float { .. })) => false,
+                ("-" | "~", Type::Int { .. }, _) => true,
+                ("-", Type::Float { .. }, Some(Type::Int { .. })) => false,
+                ("-", Type::Float { .. }, _) => true,
+                _ => false,
+            })
+            .cloned()
+            .collect();
+        if types.len() > 1 {
+            return Err(Self::error(
+                "E207",
+                "unary operand has multiple possible expected types",
+                value.span,
+            ));
+        }
+        Ok(types.into_iter().next())
     }
 
     pub(crate) fn numeric_context(
@@ -3008,5 +3044,17 @@ mod tests {
             r#"first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:"x";->first(&owner,&short).{->self}}"#,
             "E303",
         );
+    }
+
+    #[test]
+    pub(crate) fn unary_context_does_not_inject_a_union_before_the_operator() {
+        accepts("value<boolean><null>:!true");
+        accepts("byte<int8>:5;value<int8><null>:-byte;bits<int8><null>:~byte");
+        accepts("value<float32><null>:-({->1.5})");
+        rejects("value:!1", "E222");
+        rejects("value<int8><null>:-(128)", "E216");
+        rejects("value<uint8><null>:-(1)", "E222");
+        rejects("byte<int8>:5;value<int16>:-byte", "E207");
+        rejects("value<float32><float64>:-(1.5)", "E207");
     }
 }
