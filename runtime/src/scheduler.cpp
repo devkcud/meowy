@@ -88,6 +88,10 @@ ScopeClose Task::close(ScopeMark scope) noexcept {
     return scheduler.close(ticket, scope);
 }
 
+ScopeClose Task::close(ScopeMark scope, std::span<ChildFailure> failures) noexcept {
+    return scheduler.close(ticket, scope, failures, true);
+}
+
 TaskSlot::TaskSlot(std::span<std::byte> input, std::span<std::byte> output) noexcept
     : capture(input), result(output) {}
 
@@ -250,6 +254,14 @@ Joined Scheduler::join_owned(TaskTicket ticket, Owned &destination) noexcept {
 }
 
 Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destination, bool discard) noexcept {
+    const auto ready = wait_child(parent, child);
+    if (ready.status != ScheduleStatus::ok) {
+        return ready;
+    }
+    return consume(child, destination, discard);
+}
+
+Joined Scheduler::wait_child(TaskTicket parent, TaskTicket child) noexcept {
     const auto status = task_access(parent);
     if (status != ScheduleStatus::ok || !valid(child) || slots[child.index].parent != parent) {
         return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
@@ -265,7 +277,7 @@ Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destina
             return {ScheduleStatus::context_failed, {}, {result, {}}};
         }
     }
-    return consume(child, destination, discard);
+    return {ScheduleStatus::ok, slots[child.index].outcome, {}};
 }
 
 Joined Scheduler::consume(TaskTicket ticket, Owned *destination, bool discard) noexcept {
@@ -336,7 +348,7 @@ ScopeOpen Scheduler::mark(TaskTicket parent) noexcept {
     return {ScheduleStatus::ok, mark};
 }
 
-ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark) noexcept {
+ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark, std::span<ChildFailure> failures, bool detailed) noexcept {
     const auto status = task_access(parent);
     if (status != ScheduleStatus::ok || mark.parent != parent || mark.id == 0) {
         ScopeClose result;
@@ -348,6 +360,7 @@ ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark) noexcept {
         return {};
     }
     auto &scope = owner.scopes[owner.scope_depth - 1];
+    std::size_t reported = 0;
     for (;;) {
         TaskTicket child;
         for (std::size_t index = 0; index < slots.size(); ++index) {
@@ -359,15 +372,26 @@ ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark) noexcept {
         }
         if (child.id == 0) {
             const ScopeClose result{ScheduleStatus::ok, scope.joined, scope.panicked, scope.spawn_failed,
-                                    scope.first_failure, {}, {}};
+                                    scope.first_failure, {}, {}, reported};
             scope = {};
             --owner.scope_depth;
             return result;
         }
-        const auto joined = join_child(parent, child, nullptr, true);
+        auto ready = wait_child(parent, child);
+        if (ready.status != ScheduleStatus::ok) {
+            return {ready.status, scope.joined, scope.panicked, scope.spawn_failed,
+                    scope.first_failure, child, ready, reported};
+        }
+        const bool failed = ready.outcome.kind == OutcomeKind::panicked || ready.outcome.kind == OutcomeKind::spawn_failed;
+        if (failed && detailed && reported == failures.size()) {
+            ready.status = ScheduleStatus::report_full;
+            return {ScheduleStatus::report_full, scope.joined, scope.panicked, scope.spawn_failed,
+                    scope.first_failure, child, ready, reported};
+        }
+        const auto joined = consume(child, nullptr, true);
         if (joined.status != ScheduleStatus::ok) {
             return {joined.status, scope.joined, scope.panicked, scope.spawn_failed,
-                    scope.first_failure, child, joined};
+                    scope.first_failure, child, joined, reported};
         }
         ++scope.joined;
         if (joined.outcome.kind == OutcomeKind::panicked || joined.outcome.kind == OutcomeKind::spawn_failed) {
@@ -375,6 +399,9 @@ ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark) noexcept {
             scope.spawn_failed += joined.outcome.kind == OutcomeKind::spawn_failed;
             if (scope.first_failure.kind == OutcomeKind::pending) {
                 scope.first_failure = joined.outcome;
+            }
+            if (detailed) {
+                failures[reported++] = {child, joined.outcome};
             }
         }
     }

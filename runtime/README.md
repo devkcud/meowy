@@ -17,7 +17,7 @@ plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
 ASan stack-use-after-return report for a deliberately expired fiber local.
-Each profile also runs 22 scheduler cases, a real admission-refusal subprocess,
+Each profile also runs 25 scheduler cases, a real admission-refusal subprocess,
 a fatal task-cleanup subprocess and four child/scope protocol probes.
 Each profile also runs 13 owned-value cases and three fatal owned-cleanup probes,
 including rejected admission and owned-result discard during scope closing.
@@ -143,8 +143,35 @@ foundation for future generated scope-exit code, not automatic joining or unwind
   and remain in the slot across retries, including retries through a copied mark.
   A failure to reclaim exposes the `pending` child and its `pending_result`, with
   context/storage errors and outcome, separately from those cumulative counts.
-- Counts summarize every failure consumed by close; only the first diagnostic is
-  retained in this bounded report. Additional diagnostic attachment is not provided.
+- `Task::close(mark, failures)` additionally writes a `ChildFailure` for every
+  successfully consumed panicked or spawn-failed child into a caller-provided
+  `std::span<ChildFailure>`. Each record contains the consumed ticket identity and
+  complete `TaskOutcome`. It is evidence for that generation, not a live join
+  handle; slot reuse cannot change the copied identity. Records use the scheduler's
+  identity namespace and must not be reused as tickets after scheduler destruction.
+- `ScopeClose::reported` is the number of records written by the current call,
+  distinct from cumulative scope counts. Process `failures.first(reported)` on
+  every return, including failures, before reusing the buffer. Each invocation
+  starts writing at index zero; entries after that prefix remain untouched.
+- If a settled failed child would exceed the report capacity, detailed close
+  returns `report_full` before releasing its context or consuming its ticket.
+  `pending` and `pending_result` identify the retained child/outcome. The mark and
+  cumulative progress remain valid: process the current batch, provide space and
+  retry. An empty batch can drain successful children but stops at the next failed
+  child. Successful children require no report slot, even after a batch fills.
+- A context-release failure writes no record or failure count for that child.
+  Earlier records from that invocation remain valid; retries report only newly
+  reclaimed failures. Detailed mode never silently consumes a failure it cannot
+  report. The original one-argument `close(mark)` remains an explicit summary-only
+  operation, retaining counts and the first failure without writing batches.
+- Report buffers must contain valid `ChildFailure` objects and remain exclusively
+  available throughout the close call, including worker-yielding waits. No report
+  allocation or diagnostic-string copy occurs. Borrowed diagnostic storage must
+  survive all waits, retries and processing of every batch; reporting does not
+  extend the lifetime of text owned by a released child.
+- Counts summarize every failure consumed by close; summary-only mode retains
+  just the first diagnostic. Batch mode can collect all consumed failure details;
+  automatic diagnostic attachment and owned diagnostic payloads are not provided.
   The caller must handle child failures explicitly. `ok` means scope closing
   finished, not that all children succeeded; close does not automatically raise a
   Meowy panic or propagate cancellation. Panic text remains borrowed and must
@@ -158,7 +185,9 @@ foundation for future generated scope-exit code, not automatic joining or unwind
 Close waits for children to finish; it neither requests cancellation nor imposes
 a time limit. No callback can be forcibly unwound by this prototype. Native checks
 cover nested boundaries, older children, exact capacity, parent/worker generations,
-failure summaries, body/cleanup locals and partial close retry with an owned result.
+failure summaries/batches, reused and empty report buffers, body/cleanup locals and
+partial close retry with an owned result. Batch tests preserve consumed identities
+through same-slot reuse and never report a failed reclamation as consumed.
 Fatal probes distinguish unclosed-scope misuse from P008 when discarded result
 cleanup itself panics.
 

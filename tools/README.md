@@ -34,9 +34,10 @@ and context-switch checks, plus fixed-capacity scheduling and parent-owned child
 joins that yield the worker. Stack allocation is bounded and contexts remain on
 their worker thread. Explicit capture/result ownership checks cover relocation,
 failed admission, panic cleanup and join retries. Explicit scope-close checks cover
-nested marks, owned child-result release and retry-safe failure reports. Automatic cancellation,
-scope-exit joins and DWARF unwinding
-are pending.
+nested marks, owned child-result release and retry-safe failure reports. Caller
+buffers collect failure details in bounded batches; full buffers leave the next
+failed child pending, and retries preserve ticket identity and cumulative counts.
+Automatic cancellation, scope-exit joins and DWARF unwinding are pending.
 LeakSanitizer needs an execution environment without ptrace supervision; a blocked
 sanitizer check fails visibly. This protocol does not qualify native stack unwinding.
 `--all` includes both editors, compiler verification and native runtime checks.

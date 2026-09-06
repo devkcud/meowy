@@ -787,6 +787,11 @@ public:
         check(value.first->mark().status == ScheduleStatus::invalid);
         check(value.first->close(value.first_mark).status == ScheduleStatus::invalid);
         check(task.close(value.first_mark).status == ScheduleStatus::invalid);
+        std::array<ChildFailure, 1> failures;
+        failures[0].ticket.id = 919;
+        check(value.first->close(value.first_mark, failures).status == ScheduleStatus::invalid);
+        check(task.close(value.first_mark, failures).status == ScheduleStatus::invalid);
+        check(failures[0].ticket.id == 919);
         check(task.close(opened.mark).status == ScheduleStatus::ok);
         value.checked = true;
         return {};
@@ -796,6 +801,10 @@ public:
         auto &value = *static_cast<ScopeAccess *>(data);
         check(value.first->mark().status == ScheduleStatus::wrong_thread);
         check(value.first->close(value.first_mark).status == ScheduleStatus::wrong_thread);
+        std::array<ChildFailure, 1> failures;
+        failures[0].ticket.id = 919;
+        check(value.first->close(value.first_mark, failures).status == ScheduleStatus::wrong_thread);
+        check(failures[0].ticket.id == 919);
         return nullptr;
     }
 };
@@ -846,6 +855,153 @@ void scope_close_reports_child_failures_without_hiding_later_children() {
     Scheduler scheduler(slots, stack_bytes);
     const auto parent = scheduler.submit(scope_failures, nullptr);
     check(parent.status == ScheduleStatus::ok && scheduler.pump(20).status == ScheduleStatus::ok);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+struct FailureBatches final {
+public:
+    std::array<ChildFailure, 3> seen;
+    bool done = false;
+
+    static Panic run(Task &task, void *data) noexcept {
+        auto &value = *static_cast<FailureBatches *>(data);
+        const auto scope = task.mark();
+        check(scope.status == ScheduleStatus::ok);
+        std::array<Work, 7> work;
+        work[1].panic = {6, "batch first"};
+        work[3].panic = {2, "batch second"};
+        std::array<TaskTicket, 5> tickets;
+        for (std::size_t index = 0; index < 4; ++index) {
+            const auto child = task.spawn(Work::run, &work[index], Work::clean);
+            check(child.status == ScheduleStatus::ok);
+            tickets[index] = child.ticket;
+        }
+        fail_map = true;
+        const auto refused = task.spawn(Work::run, &work[4], Work::clean);
+        fail_map = false;
+        check(refused.status == ScheduleStatus::context_failed);
+        tickets[4] = refused.ticket;
+        std::array<ChildFailure, 1> batch;
+        const auto first = task.close(scope.mark, batch);
+        check(first.status == ScheduleStatus::report_full && first.reported == 1 && first.joined == 3 && first.panicked == 1);
+        check(first.pending == tickets[3] && first.pending_result.status == ScheduleStatus::report_full);
+        check(first.pending_result.outcome.panic.message == "batch second");
+        value.seen[0] = batch[0];
+        check(value.seen[0].ticket == tickets[1] && value.seen[0].outcome.panic.message == "batch first");
+        const auto extra = task.spawn(Work::run, &work[5], Work::clean);
+        const auto reused = task.spawn(Work::run, &work[6], Work::clean);
+        check(extra.status == ScheduleStatus::ok && reused.status == ScheduleStatus::ok);
+        check(reused.ticket.index == value.seen[0].ticket.index && reused.ticket.id != value.seen[0].ticket.id);
+        check(task.join(value.seen[0].ticket).status == ScheduleStatus::invalid);
+        const auto second = task.close(scope.mark, batch);
+        check(second.status == ScheduleStatus::report_full && second.reported == 1 && second.joined == 4 && second.panicked == 2);
+        check(second.pending == tickets[4] && second.spawn_failed == 0);
+        value.seen[1] = batch[0];
+        check(value.seen[1].ticket == tickets[3] && value.seen[1].outcome.panic.message == "batch second");
+        const auto third = task.close(scope.mark, batch);
+        check(third.status == ScheduleStatus::ok && third.reported == 1 && third.joined == 7);
+        check(third.panicked == 2 && third.spawn_failed == 1 && third.first_failure.panic.message == "batch first");
+        value.seen[2] = batch[0];
+        check(value.seen[2].ticket == tickets[4] && value.seen[2].outcome.kind == OutcomeKind::spawn_failed);
+        check(value.seen[2].outcome.context.memory.error == ENOMEM);
+        check(work[4].steps == 0 && work[4].cleanups == 0);
+        for (const auto index : {0, 1, 2, 3, 5, 6}) { check(work[index].cleanups == 1); }
+        check(task.close(scope.mark, batch).status == ScheduleStatus::invalid);
+        value.done = true;
+        return {};
+    }
+};
+
+void failure_batches_resume_without_truncation_or_ticket_reuse() {
+    for (const bool cleanup : {false, true}) {
+        std::array<TaskSlot, 6> slots;
+        Scheduler scheduler(slots, stack_bytes);
+        FailureBatches value;
+        const auto parent = scheduler.submit(cleanup ? CleanupChild::body : FailureBatches::run, &value,
+                                             cleanup ? FailureBatches::run : nullptr);
+        check(parent.status == ScheduleStatus::ok && scheduler.pump(40).status == ScheduleStatus::ok && value.done);
+        check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+    }
+}
+
+Panic zero_report_capacity(Task &task, void *) noexcept {
+    const auto scope = task.mark();
+    check(scope.status == ScheduleStatus::ok);
+    Work success;
+    Work failure;
+    failure.panic = {6, "needs space"};
+    check(task.spawn(Work::run, &success, Work::clean).status == ScheduleStatus::ok);
+    const auto child = task.spawn(Work::run, &failure, Work::clean);
+    check(child.status == ScheduleStatus::ok);
+    const auto full = task.close(scope.mark, std::span<ChildFailure>{});
+    check(full.status == ScheduleStatus::report_full && full.reported == 0 && full.joined == 1 && full.panicked == 0);
+    check(full.pending == child.ticket && full.first_failure.kind == OutcomeKind::pending);
+    std::array<ChildFailure, 2> failures;
+    failures[1].ticket.id = 777;
+    const auto closed = task.close(scope.mark, failures);
+    check(closed.status == ScheduleStatus::ok && closed.reported == 1 && closed.joined == 2 && closed.panicked == 1);
+    check(failures[0].ticket == child.ticket && failures[0].outcome.panic.message == "needs space");
+    check(failures[1].ticket.id == 777 && success.cleanups == 1 && failure.cleanups == 1);
+    return {};
+}
+
+void zero_capacity_reports_drain_successes_and_preserve_failed_child() {
+    std::array<TaskSlot, 3> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    const auto parent = scheduler.submit(zero_report_capacity, nullptr);
+    check(parent.status == ScheduleStatus::ok && scheduler.pump(20).status == ScheduleStatus::ok);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+struct ReportRetry final {
+public:
+    std::array<ChildFailure, 2> failures;
+    ScopeClose first;
+    bool paused = false;
+    bool done = false;
+
+    static Panic first_child(Task &, void *) noexcept { return {6, "first consumed"}; }
+
+    static Panic second_child(Task &task, void *) noexcept {
+        check(task.yield() == ContextStatus::ok);
+        fail_release = true;
+        return {2, "second retained"};
+    }
+
+    static Panic parent(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ReportRetry *>(data);
+        const auto scope = task.mark();
+        check(scope.status == ScheduleStatus::ok);
+        const auto first = task.spawn(first_child, nullptr);
+        const auto second = task.spawn(second_child, nullptr);
+        check(first.status == ScheduleStatus::ok && second.status == ScheduleStatus::ok);
+        value.failures[1].ticket.id = 777;
+        value.first = task.close(scope.mark, value.failures);
+        fail_release = false;
+        check(value.first.status == ScheduleStatus::context_failed && value.first.reported == 1);
+        check(value.first.joined == 1 && value.first.panicked == 1 && value.first.pending == second.ticket);
+        check(value.first.pending_result.outcome.panic.message == "second retained");
+        check(value.failures[0].ticket == first.ticket && value.failures[1].ticket.id == 777);
+        value.paused = true;
+        check(task.yield() == ContextStatus::ok);
+        const auto closed = task.close(scope.mark, value.failures);
+        check(closed.status == ScheduleStatus::ok && closed.reported == 1 && closed.joined == 2 && closed.panicked == 2);
+        check(closed.first_failure.panic.message == "first consumed");
+        check(value.failures[0].ticket == second.ticket && value.failures[1].ticket.id == 777);
+        value.done = true;
+        return {};
+    }
+};
+
+void release_failure_does_not_publish_or_count_an_unconsumed_failure() {
+    std::array<TaskSlot, 3> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    ReportRetry value;
+    const auto parent = scheduler.submit(ReportRetry::parent, &value);
+    check(parent.status == ScheduleStatus::ok && scheduler.pump(6).resumed == 6);
+    check(value.paused && !value.done && scheduler.inspect(parent.ticket).scopes == 1);
+    check(scheduler.inspect(value.first.pending).state == TaskState::settled);
+    check(scheduler.pump(2).status == ScheduleStatus::ok && value.done);
     check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
 }
 
@@ -912,6 +1068,9 @@ constexpr std::array cases{
     Case{"scope_nesting_capacity_and_generation_are_checked", scope_nesting_capacity_and_generation_are_checked},
     Case{"scope_operations_require_active_owner_and_worker", scope_operations_require_active_owner_and_worker},
     Case{"scope_close_reports_child_failures_without_hiding_later_children", scope_close_reports_child_failures_without_hiding_later_children},
+    Case{"failure_batches_resume_without_truncation_or_ticket_reuse", failure_batches_resume_without_truncation_or_ticket_reuse},
+    Case{"zero_capacity_reports_drain_successes_and_preserve_failed_child", zero_capacity_reports_drain_successes_and_preserve_failed_child},
+    Case{"release_failure_does_not_publish_or_count_an_unconsumed_failure", release_failure_does_not_publish_or_count_an_unconsumed_failure},
 };
 
 }

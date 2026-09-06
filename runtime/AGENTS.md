@@ -34,6 +34,10 @@
   Close only the innermost mark, retain progress on release failure and discard an
   owned child result only after its context releases successfully. Close is explicit
   and never substitutes for cancellation or joining after C++ locals expire.
+- Detailed scope reports use caller-provided bounded batches. Check capacity after
+  settlement but before reclaiming a failed child; report_full retains its ticket
+  and mark. Publish/count each detail only after successful consumption, and keep
+  per-call reported counts distinct from cumulative scope progress.
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the

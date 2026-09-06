@@ -9,7 +9,7 @@
 
 namespace meowy::prototype::v0 {
 
-enum class ScheduleStatus : unsigned char { ok, full, invalid, wrong_thread, context_failed, storage_failed };
+enum class ScheduleStatus : unsigned char { ok, full, invalid, wrong_thread, context_failed, storage_failed, report_full };
 enum class TaskState : unsigned char { vacant, runnable, running, waiting, settled };
 enum class OutcomeKind : unsigned char { pending, completed, panicked, spawn_failed };
 
@@ -32,6 +32,12 @@ public:
     std::size_t index = 0;
     std::uint64_t id = 0;
     bool operator==(const TaskTicket &) const noexcept = default;
+};
+
+struct ChildFailure final {
+public:
+    TaskTicket ticket{};
+    TaskOutcome outcome{};
 };
 
 struct Submission final {
@@ -96,6 +102,7 @@ public:
     TaskOutcome first_failure{};
     TaskTicket pending{};
     Joined pending_result{};
+    std::size_t reported = 0;
 };
 
 class Task final {
@@ -114,6 +121,7 @@ public:
     [[nodiscard]] OwnedStatus emit_capture() noexcept;
     [[nodiscard]] ScopeOpen mark() noexcept;
     [[nodiscard]] ScopeClose close(ScopeMark mark) noexcept;
+    [[nodiscard]] ScopeClose close(ScopeMark mark, std::span<ChildFailure> failures) noexcept;
 
 private:
     friend class Scheduler;
@@ -193,9 +201,11 @@ private:
                                    Owned *capture = nullptr) noexcept;
     [[nodiscard]] Joined join_child(TaskTicket parent, TaskTicket child, Owned *destination = nullptr,
                                     bool discard = false) noexcept;
+    [[nodiscard]] Joined wait_child(TaskTicket parent, TaskTicket child) noexcept;
     [[nodiscard]] Joined consume(TaskTicket ticket, Owned *destination = nullptr, bool discard = false) noexcept;
     [[nodiscard]] ScopeOpen mark(TaskTicket parent) noexcept;
-    [[nodiscard]] ScopeClose close(TaskTicket parent, ScopeMark mark) noexcept;
+    [[nodiscard]] ScopeClose close(TaskTicket parent, ScopeMark mark, std::span<ChildFailure> failures = {},
+                                   bool detailed = false) noexcept;
     void wake(TaskTicket child) noexcept;
     [[nodiscard]] bool valid(TaskTicket ticket) const noexcept;
     [[nodiscard]] std::size_t runnable_count() const noexcept;
