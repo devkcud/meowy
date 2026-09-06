@@ -42,12 +42,19 @@ Emitting does not end execution. A block produces at most one primary value and
 one value for each emitted name on any execution path. Its fields have a static
 shape; composing blocks does not require a dynamic object table.
 
-Current version: v0.0.1
+Current version: v0.0.0
+
+v0.0.1 is the first full release target, covering the documented language and
+ecosystem for the initial supported platform. Full release scope belongs to
+v0.0.1, not a future v1.0.0.
 
 ## Documentation
 
 Start with the [guide](docs/guide/README.md), or use the
 [documentation index](docs/README.md) to browse the full reference.
+
+To work on the compiler, read [Building the first meowy compiler](COMPILER.md)
+for the recommended languages, toolchain, architecture, and release gates.
 
 For something to build, open [Pawterns](docs/pawterns/README.md), the meowy
 cookbook: 39 recipes from a first greeting through owned buffers, CLI tools,
