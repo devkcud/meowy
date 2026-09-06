@@ -1,0 +1,8 @@
+debug:@"debug"
+
+read<uint16>:(){debug.print("read");->300}
+values<uint8[1]><uint16[1]>:[{value:read();->value+1}]
+|values<uint16[1]>|debug.print(values[1])
+
+bytes<uint8[1]><uint16[1]>:[{value<uint8>:=255;value=1;->value+1}]
+|bytes<uint8[1]>|debug.print(bytes[1])

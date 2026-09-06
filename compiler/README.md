@@ -35,6 +35,7 @@ compiler/target/debug/meowy run compiler/examples/element-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/element-writes.mwy
 compiler/target/debug/meowy run compiler/examples/nested-writes.mwy
 compiler/target/debug/meowy run compiler/examples/effectful-lists.mwy
+compiler/target/debug/meowy run compiler/examples/dynamic-lists.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -75,6 +76,8 @@ The [nested writes example](examples/nested-writes.mwy) updates a selected matri
 element while preserving other rows and retaining the indices chosen before the RHS.
 The [effectful lists example](examples/effectful-lists.mwy) selects numeric and
 record element widths after checking each block's effects once in source order.
+The [dynamic lists example](examples/dynamic-lists.mwy) selects element types from
+returned and mutable primitive locals while using their actual values at runtime.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -208,12 +211,17 @@ When list candidates remain unresolved, an unlabeled element block may check its
 context-independent prefix once, then select a type from a terminal sequence of
 unconditional emissions. Candidate probes use the prefix's resulting reach and
 bindings. The same block continues with the selected type; effects are neither
-replayed nor deferred across later list elements. Immutable primitive constants
-in the prefix keep their ordinary inferred types, and local shadowing resolves
-before result probing.
+replayed nor deferred across later list elements. Same-owner primitive locals keep
+their declared types and local shadowing resolves before result probing. Immutable
+constants retain their values; mutable and nonconstant locals contribute unknown
+values, without reusing their initializers. Ordinary scalar deferral remains
+constant-only, so runtime reads stay before later list effects.
 Ambiguous proved shapes report E207. Result constraints that depend on earlier
-emitted names, mutable/nonconstant locals, unresolved primary composition or more
-complex control flow remain B001 until their inference is implemented. An explicit
+emitted names, reference/aggregate locals, unresolved primary composition or more
+complex control flow remain B001 until their inference is implemented. A scratch
+failure inside a symbolic short-circuit branch may retain an uncertain candidate;
+ordinary checking with the actual flow facts decides a sole remaining choice.
+Multiple uncertain choices remain B001. An explicit
 element/list annotation supplies context for the existing ordinary block checker.
 Candidate selection allows up to 256 list alternatives and 4,096 nodes per pure
 scalar tree, charging constant bytes and
