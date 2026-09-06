@@ -36,6 +36,17 @@ class VerifyTests(unittest.TestCase):
         base = build.args[build.args.index("--target-dir") + 1]
         self.assertEqual(str(verify.ROOT / base / target / "debug/meowy"), checks[-1].args[-1])
 
+    def test_runtime_checks_are_explicit_and_all_includes_them(self):
+        defaults = verify.plan()
+        selected = verify.plan(runtime=True)
+        self.assertFalse(any("runtime/" in arg for check in defaults for arg in check.args))
+        self.assertEqual(2, len(selected) - len(defaults))
+        self.assertEqual("runtime/check.py", selected[-1].args[-1])
+        result = subprocess.run([sys.executable, "-B", str(verify.ROOT / "tools/verify.py"), "--all", "--list"], capture_output=True, text=True)
+        self.assertEqual(0, result.returncode)
+        self.assertIn("runtime/check.py", result.stdout)
+        self.assertIn("runtime/tests", result.stdout)
+
     def test_subprocess_uses_repository_directory(self):
         with tempfile.TemporaryDirectory() as temp, contextlib.redirect_stdout(io.StringIO()):
             root = Path(temp)

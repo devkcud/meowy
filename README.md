@@ -56,7 +56,9 @@ Start with the [guide](docs/guide/README.md), or use the
 To work on the compiler, read [Building the first meowy compiler](COMPILER.md)
 for the recommended languages, toolchain, architecture, and release gates.
 Use [repository verification](tools/README.md) to check documentation contracts,
-editor support, and explicitly selected compiler checks.
+editor support, and explicitly selected compiler/runtime checks. The
+[native cleanup prototype](runtime/README.md) exercises ownership cleanup outside
+the compiler; [STATUS.md](STATUS.md) tracks implementation and remaining work.
 
 For something to build, open [Pawterns](docs/pawterns/README.md), the meowy
 cookbook: 39 recipes from a first greeting through owned buffers, CLI tools,

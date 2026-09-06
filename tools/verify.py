@@ -18,7 +18,7 @@ class Check:
     args: tuple[str, ...]
 
 
-def plan(editor=None, compiler=False, strict=False):
+def plan(editor=None, compiler=False, strict=False, runtime=False):
     python = (sys.executable, "-B", "-X", "utf8", "-E")
     checks = [
         Check("tooling regressions", python + ("-m", "unittest", "discover", "-s", "tools/tests", "-p", "test_*.py")),
@@ -30,6 +30,11 @@ def plan(editor=None, compiler=False, strict=False):
         checks.append(Check("Vim runtime", ("vim", "-Nu", "NONE", "-i", "NONE", "-n", "-es", "-S", "editor/nvim/tests/run.vim")))
     if editor in ("nvim", "both"):
         checks.append(Check("Neovim runtime", ("env", "NVIM_LOG_FILE=" + os.devnull, "nvim", "--headless", "-u", "NONE", "-i", "NONE", "-n", "-S", "editor/nvim/tests/run.vim")))
+    if runtime:
+        checks.extend([
+            Check("runtime harness regressions", python + ("-m", "unittest", "discover", "-s", "runtime/tests", "-p", "test_*.py")),
+            Check("native cleanup protocol", python + ("runtime/check.py",)),
+        ])
     if compiler:
         cargo = ("--locked", "--manifest-path", "compiler/Cargo.toml", "--target", TARGET, "--target-dir", "compiler/target")
         checks.extend([
@@ -70,8 +75,9 @@ def main():
     parser = argparse.ArgumentParser(description="Verify repository contracts; compiler execution and editor runtimes are opt-in.")
     parser.add_argument("--editor", choices=("vim", "nvim", "both"))
     parser.add_argument("--compiler", action="store_true")
+    parser.add_argument("--runtime", action="store_true", help="Check native cleanup in debug, release and sanitizer builds.")
     parser.add_argument("--strict", action="store_true", help="Require every compiler conformance case; requires --compiler or --all.")
-    parser.add_argument("--all", action="store_true", help="Include both editor runtimes and compiler verification.")
+    parser.add_argument("--all", action="store_true", help="Include editor, compiler and native cleanup verification.")
     parser.add_argument("--list", action="store_true", help="Print selected commands without running them.")
     parser.add_argument("--timeout", type=float, default=300, help="Maximum seconds for each command (default: 300).")
     args = parser.parse_args()
@@ -81,18 +87,21 @@ def main():
         parser.error("--timeout must be a finite positive number")
     compiler = args.compiler or args.all
     editor = "both" if args.all else args.editor
-    checks = plan(editor, compiler, args.strict)
+    runtime = args.runtime or args.all
+    checks = plan(editor, compiler, args.strict, runtime)
     if args.list:
         for check in checks:
             print(f"{check.name}: {shlex.join(check.args)}")
         print("Plan only; no checks were run.")
         return 0
     if not compiler:
-        print("Scope: repository contracts only; no Meowy source will be compiled or executed.", flush=True)
+        print("Scope: repository contracts; no Meowy source will be compiled or executed.", flush=True)
     elif not args.strict:
         print("Scope: repository contracts and compiler bootstrap; unsupported language cases remain visible.", flush=True)
     else:
         print("Scope: repository contracts and full reference catalog execution.", flush=True)
+    if runtime:
+        print("Native cleanup protocol checks are selected; task stacks and DWARF unwinding remain unqualified.", flush=True)
     if not editor:
         print("Editor runtimes are not selected; use --editor both to include them.", flush=True)
     for check in checks:

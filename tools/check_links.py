@@ -58,7 +58,7 @@ def anchors(text):
 
 def documents(root):
     files = list(root.glob("*.md"))
-    for name in ("docs", "editor", "tools", "compiler"):
+    for name in ("docs", "editor", "tools", "compiler", "runtime"):
         for base, dirs, names in os.walk(root / name):
             dirs[:] = sorted(name for name in dirs if name not in {"target", "build", "__pycache__"})
             files.extend(Path(base) / name for name in names if name.endswith(".md"))

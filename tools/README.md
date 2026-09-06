@@ -6,6 +6,7 @@ Run from any working directory by giving the path to the script:
 python3 tools/verify.py
 python3 tools/verify.py --editor both
 python3 tools/verify.py --compiler
+python3 tools/verify.py --runtime
 python3 tools/verify.py --all --list
 ```
 
@@ -27,7 +28,11 @@ visible and fail if they were already required by the bootstrap harness.
 Cargo receives explicit `x86_64-unknown-linux-gnu` and `compiler/target` paths;
 the harness executes that build's binary even when Cargo environment defaults
 select a different target or directory.
-`--all` includes both editor runtimes and compiler verification.
+`--runtime` runs the [native cleanup prototype](../runtime/README.md), its Python
+regressions, and debug/release/ASan/UBSan checks, including fatal cleanup subprocesses.
+LeakSanitizer needs an execution environment without ptrace supervision; a blocked
+sanitizer check fails visibly. This protocol does not qualify native stack unwinding.
+`--all` includes both editors, compiler verification and runtime cleanup checks.
 
 `--strict` with `--compiler` or `--all` requires every reference catalog case to
 pass. That gate is expected to fail while language features remain unavailable.
@@ -46,7 +51,7 @@ python3 -B -m unittest discover -s tools/tests -p 'test_*.py'
 ```
 
 The link check covers root Markdown files and Markdown under `docs`, `editor`,
-`tools`, and `compiler`, excluding generated `target`, `build`, and `__pycache__`
+`tools`, `compiler`, and `runtime`, excluding generated `target`, `build`, and `__pycache__`
 directories. It validates inline links and images, relative or repository-root
 file paths, percent-encoded paths, and Markdown ATX heading fragments, including
 duplicate headings. Code fences, inline code, and HTML comments are ignored.

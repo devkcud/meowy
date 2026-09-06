@@ -45,6 +45,16 @@ class LinkTests(unittest.TestCase):
             self.assertIn("heading does not exist", errors[1])
             self.assertTrue(all("escapes repository" in error for error in errors[2:]))
 
+    def test_runtime_documentation_is_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "runtime").mkdir()
+            (root / "runtime/README.md").write_text("[missing](absent.md)", encoding="utf-8")
+            files, count, errors = check_links.check(root)
+            self.assertEqual((1, 1), (files, count))
+            self.assertEqual(1, len(errors))
+            self.assertIn("runtime/README.md:1", errors[0])
+
     def test_generated_directories_are_excluded(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
