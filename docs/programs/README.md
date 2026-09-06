@@ -20,12 +20,14 @@ helper modules stay inside their project.
 | [Seeded rolls](seeded-rolls/README.md) | Reproducible randomness, numeric conversion, bounded histogram | Fixed seed; inline counters |
 | [Ordered tasks](tasks/README.md) | Bounded groups, module callables, ordered outcomes, deadlines | Explicit executor; three child tasks |
 | [Bounded channel](channel/README.md) | Endpoint moves, backpressure, closure, partial-result handling | Explicit queue allocation and executor |
+| [Ticker](ticker/README.md) | Owned timed events, monotonic readings, missed-tick coalescing | Explicit timer allocation; finite waits |
 | [Calendar CLI](calendar-cli/README.md) | Typed options, generated help, calendar conversion, writer errors | Argv; six calendar profiles |
+| [Duration CLI](duration-cli/README.md) | Nested typed subcommands, inherited options, checked duration arithmetic | Argv; no implicit command dispatch |
 
 Start with age, composition, and packet for the language model. Text lab, word
-count, JSON report, and seeded rolls explore text, data, ownership, and storage.
-Tasks and channel make execution boundaries visible; calendar CLI combines
-several modules into an application with explicit process statuses.
+count, and JSON report show progressively more ownership and storage choices.
+Tasks, channel, and ticker make execution boundaries visible. Calendar and
+duration CLIs demonstrate typed options and nested command dispatch.
 
 ## Run one project
 
@@ -49,8 +51,10 @@ aliases, profile, and executor settings. The application's working directory
 remains the shell's working directory: a file argument such as `sample.txt` is
 resolved there.
 
-Each README provides commands, expected behavior, failure cases, and storage
-costs. Task outcomes can depend on admission, deadlines, and scheduling.
+Each README provides complete commands, expected output or timing-dependent
+behavior, failure cases, and storage costs. Timing observations and random counts
+are not made-up golden output: the tick schedule depends on runtime observations,
+and seeded output is tied to the library's declared algorithm identity.
 
 ## Build, inspect, and experiment
 

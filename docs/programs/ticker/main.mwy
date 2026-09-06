@@ -1,0 +1,50 @@
+debug : @"debug"
+fmt : @"fmt"
+io : @"io"
+memory : @"memory"
+time : @"time"
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    start : time.now()
+    created : time.ticker(time.Millisecond.scale(100), memory.heap)
+    | created <error> | {
+        debug.print(created)
+        status = 1
+        'main.leave()
+    }
+    ticker := created
+
+    observations <uint8> := 0
+    'ticks {
+        | observations == 3 | 'ticks.leave()
+
+        tick : ticker.next()
+        | tick <error> | {
+            debug.print(tick)
+            status = 1
+            'main.leave()
+        }
+
+        observations = observations + 1
+        scheduled : tick.scheduled.since(start)
+        observed : tick.observed.since(start)
+        written : fmt.write_line(output.write,
+            "tick {observations}: scheduled={scheduled}, observed={observed}, skipped={tick.skipped}")
+        | written <error> | {
+            debug.print(written)
+            status = 1
+            'main.leave()
+        }
+
+        # Let multiple periods pass before requesting the second observation. #
+        | observations == 1 | time.sleep(time.Millisecond.scale(250))
+        'ticks.restart()
+    }
+
+    ticker.close()
+}
+
+-> status

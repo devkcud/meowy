@@ -59,6 +59,10 @@ or `any`. `cli.option<T>`, `cli.argument<T>`, and the other descriptor construct
 are ordinary named values too. Aliasing them keeps the same construction rules.
 The source grammar gains no annotations or keywords.
 
+Omitted `options`, `arguments`, and `commands` lists are empty. Omitted summary
+and description text are empty strings; an omitted version disables the built-in
+version option.
+
 Descriptions are closed compile-time data. Command names and result-field names
 are known before execution; there is no runtime mutation of the command tree.
 Descriptor lists preserve declaration order for usage and help output. Duplicate
@@ -229,3 +233,6 @@ This separation also makes tests straightforward: pass a literal argument slice,
 inspect the typed result or UsageError, and render help into an in-memory writer.
 Completion frontends can inspect the same immutable descriptor; they must never
 execute command handlers just to discover an option's name.
+
+The [duration project](../../programs/duration-cli/README.md) demonstrates nested
+command types and inherited options.

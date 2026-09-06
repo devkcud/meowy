@@ -1,0 +1,147 @@
+cli : @"cli"
+fmt : @"fmt"
+io : @"io"
+memory : @"memory"
+process : @"process"
+time : @"time"
+
+app : cli.command({
+    -> name : "span"
+    -> summary : "Inspect and scale exact elapsed durations."
+    -> version : "0.1.0"
+    -> require_command : true
+    -> options : [
+        cli.flag({
+            -> name : "raw"
+            -> long : "raw"
+            -> short : "r"
+            -> help : "Print only the resulting signed nanosecond count."
+            -> global : true
+        })
+    ]
+    -> commands : [
+        cli.command({
+            -> name : "duration"
+            -> summary : "Work with fixed elapsed intervals."
+            -> require_command : true
+            -> commands : [
+                cli.command({
+                    -> name : "inspect"
+                    -> summary : "Show the duration, whole units, and remainder."
+                    -> options : [
+                        cli.option<time.Duration>({
+                            -> name : "unit"
+                            -> long : "unit"
+                            -> short : "u"
+                            -> help : "Positive duration used to split the value."
+                            -> default : time.Second
+                        })
+                    ]
+                    -> arguments : [
+                        cli.argument<time.Duration>({
+                            -> name : "value"
+                            -> help : "Exact duration, such as 1h30m or 250ms."
+                        })
+                    ]
+                }),
+                cli.command({
+                    -> name : "scale"
+                    -> summary : "Multiply a duration by a signed integer."
+                    -> arguments : [
+                        cli.argument<time.Duration>({
+                            -> name : "value"
+                            -> help : "Exact duration to multiply."
+                        }),
+                        cli.argument<int64>({
+                            -> name : "factor"
+                            -> help : "Signed multiplication factor."
+                        })
+                    ]
+                })
+            ]
+        })
+    ]
+})
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    arguments : process.arguments(memory.heap)
+    | arguments <error> | {
+        written : fmt.write_line(errors.write, arguments)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    parsed : cli.parse(app, arguments.slice())
+    | parsed <cli.Help> | {
+        written : cli.write_help(parsed, output.write, 80)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.Version> | {
+        written : cli.write_version(parsed, output.write)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.UsageError> | {
+        written : cli.write_error(parsed, errors.write)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    | parsed.command <app.commands.duration.Parsed> | {
+        command : parsed.command
+
+        | command.command <app.commands.duration.commands.inspect.Parsed> | {
+            inspect : command.command
+            value : inspect.arguments.value
+            unit : inspect.options.unit
+            | unit.compare(time.Zero) <= 0 | {
+                written : fmt.write_line(errors.write, "--unit must be positive")
+                | written <error> | { status = 1; 'main.leave() }
+                status = 2
+                'main.leave()
+            }
+
+            | parsed.options.raw | {
+                written : fmt.write_line(output.write, value.nanoseconds())
+                | written <error> | status = 1
+                'main.leave()
+            }
+
+            parts : value.split(unit)
+            written : fmt.write_line(output.write,
+                "Duration: {value}\nNanoseconds: {value.nanoseconds()}\nWhole units: {parts.whole}\nRemainder: {parts.remainder}")
+            | written <error> | status = 1
+            'main.leave()
+        }
+
+        | command.command <app.commands.duration.commands.scale.Parsed> | {
+            scale : command.command
+            result : scale.arguments.value.try_scale(scale.arguments.factor)
+            | result <time.RangeError> | {
+                written : fmt.write_line(errors.write, result)
+                | written <error> | { status = 1; 'main.leave() }
+                status = 2
+                'main.leave()
+            }
+
+            | parsed.options.raw | {
+                written : fmt.write_line(output.write, result.nanoseconds())
+                | written <error> | status = 1
+                'main.leave()
+            }
+
+            written : fmt.write_line(output.write, result)
+            | written <error> | status = 1
+            'main.leave()
+        }
+    }
+}
+
+-> status

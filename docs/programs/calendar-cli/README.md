@@ -38,4 +38,5 @@ callables, and every write result is checked. No parser branch exits the process
 or invokes an application handler implicitly.
 
 The [CLI library](../../reference/stdlib/cli.md) also supports custom parsers,
-bounded repeated options, global options, and nested subcommands.
+bounded repeated options, global options, and nested subcommands. The
+[duration CLI](../duration-cli/README.md) demonstrates that command hierarchy.
