@@ -33,6 +33,7 @@ compiler/target/debug/meowy run compiler/examples/list-unions.mwy
 compiler/target/debug/meowy run compiler/examples/compound-lists.mwy
 compiler/target/debug/meowy run compiler/examples/element-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/element-writes.mwy
+compiler/target/debug/meowy run compiler/examples/nested-writes.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -69,6 +70,8 @@ into original list storage, returns an element through a function and replaces t
 owner after the references' final uses.
 The [element writes example](examples/element-writes.mwy) replaces initialized
 elements after the final use of a shared view, preserving the list's length and copies.
+The [nested writes example](examples/nested-writes.mwy) updates a selected matrix
+element while preserving other rows and retaining the indices chosen before the RHS.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -132,12 +135,12 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   an element address. Copied parameter/self elements cannot escape their scope.
   Lifetime analysis conservatively treats all indices in a list as overlapping;
   runtime reference equality still uses the actual element addresses.
-- Checked element assignment to direct mutable local lists: `values[index] = value`.
-  It checks the one-based initialized position before evaluating the replacement,
-  then updates only that element. Returning index/RHS evaluation keeps parent
-  storage reserved against writes; shared reads may finish before the final store.
-  Nested index targets and writes through fields, references or temporary owners
-  remain unavailable.
+- Checked element assignment to mutable local lists, including nested targets
+  such as `matrix[row][column] = value`. It checks each one-based initialized
+  position from root to leaf before evaluating the replacement, then updates only
+  that element. Returning index/RHS evaluation keeps parent storage reserved
+  against writes; shared reads may finish before the final store. Writes through
+  fields, references or temporary owners remain unavailable.
 - Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
   literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
   replacement and equality of initialized elements. Elements can be scalars,
@@ -224,6 +227,12 @@ of `view`; any later shared use conflicts, even when it selects a different inde
 Replacing the owner or another element during a returning index/RHS reports E302,
 because the pending write still depends on that list storage. Other owners remain
 independent. Copy reads keep their existing aggregate snapshot semantics.
+For a nested target, each selected child has its own initialized length. The
+compiler checks each prefix before evaluating the next index; a bounds failure
+reports that prefix's byte span and skips every remaining index and the RHS.
+Captured indices keep the destination fixed when later operands change index
+variables. A borrow of any row or element conservatively conflicts with a nested
+write if the borrow is used afterward.
 Copying a record counts as a use of all its references, even if a later operation
 selects only one field. Direct projection, scalar comparison and scalar-primary
 formatting do not keep unrelated component loans alive.
