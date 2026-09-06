@@ -143,6 +143,10 @@
 # reachability, so there is no separate list of stdlib packages to link. #
 # The root build policy governs imported code; dependencies add their own native #
 # artifacts and import maps, never a second executor or target. #
+# Fixed distribution recording policy has no manifest settings: 256 MiB captured #
+# inputs, 64 MiB events, 8 MiB application output, and a locale/TZ environment #
+# allowlist. Limits affect evidence, not application I/O. See #
+# ../reference/replay-recording.md and ../reference/artifact-formats.md. #
 
 # TEST -- discovery and isolated case execution. #
 # Reference: ../reference/stdlib/testing.md. #

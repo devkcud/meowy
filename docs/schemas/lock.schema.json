@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:meowy:schema:lock:1",
+  "title": "Meowy lock schema 1",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "meowy.lock"
+    },
+    "version": {
+      "const": 1
+    },
+    "distribution": {
+      "$ref": "urn:meowy:schema:common:1#/$defs/distribution"
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^git:[0-9a-f]{64}$"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^https://[a-z0-9.-]+(?::[0-9]+)?/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\\.git$"
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "const": "."
+              },
+              {
+                "$ref": "urn:meowy:schema:common:1#/$defs/member"
+              }
+            ]
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": ["id", "source", "revision", "directory", "digest"],
+        "additionalProperties": false
+      }
+    },
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "alias": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "fetch": {
+            "type": "string",
+            "pattern": "^https://[a-z0-9.-]+(?::[0-9]+)?/(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\\.git$"
+          },
+          "selector": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": ["hash", "tag", "ref"]
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["kind", "value"],
+            "additionalProperties": false
+          },
+          "package": {
+            "type": "string",
+            "pattern": "^git:[0-9a-f]{64}$"
+          }
+        },
+        "required": ["from", "alias", "fetch", "selector", "package"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema", "version", "distribution", "packages", "requests"],
+  "additionalProperties": false
+}

@@ -534,6 +534,14 @@ earlier phase. An assertion panic is a normal panic artifact with test context.
 A handled error, matching expected panic, or skipped case creates no failure
 occurrence merely because its code exercises a failure path.
 
+The harness enables [recording profile 1](../replay-recording.md) for each executed
+case by default, with that profile's fixed event/input budgets and instrumentation
+costs. There is no test recording toggle in this revision. Listing, checking,
+skipped cases and `--no-run` do not execute recording boundaries. Unsupported
+effects still run in the original case and mark its capture external; capture
+limits do not turn passing case results into failures. The separately configured
+case output limit and watchdog remain enforced test outcomes.
+
 Reproduction selects the failing case under its preserved supervision, not the
 whole current suite. Case replay keeps its labeled captured streams on stderr,
 as the test runner does. Exported case capsules preserve that mode. They retain

@@ -1,0 +1,75 @@
+{
+  "schema": "meowy.capsule",
+  "version": 1,
+  "session": "schema-example-1",
+  "occurrence": 1,
+  "phase": "execution",
+  "distribution": {
+    "version": "0.0.1+schema-example",
+    "digest": "sha256:c028d730751242d417443b2e8a39839a7ce8198385a67be4d529cdb6386c80ea"
+  },
+  "compiler_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "host": {
+    "target": "x86_64-unknown-linux-gnu",
+    "cpu_features": ["x86-64", "sse2"],
+    "minimum_kernel": "5.4",
+    "minimum_glibc": "2.31"
+  },
+  "command": ["meowy", "run", "main.mwy"],
+  "entry": "main.mwy",
+  "namespace": "entry",
+  "test": null,
+  "inputs": [
+    {
+      "package": "local:.",
+      "path": "main.mwy",
+      "original_path": "/example/project/main.mwy",
+      "member": "source.txt",
+      "bytes": 41,
+      "digest": "sha256:68be354c8c24af9c0d640138d1eda8010769e9dfeb2e8987897e0545e571cef3"
+    }
+  ],
+  "inventory": [
+    {
+      "path": "diagnostic.json",
+      "bytes": 715,
+      "digest": "sha256:2ce349eae4a5b0019deef475b3ac057959afa97e7ebf49b3e80746df9f5d4223",
+      "executable": false
+    },
+    {
+      "path": "source.txt",
+      "bytes": 41,
+      "digest": "sha256:68be354c8c24af9c0d640138d1eda8010769e9dfeb2e8987897e0545e571cef3",
+      "executable": false
+    }
+  ],
+  "diagnostic": "diagnostic.json",
+  "runner": null,
+  "toolchain_descriptor": null,
+  "event_log": null,
+  "capture": {
+    "state": "incomplete",
+    "reasons": [
+      "Schema fixture only: compiler, runner and executable payloads are absent."
+    ]
+  },
+  "budgets": {
+    "input_limit": 268435456,
+    "event_limit": 67108864,
+    "output_limit": 8388608,
+    "input_observed": 41,
+    "event_observed": 0,
+    "output_observed": 0,
+    "first_omitted": "tools/compiler"
+  },
+  "environment": {
+    "values": {
+      "LANG": null,
+      "LC_ALL": null,
+      "LC_CTYPE": null,
+      "TZ": null
+    },
+    "omitted_names": []
+  },
+  "missing": ["tools/compiler", "tools/replay", "application"]
+}

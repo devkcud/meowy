@@ -286,6 +286,8 @@ ones explicitly. Replaying a saved executable does not automatically make a live
 network peer or mutable filesystem deterministic. The
 [replay contract](../diagnostics.md#replay-fidelity) governs which recorded results
 replace live effects and when a replay must report missing evidence.
+The [recording support matrix](../replay-recording.md) names supported boundaries
+and fixed capture limits for the initial distribution.
 
 See the self-contained [file hash](../../programs/file-hash/README.md) and
 [file copy](../../programs/file-copy/README.md) projects for initialized buffers,

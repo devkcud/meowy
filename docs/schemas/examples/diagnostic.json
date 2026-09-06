@@ -1,0 +1,33 @@
+{
+  "schema": "meowy.diagnostic",
+  "version": 1,
+  "session": "schema-example-1",
+  "occurrence": 1,
+  "code": "P006",
+  "phase": "execution",
+  "severity": "panic",
+  "message": "Explicit debug.panic",
+  "primary": {
+    "path": "main.mwy",
+    "digest": "sha256:68be354c8c24af9c0d640138d1eda8010769e9dfeb2e8987897e0545e571cef3",
+    "start": 18,
+    "end": 40
+  },
+  "related": [],
+  "facts": [],
+  "candidates": [],
+  "failure": {
+    "panic_message": "fixture",
+    "process": {
+      "code": 1,
+      "signal": null
+    },
+    "crash_signature": null
+  },
+  "capture": {
+    "state": "incomplete",
+    "reasons": [
+      "Schema fixture only: compiler, runner and executable payloads are absent."
+    ]
+  }
+}

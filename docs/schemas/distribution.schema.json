@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:meowy:schema:distribution:1",
+  "title": "Meowy distribution schema 1",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "meowy.distribution"
+    },
+    "version": {
+      "const": 1
+    },
+    "release": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "const": "x86_64-unknown-linux-gnu"
+    },
+    "cpu_features": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "minimum_kernel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "minimum_glibc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "link_modes": {
+      "type": "array",
+      "items": {
+        "enum": ["platform", "shared", "static"]
+      }
+    },
+    "lto_modes": {
+      "type": "array",
+      "items": {
+        "enum": ["off", "thin", "full"]
+      }
+    },
+    "debug_modes": {
+      "type": "array",
+      "items": {
+        "enum": ["embedded", "separate", "none"]
+      }
+    },
+    "inventory": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:meowy:schema:common:1#/$defs/file"
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "release",
+    "target",
+    "cpu_features",
+    "minimum_kernel",
+    "minimum_glibc",
+    "link_modes",
+    "lto_modes",
+    "debug_modes",
+    "inventory"
+  ],
+  "additionalProperties": false
+}

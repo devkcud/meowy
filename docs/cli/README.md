@@ -683,6 +683,12 @@ live I/O. The default replay stops at an uncaptured boundary. Use
 labeled a best-effort rerun. A hang without a captured failure or completed
 session does not automatically have an error ID.
 
+[Recording profile 1](../reference/replay-recording.md) lists exactly which APIs
+can be replayed, operation/argument matching, the fixed environment allowlist, and
+256 MiB input / 64 MiB event / 8 MiB application-output capture budgets. These
+are fixed distribution policy, without manifest or CLI overrides. Capture limits
+mark evidence incomplete; they do not truncate the original application's I/O.
+
 ### Export one executable
 
 ```sh
@@ -705,6 +711,12 @@ A capsule marked incomplete stays incomplete after export; the exporter reports
 exactly which inputs are missing. Inspecting remains useful even when replay is
 unavailable.
 
+The [versioned artifact contract](../reference/artifact-formats.md) defines the
+ELF capsule container and structural/integrity checks. If even its runner is
+missing, export returns `E704` and writes no executable-looking artifact. A newer
+unsupported artifact schema also returns `E704`; malformed structure or payload
+integrity failures use `E705`. Neither case silently migrates saved evidence.
+
 ## Report a compiler bug
 
 A source error usually calls for a source edit. Report a compiler crash, an
@@ -726,7 +738,9 @@ payload exists, `report` presents it before requesting confirmation; if the
 payload changes after preview, it must be reviewed again. In a noninteractive
 shell, submission requiring authentication or confirmation fails with instructions.
 Local explanation, replay, and export never require an account. Report previews
-exclude credentials and mark any omitted input that affects reproducibility.
+exclude tool transport credentials and disallowed environment values, and mark
+any omission that affects replay. Source/argv/output remain reviewed exact inputs;
+this is not a promise to recognize secrets embedded in arbitrary project bytes.
 
 ## Clean up saved failures
 

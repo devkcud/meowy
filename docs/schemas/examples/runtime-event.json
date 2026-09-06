@@ -1,0 +1,28 @@
+{
+  "schema": "meowy.runtime-event",
+  "version": 1,
+  "seq": 1,
+  "task": 0,
+  "resource": "stderr",
+  "operation": "io.stderr.write",
+  "arguments": {
+    "count": "7",
+    "bytes_digest": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+  },
+  "arguments_digest": "sha256:a298a8cd47d06c96f7582521161875b11847c6a8c346a3037b907dd2b4962829",
+  "predecessors": [],
+  "outcome": {
+    "kind": "result",
+    "data": {
+      "count": "7",
+      "error": null
+    },
+    "payloads": [
+      {
+        "member": "output.bin",
+        "bytes": 7,
+        "digest": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+      }
+    ]
+  }
+}

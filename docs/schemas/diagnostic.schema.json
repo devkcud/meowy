@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:meowy:schema:diagnostic:1",
+  "title": "Meowy diagnostic schema 1",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "meowy.diagnostic"
+    },
+    "version": {
+      "const": 1
+    },
+    "session": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occurrence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[EPTF][0-9]{3}$"
+    },
+    "phase": {
+      "$ref": "urn:meowy:schema:common:1#/$defs/phase"
+    },
+    "severity": {
+      "enum": ["error", "panic", "failure", "fatal"]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary": {
+      "anyOf": [
+        {
+          "$ref": "urn:meowy:schema:common:1#/$defs/span"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "span": {
+            "anyOf": [
+              {
+                "$ref": "urn:meowy:schema:common:1#/$defs/span"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["span", "message"],
+        "additionalProperties": false
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "urn:meowy:schema:common:1#/$defs/fact"
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*\\.[1-9][0-9]*$"
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "start": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "replacement_base64": {
+                  "type": "string",
+                  "contentEncoding": "base64"
+                }
+              },
+              "required": [
+                "path",
+                "digest",
+                "start",
+                "end",
+                "replacement_base64"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["id", "edits", "conditions", "effects", "recommendation"],
+        "additionalProperties": false
+      }
+    },
+    "failure": {
+      "type": "object",
+      "properties": {
+        "panic_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "process": {
+          "anyOf": [
+            {
+              "$ref": "urn:meowy:schema:common:1#/$defs/process"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "crash_signature": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pass": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "frame": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": ["kind", "pass", "frame"],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["panic_message", "process", "crash_signature"],
+      "additionalProperties": false
+    },
+    "capture": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "closed",
+            "external_dependencies",
+            "incomplete",
+            "unavailable"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": ["state", "reasons"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "closed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reasons": {
+                "maxItems": 0
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reasons": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "session",
+    "occurrence",
+    "code",
+    "phase",
+    "severity",
+    "message",
+    "primary",
+    "related",
+    "facts",
+    "candidates",
+    "failure",
+    "capture"
+  ],
+  "additionalProperties": false
+}

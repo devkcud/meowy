@@ -399,6 +399,14 @@ required tools, source graph, diagnostics, and all captured inputs. It does not
 need the original checkout, an installed meowy compiler, a populated build cache,
 or a dependency download.
 
+Capture is supervised by `meowy run`, `check`, `build`, or the test runner. A
+directly launched deployed binary has minimal runtime diagnostics but cannot
+promise an absent source/toolchain closure. The fixed initial capture limits,
+environment policy and supported runtime boundaries are defined by
+[recording profile 1](replay-recording.md). The
+[artifact formats](artifact-formats.md) define actual diagnostic/capsule schemas,
+the executable container and reader compatibility.
+
 For a static error, the executable drives the preserved compiler up to the
 rejected phase. For a runtime failure, it also contains the built program and
 its runtime inputs. Both are executable capsules; a static rejection does not
@@ -441,7 +449,7 @@ collision-prone directory key.
 | Compiler version, build identity, executable, required libraries, and invocation                               | Replay with the toolchain that produced the failure            |
 | Target, profile, CPU features, effective optimization/link settings, runtime/sysroot, and native input digests | Preserve the selected representation and build inputs          |
 | Failure phase, code, spans, related notes, and fix candidates                                                  | Identify the occurrence independently of terminal formatting   |
-| Declared environment inputs and captured standard streams                                                      | Record the relevant inputs and observed output                 |
+| Fixed tool environment policy, allowed runtime environment values, omitted names and captured streams          | Record permitted inputs without copying shell credentials      |
 | Backend IR, objects, linker commands, and executable, when produced                                            | Investigate lowering, linking, or runtime failures             |
 | Debug companions, build report, and link map, when produced                                                    | Explain retained code/data and interpret the exact executable  |
 | Runtime arguments and replayable input, when available                                                         | Revisit a failure that actually reached execution              |
@@ -521,7 +529,7 @@ and enforces that event sequence. This mode has explicit instrumentation, I/O,
 and storage costs, which are recorded in the capsule along with capture limits
 and truncation. It does not change ownership, bounds, or cleanup semantics.
 
-The manifest distinguishes a **closed** recording, with all required inputs
+The capsule manifest distinguishes a **closed** recording, with all required inputs
 captured, from one containing **external dependencies** or an **incomplete**
 capture. Arbitrary FFI, shared files, external services, and uninstrumented
 threads are not made deterministic by copying an executable. For recorded
@@ -549,7 +557,8 @@ input isolation and recorded I/O are not a general OS sandbox for arbitrary nati
 code. See the [CLI reproduction workflow](../cli/README.md#reproduce-a-failure).
 
 Reports start with a local preview of the exact outgoing files and metadata.
-Environment capture uses declared build inputs, not a dump of the user's shell.
-Credentials are omitted; source, arguments, paths, and output are reviewable
+Environment capture uses recording profile 1's allowlist, not a dump of the shell.
+Transport credentials and excluded environment values are omitted. Source,
+arguments, paths, and output are exact captured inputs and are reviewable
 because they may contain project data. If an omitted input prevents replay, the
 report states that limitation. Reporting never uploads silently after a failure.

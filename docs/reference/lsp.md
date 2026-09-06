@@ -92,6 +92,14 @@ does not replace dependency locks or select a compiler for CLI invocations.
 
 These choices use the protocol's [initialization and capability negotiation](https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.17/general/initialize.md).
 
+The initial server uses the [initial target profile](target-profile.md), the
+root-authoritative [package resolver](packages-and-builds.md), and the
+[artifact schemas](artifact-formats.md). Its distribution digest identifies the
+entire bundled component inventory; the actual compiler digest is additionally
+recorded for captures. A root lock pinned to another distribution is `E507` even
+when `lsp.toolchain` is null. Missing executor requirements use `E404`, without
+starting an executor or invoking module initialization during analysis.
+
 ## Configure everything in mod.mwy
 
 This is a complete example; omitted fields take the defaults in the tables:

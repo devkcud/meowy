@@ -450,6 +450,10 @@ The JSON report has `version : 1`, `status : "complete"` or `"incomplete"`, and
 phase names are `"checking"` (including resolution), `"lowering"` (including native
 code generation), `"linking"`, or `"reporting"`. It records:
 
+The report's `schema` is `"meowy.build-report"`. The
+[machine-checkable schema and example](artifact-formats.md#build-reports)
+define exact field shapes, null/unavailable values, digests and reader compatibility.
+
 | Section      | Required evidence                                                                                                                                                                                            |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `inputs`     | Source/manifest/lock digests, compiler/linker identity, target/runtime/sysroot identity, expanded CPU features, effective optimization/link/debug settings, and reachable data versions.                     |

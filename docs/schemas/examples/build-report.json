@@ -1,0 +1,59 @@
+{
+  "schema": "meowy.build-report",
+  "version": 1,
+  "status": "incomplete",
+  "failed_phase": "checking",
+  "inputs": {
+    "files": [
+      {
+        "path": "source.txt",
+        "bytes": 41,
+        "digest": "sha256:68be354c8c24af9c0d640138d1eda8010769e9dfeb2e8987897e0545e571cef3"
+      }
+    ],
+    "distribution": {
+      "version": "0.0.1+schema-example",
+      "digest": "sha256:c028d730751242d417443b2e8a39839a7ce8198385a67be4d529cdb6386c80ea"
+    },
+    "compiler_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "linker_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "target": "x86_64-unknown-linux-gnu",
+    "runtime_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "sysroot_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "cpu_features": ["x86-64", "sse2"],
+    "policy": {
+      "profile": "debug",
+      "cpu": "baseline",
+      "optimize": "none",
+      "jobs": 1,
+      "debug_info": "embedded",
+      "link": {
+        "mode": "platform",
+        "dead_strip": true,
+        "lto": "off",
+        "icf": "off"
+      }
+    },
+    "data_versions": {},
+    "unavailable": {}
+  },
+  "artifacts": {
+    "report_path": "build/app.build.json",
+    "executable": null,
+    "debug": [],
+    "link_map": null
+  },
+  "sections": {
+    "available": false,
+    "reason": "No object or executable was produced.",
+    "items": []
+  },
+  "retention": {
+    "roots": [],
+    "edges": [],
+    "unavailable": ["Checking did not complete."]
+  },
+  "transforms": [],
+  "runtime": [],
+  "stack": []
+}

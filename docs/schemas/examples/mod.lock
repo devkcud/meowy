@@ -1,0 +1,29 @@
+{
+  "schema": "meowy.lock",
+  "version": 1,
+  "distribution": {
+    "version": "0.0.1+schema-example",
+    "digest": "sha256:c028d730751242d417443b2e8a39839a7ce8198385a67be4d529cdb6386c80ea"
+  },
+  "packages": [
+    {
+      "id": "git:8b5d8d2ab13720b9fdc90fce78a533a814f002eba4fd59f855e5fe0ff4098d41",
+      "source": "https://example.com/geometry.git",
+      "revision": "0123456789abcdef0123456789abcdef01234567",
+      "directory": ".",
+      "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "requests": [
+    {
+      "from": "local:.",
+      "alias": "geometry",
+      "fetch": "https://example.com/geometry.git",
+      "selector": {
+        "kind": "hash",
+        "value": "0123456789abcdef0123456789abcdef01234567"
+      },
+      "package": "git:8b5d8d2ab13720b9fdc90fce78a533a814f002eba4fd59f855e5fe0ff4098d41"
+    }
+  ]
+}

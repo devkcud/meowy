@@ -1,0 +1,2596 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:meowy:schema:runtime-event:1",
+  "title": "Meowy runtime-event schema 1",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "meowy.runtime-event"
+    },
+    "version": {
+      "const": 1
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "task": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "resource": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operation": {
+      "enum": [
+        "task.admit",
+        "task.dispatch",
+        "task.suspend",
+        "task.resume",
+        "task.join",
+        "task.cancel",
+        "task.checkpoint",
+        "task.cleanup",
+        "task.settle",
+        "channel.create",
+        "channel.clone",
+        "channel.send",
+        "channel.receive",
+        "channel.close",
+        "clock.monotonic",
+        "clock.civil",
+        "clock.sleep",
+        "clock.timer",
+        "clock.ticker",
+        "process.arguments",
+        "process.working_directory",
+        "io.stdin.read",
+        "io.stdout.write",
+        "io.stderr.write",
+        "fs.open",
+        "fs.open_native",
+        "fs.file.read",
+        "fs.file.seek",
+        "fs.file.metadata",
+        "fs.file.close",
+        "fs.entries",
+        "fs.directory.next",
+        "fs.directory.close",
+        "env.snapshot",
+        "random.secure_fill",
+        "memory.allocate",
+        "memory.resize",
+        "memory.release",
+        "unsupported"
+      ]
+    },
+    "arguments": {
+      "type": "object"
+    },
+    "arguments_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "predecessors": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 9007199254740991
+      },
+      "uniqueItems": true
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": ["result", "external"]
+        },
+        "data": {
+          "type": "object"
+        },
+        "payloads": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/payload"
+          }
+        }
+      },
+      "required": ["kind", "data", "payloads"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "seq",
+    "task",
+    "resource",
+    "operation",
+    "arguments",
+    "arguments_digest",
+    "predecessors",
+    "outcome"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "u64": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "i64": {
+      "type": "string",
+      "pattern": "^(0|-?[1-9][0-9]*)$"
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "null"
+            }
+          },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "boolean"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": ["kind", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "integer"
+            },
+            "type": {
+              "enum": [
+                "int8",
+                "int16",
+                "int32",
+                "int64",
+                "int128",
+                "isize",
+                "uint8",
+                "uint16",
+                "uint32",
+                "uint64",
+                "uint128",
+                "usize"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "pattern": "^(0|-?[1-9][0-9]*)$"
+            }
+          },
+          "required": ["kind", "type", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "float32"
+            },
+            "bits": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}$"
+            }
+          },
+          "required": ["kind", "bits"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "float64"
+            },
+            "bits": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$"
+            }
+          },
+          "required": ["kind", "bits"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "text"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": ["kind", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "bytes"
+            },
+            "payload": {
+              "$ref": "#/$defs/payload"
+            }
+          },
+          "required": ["kind", "payload"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "record"
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "value": {
+                    "$ref": "#/$defs/value"
+                  }
+                },
+                "required": ["name", "value"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["kind", "type", "fields"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "variant"
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "alternative": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "$ref": "#/$defs/value"
+            }
+          },
+          "required": ["kind", "type", "alternative", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "resource"
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["kind", "type", "id"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "$ref": "urn:meowy:schema:common:1#/$defs/member"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "$ref": "urn:meowy:schema:common:1#/$defs/digest"
+        }
+      },
+      "required": ["member", "bytes", "digest"],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "native_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(0|-?[1-9][0-9]*)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "details": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": ["type", "code", "message", "native_code", "details"],
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "string",
+          "pattern": "^(0|-?[1-9][0-9]*)$"
+        },
+        "nanoseconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "required": ["seconds", "nanoseconds"],
+      "additionalProperties": false
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": ["file", "directory", "symlink", "other"]
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)$"
+        },
+        "permissions": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4095
+        },
+        "modified": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "accessed": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "size",
+        "permissions",
+        "modified",
+        "accessed",
+        "created"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.admit"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "child": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "callable": {
+                "type": "string",
+                "minLength": 1
+              },
+              "capture_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "stack_bytes": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["child", "callable", "capture_count", "stack_bytes"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "admitted": {
+                    "type": "boolean"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["admitted", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.dispatch"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "worker": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["worker"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.suspend"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "enum": ["join", "channel", "io", "timer", "checkpoint"]
+              },
+              "waiting_on": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["reason", "waiting_on"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.resume"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "worker": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "reason": {
+                "enum": ["ready", "io", "timer", "cancel"]
+              }
+            },
+            "required": ["worker", "reason"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.join"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "child": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["child"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "completed",
+                      "cancelled",
+                      "timeout",
+                      "panicked",
+                      "spawn_failed"
+                    ]
+                  }
+                },
+                "required": ["state"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.cancel"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "child": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "reason": {
+                "enum": ["explicit", "deadline", "parent", "group"]
+              }
+            },
+            "required": ["child", "reason"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "accepted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["accepted"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.checkpoint"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "cancelled": {
+                    "type": "boolean"
+                  },
+                  "reason": {
+                    "anyOf": [
+                      {
+                        "enum": ["explicit", "deadline", "parent", "group"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["cancelled", "reason"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.cleanup"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "cause": {
+                "enum": ["scope", "panic", "cancellation"]
+              }
+            },
+            "required": ["owner", "cause"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "task.settle"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": [
+                  "completed",
+                  "cancelled",
+                  "timeout",
+                  "panicked",
+                  "spawn_failed"
+                ]
+              },
+              "result_type": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["state", "result_type"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "channel.create"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "capacity": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "message_type": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["capacity", "message_type"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "sender": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "receiver": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["channel", "sender", "receiver", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "channel.clone"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["channel"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "sender": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["sender"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "channel.send"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            },
+            "required": ["channel", "message", "blocking"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": ["sent", "full", "closed", "cancelled"]
+                  }
+                },
+                "required": ["state"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "channel.receive"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "minLength": 1
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            },
+            "required": ["channel", "blocking"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": ["item", "empty", "closed", "cancelled"]
+                  },
+                  "message": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["state", "message"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "channel.close"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": "string",
+                "minLength": 1
+              },
+              "endpoint": {
+                "enum": ["sender", "receiver"]
+              }
+            },
+            "required": ["channel", "endpoint"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "clock.monotonic"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "domain": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "nanoseconds": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(0|-?[1-9][0-9]*)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["domain", "nanoseconds", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "clock.civil"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "timestamp": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/timestamp"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["timestamp", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "clock.sleep"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "minLength": 1
+              },
+              "deadline_ns": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              }
+            },
+            "required": ["domain", "deadline_ns"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "wake_ns": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(0|-?[1-9][0-9]*)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["wake_ns", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "clock.timer"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "minLength": 1
+              },
+              "deadline_ns": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              }
+            },
+            "required": ["domain", "deadline_ns"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "wake_ns": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(0|-?[1-9][0-9]*)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["wake_ns", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "clock.ticker"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scheduled_ns": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "period_ns": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["domain", "scheduled_ns", "period_ns"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "wake_ns": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(0|-?[1-9][0-9]*)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "skipped": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["wake_ns", "skipped", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "process.arguments"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "program": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "arguments": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["program", "arguments", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "process.working_directory"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["path", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "io.stdin.read"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "capacity": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["capacity"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "eof": {
+                    "type": "boolean"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["count", "eof", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "io.stdout.write"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "bytes_digest": {
+                "$ref": "urn:meowy:schema:common:1#/$defs/digest"
+              }
+            },
+            "required": ["count", "bytes_digest"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["count", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "io.stderr.write"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "bytes_digest": {
+                "$ref": "urn:meowy:schema:common:1#/$defs/digest"
+              }
+            },
+            "required": ["count", "bytes_digest"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["count", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.open"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "path_base64": {
+                "type": "string"
+              },
+              "mode": {
+                "const": "ReadOnly"
+              }
+            },
+            "required": ["path_base64", "mode"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "handle": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["handle", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.open_native"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name_base64": {
+                "type": "string"
+              },
+              "mode": {
+                "const": "ReadOnly"
+              }
+            },
+            "required": ["directory", "name_base64", "mode"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "handle": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["handle", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.file.read"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "capacity": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["capacity"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]*)$"
+                  },
+                  "eof": {
+                    "type": "boolean"
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["count", "eof", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.file.seek"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "offset": {
+                "type": "string",
+                "pattern": "^(0|-?[1-9][0-9]*)$"
+              },
+              "origin": {
+                "enum": ["Start", "Current", "End"]
+              }
+            },
+            "required": ["offset", "origin"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "position": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^(0|[1-9][0-9]*)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["position", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.file.metadata"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "metadata": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/metadata"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["metadata", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.file.close"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.entries"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "path_base64": {
+                "type": "string"
+              }
+            },
+            "required": ["path_base64"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "directory": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["directory", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.directory.next"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "enum": ["entry", "end", "error"]
+                  },
+                  "name_base64": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "kind": {
+                    "anyOf": [
+                      {
+                        "enum": ["file", "directory", "symlink", "other"]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["state", "name_base64", "kind", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "fs.directory.close"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "env.snapshot"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result", "external"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "values": {
+                    "type": "object",
+                    "properties": {
+                      "LANG": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "LC_ALL": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "LC_CTYPE": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "TZ": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["LANG", "LC_ALL", "LC_CTYPE", "TZ"],
+                    "additionalProperties": false
+                  },
+                  "omitted_names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["values", "omitted_names", "error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "random.secure_fill"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["count"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "error": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/$defs/error"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["error"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "memory.allocate"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "allocator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allocation": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "bytes": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "alignment": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["allocator", "allocation", "bytes", "alignment"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "allocation": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "succeeded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["allocation", "succeeded"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "memory.resize"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "allocator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allocation": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "bytes": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              },
+              "alignment": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)$"
+              }
+            },
+            "required": ["allocator", "allocation", "bytes", "alignment"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "allocation": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "succeeded": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["allocation", "succeeded"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "memory.release"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "allocator": {
+                "type": "string",
+                "minLength": 1
+              },
+              "allocation": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["allocator", "allocation"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["result"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "unsupported"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "arguments": {
+            "type": "object",
+            "properties": {
+              "api": {
+                "type": "string",
+                "minLength": 1
+              },
+              "site": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["api", "site"],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "properties": {
+              "kind": {
+                "enum": ["external"]
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["reason"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

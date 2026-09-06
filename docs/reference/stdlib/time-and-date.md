@@ -432,6 +432,8 @@ recorded reads and a virtual clock; it does not sleep for the original wall-cloc
 interval or substitute the host's current civil time. Missing required events
 make replay incomplete. Build-only isolation does not claim deterministic timing.
 See [replay fidelity](../diagnostics.md#replay-fidelity).
+The [recording support matrix](../replay-recording.md) defines captured clock and
+timer boundaries and the fixed recording limits.
 
 The [ticker project](../../programs/ticker/README.md) observes coalesced wakeups
 with explicit timer ownership. The [duration CLI](../../programs/duration-cli/README.md)
