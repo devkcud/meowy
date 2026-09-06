@@ -71,6 +71,10 @@ pub fn examples_execute_in_both_profiles() {
             "read\n301\n2\n",
         ),
         (
+            include_str!("../../examples/mutable-fields.mwy"),
+            "1\n2\n3\nkept\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

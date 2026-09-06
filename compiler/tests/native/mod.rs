@@ -6,6 +6,7 @@ pub(crate) mod effectful_lists;
 pub(crate) mod element_borrows;
 pub(crate) mod element_writes;
 pub(crate) mod examples;
+pub(crate) mod fields;
 pub(crate) mod function_borrows;
 pub(crate) mod list_contexts;
 pub(crate) mod lists;

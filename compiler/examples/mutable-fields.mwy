@@ -1,0 +1,12 @@
+debug:@"debug"
+
+<Counter>:<{count<uint32>:=;label<string>}>
+counter<Counter>:={->count:=1;->label:"kept"}
+original:counter
+view:&counter.count
+counter.count=*view+1
+debug.print(original.count)
+debug.print(counter.count)
+counter.count=counter.count+1
+debug.print(counter.count)
+debug.print(counter.label)

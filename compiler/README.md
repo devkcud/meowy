@@ -36,6 +36,7 @@ compiler/target/debug/meowy run compiler/examples/element-writes.mwy
 compiler/target/debug/meowy run compiler/examples/nested-writes.mwy
 compiler/target/debug/meowy run compiler/examples/effectful-lists.mwy
 compiler/target/debug/meowy run compiler/examples/dynamic-lists.mwy
+compiler/target/debug/meowy run compiler/examples/mutable-fields.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -78,6 +79,8 @@ The [effectful lists example](examples/effectful-lists.mwy) selects numeric and
 record element widths after checking each block's effects once in source order.
 The [dynamic lists example](examples/dynamic-lists.mwy) selects element types from
 returned and mutable primitive locals while using their actual values at runtime.
+The [mutable fields example](examples/mutable-fields.mwy) updates a declared mutable
+field after its final shared read while preserving an earlier record copy.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -122,6 +125,11 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their
   receiving block. Record equality compares the full shape, including addresses.
+- Mutable fields in reference-free Copy records. Field mutability is part of the
+  type's shape and survives construction, composition, unions and list contexts.
+  Named field paths on mutable local owners support assignment when every crossed
+  field is mutable. Writes preserve other fields and copies; disjoint shared views
+  may stay live, and overlapping views must finish before the store.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -145,8 +153,8 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   such as `matrix[row][column] = value`. It checks each one-based initialized
   position from root to leaf before evaluating the replacement, then updates only
   that element. Returning index/RHS evaluation keeps parent storage reserved
-  against writes; shared reads may finish before the final store. Writes through
-  fields, references or temporary owners remain unavailable.
+  against writes; shared reads may finish before the final store. Index targets
+  rooted in fields, references or temporary owners remain unavailable.
 - Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
   literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
   replacement and equality of initialized elements. Elements can be scalars,
@@ -185,8 +193,9 @@ release panic artifact format or a recovery/unwind implementation.
 Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
-helpers, imports beyond the foundational bootstrap modules, and mutable record fields. String interpolation outside an
-output call requires the future formatting/storage implementation and is rejected.
+helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
+fields, mutable primary slots and assignments to emitted names. String interpolation
+outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
 
 List capacities accept non-negative integer constants and checked scalar
@@ -231,8 +240,8 @@ References can pass through local blocks and immutable aliases while their owner
 remain alive. The checker reuses branch/completion proofs and checks all possible
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
-record and union components and direct-function signatures. Mutable carriers,
-reassignment and direct reference formatting require future analysis. Named-emission
+record and union components and direct-function signatures. Mutable reference carriers,
+reference reassignment and direct reference formatting require future analysis. Named-emission
 storage remains unavailable as a borrow root; parameter and receiver copies may
 be borrowed only while their local storage survives. Missing
 origin proofs or exhausted analysis budgets produce B001.
@@ -240,6 +249,14 @@ Borrow liveness follows branches and named loop edges. An assignment evaluates i
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
 record overlaps references to any of its fields.
+Named field assignment updates only the selected initialized field. Static offsets
+remain valid when the RHS replaces the same Copy owner; RHS changes to other fields
+are preserved. The final store still conflicts with any overlapping live shared
+view. Immutable roots or crossed fields report E305, and incompatible field
+mutability in declared construction or completing branches reports E206. Shared
+reference targets, fields reached through indices and direct emitted-name writes
+remain B001. A mutable emission currently fills the result from a separate local
+copy; it does not create an assignable alias to the result slot.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the
