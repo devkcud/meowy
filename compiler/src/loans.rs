@@ -552,10 +552,36 @@ impl<'a> Graph<'a> {
             }
             ExprKind::Deref(value)
             | ExprKind::Unary { value, .. }
-            | ExprKind::StringSize(value) => {
+            | ExprKind::StringSize(value)
+            | ExprKind::ListSize(value) => {
                 let value = self.expression(value)?;
                 self.append(Node {
                     uses: value.into_values().collect(),
+                    ..Node::default()
+                })?;
+                Bundle::new()
+            }
+            ExprKind::List { values, .. } => {
+                for value in values {
+                    let value = self.expression(value)?;
+                    if self.current.is_empty() {
+                        return Ok(Bundle::new());
+                    }
+                    self.append(Node {
+                        uses: value.into_values().collect(),
+                        ..Node::default()
+                    })?;
+                }
+                Bundle::new()
+            }
+            ExprKind::ListIndex { value, index } | ExprKind::ListAdd { value, item: index } => {
+                let left = self.expression(value)?;
+                if self.current.is_empty() {
+                    return Ok(Bundle::new());
+                }
+                let right = self.expression(index)?;
+                self.append(Node {
+                    uses: left.into_values().chain(right.into_values()).collect(),
                     ..Node::default()
                 })?;
                 Bundle::new()

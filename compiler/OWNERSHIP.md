@@ -250,6 +250,50 @@ implementation boundary; it does not change language rules.
   temporary owners, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
+## Inline bounded lists
+
+- `T[N]` stores a runtime initialized length and inline capacity, with no allocator
+  or automatic growth. This milestone accepts reference-free, currently copyable
+  elements, including records, unions and nested bounded lists. Reference-bearing
+  or uninhabited elements remain B001 until their value/cleanup semantics are ready.
+- List literals, `.size()`, one-based copy indexing, same-type/capacity equality,
+  whole-value replacement and value-returning `.add()` are implemented. `.add()`
+  copies these Copy lists, so an immutable source stays unchanged. Only assigning
+  its result back to storage requires a mutable binding.
+- Inferred literals require identical normalized types among already typed
+  elements. Only pure scalar literals are deferred for contextual checking; other
+  expressions are checked once in source order and the emitted operands retain
+  that order. No union, numeric promotion or record-primary projection reconciles
+  inferred elements. Empty literals need an expected element type.
+- A single expected list type supplies element type and capacity. Multiple-list
+  union literal contexts remain B001; bind an explicitly typed list first, then
+  inject that value into the union. This avoids claiming ambiguity when candidate
+  inference has not yet proved it.
+- Extents use existing checked scalar expression/constant rules. Typed width
+  overflow remains E107, mixed widths remain E213, and negative or nonconstant
+  extents are E104. Required extent checks run even on dead runtime paths. Effectful
+  or helper-driven required evaluation remains B001. Pure constant lookup for a
+  type extent does not introduce a runtime capture.
+- `Type::layout()` is the checked layout source used by frontend and backend.
+  Bootstrap limits are 65,536 elements and 1 MiB of inline list storage; exceeding
+  those implementation budgets is B001. Target-layout arithmetic overflow is E104.
+  These limits do not qualify a total native frame or stack-size budget.
+- Known immutable/literal lengths and lengths shared by every completing block
+  emission support E101/E103. Discarded restart/leave paths are excluded; different
+  completing lengths remain unknown. Mutable bindings and function results keep
+  runtime length checks. Static facts never come from the last emission alone.
+- Receiver values are captured before index or append arguments run. Index checks
+  use initialized length, not capacity, and preserve signedness before range checks.
+  Runtime failures report P001 for bounds and P003 for capacity with the relevant
+  lengths/capacity, position and source span. Equality reads only initialized
+  elements, preserving element equality semantics such as NaN and signed zero.
+- Whole lists and concrete record fields containing lists use existing shared
+  places, reborrows and E302/E303 checks. A copied list has no continuing reference
+  origin; dereference copies finish their loan before later operand effects unless
+  another reference use keeps it live. Element addresses/writes, slices, aliases,
+  removal, owned elements and list formatting remain B001. Caller-origin searches
+  do not invent indexed descendants.
+
 ## Next analysis stages
 
 1. Extend origin and all-input bounds to exclusive reborrows, static reference
@@ -268,6 +312,8 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
+7. Add verified element places, slice/alias metadata and non-Copy element state
+   before expanding bounded-list mutation or collection library APIs.
 
 ## Verification
 

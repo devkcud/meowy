@@ -79,3 +79,45 @@ extern "C" [[noreturn]] void meowy_arithmetic_fail_v1() {
     meowy_write_v1(2, message, sizeof(message) - 1);
     meowy_panic_v1();
 }
+
+static void site(const std::uint64_t start, const std::uint64_t end) {
+    constexpr char text[] = " at bytes ";
+    meowy_write_v1(2, text, sizeof(text) - 1);
+    meowy_uint_v1(2, start);
+    meowy_write_v1(2, "..", 2);
+    meowy_uint_v1(2, end);
+}
+
+extern "C" [[noreturn]] void meowy_index_fail_v1(const std::uint64_t index,
+                                                const std::uint64_t length,
+                                                const int signed_index,
+                                                const std::uint64_t start,
+                                                const std::uint64_t end) {
+    constexpr char prefix[] = "panic[P001]: index ";
+    constexpr char suffix[] = " is outside initialized length ";
+    meowy_write_v1(2, prefix, sizeof(prefix) - 1);
+    if (signed_index != 0) {
+        meowy_int_v1(2, static_cast<std::int64_t>(index));
+    } else {
+        meowy_uint_v1(2, index);
+    }
+    meowy_write_v1(2, suffix, sizeof(suffix) - 1);
+    meowy_uint_v1(2, length);
+    site(start, end);
+    meowy_panic_v1();
+}
+
+extern "C" [[noreturn]] void meowy_list_full_v1(const std::uint64_t length,
+                                               const std::uint64_t capacity,
+                                               const std::uint64_t start,
+                                               const std::uint64_t end) {
+    constexpr char prefix[] = "panic[P003]: bounded list is full (length ";
+    constexpr char middle[] = ", capacity ";
+    meowy_write_v1(2, prefix, sizeof(prefix) - 1);
+    meowy_uint_v1(2, length);
+    meowy_write_v1(2, middle, sizeof(middle) - 1);
+    meowy_uint_v1(2, capacity);
+    meowy_write_v1(2, ")", 1);
+    site(start, end);
+    meowy_panic_v1();
+}

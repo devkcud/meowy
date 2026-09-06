@@ -747,8 +747,25 @@ impl Checker<'_> {
             }
             ExprKind::Unary { value, .. }
             | ExprKind::StringSize(value)
+            | ExprKind::ListSize(value)
             | ExprKind::TypeTest { value, .. } => {
                 flow = self.expression(value)?.flow;
+                State::unknown(&expr.ty, self.guards, expr.span)?
+            }
+            ExprKind::List { values, .. } => {
+                for value in values {
+                    if !flow.next {
+                        break;
+                    }
+                    flow.append(self.expression(value)?.flow);
+                }
+                State::unknown(&expr.ty, self.guards, expr.span)?
+            }
+            ExprKind::ListIndex { value, index } | ExprKind::ListAdd { value, item: index } => {
+                flow = self.expression(value)?.flow;
+                if flow.next {
+                    flow.append(self.expression(index)?.flow);
+                }
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::Binary { op, left, right } => {

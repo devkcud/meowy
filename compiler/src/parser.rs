@@ -544,7 +544,7 @@ impl Parser {
                         ExprKind::Label(label)
                     }
                 }
-                "[" => ExprKind::List(self.arguments("]")?),
+                "[" => ExprKind::List(self.list_values()?),
                 "@" => {
                     let path = self.bump();
                     if path.kind != TokenKind::String {
@@ -753,6 +753,31 @@ impl Parser {
             }
         }
         Ok(args)
+    }
+
+    pub(crate) fn list_values(&mut self) -> ParseResult<Vec<Expr>> {
+        let mut values = Vec::new();
+        self.newlines();
+        if self.take("]") {
+            return Ok(values);
+        }
+        loop {
+            values.push(self.expr(0, false, true, false)?);
+            if self.at(":") || self.at(":=") {
+                return Err(Diagnostic::unsupported(
+                    "named list aliases",
+                    self.token().span,
+                ));
+            }
+            if self.take("]") {
+                return Ok(values);
+            }
+            self.need(",")?;
+            self.newlines();
+            if self.take("]") {
+                return Ok(values);
+            }
+        }
     }
 
     pub(crate) fn type_union(&mut self) -> ParseResult<TypeExpr> {

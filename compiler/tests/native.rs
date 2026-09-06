@@ -337,7 +337,7 @@ pub fn protected_inputs_and_usage_errors_are_rejected() {
 
 #[test]
 pub fn unavailable_features_and_manifests_are_explicit() {
-    let case = Case::new("values:[1,2,3]");
+    let case = Case::new("values<int32[]>:[]");
     let result = case.command("check", &["--json"]);
     assert_eq!(result.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&result.stderr).contains("B001"));

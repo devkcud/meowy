@@ -9,6 +9,7 @@ pub mod driver;
 pub(crate) mod flow;
 pub mod hir;
 pub mod lexer;
+pub(crate) mod list;
 pub(crate) mod loans;
 pub mod parser;
 

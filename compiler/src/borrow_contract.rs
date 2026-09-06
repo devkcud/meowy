@@ -147,7 +147,7 @@ pub(crate) fn type_weight(ty: &Type, flow: &mut Flow, span: Span) -> Result<usiz
             return Err(State::budget(span));
         }
         match ty {
-            Type::Reference(ty) => pending.push(ty),
+            Type::Reference(ty) | Type::List { element: ty, .. } => pending.push(ty),
             Type::Record { primary, fields } => {
                 pending.push(primary);
                 for (_, ty) in fields {

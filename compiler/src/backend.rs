@@ -1,3 +1,4 @@
+use crate::ast::Span;
 use crate::hir::{Block, BlockId, Expr, ExprKind, Place, Program, Stmt, Type};
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::c_char;
@@ -60,6 +61,9 @@ pub(crate) fn ir_type(ty: &Type) -> String {
         Type::Float { bits: 32 } => "float".into(),
         Type::Float { .. } => "double".into(),
         Type::String => "{ ptr, i64 }".into(),
+        Type::List { element, capacity } => {
+            format!("{{ i64, [{capacity} x {}] }}", ir_type(element))
+        }
         Type::Reference(_) => "ptr".into(),
         Type::Record { primary, fields } => {
             let mut types = vec![ir_type(primary)];
@@ -80,26 +84,7 @@ pub(crate) fn union_words(types: &[Type]) -> usize {
 }
 
 pub(crate) fn layout(ty: &Type) -> (usize, usize) {
-    match ty {
-        Type::Null | Type::Never | Type::Bool => (1, 1),
-        Type::Int { bits, .. } | Type::Float { bits } => {
-            let size = (*bits as usize).div_ceil(8);
-            (size, size)
-        }
-        Type::String => (16, 8),
-        Type::Reference(_) => (8, 8),
-        Type::Record { primary, fields } => {
-            let mut size = 0usize;
-            let mut align = 1usize;
-            for ty in std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty)) {
-                let (part, boundary) = layout(ty);
-                size = size.next_multiple_of(boundary) + part;
-                align = align.max(boundary);
-            }
-            (size.next_multiple_of(align), align)
-        }
-        Type::Union(types) => (8 + union_words(types) * 8, 8),
-    }
+    ty.layout().expect("validated native layout")
 }
 
 #[derive(Clone)]
@@ -182,6 +167,8 @@ impl<'a> Generator<'a> {
             "declare i32 @meowy_string_compare_v1(ptr, i64, ptr, i64)",
             "declare void @meowy_panic_v1() noreturn",
             "declare void @meowy_arithmetic_fail_v1() noreturn",
+            "declare void @meowy_index_fail_v1(i64, i64, i32, i64, i64) noreturn",
+            "declare void @meowy_list_full_v1(i64, i64, i64, i64) noreturn",
         ];
         Ok(format!(
             "target triple = \"x86_64-unknown-linux-gnu\"\n\n{}\n\n{}\n{}\n\n{}\n",
@@ -300,6 +287,33 @@ impl<'a> Generator<'a> {
                 ));
                 self.store_value(field, &part, &dest);
             }
+        } else if let Type::List { element, .. } = ty {
+            let source = self.slot(ty);
+            self.line(format!("store {} {value}, ptr {source}", ir_type(ty)));
+            let length = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
+            self.line(format!("store i64 {length}, ptr {ptr}"));
+            let position = self.slot(&Type::Int {
+                bits: 64,
+                signed: false,
+            });
+            self.line(format!("store i64 0, ptr {position}"));
+            let head = self.name("list_copy");
+            let body = self.name("list_copy_item");
+            let end = self.name("list_copy_end");
+            self.jump(&head);
+            self.label(&head);
+            let index = self.value(format!("load i64, ptr {position}"));
+            let active = self.value(format!("icmp ult i64 {index}, {length}"));
+            self.branch(&active, &body, &end);
+            self.label(&body);
+            let item = self.list_item(ty, &source, &index);
+            let value = self.value(format!("load {}, ptr {item}", ir_type(element)));
+            let dest = self.list_item(ty, ptr, &index);
+            self.store_value(element, &value, &dest);
+            let next = self.value(format!("add i64 {index}, 1"));
+            self.line(format!("store i64 {next}, ptr {position}"));
+            self.jump(&head);
+            self.label(&end);
         } else if let Type::Union(types) = ty {
             let tag = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
             let payload = self.value(format!("extractvalue {} {value}, 1", ir_type(ty)));
@@ -312,6 +326,9 @@ impl<'a> Generator<'a> {
                 "store [{} x i64] {payload}, ptr {dest}",
                 union_words(types)
             ));
+        } else if *ty == Type::Bool {
+            let byte = self.value(format!("zext i1 {value} to i8"));
+            self.line(format!("store i8 {byte}, ptr {ptr}"));
         } else {
             self.line(format!("store {} {value}, ptr {ptr}", ir_type(ty)));
         }
@@ -602,6 +619,16 @@ impl<'a> Generator<'a> {
                 Ok(format!("0x{:016X}", value.to_bits()))
             }
             ExprKind::String(value) => Ok(self.string(value)),
+            ExprKind::List { values, list } => self.list(values, list),
+            ExprKind::ListSize(value) => {
+                let result = self.expression(value)?;
+                if self.ended {
+                    return Ok("undef".into());
+                }
+                Ok(self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty))))
+            }
+            ExprKind::ListIndex { value, index } => self.list_index(value, index, expression.span),
+            ExprKind::ListAdd { value, item } => self.list_add(value, item, expression.span),
             ExprKind::Local(id) => {
                 self.local(*id);
                 let stored = &self.program.locals[*id];
@@ -744,6 +771,127 @@ impl<'a> Generator<'a> {
                 Ok(self.type_test(&value.ty, ty, &result))
             }
         }
+    }
+
+    pub(crate) fn list_item(&mut self, ty: &Type, ptr: &str, index: &str) -> String {
+        self.value(format!(
+            "getelementptr {}, ptr {ptr}, i32 0, i32 1, i64 {index}",
+            ir_type(ty)
+        ))
+    }
+
+    pub(crate) fn list(&mut self, values: &[Expr], ty: &Type) -> Result<String, String> {
+        let Type::List { element, capacity } = ty else {
+            return Err("list literal requires a concrete list type".into());
+        };
+        if values.len() > *capacity {
+            return Err("list literal exceeds its capacity".into());
+        }
+        let ptr = self.slot(ty);
+        self.line(format!("store {} zeroinitializer, ptr {ptr}", ir_type(ty)));
+        for (index, value) in values.iter().enumerate() {
+            let result = self.expression(value)?;
+            if self.ended {
+                return Ok("undef".into());
+            }
+            let result = self.coerce(&value.ty, element, &result)?;
+            let dest = self.list_item(ty, &ptr, &index.to_string());
+            self.store_value(element, &result, &dest);
+        }
+        self.line(format!("store i64 {}, ptr {ptr}", values.len()));
+        Ok(self.value(format!("load {}, ptr {ptr}", ir_type(ty))))
+    }
+
+    pub(crate) fn list_index(
+        &mut self,
+        value: &Expr,
+        index: &Expr,
+        span: Span,
+    ) -> Result<String, String> {
+        let result = self.expression(value)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let Type::List { element, .. } = &value.ty else {
+            return Err("indexing requires a list value".into());
+        };
+        let ptr = self.slot(&value.ty);
+        self.line(format!("store {} {result}, ptr {ptr}", ir_type(&value.ty)));
+        let length = self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty)));
+        let mut position = self.expression(index)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let Type::Int { bits, signed } = index.ty else {
+            return Err("list position requires an integer".into());
+        };
+        if bits < 64 {
+            position = self.value(format!(
+                "{} i{bits} {position} to i64",
+                if signed { "sext" } else { "zext" }
+            ));
+        } else if bits != 64 {
+            return Err("list positions wider than 64 bits are unavailable".into());
+        }
+        let zero = self.value(format!("icmp eq i64 {position}, 0"));
+        let beyond = self.value(format!("icmp ugt i64 {position}, {length}"));
+        let invalid = self.value(format!("or i1 {zero}, {beyond}"));
+        self.list_guard(
+            &invalid,
+            format!(
+                "call void @meowy_index_fail_v1(i64 {position}, i64 {length}, i32 {}, i64 {}, i64 {})",
+                i32::from(signed), span.start, span.end
+            ),
+        );
+        let index = self.value(format!("sub i64 {position}, 1"));
+        let ptr = self.list_item(&value.ty, &ptr, &index);
+        Ok(self.value(format!("load {}, ptr {ptr}", ir_type(element))))
+    }
+
+    pub(crate) fn list_add(
+        &mut self,
+        value: &Expr,
+        item: &Expr,
+        span: Span,
+    ) -> Result<String, String> {
+        let result = self.expression(value)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let Type::List { element, capacity } = &value.ty else {
+            return Err("append requires a list value".into());
+        };
+        let ptr = self.slot(&value.ty);
+        self.line(format!("store {} {result}, ptr {ptr}", ir_type(&value.ty)));
+        let length = self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty)));
+        let result = self.expression(item)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let result = self.coerce(&item.ty, element, &result)?;
+        let full = self.value(format!("icmp uge i64 {length}, {capacity}"));
+        self.list_guard(
+            &full,
+            format!(
+                "call void @meowy_list_full_v1(i64 {length}, i64 {capacity}, i64 {}, i64 {})",
+                span.start, span.end
+            ),
+        );
+        let dest = self.list_item(&value.ty, &ptr, &length);
+        self.store_value(element, &result, &dest);
+        let size = self.value(format!("add i64 {length}, 1"));
+        self.line(format!("store i64 {size}, ptr {ptr}"));
+        Ok(self.value(format!("load {}, ptr {ptr}", ir_type(&value.ty))))
+    }
+
+    pub(crate) fn list_guard(&mut self, invalid: &str, call: String) {
+        let fail = self.name("list_fail");
+        let next = self.name("list_ok");
+        self.branch(invalid, &fail, &next);
+        self.label(&fail);
+        self.line(call);
+        self.line("unreachable".into());
+        self.label(&next);
     }
 
     pub(crate) fn checked(
@@ -923,6 +1071,7 @@ impl<'a> Generator<'a> {
                 let size_b = self.value(format!("extractvalue {{ ptr, i64 }} {right}, 1"));
                 Ok(self.value(format!("call zeroext i1 @meowy_string_equal_v1(ptr {a}, i64 {size_a}, ptr {b}, i64 {size_b})")))
             }
+            Type::List { element, .. } => self.list_equal(ty, element, left, right),
             Type::Record { primary, fields } => {
                 let types =
                     std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty));
@@ -965,6 +1114,55 @@ impl<'a> Generator<'a> {
         }
     }
 
+    pub(crate) fn list_equal(
+        &mut self,
+        ty: &Type,
+        element: &Type,
+        left: &str,
+        right: &str,
+    ) -> Result<String, String> {
+        let a = self.slot(ty);
+        let b = self.slot(ty);
+        self.line(format!("store {} {left}, ptr {a}", ir_type(ty)));
+        self.line(format!("store {} {right}, ptr {b}", ir_type(ty)));
+        let size = self.value(format!("extractvalue {} {left}, 0", ir_type(ty)));
+        let other = self.value(format!("extractvalue {} {right}, 0", ir_type(ty)));
+        let same = self.value(format!("icmp eq i64 {size}, {other}"));
+        let result = self.slot(&Type::Bool);
+        self.line(format!("store i1 false, ptr {result}"));
+        let position = self.slot(&Type::Int {
+            bits: 64,
+            signed: false,
+        });
+        self.line(format!("store i64 0, ptr {position}"));
+        let head = self.name("list_equal");
+        let body = self.name("list_equal_item");
+        let step = self.name("list_equal_next");
+        let done = self.name("list_equal_done");
+        let end = self.name("list_equal_end");
+        self.branch(&same, &head, &end);
+        self.label(&head);
+        let index = self.value(format!("load i64, ptr {position}"));
+        let active = self.value(format!("icmp ult i64 {index}, {size}"));
+        self.branch(&active, &body, &done);
+        self.label(&body);
+        let left = self.list_item(ty, &a, &index);
+        let right = self.list_item(ty, &b, &index);
+        let left = self.value(format!("load {}, ptr {left}", ir_type(element)));
+        let right = self.value(format!("load {}, ptr {right}", ir_type(element)));
+        let equal = self.equal(element, &left, &right)?;
+        self.branch(&equal, &step, &end);
+        self.label(&step);
+        let next = self.value(format!("add i64 {index}, 1"));
+        self.line(format!("store i64 {next}, ptr {position}"));
+        self.jump(&head);
+        self.label(&done);
+        self.line(format!("store i1 true, ptr {result}"));
+        self.jump(&end);
+        self.label(&end);
+        Ok(self.value(format!("load i1, ptr {result}")))
+    }
+
     pub(crate) fn print(&mut self, parts: &[Expr], fd: i32) -> Result<(), String> {
         for part in parts {
             let value = self.expression(part)?;
@@ -984,6 +1182,7 @@ impl<'a> Generator<'a> {
             }
             Type::Never => return Err("cannot print a never value".into()),
             Type::Reference(_) => return Err("shared-reference formatting is unavailable".into()),
+            Type::List { .. } => return Err("list formatting is unavailable".into()),
             Type::Bool => self.line(format!(
                 "call void @meowy_bool_v1(i32 {fd}, i1 zeroext {value})"
             )),
@@ -1063,6 +1262,51 @@ mod tests {
         )
     }
 
+    pub(crate) fn list(element: Type, capacity: usize, values: Vec<Expr>) -> Expr {
+        let ty = Type::List {
+            element: Box::new(element),
+            capacity,
+        };
+        expr(
+            ExprKind::List {
+                values,
+                list: ty.clone(),
+            },
+            ty,
+        )
+    }
+
+    pub(crate) fn index(value: Expr, position: Expr) -> Expr {
+        let Type::List { element, .. } = &value.ty else {
+            unreachable!()
+        };
+        let ty = *element.clone();
+        expr(
+            ExprKind::ListIndex {
+                value: Box::new(value),
+                index: Box::new(position),
+            },
+            ty,
+        )
+    }
+
+    pub(crate) fn size(value: Expr) -> Expr {
+        expr(
+            ExprKind::ListSize(Box::new(value)),
+            Type::Int {
+                bits: 64,
+                signed: false,
+            },
+        )
+    }
+
+    pub(crate) fn separated(parts: Vec<Expr>) -> Vec<Expr> {
+        parts
+            .into_iter()
+            .flat_map(|part| [part, expr(ExprKind::String("|".into()), Type::String)])
+            .collect()
+    }
+
     pub(crate) fn native(parts: Vec<Expr>, release: bool, full: bool) -> Output {
         let program = Program {
             body: Block {
@@ -1121,6 +1365,163 @@ mod tests {
         let output = command.output().unwrap();
         std::fs::remove_dir_all(dir).unwrap();
         output
+    }
+
+    #[test]
+    pub(crate) fn lists_compare_initialized_prefixes_and_preserve_element_equality() {
+        let int = Type::Int {
+            bits: 32,
+            signed: true,
+        };
+        let values = list(
+            int.clone(),
+            3,
+            vec![integer(11, 32, true), integer(22, 32, true)],
+        );
+        let appended = expr(
+            ExprKind::ListAdd {
+                value: Box::new(values.clone()),
+                item: Box::new(integer(33, 32, true)),
+            },
+            values.ty.clone(),
+        );
+        let empty = list(Type::Bool, 0, Vec::new());
+        let short = list(int, 3, vec![integer(11, 32, true)]);
+        let float = Type::Float { bits: 64 };
+        let zero = list(
+            float.clone(),
+            2,
+            vec![expr(ExprKind::Float(0.0), float.clone())],
+        );
+        let negative = list(
+            float.clone(),
+            2,
+            vec![expr(ExprKind::Float(-0.0), float.clone())],
+        );
+        let nan = binary(
+            "/",
+            expr(ExprKind::Float(0.0), float.clone()),
+            expr(ExprKind::Float(0.0), float.clone()),
+            float.clone(),
+        );
+        let nan = list(float, 1, vec![nan]);
+        for release in [false, true] {
+            let output = native(
+                separated(vec![
+                    binary("==", empty.clone(), empty.clone(), Type::Bool),
+                    size(values.clone()),
+                    index(values.clone(), integer(2, 8, false)),
+                    size(appended.clone()),
+                    index(appended.clone(), integer(3, 64, true)),
+                    size(values.clone()),
+                    binary("==", values.clone(), short.clone(), Type::Bool),
+                    binary("==", zero.clone(), negative.clone(), Type::Bool),
+                    binary("==", nan.clone(), nan.clone(), Type::Bool),
+                ]),
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"true|2|22|3|33|2|false|true|false|\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn lists_preserve_nested_and_padded_union_payloads() {
+        let record = record(
+            1,
+            expr(ExprKind::Bool(true), Type::Bool),
+            integer(41, 64, true),
+        );
+        let values = list(record.ty.clone(), 3, vec![record.clone()]);
+        let union = Type::union([Type::Null, values.ty.clone()]);
+        let packed = coerce(values.clone(), &union);
+        let restored = coerce(packed.clone(), &values.ty);
+        let first = index(restored.clone(), integer(1, 32, true));
+        let inner = list(Type::Bool, 3, vec![expr(ExprKind::Bool(true), Type::Bool)]);
+        let outer = list(inner.ty.clone(), 2, vec![inner]);
+        let outer_union = Type::union([Type::Null, outer.ty.clone()]);
+        let nested = coerce(coerce(outer.clone(), &outer_union), &outer.ty);
+        for release in [false, true] {
+            let output = native(
+                separated(vec![
+                    expr(ExprKind::Primary(Box::new(first.clone())), Type::Bool),
+                    expr(
+                        ExprKind::Field {
+                            value: Box::new(first.clone()),
+                            index: 0,
+                        },
+                        Type::Int {
+                            bits: 64,
+                            signed: true,
+                        },
+                    ),
+                    size(restored.clone()),
+                    binary("==", packed.clone(), packed.clone(), Type::Bool),
+                    index(
+                        index(nested.clone(), integer(1, 32, true)),
+                        integer(1, 32, true),
+                    ),
+                ]),
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"true|41|1|true|true|\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn list_failures_keep_index_sign_length_capacity_and_site() {
+        let values = list(
+            Type::Bool,
+            256,
+            vec![expr(ExprKind::Bool(true), Type::Bool); 256],
+        );
+        for release in [false, true] {
+            for (position, text) in [
+                (integer(-1, 8, true), "-1"),
+                (integer(0, 32, true), "0"),
+                (integer(u64::MAX.into(), 64, false), "18446744073709551615"),
+            ] {
+                let mut value = index(values.clone(), position);
+                value.span = Span { start: 10, end: 20 };
+                let output = native(vec![value], release, false);
+                assert_eq!(output.status.code(), Some(1));
+                assert!(output.stdout.is_empty());
+                assert_eq!(
+                    String::from_utf8_lossy(&output.stderr),
+                    format!(
+                        "panic[P001]: index {text} is outside initialized length 256 at bytes 10..20\n"
+                    )
+                );
+            }
+            let value = list(Type::Bool, 1, vec![expr(ExprKind::Bool(true), Type::Bool)]);
+            let ty = value.ty.clone();
+            let mut full = expr(
+                ExprKind::ListAdd {
+                    value: Box::new(value),
+                    item: Box::new(expr(ExprKind::Bool(false), Type::Bool)),
+                },
+                ty,
+            );
+            full.span = Span { start: 30, end: 40 };
+            let output = native(vec![size(full)], release, false);
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            assert_eq!(
+                output.stderr,
+                b"panic[P003]: bounded list is full (length 1, capacity 1) at bytes 30..40\n"
+            );
+        }
     }
 
     #[test]

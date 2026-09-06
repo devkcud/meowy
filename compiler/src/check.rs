@@ -63,6 +63,7 @@ pub(crate) struct Slot {
     pub(crate) mutable: bool,
     pub(crate) guard: Guard,
     pub(crate) order: usize,
+    pub(crate) list: Option<crate::list::Fact>,
 }
 
 pub(crate) struct Frame {
@@ -93,6 +94,9 @@ pub(crate) struct Checker {
     pub(crate) owner: usize,
     pub(crate) calls: usize,
     pub(crate) reborrows: usize,
+    pub(crate) lengths: BTreeMap<usize, crate::list::Fact>,
+    pub(crate) block_lengths: BTreeMap<usize, crate::list::Fact>,
+    pub(crate) required: bool,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
@@ -156,6 +160,9 @@ impl Checker {
             owner: 0,
             calls: 0,
             reborrows: 0,
+            lengths: BTreeMap::new(),
+            block_lengths: BTreeMap::new(),
+            required: false,
         }
     }
 
@@ -204,6 +211,7 @@ impl Checker {
             .cloned()
             .ok_or_else(|| Self::error("E201", format!("unknown value `{name}`"), span))?;
         match &value {
+            Value::Local { .. } if self.required => Ok(value),
             Value::Local { owner, .. } | Value::Control { owner, .. } if *owner != self.owner => {
                 Err(Diagnostic::unsupported(
                     "capturing a value from an enclosing function or module",
@@ -319,8 +327,13 @@ impl Checker {
                     .collect::<Result<Vec<_>>>()?;
                 Ok(Spec::Data(Type::union(types)))
             }
-            TypeKind::List { .. } => {
-                Err(Diagnostic::unsupported("list and slice types", expr.span))
+            TypeKind::List { element, size } => {
+                let Some(size) = size else {
+                    return Err(Diagnostic::unsupported("borrowed slice types", expr.span));
+                };
+                let element = self.ty(element)?;
+                let capacity = self.list_extent(size)?;
+                Ok(Spec::Data(self.list_type(element, capacity, expr.span)?))
             }
             TypeKind::Reference { value, mutable } => {
                 if *mutable {
@@ -695,6 +708,7 @@ impl Checker {
         let frame = self.frames.pop().expect("frame");
         self.reach = self.flow.or(self.reach, frame.leaves);
         let ty = self.block_type(&frame, expected.as_ref(), block.span)?;
+        self.block_list_length(&frame, &ty);
         self.proofs.completions.insert(id, self.reach);
         if self.flow.exceeded() {
             return Err(Diagnostic::unsupported(
@@ -1064,6 +1078,9 @@ impl Checker {
                     ));
                 }
                 let id = self.local(ty.clone());
+                if !*mutable && let Some(fact) = self.list_fact(&value) {
+                    self.lengths.insert(id, fact);
+                }
                 if *mutable {
                     self.proofs.mutable.insert(id);
                 }
@@ -1336,7 +1353,7 @@ impl Checker {
             let Type::Record { primary, fields } = ty else {
                 unreachable!()
             };
-            self.write_slot(target, None, *primary.clone(), mutable, span)?;
+            self.write_slot(target, None, *primary.clone(), mutable, None, span)?;
             stmts.push(self.emission(
                 target,
                 None,
@@ -1347,7 +1364,7 @@ impl Checker {
                 },
             ));
             for (index, (field, ty)) in fields.into_iter().enumerate() {
-                self.write_slot(target, Some(field.clone()), ty.clone(), mutable, span)?;
+                self.write_slot(target, Some(field.clone()), ty.clone(), mutable, None, span)?;
                 stmts.push(self.emission(
                     target,
                     Some(field),
@@ -1364,7 +1381,14 @@ impl Checker {
         } else if let Some(name) = name {
             let ty = value.ty.clone();
             let id = self.local(ty.clone());
-            self.write_slot(target, Some(name.into()), ty.clone(), mutable, span)?;
+            self.write_slot(
+                target,
+                Some(name.into()),
+                ty.clone(),
+                mutable,
+                self.list_fact(&value),
+                span,
+            )?;
             self.declare(
                 name,
                 Value::Local {
@@ -1387,7 +1411,14 @@ impl Checker {
                 },
             ));
         } else {
-            self.write_slot(target, None, value.ty.clone(), mutable, span)?;
+            self.write_slot(
+                target,
+                None,
+                value.ty.clone(),
+                mutable,
+                self.list_fact(&value),
+                span,
+            )?;
             stmts.push(self.emission(target, None, value));
         }
         Ok(stmts)
@@ -1415,6 +1446,7 @@ impl Checker {
         name: Option<String>,
         ty: Type,
         mutable: bool,
+        list: Option<crate::list::Fact>,
         span: Span,
     ) -> Result<()> {
         if self.reach == FALSE {
@@ -1481,6 +1513,7 @@ impl Checker {
             mutable,
             guard: self.reach,
             order: self.writes,
+            list,
         });
         self.writes += 1;
         Ok(())
@@ -1826,12 +1859,8 @@ impl Checker {
                     expr.span,
                 ));
             }
-            ExprKind::Index { .. } | ExprKind::List(_) => {
-                return Err(Diagnostic::unsupported(
-                    "collections and indexing",
-                    expr.span,
-                ));
-            }
+            ExprKind::Index { value, index } => return self.list_index(value, index, expr.span),
+            ExprKind::List(values) => return self.list_literal(values, expected, expr.span),
             ExprKind::Label(_) => {
                 return Err(Self::error(
                     "E201",
@@ -2149,6 +2178,20 @@ impl Checker {
 
     pub(crate) fn hint(&mut self, expr: &ast::Expr) -> Option<Type> {
         match &expr.kind {
+            ExprKind::List(values) => self.list_hint(values),
+            ExprKind::Index { value, .. } => {
+                let ty = self.hint(value)?;
+                let ty = if let Type::Reference(ty) = ty {
+                    *ty
+                } else {
+                    ty
+                };
+                if let Type::List { element, .. } = ty {
+                    Some(*element)
+                } else {
+                    None
+                }
+            }
             ExprKind::Name(name) => match self.value(name, expr.span).ok()? {
                 Value::Local { id, ty, .. } => Some(self.refined((id, Vec::new()), &ty)),
                 Value::Constant(value) => Some(Self::constant_expr(value, expr.span).ty),
@@ -2390,21 +2433,12 @@ impl Checker {
     ) -> Result<hir::Expr> {
         if receiver.is_none()
             && let ExprKind::Field { value, name } = &callee.kind
-            && name == "size"
-            && self.hint(value) == Some(Type::String)
+            && ["size", "add"].contains(&name.as_str())
+            && self
+                .symbol(value)?
+                .is_none_or(|value| matches!(value, Value::Local { .. } | Value::Constant(_)))
         {
-            if !args.is_empty() {
-                return Err(Self::error("E212", "string.size takes no arguments", span));
-            }
-            let value = self.expr(value, Some(&Type::String))?;
-            return Ok(hir::Expr {
-                kind: hir::ExprKind::StringSize(Box::new(value)),
-                ty: Type::Int {
-                    bits: 64,
-                    signed: false,
-                },
-                span,
-            });
+            return self.list_method(value, name, args, span);
         }
         let value = self.symbol(callee)?.ok_or_else(|| {
             Diagnostic::unsupported("indirect calls and callable fields", callee.span)
@@ -2511,6 +2545,12 @@ impl Checker {
                         expr.span,
                     ));
                 }
+                if !Self::list_formattable(&value.ty) {
+                    return Err(Diagnostic::unsupported(
+                        "bounded-list formatting",
+                        expr.span,
+                    ));
+                }
                 parts.push(value);
             }
         }
@@ -2536,6 +2576,9 @@ impl Checker {
 
     pub(crate) fn constant(&self, expr: &hir::Expr) -> Option<Constant> {
         match &expr.kind {
+            hir::ExprKind::ListSize(value) => self
+                .list_length(value)
+                .map(|size| Constant::Int(size as i128)),
             hir::ExprKind::Null => Some(Constant::Null),
             hir::ExprKind::Bool(value) => Some(Constant::Bool(*value)),
             hir::ExprKind::Int(value) => Some(Constant::Int(*value)),
@@ -2757,7 +2800,7 @@ mod tests {
 
     #[test]
     pub(crate) fn unsupported_features_have_capability_diagnostics() {
-        rejects("x:[1,2]", "B001");
+        rejects("x<int32[]>:[]", "B001");
         rejects("x:1;f<int32>:(){->x}", "B001");
         rejects("x:1;text:\"{x}\"", "B001");
         rejects("f<int32>:(){->1};x:f==f", "E222");

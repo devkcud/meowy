@@ -20,6 +20,10 @@ pub enum Type {
         bits: u32,
     },
     String,
+    List {
+        element: Box<Type>,
+        capacity: usize,
+    },
     Reference(Box<Type>),
     Record {
         primary: Box<Type>,
@@ -29,8 +33,46 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn layout(&self) -> Option<(usize, usize)> {
+        let ty = self;
+        match ty {
+            Type::Null | Type::Never | Type::Bool => Some((1, 1)),
+            Type::Int { bits, .. } | Type::Float { bits } => {
+                let size = (*bits as usize).div_ceil(8);
+                Some((size, size))
+            }
+            Type::String => Some((16, 8)),
+            Type::Reference(_) => Some((8, 8)),
+            Type::Record { primary, fields } => {
+                let mut size = 0usize;
+                let mut align = 1;
+                for ty in std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty)) {
+                    let (part, boundary) = ty.layout()?;
+                    size = size.checked_next_multiple_of(boundary)?.checked_add(part)?;
+                    align = align.max(boundary);
+                }
+                Some((size.checked_next_multiple_of(align)?, align))
+            }
+            Type::Union(members) => {
+                let mut size = 0;
+                for member in members {
+                    size = size.max(member.layout()?.0);
+                }
+                Some((8usize.checked_add(size.checked_next_multiple_of(8)?)?, 8))
+            }
+            Type::List { element, capacity } => {
+                let (size, align) = element.layout()?;
+                let start = 8usize.checked_next_multiple_of(align)?;
+                let size = start.checked_add(size.checked_mul(*capacity)?)?;
+                let align = align.max(8);
+                Some((size.checked_next_multiple_of(align)?, align))
+            }
+        }
+    }
+
     pub fn has_reference(&self) -> bool {
         match self {
+            Self::List { element, .. } => element.has_reference(),
             Self::Reference(_) => true,
             Self::Record { primary, fields } => {
                 primary.has_reference() || fields.iter().any(|(_, ty)| ty.has_reference())
@@ -158,6 +200,19 @@ pub enum ExprKind {
     Int(i128),
     Float(f64),
     String(String),
+    List {
+        values: Vec<Expr>,
+        list: Type,
+    },
+    ListSize(Box<Expr>),
+    ListIndex {
+        value: Box<Expr>,
+        index: Box<Expr>,
+    },
+    ListAdd {
+        value: Box<Expr>,
+        item: Box<Expr>,
+    },
     Local(LocalId),
     Borrow(Place),
     Reborrow {

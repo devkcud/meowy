@@ -1,0 +1,547 @@
+use crate::ast::{self, ExprKind, Span};
+use crate::check::{Checker, Constant, Frame, Result, Value};
+use crate::diagnostic::Diagnostic;
+use crate::flow::FALSE;
+use crate::hir::{self, Type};
+
+pub(crate) const MAX_CAPACITY: usize = 65_536;
+pub(crate) const MAX_BYTES: usize = 1_048_576;
+
+#[derive(Clone)]
+pub(crate) struct Fact {
+    pub(crate) ty: Type,
+    pub(crate) length: usize,
+}
+
+impl Checker {
+    pub(crate) fn extent_form(expr: &ast::Expr) -> bool {
+        match &expr.kind {
+            ExprKind::Int(_) | ExprKind::Float(_) | ExprKind::String(_) | ExprKind::Name(_) => true,
+            ExprKind::Group(value) | ExprKind::Unary { value, .. } => Self::extent_form(value),
+            ExprKind::Binary { left, right, .. } => {
+                Self::extent_form(left) && Self::extent_form(right)
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn list_extent(&mut self, expr: &ast::Expr) -> Result<usize> {
+        if !Self::extent_form(expr) {
+            return Err(Diagnostic::unsupported(
+                "required evaluation of list extent expressions",
+                expr.span,
+            ));
+        }
+        let reach = std::mem::replace(&mut self.reach, crate::flow::TRUE);
+        let required = std::mem::replace(&mut self.required, true);
+        let result = self.expression(expr, None);
+        self.reach = reach;
+        self.required = required;
+        let value = result?;
+        match self.constant(&value) {
+            Some(Constant::Int(value)) => usize::try_from(value).map_err(|_| {
+                Self::error(
+                    "E104",
+                    "list extent must be a non-negative target-sized constant integer",
+                    expr.span,
+                )
+            }),
+            _ => Err(Self::error(
+                "E104",
+                "list extent must be a compile-time constant integer",
+                expr.span,
+            )),
+        }
+    }
+
+    pub(crate) fn list_type(&mut self, element: Type, capacity: usize, span: Span) -> Result<Type> {
+        if capacity > MAX_CAPACITY {
+            return Err(Diagnostic::unsupported(
+                "bounded-list capacity exceeds bootstrap budget",
+                span,
+            ));
+        }
+        let mut pending = vec![&element];
+        while let Some(ty) = pending.pop() {
+            if !self.flow.spend(1) {
+                return Err(Diagnostic::unsupported("list type budget exhausted", span));
+            }
+            match ty {
+                Type::Reference(_) | Type::Never => {
+                    return Err(Diagnostic::unsupported(
+                        "reference-bearing or uninhabited list elements",
+                        span,
+                    ));
+                }
+                Type::Record { primary, fields } => {
+                    pending.push(primary);
+                    for (_, ty) in fields {
+                        if pending.len() >= 4096 {
+                            return Err(Diagnostic::unsupported(
+                                "list type budget exhausted",
+                                span,
+                            ));
+                        }
+                        pending.push(ty);
+                    }
+                }
+                Type::Union(members) => {
+                    for ty in members {
+                        if pending.len() >= 4096 {
+                            return Err(Diagnostic::unsupported(
+                                "list type budget exhausted",
+                                span,
+                            ));
+                        }
+                        pending.push(ty);
+                    }
+                }
+                Type::List { element, .. } => pending.push(element),
+                _ => {}
+            }
+        }
+        let ty = Type::List {
+            element: Box::new(element),
+            capacity,
+        };
+        let (size, _) = ty.layout().ok_or_else(|| {
+            Self::error(
+                "E104",
+                "bounded-list layout overflows the target address space",
+                span,
+            )
+        })?;
+        if size > MAX_BYTES {
+            return Err(Diagnostic::unsupported(
+                "bounded-list layout exceeds bootstrap byte budget",
+                span,
+            ));
+        }
+        Ok(ty)
+    }
+
+    pub(crate) fn scalar_literal(&self, expr: &ast::Expr) -> bool {
+        match &expr.kind {
+            ExprKind::Int(_) | ExprKind::Float(_) => true,
+            ExprKind::String(parts) => parts
+                .iter()
+                .all(|part| matches!(part, ast::StringPart::Text(_))),
+            ExprKind::Group(value) => self.scalar_literal(value),
+            ExprKind::Unary { op, value } if op == "-" => {
+                matches!(value.kind, ExprKind::Int(_) | ExprKind::Float(_))
+            }
+            ExprKind::Name(name) => self
+                .scopes
+                .iter()
+                .rev()
+                .find_map(|scope| scope.values.get(name))
+                .is_some_and(|value| matches!(value, Value::Constant(_))),
+            _ => false,
+        }
+    }
+
+    pub(crate) fn list_literal(
+        &mut self,
+        values: &[ast::Expr],
+        expected: Option<&Type>,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        let contexts: Vec<_> = expected
+            .into_iter()
+            .flat_map(Type::members)
+            .filter(|ty| matches!(ty, Type::List { .. }))
+            .collect();
+        if contexts.len() > 1 {
+            return Err(Diagnostic::unsupported(
+                "literal inference across multiple expected list types; bind a typed list first",
+                span,
+            ));
+        }
+        if let Some(Type::List { element, capacity }) = contexts.first().copied() {
+            if values.len() > *capacity {
+                return Err(Self::error(
+                    "E103",
+                    format!(
+                        "list has {} elements but capacity is {capacity}",
+                        values.len()
+                    ),
+                    span,
+                ));
+            }
+            let list = self.list_type(*element.clone(), *capacity, span)?;
+            let values = values
+                .iter()
+                .map(|value| self.expr(value, Some(element)))
+                .collect::<Result<Vec<_>>>()?;
+            let ty = if values.iter().any(|value| value.ty == Type::Never) {
+                Type::Never
+            } else {
+                list.clone()
+            };
+            return Ok(hir::Expr {
+                kind: hir::ExprKind::List { values, list },
+                ty,
+                span,
+            });
+        }
+        if values.is_empty() {
+            return Err(Self::error(
+                "E207",
+                "empty list literal requires an expected element type",
+                span,
+            ));
+        }
+        if values.len() > MAX_CAPACITY {
+            return Err(Diagnostic::unsupported(
+                "bounded-list capacity exceeds bootstrap budget",
+                span,
+            ));
+        }
+        let mut common = None;
+        let mut items = vec![None; values.len()];
+        let mut deferred = Vec::new();
+        for (index, value) in values.iter().enumerate() {
+            if self.scalar_literal(value) {
+                deferred.push((index, self.reach));
+                continue;
+            }
+            let value = self.expr(value, None)?;
+            if value.ty != Type::Never {
+                if common.as_ref().is_some_and(|ty| ty != &value.ty) {
+                    return Err(Self::error(
+                        "E207",
+                        "already typed list elements require one identical normalized type",
+                        value.span,
+                    ));
+                }
+                common = Some(value.ty.clone());
+            }
+            items[index] = Some(value);
+        }
+        let reached = self.reach;
+        for (index, reach) in deferred {
+            self.reach = reach;
+            let value = self.expr(&values[index], common.as_ref())?;
+            if common.is_none() {
+                common = Some(value.ty.clone());
+            }
+            items[index] = Some(value);
+        }
+        self.reach = reached;
+        let element = common.unwrap_or(Type::Null);
+        let list = self.list_type(element, values.len(), span)?;
+        let values: Vec<_> = items
+            .into_iter()
+            .map(|value| value.expect("checked list element"))
+            .collect();
+        let ty = if values.iter().any(|value| value.ty == Type::Never) {
+            Type::Never
+        } else {
+            list.clone()
+        };
+        Ok(hir::Expr {
+            kind: hir::ExprKind::List { values, list },
+            ty,
+            span,
+        })
+    }
+
+    pub(crate) fn literal_default(&self, value: &ast::Expr) -> Option<Type> {
+        match &value.kind {
+            ExprKind::Int(_) => Some(Type::Int {
+                bits: 32,
+                signed: true,
+            }),
+            ExprKind::Float(_) => Some(Type::Float { bits: 64 }),
+            ExprKind::String(_) => Some(Type::String),
+            ExprKind::Group(value) | ExprKind::Unary { value, .. } => self.literal_default(value),
+            ExprKind::Name(name) => self
+                .scopes
+                .iter()
+                .rev()
+                .find_map(|scope| scope.values.get(name))
+                .and_then(|symbol| {
+                    if let Value::Constant(data) = symbol {
+                        Some(Self::constant_expr(data.clone(), value.span).ty)
+                    } else {
+                        None
+                    }
+                }),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn list_hint(&mut self, values: &[ast::Expr]) -> Option<Type> {
+        let mut common = None;
+        for value in values {
+            if self.scalar_literal(value) {
+                continue;
+            }
+            let ty = self.hint(value)?;
+            if ty == Type::Never {
+                continue;
+            }
+            if common.as_ref().is_some_and(|common| common != &ty) {
+                return None;
+            }
+            common = Some(ty);
+        }
+        if common.is_none() {
+            for value in values {
+                let ty = self.literal_default(value)?;
+                if common.as_ref().is_some_and(|common| common != &ty) {
+                    return None;
+                }
+                common = Some(ty);
+            }
+        }
+        Some(Type::List {
+            element: Box::new(common?),
+            capacity: values.len(),
+        })
+    }
+
+    pub(crate) fn list_fact(&self, value: &hir::Expr) -> Option<Fact> {
+        if value.ty == Type::Never {
+            return None;
+        }
+        match &value.kind {
+            hir::ExprKind::List { values, list } => Some(Fact {
+                ty: list.clone(),
+                length: values.len(),
+            }),
+            hir::ExprKind::Local(id) => self.lengths.get(id).cloned(),
+            hir::ExprKind::Block(block) => self.block_lengths.get(&block.id).cloned(),
+            hir::ExprKind::Coerce { value: source } => self
+                .list_fact(source)
+                .filter(|fact| value.ty.accepts(&fact.ty)),
+            hir::ExprKind::ListAdd { value, .. } => self.list_fact(value).and_then(|mut fact| {
+                fact.length = fact.length.checked_add(1)?;
+                Some(fact)
+            }),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn list_length(&self, value: &hir::Expr) -> Option<usize> {
+        match &value.ty {
+            Type::List { capacity: 0, .. } => Some(0),
+            Type::List { .. } => self
+                .list_fact(value)
+                .filter(|fact| fact.ty == value.ty)
+                .map(|fact| fact.length),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn block_list_length(&mut self, frame: &Frame, ty: &Type) {
+        if !matches!(ty, Type::List { .. }) {
+            return;
+        }
+        let Some(writes) = frame.slots.get(&None) else {
+            return;
+        };
+        let mut fact: Option<Fact> = None;
+        for slot in writes {
+            if !self.flow.overlap(slot.guard, self.reach) {
+                continue;
+            }
+            let Some(next) = slot.list.as_ref().filter(|fact| &fact.ty == ty) else {
+                return;
+            };
+            if fact.as_ref().is_some_and(|fact| fact.length != next.length) {
+                return;
+            }
+            fact = Some(next.clone());
+        }
+        if let Some(fact) = fact {
+            self.block_lengths.insert(frame.id, fact);
+        }
+    }
+
+    pub(crate) fn list_receiver(&mut self, value: &ast::Expr) -> Result<hir::Expr> {
+        let mut value = self.expr(value, None)?;
+        if let Type::Reference(ty) = &value.ty
+            && matches!(ty.as_ref(), Type::List { .. })
+        {
+            value = hir::Expr {
+                ty: *ty.clone(),
+                span: value.span,
+                kind: hir::ExprKind::Deref(Box::new(value)),
+            };
+        }
+        Ok(value)
+    }
+
+    pub(crate) fn list_index(
+        &mut self,
+        value: &ast::Expr,
+        index: &ast::Expr,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        let value = self.list_receiver(value)?;
+        if value.ty == Type::Never {
+            return Ok(value);
+        }
+        let Type::List { element, capacity } = &value.ty else {
+            return Err(Diagnostic::unsupported(
+                "indexing outside bounded lists",
+                span,
+            ));
+        };
+        let ty = *element.clone();
+        let capacity = *capacity;
+        let length = self.list_length(&value);
+        let index = self.expr(index, None)?;
+        if index.ty == Type::String {
+            return Err(Diagnostic::unsupported(
+                "named-list alias lookup",
+                index.span,
+            ));
+        }
+        if !matches!(index.ty, Type::Int { .. } | Type::Never) {
+            return Err(Self::error(
+                "E222",
+                "list positions require an integer",
+                index.span,
+            ));
+        }
+        if self.reach != FALSE
+            && let Some(Constant::Int(position)) = self.constant(&index)
+            && (position < 1 || position > length.unwrap_or(capacity) as i128)
+        {
+            return Err(Self::error(
+                "E101",
+                format!(
+                    "one-based position {position} exceeds initialized length {}",
+                    length
+                        .map(|length| length.to_string())
+                        .unwrap_or_else(|| format!("at most {capacity}"))
+                ),
+                index.span,
+            ));
+        }
+        let ty = if index.ty == Type::Never {
+            Type::Never
+        } else {
+            ty
+        };
+        Ok(hir::Expr {
+            kind: hir::ExprKind::ListIndex {
+                value: Box::new(value),
+                index: Box::new(index),
+            },
+            ty,
+            span,
+        })
+    }
+
+    pub(crate) fn list_method(
+        &mut self,
+        value: &ast::Expr,
+        name: &str,
+        args: &[ast::Expr],
+        span: Span,
+    ) -> Result<hir::Expr> {
+        let value = self.list_receiver(value)?;
+        if value.ty == Type::Never {
+            return Ok(value);
+        }
+        if name == "size" {
+            if !args.is_empty() {
+                return Err(Self::error("E212", "size takes no arguments", span));
+            }
+            let kind = match value.ty {
+                Type::List { .. } => hir::ExprKind::ListSize(Box::new(value)),
+                Type::String => hir::ExprKind::StringSize(Box::new(value)),
+                _ => return Err(Self::error("E201", "size requires a list or string", span)),
+            };
+            return Ok(hir::Expr {
+                kind,
+                ty: Type::Int {
+                    bits: 64,
+                    signed: false,
+                },
+                span,
+            });
+        }
+        let Type::List { element, capacity } = &value.ty else {
+            return Err(Self::error("E201", "add requires a bounded list", span));
+        };
+        if args.len() != 1 {
+            return Err(Self::error("E212", "list.add takes one element", span));
+        }
+        let length = self.list_length(&value);
+        let capacity = *capacity;
+        let item = self.expr(&args[0], Some(element))?;
+        if self.reach != FALSE && length == Some(capacity) {
+            return Err(Self::error(
+                "E103",
+                format!("list is full at capacity {capacity}"),
+                span,
+            ));
+        }
+        let ty = if item.ty == Type::Never {
+            Type::Never
+        } else {
+            value.ty.clone()
+        };
+        Ok(hir::Expr {
+            kind: hir::ExprKind::ListAdd {
+                value: Box::new(value),
+                item: Box::new(item),
+            },
+            ty,
+            span,
+        })
+    }
+
+    pub(crate) fn list_formattable(ty: &Type) -> bool {
+        match ty {
+            Type::List { .. } => false,
+            Type::Record { primary, .. } => Self::list_formattable(primary),
+            Type::Union(members) => members.iter().all(Self::list_formattable),
+            _ => true,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    pub(crate) fn rejects(source: &str, code: &str) {
+        let errors = crate::compile(source).unwrap_err();
+        assert_eq!(errors[0].code, code, "{source}: {errors:?}");
+    }
+
+    #[test]
+    pub(crate) fn required_extents_preserve_width_checks_even_on_dead_paths() {
+        rejects(
+            "capacity<uint8>:255;|false|{values<int32[capacity+1]>:[]}",
+            "E107",
+        );
+        rejects("a<uint8>:2;b<uint16>:2;values<int32[a+b]>:[]", "E213");
+        rejects("capacity:=2;f<null>:(){values<int32[capacity]>:[]}", "E104");
+        rejects("values<int32[-1]>:[]", "E104");
+        rejects("capacity:(){->2};values<int32[capacity()]>:[]", "B001");
+    }
+
+    #[test]
+    pub(crate) fn later_typed_values_contextualize_only_pure_scalar_literals() {
+        assert!(crate::compile("byte<uint8>:1;values:[2,byte]").is_ok());
+        assert!(crate::compile("wide<uint64>:1;values:[4294967295,wide]").is_ok());
+        rejects("byte<uint8>:1;values:[byte,1+1]", "E207");
+        rejects("byte<uint8>:1;values:[byte,{->2}]", "E207");
+        rejects("record:{->1;->tag:true};values:[record,2]", "E207");
+        rejects("values<int32[1]><string[1]>:[1]", "B001");
+    }
+
+    #[test]
+    pub(crate) fn list_budget_and_unimplemented_boundaries_are_explicit() {
+        rejects("values<int32[65537]>:[]", "B001");
+        rejects("values<string[65536]>:[]", "B001");
+        rejects("a:1;values:[&a]", "B001");
+        rejects("values:[\"name\":1]", "B001");
+        rejects("d:@\"debug\";values:[1];d.print(values)", "B001");
+        rejects("values:[1];view:&values[1]", "B001");
+    }
+}
