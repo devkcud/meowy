@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Effectful list inference handoff
+
+- State: Implementation is complete in 228d808 and native coverage/example/README in 1337785. Prefixes are checked once in the ordinary frame; bounded pure suffixes select candidates using actual reach and immutable primitive constants. Structural errors remain candidate-local so valid alternatives survive. All workers are finished; no unfinished source work or failing checks remain. Final tracker commit follows.
+- Validation: All 14 checks pass: 137 library and 120 native Rust tests, 35 Python tests, 856 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized checks pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed. Optimized example output is exact. Review corrections cover duplicate diagnostics and candidate-dependent record forwarding.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Extend concrete nonconstant prefix-local inference without stale guards or replay, retaining honest B001 for unresolved emitted-name/cross-element constraints. Mutable fields/exclusive references, generated cleanup/runtime integration and module/library work remain separate priorities. Finalize the handoff commit and confirm a clean tree.
+
+### 2026-09-06 — Effectful inference implementation commit
+
+- State: Committed effectful-prefix context inference, shared block-frame handling, ownership notes and the updated ambiguity expectation. Native acceptance/example/README and final handoffs remain for separate commits. The optimized compiler release example passed with exact output.
+- Validation: All 14 combined checks pass. Optimized example stdout is value, 128, 1, row, 300 on separate lines with empty stderr. Cached whitespace and dependency split were inspected.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native coverage/example/README, finalize both handoffs with current evidence and concrete nonconstant suffix inference as the next step, then commit trackers and verify Git integrity.
+
+### 2026-09-06 — Effectful context combined gate
+
+- State: The complete repository/runtime/compiler gate passes on the final implementation. Both diagnostic corrections, the ordinary block-frame refactor, pure suffix budgets and all prior ownership/list/runtime behaviors pass. Runtime sources and reference fixtures are unchanged.
+- Validation: All 14 checks pass: 137 library and 120 native Rust tests, 35 Python tests, 856 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build and execute the optimized effectful-lists example with exact output, commit the implementation and native evidence separately, finalize both handoffs/logs and verify a clean tree.
+
+### 2026-09-06 — Effectful context source freeze
+
+- State: Source and OWNERSHIP are stable, all workers are finished, and both reviews have no remaining blocker. The final path keeps candidate-local structural errors until all trials, bounds pure suffixes before copying, and uses the same ordinary frame for prefix and completion.
+- Validation: All 9 list_context groups pass (2 new; total library inventory 137), all five native groups pass, and final Clippy/format/whitespace checks pass. Review verified duplicate diagnostics, valid alternate record composition and dead behavior; pre-copy 4,096-node, constant-byte and repeated-work budget cases pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the full repository/runtime/compiler gate on frozen source, verify the optimized effectful-lists example, then split implementation, native coverage and final handoff commits.
+
+### 2026-09-06 — Candidate-specific diagnostic handling
+
+- State: Review found that record forwarding can fail with E205 for one candidate but succeed for another. Structural trial errors are now retained per candidate; a valid candidate survives, and a structural code is reported only when every trial fails with that same code. Added the supported record/union composition regression and tightened suffix bounds before cloning.
+- Validation: All five native effectful_list_ groups pass again, including the forwarding case and E203/E205 rows. Frontend focused groups pass; the final read-only audit found no further issue. No application effects are replayed. Full combined verification remains pending source freeze.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish OWNERSHIP/format/Clippy confirmation, run the combined repository/runtime/compiler gate and optimized example, then split implementation, native coverage and handoff commits.
+
+### 2026-09-06 — Effectful suffix diagnostic correction
+
+- State: Independent review found that duplicate terminal emissions were being converted from E205 into a generic no-candidate E207. The suffix checker now preserves structural E203/E205/E206 diagnostics; native regression rows cover duplicate emission and prefix-name collision. The ordinary checker still decides whether dead emissions actually conflict.
+- Validation: Five native groups passed before this diagnostic adjustment. Review snapshot passed effect/order/ownership cases but exposed the two duplicate-emission diagnostic mismatches. Final focused reruns, formatting and full verification remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify live/dead duplicate behavior on the rebuilt compiler, finish focused unit and budget checks, run the combined gate and optimized example, then commit implementation, native evidence and handoff separately.
+
+### 2026-09-06 — Effectful context native integration
+
+- State: The resumable block path passes all five new native groups. Prefix effects run once, immutable primitive locals preserve their types/shadowing, result shapes select widths at actual reach, and exits/loans remain owned by ordinary checking. Unknown later constraints and emitted-name dependencies remain B001. README documents the boundary.
+- Validation: Filtered native effectful_list_ run: 5 passed with debug/release execution. First filtered run had one unsupported direct matcher prefix in a new fixture; enclosing it as an ordinary prefix expression preserved the tested restart behavior and passed. Reviewer loan corpus is safe; diagnostic details and focused unit checks are still being completed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any remaining diagnostic/review findings, finish unit coverage and formatting, freeze source, then run the combined gate and optimized example before split commits.
+
+### 2026-09-06 — Context inference ambiguity review
+
+- State: Review confirmed that a still-ambiguous effectful element may be resolved by a later element, so this slice must report B001 when cross-element constraints remain unknown rather than claim E207. Added a native boundary for that case. The shared ordinary block start/end extraction is in place; suffix selection implementation is ongoing.
+- Validation: Baseline direct-type reach checks and static source review are complete. Five native groups/example and README are prepared; integrated execution remains pending. No reference fixtures changed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete prefix checking plus suffix candidate selection, verify shadowing/collisions and typed locals, run focused tests and the reviewers directed corpus, then execute full gates and split commits.
+
+### 2026-09-06 — Resumable block context plan
+
+- State: The chosen implementation checks a context-independent prefix once inside the ordinary block frame, probes only a terminal unconditional emission suffix using the resulting bindings and reach, then continues that same frame with one selected candidate. No fake union element type, live-checker clone or effectful deferral is used. Added five native groups and an example for scalar/record/list shapes, prefix locals, order, exits, ambiguity and borrow conflicts.
+- Validation: Baseline probes confirm dead arithmetic suppresses E107 while unrepresentable literals and required extents still reject. Native cases are written but await integration. Reviewers identified emitted-name shadowing and primary composition as explicit boundaries.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement shared block begin/finish handling and the bounded contextual suffix, run focused native/unit evidence, resolve exact diagnostics, then complete review and combined verification.
+
+### 2026-09-06 — Effectful list context design
+
+- State: Implementation is active for contextual list inference on effectful blocks with provable result shapes. Candidate probing must not execute/lower effects, clone live checker state or defer effectful blocks across later elements. Preserve strict widths, source errors, ambiguity, saved reach and existing work budgets. One frontend worker and two independent reviewers are evaluating the safe subset; root owns both handoffs and native evidence.
+- Validation: Read current handoffs/rules and list/block language contracts; tree starts clean at 62d43a8. No new implementation checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on a bounded shape-probe rule, implement it in the existing candidate pass, add native effect/order/error evidence, complete independent review, then run full gates and split commits.
+
 ### 2026-09-06 — Nested checked-write handoff
 
 - State: Nested assignment is complete: implementation 2eb9d1f and native coverage/example/README 06bdee8. Every list layer uses its own initialized length and prefix span, keeps parent reservations through returning phases, and preserves captured indices. All workers are finished; no failing checks or unfinished source edits remain. The final tracker commit follows.

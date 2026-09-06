@@ -1,25 +1,26 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Nested element assignment passes the final gate.
+Updated: 2026-09-06. Bounded effectful list context inference passes the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `2eb9d1f`; native coverage/example: `06bdee8`.
+Implementation: `228d808`; native coverage/example: `1337785`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: `matrix[row][column] = value` traverses nested initialized Copy lists
-rooted in a direct mutable local. Each selected list supplies its own length;
-indices and bounds run from root to leaf before RHS, then only the selected leaf
-is stored. Every returning phase retains the root reservation, while nonreturning
-operands skip later accesses. P001 identifies the actual failing prefix.
+Completed: unresolved list candidates can be selected from an unlabeled element
+block whose context-independent prefix is followed by a terminal pure emission
+suffix. The prefix is checked once in the ordinary block frame. Suffix probes use
+its actual reach and immutable primitive constants, then the same frame continues
+with the selected expected type. Block finalization and ownership facts are shared
+with the existing checker; application effects are never replayed or deferred.
 
-Field/reference/temporary write targets remain B001, as do source-level exclusive
-references, slices and owned/reference list elements. Fields remain immutable;
-mutable field shape support must precede field writes. Shared element borrows keep
-all-input lifetime bounds. Runtime cleanup/task integration, cancellation, DWARF
-and remaining contextual list constraints are the next larger implementation areas.
+More general suffix effects/control flow, mutable/nonconstant local constraints,
+emitted-name dependencies and unresolved cross-element constraints remain B001.
+Proved ambiguity remains E207. Structural source diagnostics and dead-emission
+rules are preserved. Nested local Copy writes remain supported. Mutable fields,
+exclusive references, owned elements, generated cleanup and modules remain pending.
 
 ## Resume here
 
@@ -45,11 +46,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 13 list/context and 5 guard groups |
+| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 15 list/context and 5 guard groups |
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 23 loan, 9 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 26 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 115 native groups, 4 harness tests and 19 covered examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 120 native groups, 4 harness tests and 20 covered examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -97,6 +98,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   scalar unary/binary trees can use literals and same-owner immutable primitive
   constants. A fresh checker retains only those constants, exact types and normalized
   local IDs, reusing ordinary expression checking. Unannotated compounds remain typed.
+  Pure terminal aggregate suffixes can use the same isolated checking machinery.
 - Preflight suppresses reach-dependent arithmetic errors; source-order probes use
   the actual position's reach and may select a type before later effects. Deferred
   pure elements retain their original reach. A Never prefix can suppress later E107
@@ -106,7 +108,26 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   constant strings and repeated scratch work are charged to the shared budget.
   Limits are 256 list candidates and 4,096 nodes per scalar scratch tree. Exhaustion
   remains B001 even for pure or dead expressions. No hidden reset grants extra budget.
-- Complex effectful/captured/non-scalar constraints remain B001 when no context is
+- When candidate element types differ, `list_effect_block` accepts an unlabeled
+  block with prefix bindings/assignments/expression statements followed by terminal
+  unconditional unannotated immutable emissions. `block_start`/`block_end` share
+  ordinary frame, scope, length and completion handling. Prefix checking runs once
+  at the element's actual source position; probes never rerun that prefix.
+- `list_pure` allows closed scalar/list/fresh-record suffix trees and same-owner
+  immutable primitive constants. Local defaults and shadowing are resolved before
+  building the minimal scratch environment. Mutable/nonconstant/captured values,
+  suffix effects, named blocks and emitted-name dependencies remain B001 while
+  context is unresolved. No scratch Flow IDs or borrow/call sites enter live state.
+- A unique suffix fit selects the original list candidate and continues the same
+  block frame with that expected type. Multiple fits report E207 only when proved;
+  earlier deferred/later element constraints or an unknown suffix fit stay B001.
+  Effectful blocks are never deferred. No synthetic union element type is invented.
+- Suffix source bytes, AST nodes, names/constants, candidate types and repeated
+  scratch work consume existing budgets (256 candidates, 4,096 pure nodes and shared
+  proof work). Structural E203/E205/E206 errors remain candidate-local until all
+  trials fail with the same code; another valid candidate must survive. Actual
+  prefix reach controls dead arithmetic and duplicate-slot behavior.
+- Remaining effectful/captured/non-scalar constraints stay B001 when no context is
   proved. Use annotations rather than guessing. Intermediate checked widths, f32
   parsing/operations, short circuits, unsigned negation and grouped signed-minimum
   rules remain those of the ordinary checker; do not evaluate only the final result.
@@ -264,37 +285,36 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
-  and compiler identity are explicit. Native runtime sanitizers ran outside the
-  sandbox; metadata validation is distinct from compiler execution and qualification.
-- Rust: 135 library and 115 native groups pass. New coverage adds 3 backend,
-  1 list, 1 loan and 7 native groups. Clippy `-D warnings` and formatting pass.
-  The optimized compiler builds/runs `examples/nested-writes.mwy` in release with
-  exact stdout `20\n11\n2\n1\n2\n99\n` and empty stderr.
-- New native cases cover nested scalar/record/union/list leaves, unequal row lengths,
-  copied values, captured indices, grouped paths, shared final use, retained and
-  emitted aliases, independent owners, loops and nonreturning operands. P001 uses
-  the failing prefix and actual layer length; P006 preserves only prior effects.
-- Three new backend groups execute 24 debug/release cases through original storage,
-  including padded payloads, full-width indices and zero-capacity children. Earlier
-  checks skip later index/RHS effects, and no store follows an operand leave. Prior
-  single-index tests still pass.
-- Frontend coverage checks leaf context and exact prefix spans; a 32-layer source
-  compiles, while the existing parser boundary rejects the 64-layer literal.
-  The first stress-test expectation was corrected to retain that limit.
-  Path flattening and all typed/CFG visits consume capped work. No source-level
-  exclusive references or mutable fields were added.
-- Independent review passed 11 directed check-only cases: earlier writes before
-  later divergence, allowed replacement within a Never phase, retained sibling
-  loans, emitted aliases, conditional exits, dead facts and stale union predicates.
-  No blocker or unsafe acceptance was found; no reference fixtures were changed.
+  and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
+  metadata validation remains distinct from compiler execution and qualification.
+- Rust: 137 library and 120 native groups pass. New coverage adds 2 list-context
+  and 5 native groups. Clippy `-D warnings` and formatting pass. The optimized
+  compiler builds/runs `examples/effectful-lists.mwy` in release with exact stdout
+  `value\n128\n1\nrow\n300\n` and empty stderr.
+- Native cases cover numeric/record/list suffixes, arithmetic widths, immutable
+  prefix-local defaults/shadowing, once-only effects, source order, early leave,
+  restart, panic, last-use loans and E201/E203/E205/E207/E302/B001 boundaries.
+  A new restart fixture initially used an unsupported direct matcher prefix;
+  enclosing it as an ordinary prefix expression preserved the tested behavior.
+- Review exposed live duplicate terminal emissions becoming generic E207. Probes
+  now retain E203/E205/E206 across trials, reporting a shared code only when all
+  candidates fail with it. A second review case proves record forwarding can be
+  invalid under one candidate and valid under another; that valid candidate now
+  survives. Native/unit regressions and directed rechecks cover both corrections.
+  Dead duplicate primary emissions still follow ordinary reach-sensitive checking.
+- Independent review checked contextual defaults/shadowing, candidate ambiguity,
+  structural diagnostics, effect order and ownership. Mutable suffix references
+  correctly remain B001. No remaining unsafe acceptance or replay was found.
+- Existing parser/path, candidate budget, call/borrow identity, list-write and
+  runtime-diagnostic regressions pass. No reference fixture or REQUIRED was changed.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 855 local links; schemas/catalog and Vim/Neovim pass.
+  checks 856 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime is unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with exact
   fatal/truncation/lifetime/guard/admission probes and stable layout. ASan/UBSan/LSan
   and the expired-fiber-local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Reference
-  fixtures and REQUIRED are unchanged; full conformance/release qualification is open.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
+  conformance/release qualification remains open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -302,11 +322,11 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend contextual list inference in `list_context.rs`, starting with effectful
-   blocks whose result shape can be established without replaying effects. Reuse
-   the source-order candidate pass and budgets; keep unresolved/ambiguous cases
-   explicit. Test chosen widths, once-only effects and early exits against ordinary
-   checking, including existing `unresolved_effectful_contexts` cases.
+1. Extend `list_context.rs` beyond immutable constant suffix leaves. Use concrete
+   nonconstant prefix-local types only with a sound model for unknown values and
+   Boolean activity; never transfer scratch guard IDs or stale narrowings. Keep
+   emitted-name and cross-element constraints explicit until their scopes/dependencies
+   are modeled. Verify chosen widths, once-only effects, ambiguity and budgets.
 2. Implement mutable field shape/type support and exclusive-reference contracts
    before field/reference write paths. Preserve every checked path phase and
    parent reservation. Owned replacements need initialization, move and cleanup
