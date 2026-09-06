@@ -6,6 +6,69 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Finalize the contextual-list handoff
+
+- State: Unary fix c6bf80a, inference 1817ea4, native coverage/example 50283a5 and runtime diagnostic design 541747f are committed. Both STATUS files now describe current behavior, explicit contextual limits, validation and ordered next steps. Historical checkpoints remain here. All implementation workers have finished; unrelated examples/meow.mwy is preserved outside the commits.
+- Validation: Final hardened source passes all 14 checks with 197 Rust tests, 34 Python tests and 851 local links; optimized compiler/example stdout is exact. Runtime sanitizer profiles pass. Conformance is 10 passed, 13 unsupported, 0 failed. The 1,096-case semantic audit passed before the subsequent resource-accounting hardening, which passed targeted stress and the full gate. Final documentation links and Git whitespace pass.
+- Blockers: no unfinished implementation or failing checks. Context-dependent effects/nested constraints and owning diagnostic storage remain explicit future work; full v0.0.1 is unqualified.
+- Next steps: Extend contextual constraints without replaying effects or weakening budgets, implement constructor-time owning diagnostics with measured storage/overflow behavior, then add element ownership and generated task-scope cleanup. Follow the ordered STATUS steps and preserve the unrelated untracked example.
+
+### 2026-09-06 — Commit contextual inference and optimized example evidence
+
+- State: Committed unary typing as c6bf80a, bounded list candidate inference as 1817ea4, native example/coverage as 50283a5 and runtime diagnostic-ownership planning as 541747f. All implementation workers have finished. Unrelated compiler/examples/meow.mwy remains untouched and untracked.
+- Validation: The final hardened source passes all 14 checks with 197 Rust tests, 34 Python tests and 851 local links. The optimized compiler builds/runs list-unions in release with exact stdout and empty stderr. Conformance remains 10 passed, 13 unsupported, 0 failed; runtime sanitizer profiles pass. The semantic differential audit passed 1,096 cases before resource accounting was tightened.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Replace active-work notes with the completed current snapshot, preserve audit/failure history in step logs, verify final documentation and commit tracking. Continue with unresolved contextual constraints, constructor-time owning diagnostics, element ownership and generated scope cleanup.
+
+### 2026-09-06 — Pass the final contextual-list gate
+
+- State: Expected-list inference and unary contextual typing are complete for the documented subset; declared-type/record-shape work is now fully charged in the new selector. The runtime diagnostic-lifetime design is committed as 541747f. An unrelated untracked compiler/examples/meow.mwy appeared during work and is being preserved untouched and unstaged.
+- Validation: The final hardened source passes all 14 repository checks: 114 library plus 83 native groups, 34 Python tests, 851 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed. The semantic audit passed 1,096 cases before final resource accounting was tightened.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify the optimized compiler/example, commit frontend behavior and native coverage separately, refresh both current handoffs and commit tracking. Preserve the unrelated meow.mwy and leave explicit B001 contextual limits and owned diagnostic work in the next steps.
+
+### 2026-09-06 — Bound declared-type and record-shape candidate work
+
+- State: The semantic audit passed all 1,096 comparisons after the unary repair. Follow-up review found repeated uncharged declared-type copies; source probes now borrow type descriptions and charge actual types, field searches and record-shape comparisons. A large-record two-element fixture verifies budget exhaustion without allocating a copy per candidate.
+- Validation: The earlier complete 14-check gate passed. Focused list/native checks, Clippy and the new budget stress pass after hardening. The stress fixture first had invalid primary syntax and then insufficient work to exhaust the budget; it was corrected before recording success. Final full gate and optimized example are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run formatting and the final combined gate on the hardened source, verify the optimized list-unions example, commit compiler behavior and coverage separately, then update current snapshots with explicit contextual/runtime limits and next steps.
+
+### 2026-09-06 — Repair unary contextual typing found by comparison
+
+- State: The 1,080-case differential list audit found nine mismatches caused by an existing unary expected-union injection bug. Unary operands now keep their natural or uniquely contextual numeric type; !, negation and complement run before the result is injected into an expected union. Assignment coercion retains source spans and nonreturning values.
+- Validation: The original audit found no new candidate-selection defect in its other 1,071 cases. Focused unary native and unit regressions pass, including no widening, grouped-minimum bounds and unsigned negation. The audit is rerunning on the repair; a first native probe used unsupported repeated index narrowing and was corrected to bind the copied element first.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the final differential rerun, run the complete repository gate and optimized list-unions example, then split compiler inference/unary behavior, native coverage and final tracking; runtime diagnostic ownership remains a reviewed plan, committed as 541747f.
+
+### 2026-09-06 — Pass integrated compiler regressions
+
+- State: Candidate inference, contextual list examples and runtime diagnostic ownership planning are complete for review. The selector retains explicit B001 limits for unresolved contextual effects/nested constraints, and its proof work is bounded.
+- Validation: All 113 library and 82 native groups pass. All-target Clippy with -D warnings, formatting, 851 local links and Git whitespace pass. The differential candidate audit and final repository gate are still pending; no new runtime execution behavior was added.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the read-only candidate audit, address any confirmed semantic mismatch, run the final combined gate and optimized example, then make focused source/coverage/runtime-design/tracking commits.
+
+### 2026-09-06 — Validate contextual lists and document diagnostic ownership
+
+- State: Five new native groups now pass for scalar/capacity/range selection, nested and record contexts, ordinary record-primary assignment, precise errors and once-only effects. Three unit groups cover sign/width fidelity, explicit contextual limits and bounded candidate work. Runtime README now records a constructor-time owning diagnostic design; runtime behavior is unchanged.
+- Validation: Baseline 187 Rust tests passed before edits. New five native groups pass debug/release; three focused candidate unit groups pass. A read-only differential audit is in progress; the full integrated gate is pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any confirmed candidate-audit findings, run all compiler/runtime/editor checks, verify the optimized example, then split frontend behavior, native example/docs, runtime design and final handoff commits.
+
+### 2026-09-06 — Implement bounded list candidate selection
+
+- State: A separate list_context module now filters normalized capacities and literal/record shapes without speculative expression checking. It preserves typed scalar parsing, defers pure contextual literals, checks effectful typed values once and reuses ordinary assignment coercion after unique selection. Ambiguous context-dependent effects remain explicit B001.
+- Validation: All five new native union-list groups passed in debug/release on the first implementation. Baseline 110 library plus 77 native groups passed before edits. Runtime review found no defect in the documented borrowed diagnostic contract and identified constructor-time owning snapshots as the next sound step.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Audit candidate filtering against existing single-context behavior and flow-sensitive sources, add resource and unsupported-context boundaries, document runtime snapshot ownership, then run the combined gate and split implementation, coverage and handoff commits.
+
+### 2026-09-06 — Begin expected-list union inference
+
+- State: The checkout starts clean at caa85f1. Root is implementing contextual list selection across multiple expected list alternatives without replaying effectful expressions. A worker owns native coverage/example, a reviewer audits inference contracts, and runtime review is read-only for the owned-diagnostic lifecycle. Root alone owns both tracking files.
+- Validation: Previous milestone passed all 14 checks with 187 Rust tests and 10 passed/13 unsupported conformance. New inference behavior has not been implemented or validated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define bounded candidate filtering and once-only checking, implement unique selection and genuine ambiguity diagnostics, add native effect/width/capacity cases, and record a concrete runtime diagnostic-lifetime continuation before running the full gate and split commits.
+
 ### 2026-09-06 — Finalize the bounded-list restart handoff
 
 - State: Compiler b7ddf0c, native coverage/example abd1774 and runtime batches 4feecf8 are committed. Root/compiler STATUS now describe the completed subset, remaining language/runtime gaps and ordered continuation; historical checkpoints remain in their step logs. No source worker remains active.

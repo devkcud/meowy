@@ -1,24 +1,27 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Bounded lists and runtime failure batches are complete for the subset below.
-Full v0.0.1 remains incomplete; no unfinished source files or failing checks remain.
-Compiler implementation: `b7ddf0c`; native coverage/example: `abd1774`; runtime/tooling: `4feecf8`.
+Updated: 2026-09-06. Contextual list candidates and unary union typing pass the final gate.
+Full v0.0.1 remains incomplete; no unfinished implementation or active workers remain.
+Inference: `1817ea4`; unary fix: `c6bf80a`; native coverage/example: `50283a5`.
+Runtime diagnostic design: `541747f`; existing native batch behavior: `4feecf8`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: inline `T[N]` lists with reference-free Copy elements, typed/inferred
-literals, initialized length, one-based indexing, `.size()`, `.add()`, equality
-and whole-value replacement. Typed constant extents preserve checked arithmetic.
-Whole-list references reuse existing scoped origins, reborrows and E302/E303.
-Multi-list expected literal inference, element places, mutation, aliases, slices,
-reference/owned elements and general required evaluation remain unavailable.
+Completed: list literals can select one compatible expected list alternative using
+capacity, scalar range, typed elements and fresh list/record shapes. Pure contextual
+literals may be deferred; effectful typed values are checked once in source order.
+Proved ambiguity or no fit reports E207; all capacities being too small is E103.
+Unary operators now preserve the operand type before expected-union injection.
 
-Runtime detailed scope closing now returns all consumed failures in caller-owned
-bounded batches. A full buffer retains the next failed child and mark for retry.
-Generated programs still use the scalar runtime; generated task scope exits,
-owned diagnostics, cancellation, automatic propagation and DWARF remain pending.
+Context-dependent effects/nested constraints that still need an unavailable proof
+remain B001 and need annotations. Element places/mutation, aliases, slices,
+reference/owned elements and general required evaluation remain unavailable.
+The runtime owning-diagnostic lifecycle is documented, not implemented. Generated
+programs still use the scalar runtime; generated scope exits, owning messages,
+cancellation, automatic propagation and DWARF remain pending.
+The unrelated untracked `examples/meow.mwy` is untouched and excluded from this work.
 
 ## Resume here
 
@@ -42,11 +45,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/flow.rs` | Reference unions, record/list contexts and checked extents; 26 checker, 3 list and 5 guard tests |
+| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 6 list/context and 5 guard groups |
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 17 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 77 native groups, 4 harness tests and 14 runnable examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 83 native groups, 4 harness tests and 15 covered examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -65,7 +68,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
 | Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
-| Collections | Multi-list literal contexts, element places/mutation, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
+| Collections | Remaining contextual constraints, element places/mutation, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
 | Native ABI | Clang ABI adapters, explicit native artifacts, record classification | Separate C fixtures, argument/return layout and safety boundaries |
@@ -86,10 +89,21 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   B001. Bootstrap limits are 65,536 elements and 1 MiB inline layout per list, also
   B001; target-layout arithmetic overflow is E104. Total frame/stack budgets remain
   unqualified. Frontend/backend share `Type::layout()`.
-- List inference never invents unions, promotions or primary projections. Multiple
-  expected list alternatives remain B001; bind one concrete type first. Known
-  immutable/literal lengths and equal lengths on every completing block path give
-  static E101/E103. Mutable/function-result lengths keep runtime checks. Never
+- Unannotated list inference never invents unions, promotions or primary projections.
+  Expected list candidates use ordinary assignment, including record-primary copies.
+  Capacity, literal representability and typed/fresh aggregate shapes select a unique
+  candidate; no smallest-capacity or default-width preference breaks a tie.
+- Candidate probes do not change flow proofs or replay a live checker. Pure
+  contextual literals may wait while typed expressions are checked once. Raw source
+  types are borrowed and conservatively retain potentially narrowed members; both
+  actual/expected type walks, field searches and shape comparisons are charged.
+  At most 256 list candidates are considered. Work exhaustion is B001.
+- Unresolved context-dependent effects and nested candidate constraints remain B001;
+  add an annotation rather than guessing. Unary operands keep their natural or
+  unique literal type before the result enters an expected union. Numeric widening,
+  unsigned negation and grouped signed-minimum rules remain checked.
+- Known immutable/literal lengths and equal lengths on every completing block path
+  give static E101/E103. Mutable/function-result lengths keep runtime checks. Never
   infer a block length from its last emission alone.
 - Whole-list references and concrete record list fields use existing places and
   lifetime contracts. Element borrows/writes, reference/owned elements, aliases,
@@ -196,59 +210,61 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Final `python3 -B tools/verify.py --all`: all 14 selected checks pass outside
-  sandbox/ptrace supervision. Cargo target/output and the actual compiler binary
-  are explicit. Source conformance remains distinct from metadata validation.
-- Rust: 110 library and 77 native groups pass. New list coverage includes 3 checker,
-  3 backend and 9 native groups. All-target Clippy with `-D warnings` and formatting
-  pass. The optimized compiler also builds and executes the bounded-lists example
-  in release with empty stderr and exact stdout `2\n3\nAda\nLin\ntrue\n0\n`.
-- Python: 16 tooling, 14 runtime and 4 compiler-harness regressions pass. Local
-  documentation validation checks 849 links; schemas/catalog and Vim/Neovim pass.
-- Runtime per debug/release/sanitized profile: 14 cleanup cases plus 2 fatal probes;
-  10 stack cases plus kernel ENOMEM and 2 guard faults; 10 context cases plus fatal
-  resumed cleanup; 25 scheduler cases plus admission/fatal/child/scope probes;
-  13 owned-value cases plus 3 exact fatal cleanup probes. ASan/UBSan/LSan pass,
-  including the expired fiber-local negative diagnosis. An earlier isolated probe
-  timed out; complete outside-sandbox reruns passed without suppressing it.
-- Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. `mixed_list`
-  now reports E207 and is required. `core.Type`, slices, callable generics, FFI and
-  other unsupported catalog features remain visible. No reference fixture changed.
-- Native tests cover exact typed inference/capacity, initialized-prefix equality
-  with records/unions/nested lists and NaN/signed zero, dynamic signed/uint64 index
-  checks, empty/full lists, checked extents, receiver snapshots and argument effects,
-  early exits, completing-path lengths, whole-list loans and final-use writes.
-- Runtime batches cover reused/empty buffers, mixed child outcomes, consumed ticket
-  identities after slot reuse, context-release retries, owned results and worker/
-  parent restrictions. A full buffer never silently consumes a failed child.
-- Existing regression coverage retains malformed/Unicode parser inputs, depth and
-  analysis budgets, bounded backend FFI, arithmetic, tagged unions, records,
-  reference contracts and `/dev/full`. These are bounded bootstrap checks.
-- Prior ELF inspection found x86-64 PIE, only `libc.so.6` in DT_NEEDED and GLIBC_2.34.
-  It was not repeated this milestone; glibc 2.31 and minimum-kernel execution remain
-  unqualified. Earlier dispatch/origin audits are preserved in the step log.
-- Git whitespace checks pass. The unchanged upstream `fcontext.hpp` blank-at-EOF
-  exception remains covered by its original checksum.
+- Final `python3 -B tools/verify.py --all`: all 14 checks pass on the hardened source,
+  with explicit Cargo target/output and the actual compiler binary. Runtime sanitizer
+  execution ran outside sandbox/ptrace supervision; metadata checks remain distinct
+  from compiler execution and release qualification.
+- Rust: 114 library and 83 native groups pass. New coverage includes 3 candidate
+  groups, 1 unary checker group and 6 native groups. Clippy `-D warnings` and
+  formatting pass. The optimized compiler builds/runs `examples/list-unions.mwy`
+  in release with empty stderr and exact stdout `20\nmeowy\n300\n2\n`.
+- Python: 16 tooling, 14 runtime and 4 compiler-harness tests pass. Documentation
+  checks 851 local links; schemas/catalog and Vim/Neovim pass.
+- Runtime per debug/release/sanitized profile: 14 cleanup groups plus 2 fatal probes;
+  10 stack groups plus kernel ENOMEM and 2 guard faults; 10 context groups plus fatal
+  resumed cleanup; 25 scheduler groups plus admission/fatal/child/scope probes;
+  13 owned groups plus 3 exact fatal cleanup probes. ASan/UBSan/LSan and the
+  expired-fiber-local negative diagnosis pass. Runtime behavior did not change.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in debug/release.
+  `mixed_list` is required; unsupported core.Type, slices, callables and FFI remain
+  visible. Reference fixtures and conformance requirements were unchanged.
+- The semantic audit passed 1,080 scalar/capacity comparisons and 16 record/nested/
+  narrowing comparisons after the unary fix. It found no remaining mismatch.
+  Final declared-type/shape work charging was added afterward and passed focused
+  stress plus the complete gate. Temporary audit snapshots supplement committed tests.
+- Candidate tests cover unique and ambiguous capacities/types/ranges, later typed
+  elements, nested literals, fresh record defaults, typed record-primary copies,
+  original E201/E107/E216 errors, effects, early exits, bounded work and annotations
+  for explicitly unavailable contexts. Unary tests preserve widths and failure codes.
+- Existing suites retain bounded parser/Unicode, origin/loan, native layout,
+  arithmetic, safe output and process-supervision regressions. The runtime ownership
+  investigation was read-only; constructor-time copying, storage limits and P008
+  snapshot independence still need implementation and native evidence.
+- Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
+  It was not repeated; glibc 2.31, minimum-kernel execution, bundled distribution
+  and full v0.0.1 remain unqualified. Prior evidence remains in the step log.
+- Git whitespace passes. `examples/meow.mwy` is unrelated untracked work and was
+  left untouched. Preserve the checksum-matching vendored fcontext.hpp EOF exception.
 
 ## Next steps
 
-1. Extend `src/list.rs` with single-evaluation candidate inference across multiple
-   expected list types. Distinguish unique candidates from genuine E207 ambiguity;
-   verify element widths, exact capacity and effect order before removing B001.
-2. Add explicit initialized element places, moves and cleanup edges before indexed
-   mutation, exclusive loans/reborrows, reference reassignment or owned collections.
-   Preserve reset/resource bounds; test parent-loan suspension and exact-once cleanup.
-3. Extend `src/borrow_contract.rs` and origin proofs for static references, verified
-   intrinsic sources and new projections. Preserve all-input lifetime bounds and
-   update no-return assumptions before enabling new reference-producing sources.
-4. Add general required evaluation, effects, logical budgets and specialization;
-   enable type-helper and compile-effect/budget fixtures only with actual support.
-5. Generate payload layouts, move/drop operations and runtime mark/close calls
-   before parent locals die. Drain every reported failure batch, retain diagnostic
-   lifetimes and handle retries; then add cancellation and pinned unwind support.
-   Verify interleaved child/result/local cleanup and panic while waiting.
-6. Implement the project/module graph for native adapters and real Meowy library
-   sources, then tools/artifacts and distribution qualification from the table above.
-7. Keep the combined gate green and expand conformance REQUIRED only when supported.
-   `--strict` requires zero unsupported cases; even that catalog covers only part
-   of full v0.0.1 qualification. Keep both STATUS files and step logs current.
+1. Extend `src/list_context.rs` for remaining compound/context-dependent elements
+   and nested constraints. Keep once-only checking and actual/expected/source work
+   charging; verify unique candidates, genuine ambiguity, flow changes and escapes.
+2. Implement constructor-time owning panic text following `../runtime/README.md`.
+   Choose explicit storage/overflow policy and measure fixed slot/report growth;
+   test overwrite, copy independence, slot reuse, retries and both P008 causes.
+3. Add initialized element places, moves and cleanup edges before indexed mutation,
+   exclusive loans/reborrows, reference reassignment or owned collections. Preserve
+   reset/resource bounds and test suspended parent loans and exact-once cleanup.
+4. Extend borrow contracts for static/intrinsic sources and verified projections;
+   preserve all-input lifetime bounds and update no-return assumptions first.
+5. Add general required evaluation, effects, budgets and specialization; enable
+   type-helper and compile-effect/budget fixtures only after real compiler support.
+6. Generate payload layouts, move/drop and runtime mark/close calls while parents
+   live. Drain every failure batch and preserve diagnostic lifetimes and retries;
+   then add cancellation and pinned unwind support with interleaved cleanup tests.
+7. Build the project/module graph for adapters and Meowy libraries, then tooling,
+   artifacts and distribution qualification. Keep both trackers and step logs current.
+8. Keep the combined gate green and require conformance cases only when supported.
+   `--strict` needs zero unsupported cases and still covers only part of v0.0.1.
