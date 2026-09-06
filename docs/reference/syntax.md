@@ -81,51 +81,129 @@ at the end of a line to continue that expression on the next line.
 Braces contain a sequence of statements. An expression statement evaluates and
 discards its result; it does not implicitly emit that result.
 
+No grammar production requires a space or tab. Indentation is presentation, and
+spaces never select between a type test and an ascription. Use `;` when removing
+a statement-ending newline. Record-type fields and type expansions can likewise
+be separated with `;`, so a record type can be written `<{x<int32>;y<int32>}>`.
+An optional final separator is permitted before the closing brace.
+
+This is a complete program with no whitespace outside its string:
+
+```meowy
+debug:@"debug";value<int32><null>:7;|value<int32>|debug.print("{value}");
+```
+
+Compact source still has tokens. Identifiers and numbers cannot be joined into
+different tokens, and multi-character operators such as `&&`, `->`, and `>>`
+must stay intact. Use punctuation or a newline to separate tokens when needed;
+removing whitespace with a text substitution is not a minifier. Comments and
+literal contents retain their own bytes regardless of the surrounding layout.
+
 ## Forms at a glance
 
-| Form                        | Meaning                                                          |
-| --------------------------- | ---------------------------------------------------------------- |
-| `name : value`              | Immutable binding                                                |
-| `name := value`             | Mutable binding                                                  |
-| `name <T> : value`          | Explicit binding type                                            |
-| `name = value`              | Reassign a mutable binding                                       |
-| `<Name> : <T>`              | Type alias                                                       |
-| `-> value`                  | Primary emission                                                 |
-| `-> name : value`           | Immutable named emission                                         |
-| `-> name := value`          | Mutable named emission                                           |
-| `(x <T>) { ... }`           | Function value                                                   |
-| `f <R> : (x <T>) { ... }`   | Function declaration with result type `R`                        |
-| `f(value)`                  | Function call                                                    |
-| `value.name`                | Field selection                                                  |
-| `value.(f)`                 | Call `f` with `value` as its first argument                      |
-| `value.{ ... }`             | Evaluate block with `self` bound to `value`                      |
-| `\| condition \| statement` | Conditional matcher arm                                          |
-| `'scope { ... }`            | Named, immediately evaluated block                               |
-| `'scope -> value`           | Primary emission into a named enclosing block                    |
-| `'scope.leave()`            | Finish that named block                                          |
-| `'scope.restart()`          | Clean up and restart that named block                            |
-| `value <T>`                 | Type predicate in a matcher condition                            |
-| `value<>`                   | Compile-time type query                                          |
-| `value<T>`                  | Proven type ascription; no conversion                            |
-| `@"name"`                   | Module import                                                    |
-| `&value`, `&!value`         | Shared or exclusive borrow                                       |
-| `*reference`                | Access a safe reference's referent                               |
-| `>> expression`, `<< task`  | Start or join a task                                             |
-| `&group<T[N]>`              | Declare a bounded task group                                     |
-| `&group >> expression`      | Submit a task to a group                                         |
-| `!{ ... }`                  | Block permitting operations with caller-proven safety conditions |
-| `(x <T>) !{ ... }`          | Function whose callers must establish those conditions           |
-| `<:T : memory.Copy>`        | Generic type binder constrained by a capability value            |
+| Form                         | Meaning                                                          |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `name : value`               | Immutable binding                                                |
+| `name := value`              | Mutable binding                                                  |
+| `name <T> : value`           | Explicit binding type                                            |
+| `name = value`               | Reassign a mutable binding                                       |
+| `<Name> : <T>`               | Type alias                                                       |
+| `-> value`                   | Primary emission                                                 |
+| `-> name : value`            | Immutable named emission                                         |
+| `-> name := value`           | Mutable named emission                                           |
+| `(x <T>) { ... }`            | Function value                                                   |
+| `f <R> : (x <T>) { ... }`    | Function declaration with result type `R`                        |
+| `f(value)`                   | Function call                                                    |
+| `value.name`                 | Field selection                                                  |
+| `value.(f)`                  | Call `f` with `value` as its first argument                      |
+| `value.{ ... }`              | Evaluate block with `self` bound to `value`                      |
+| `\| condition \| statement`  | Conditional matcher arm                                          |
+| `'scope { ... }`             | Named, immediately evaluated block                               |
+| `'scope -> value`            | Primary emission into a named enclosing block                    |
+| `'scope.leave()`             | Finish that named block                                          |
+| `'scope.restart()`           | Clean up and restart that named block                            |
+| `\| value<T> \| statement`   | Type predicate in a matcher condition                            |
+| `value<>`                    | Compile-time type query                                          |
+| `value<T>`                   | Proven type ascription in a value expression; no conversion      |
+| `name<(expression)> : value` | Binding annotated by a computed type                             |
+| `@"name"`                    | Module import                                                    |
+| `&value`, `&!value`          | Shared or exclusive borrow                                       |
+| `*reference`                 | Access a safe reference's referent                               |
+| `>> expression`, `<< task`   | Start or join a task                                             |
+| `&group<T[N]>`               | Declare a bounded task group                                     |
+| `&group >> expression`       | Submit a task to a group                                         |
+| `!{ ... }`                   | Block permitting operations with caller-proven safety conditions |
+| `(x <T>) !{ ... }`           | Function whose callers must establish those conditions           |
+| `<:T : memory.Copy>`         | Generic type binder constrained by a capability value            |
 
-The escaped pipes in the table stand for literal `|` characters. Type ascription
-and generic specialization attach directly to their subject (`value<T>`,
-`choose<string>(...)`). A type predicate is separated from its subject
-(`value <T>`) in a matcher. A comparison such as `age < 18` has an expression on
-the right, not a closed type form.
+The escaped pipes in the table stand for literal `|` characters. Spaces around
+angle brackets do not change their role: `value<T>` and `value <T>` have the same
+meaning in the same grammatical position. See the contextual rules below.
 
 `<T><U>` is a union in a type position, and `!<U>` subtracts members from a type.
 Generic arguments name types without an extra pair of angle brackets:
 `<task<int32>>`. Use a type alias for a union inside a generic argument.
+
+## Angle brackets in context
+
+Declarations establish an annotation position: `name<T>:value` annotates the
+binding, including inside a matcher body. Elsewhere, parse a complete type form
+after an expression by these rules, independently of spacing:
+
+1. Empty `<>` is always a type query.
+2. Type arguments followed by call parentheses specialize that call:
+   `accepts<T>(value)`. This rule also applies in a matcher condition.
+3. In a matcher condition, a nonempty type suffix is a type predicate, taking
+   precedence over the ascription interpretation. It has comparison precedence.
+   `|value<T><U>|use(value)` tests membership in the union `<T><U>`.
+4. In an ordinary value expression, that suffix is a proven ascription, with
+   postfix precedence. `copy:value<T>` requests no conversion or runtime check.
+
+Grouping parentheses in a condition retain its condition context. Boolean
+operands of `&&`, `||`, and `!` do too. Call arguments, index expressions, and
+the bodies of blocks and functions are ordinary value contexts; a nested matcher
+starts its own condition context. Thus a predicate inside an argument must be
+expressed through a matcher, not inferred from its distance to an outer `|`.
+
+| Form                              | Interpretation                                 |
+| --------------------------------- | ---------------------------------------------- |
+| `\|value<T>\|use(value)`          | Test `value` and refine it in the arm          |
+| `\|!(value<T>)\|reject()`         | Negate the type test                           |
+| `\|accepts<T>(value)\|use(value)` | Call a specialized boolean function            |
+| `\|accepts(value<T>)\|use(value)` | Pass a proven ascription to a boolean function |
+| `\|flag\|copy:value<T>`           | Test `flag`; the body contains an ascription   |
+| `copy:value <T>`                  | Ascription, even with a space                  |
+
+The contexts compose through dispatch too:
+
+```meowy
+|t.{->self<MyCoolType>}<MyCoolType>|matched()
+```
+
+The dispatched block is an ordinary value context: `self<MyCoolType>` is an
+ascription, and `->` emits that value. After `}`, the surrounding matcher context
+resumes, so the outer `<MyCoolType>` is a predicate. This requires the flow type
+of `self` to satisfy the ascription before the block emits; an outer test cannot
+prove an earlier operation. With this exact block, the outer test succeeds if
+evaluation completes normally. Dispatch still follows its usual move/borrow
+rules. Neither the spaces nor the spelling of `self` introduces a special case.
+
+For an ascription directly used as a condition, bind it first and match the
+boolean binding. Parenthesizing `value<T>` alone still gives a type test there.
+Because unary operators bind more tightly than predicates, write `!(value<T>)`
+to negate a test; `!value<T>` tests the result of `!value`.
+
+A complete type form wins over a relational interpretation, without consulting
+whether a name resolves to a type. `age<18` is a comparison: it has no closing
+type delimiter. `left<limit&&other>0` is two comparisons joined by `&&`; the
+intervening operator cannot belong to the putative type form. Chained relational
+comparisons are invalid; parentheses must express the intended grouping.
+
+`<(expression)>` evaluates a compile-time expression that produces a type. It
+allows computed annotations such as `other<(name<>)>:value` without using a space
+to separate two identifiers. A function type instead contains an arrow after its
+parameter list: `<(T)->R>`. Bare computed annotations such as `other name<>:value`
+are not part of the grammar. See [type queries](types.md#type-queries).
 
 ## Operators and evaluation order
 

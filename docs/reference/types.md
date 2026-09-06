@@ -66,10 +66,10 @@ Two already typed arithmetic operands must have the same numeric type.
 Unions accept any of their members. A descriptor-compatible concrete error may
 be passed as `<error>` without allocation. An error retaining arbitrary inline
 owners must stay concrete or have its payload explicitly boxed before erasure.
-The predicate `value <error>` recognizes either representation without converting
-it. References may shorten their lifetimes, and an exclusive reference may be
-reborrowed as shared. Other storage conversions are explicit. In particular,
-making a slice of a bounded list uses `list.slice()`.
+In a matcher, the predicate `value<error>` recognizes either representation
+without converting it. References may shorten their lifetimes, and an exclusive
+reference may be reborrowed as shared. Other storage conversions are explicit.
+In particular, making a slice of a bounded list uses `list.slice()`.
 
 Every normal path must initialize a binding before it is read. Untyped empty
 lists require an expected element type. A function taking no arguments still
@@ -113,12 +113,18 @@ representable as a new primitive type and is rejected; use a predicate instead.
 
 ```meowy
 value <string><null> : null
-present value<>!<null> : value
+present <(value<>!<null>)> : value
 ```
 
 Within a proven branch, an ascription such as `value<string>` is permitted. It
 does not insert a trap, parse, or unchecked cast. If the current flow type is not
 assignable to the requested type, the ascription is rejected.
+
+The surrounding grammar chooses the operation, not a space: `value<T>` and
+`value <T>` are both predicates in matcher conditions and both ascriptions in
+ordinary value expressions. Grouping a condition does not turn a predicate into
+an ascription. Generic calls and type queries retain their own forms; see
+[angle brackets in context](syntax.md#angle-brackets-in-context).
 
 ## Type queries
 
@@ -127,8 +133,13 @@ Thus `get()<>` queries the result type and does not call `get`.
 
 ```meowy
 name : "Dev"
-other name<> : "Ada"
+other <(name<>)> : "Ada"
 ```
+
+The `<(expression)>` form evaluates a type-producing compile-time expression
+inside an explicit annotation delimiter. The example can therefore also be
+written `other<(name<>)>:"Ada"`. It does not evaluate `name` at runtime. Type
+subtraction can appear inside the same form, as in `<(value<>!<null>)>`.
 
 A query at a refined program point observes the refined type. Queries cannot be
 used to make a type depend on a runtime value. `<:T>` introduces a generic type
