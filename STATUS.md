@@ -7,37 +7,38 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `dddd8ae` enables shared borrows of mutable emitted names, concrete
-  fields and initialized list elements. Source::Slot separates target-block
-  ownership, canonical slot identity and the original alias's declared pointee type.
-  A reference may outlive an inner alias name while its outer target stays active.
-- Borrowed storage must match the alias type or contain it as one exact concrete
-  union member. Proper subunion views remain B001. Discarded initialized cells are
-  explicitly owned by the target's partial result under current Copy-only rules.
-- Overlapping writes report E302, including future uses across inner restarts;
-  last-use RHS reads and disjoint fields remain accepted. Publication cannot return
-  a reference into its own construction storage (E303). Canonical identities also
-  protect aliases introduced by different guarded emissions.
-- Existing backend address helpers handle these cells and payloads without new
-  production lowering or runtime ABI changes. `4a012b0` adds eight native groups,
-  `compiler/examples/emitted-borrows.mwy` and README coverage; eight library groups
-  cover origin/lifetime, conflicts and native addresses.
-- All 14 combined checks pass: 326 Rust tests, 35 Python tests, 861 local links,
+- Compiler: `faaa08b` gives immutable reference-free emitted names actual result-slot
+  aliases and shared borrows. SlotAlias and private metadata retain declared
+  mutability; backend backing must match that flag and accept the lexical type.
+- Immutable aliases retain constant, variant and initialized-length facts. Their
+  roots reject direct, field and element writes with E305, including mutable fields
+  inside an immutable value. Mutable aliases retain unknown activity and last-use
+  conflict checks; reference-bearing emitted names keep their prior copied origins.
+- Existing Source::Slot ownership covers nested names, outer target lifetimes,
+  discarded cells, restart and E303 publication. Exact cells or concrete union
+  members can be borrowed; narrower subunion reads still convert while their
+  borrowed views remain B001. Initializers execute once and ordinary copies remain
+  independent.
+- `496b529` adds eight native groups, `compiler/examples/immutable-slots.mwy`
+  and README evidence. Three semantic and five backend groups check facts,
+  initialized lengths, write rejection, actual pointers, widening and discarded
+  opposite-mutability backing. Runtime ABI and dependencies are unchanged.
+- All 14 combined checks pass: 342 Rust tests, 35 Python tests, 862 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs emitted-borrows with exact output. Ten independent
-  lifecycle/call-bound cases and source review pass. No unfinished source work,
-  active workers or failing checks remain; modular source organization is preserved.
-- Immutable emitted-name borrows, mutable reference-bearing fields, source-level
-  exclusive references, owned cleanup and full release qualification remain open.
-  Next is immutable reference-free emitted storage, preserving immutable facts.
+- The optimized compiler runs immutable-slots with exact output. Twelve independent
+  fact/lifetime/regression cases and source review pass. No unfinished source work,
+  active workers or failing checks remain; modular organization is preserved.
+- Reference-bearing emitted-slot addresses, mutable reference carriers, exclusive
+  references, owned cleanup and full release qualification remain open. Next is
+  immutable reference-bearing slot identity with explicit contained-origin proofs.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable emitted-storage borrows and unified checked writes | Immutable emitted storage, exclusive ownership and cleanup |
+| Compiler | Immutable and mutable reference-free emitted-storage borrows | Reference-bearing slots, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -47,10 +48,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Give immutable reference-free emitted names actual slot identities before enabling
-   their borrows. Preserve immutable tag/origin facts and reject writes with E305;
-   coordinate checker aliases, native cells and target-owned lifetimes. Verify
-   outer targets, copies, widened/discarded backing, restart and E303 publication.
+1. Model immutable reference-bearing named emissions as slots while preserving each
+   copied component's actual origins, input bounds and active variant facts. Keep
+   storage borrowing B001 until physical owner and contained-reference dependencies
+   are both represented; verify projected reads, calls, discard/restart and escapes.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

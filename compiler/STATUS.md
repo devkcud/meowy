@@ -1,8 +1,9 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Mutable emitted-storage borrows pass the final gate.
+Updated: 2026-09-06. Immutable emitted-slot aliases and borrows pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `dddd8ae`; native coverage/example: `4a012b0`.
+Implementation: `faaa08b`; native coverage/example: `496b529`.
+Prior mutable slot borrows: `dddd8ae`.
 Prior mutable result-slot aliases: `554fa6c`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
@@ -12,17 +13,16 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: shared borrows of mutable emitted names, concrete fields and initialized
-list elements address their existing result cells. Source::Slot carries the owner
-target, canonical conflict root, original alias view and projected field/element
-path. References may cross the alias name's inner scope while the owner target lives.
+Completed: immutable reference-free emitted names now use real SlotAlias storage
+and shared borrows. Declared mutability travels through HIR/private metadata and
+must match final field backing. Immutable IDs retain constants, tag state and list
+length facts; mutable IDs still receive unknown activity. E305 prevents writes
+through immutable roots even when nested fields are mutable.
 
-Result and proved-discarded transient backing have explicit target ownership.
-Exact storage types or concrete union members are borrowable; proper subunion views
-remain B001. Last-use writes, field disjointness and whole-list conflicts are
-preserved. Self-referential result publication is E303; live overlapping writes
-are E302. Immutable emitted-name borrows, reference-bearing mutation, exclusive
-references, owned cleanup, modules and release qualification remain open.
+Existing target-owned lifetime and exact-layout rules cover outer names, discarded
+cells, widening, restart and publication. Reference-bearing named emissions retain
+Bind+Emit copies and their contained origins; borrowing that storage, mutable
+reference carriers, exclusive references, owned cleanup and modules remain open.
 
 ## Resume here
 
@@ -48,11 +48,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 34 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 16 origin, 27 loan, 9 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 43 focused backend tests |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 35 checker, 18 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 17 origin, 28 loan, 9 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 48 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 156 native groups, 4 harness tests and 25 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 164 native groups, 4 harness tests and 26 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -112,15 +112,16 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   are allowed. Field and indexed writes never write back an old aggregate snapshot.
 - Mutable field types/subtrees containing references and mutable primary emissions
   remain B001. No origin-bearing mutable carrier can reach these new writes.
-- SlotAlias follows the initializer Bind+Emit and maps a mutable local ID to its
-  target block and field. `check/aliases.rs` validates a compatible concrete mutable
-  field, or requires the emission/target-completion guard intersection to be false.
-  Alias IDs remain outside ordinary places; mutable alias metadata explicitly permits
-  borrowed addresses. Actual borrow sites, not address hints, request late layout
+- SlotAlias follows initializer Bind+Emit for reference-free named emissions and
+  maps the local ID to its target, field and declared mutability. `check/aliases.rs`
+  requires compatible type and matching field mutability, or proves the emission
+  cannot reach target completion. Alias IDs remain outside ordinary places; resolved
+  alias metadata explicitly permits borrowed addresses. Actual borrow sites, not
+  address hints, request late layout
   validation. Equal storage types and exact union members pass; subunion views do not.
 - `backend/storage.rs` resolves whole-cell reads/stores with final-slot/local type
   conversion, and matching concrete union payloads for SetPath addresses. Actual
-  result cells remain the backing storage for compatible retained aliases; only
+  result cells remain backing storage when type and mutability match; only
   proved discarded destinations keep the initialized temporary cell. Backend Bind
   clears old alias metadata, and each generated function starts with an empty map.
 - Source::Slot stores target ownership, canonical root, original alias view and typed
@@ -135,10 +136,19 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   closes. Retaining a borrow in that target's own result or an enclosing result is
   E303. Target restart ends the iteration; inner restart can preserve outer storage
   but cannot bypass future-use E302. Origin weights and lookup work remain bounded.
+- Immutable alias IDs never enter mutable proofs. Existing Bind/link_tags preserves
+  their activity; declared local constants remain available, and list_fact seeds
+  the immutable local length cache before emission. Static E101 and constant-based
+  extents use those facts, while dynamic indices retain P001. Direct/field/element
+  writes through an immutable alias report E305. Mutable copies remain independent.
+- Reference-bearing named emissions stay on the existing Bind+Emit copy path, so
+  retained reference components keep their actual origins and all-input bounds.
+  Their storage addresses remain B001; aliasing those cells requires separate
+  initialization and contained-origin accounting before enabling borrowed access.
 - Mutable alias IDs enter proofs before origin traversal. Their ref-free activity
   becomes unknown from initialization, preventing stale union/record tags from
   suppressing a real loan while preserving other immutable reference components.
-  Alias length caches stay unset. IDs sharing a target field use one canonical
+  Mutable alias length caches stay unset. IDs sharing a target field use one canonical
   write/reservation root and share predicate invalidation; value copies stay separate.
 - Alias metadata, names, type walks and canonical lookup/invalidation use shared
   bounded work, with a 65,536-entry metadata ceiling. Slot initialization still
@@ -247,8 +257,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   survive. Receiver/argument expressions evaluate once and in order.
 - A leading carrier field can produce the reference used by `&holder.view.field`.
   The reference prefix is copied once, then reborrowed. `&holder.view` and addresses
-  of the carrier's own scalar fields remain B001. Temporary owners, immutable emitted
-  storage, reference-bearing pointees, union-payload/primary-ascription addresses,
+  of the carrier's own scalar fields remain B001. Temporary owners, reference-bearing
+  emitted storage/pointees, union-payload/primary-ascription addresses,
   exclusive borrows and mutable reference carriers remain unsupported.
 - Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
   field indices while inherited bounds stay unchanged. Lowering evaluates the parent
@@ -357,30 +367,30 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 170 library and 156 native groups pass. New coverage adds 2 origin, 1 loan,
-  5 backend and 8 native groups. Clippy `-D warnings` and formatting pass. The
-  optimized compiler builds/runs `examples/emitted-borrows.mwy` in release with exact
-  stdout `1\n3\n2\n9\n7\n` and empty stderr.
-- Native coverage includes actual-cell identity, independent copies, last-use RHS
-  assignment, inner-to-outer target lifetimes, field/list regions, widened concrete
-  payloads, equal unions, discarded cells, restarts, E302/E303 and exact P001 effects.
-  Initial E203/E207 test-fixture mistakes were corrected; no reference fixture or
-  REQUIRED was changed and unsupported diagnostics never counted as rejections.
-- All 43 backend groups pass. Five new groups include 20 native debug/release
-  executions plus a proper-subunion lowering boundary. Existing address helpers
-  suffice; no production backend, runtime ABI or dependency change was needed.
-- Ten independent lifecycle/call-bound/alias cases and source review pass, including
-  ignored/projected input dependencies, guarded canonical aliases and transient
-  target lifetime. Existing shared budgets pass with explicit slot-origin weights
-  and lifetime lookup charges; no full frontend scaling claim is made.
+- Rust: 178 library and 164 native groups pass. New coverage adds 1 checker, 1 origin,
+  1 loan, 5 backend and 8 native groups. Clippy `-D warnings` and formatting pass.
+  The optimized compiler builds/runs `examples/immutable-slots.mwy` in release with
+  exact stdout `7\n2\nready\n7\n2\n` and empty stderr.
+- All eight new native groups passed on first integration: once-only initialization,
+  pointer/copy identity, immutable fields/list elements, outer/discarded targets,
+  opposite backing mutability, widened payloads, restart, variant/carrier facts,
+  E305/E303/E302 and static E101/dynamic P001 with exact prior effects.
+- All 48 backend groups pass. Five new groups include 30 native debug/release
+  executions, actual result-pointer backing and proper-subunion borrow rejection.
+  Unborrowed subunion reads remain supported. The change extends existing storage
+  helpers; no runtime ABI, allocation, cleanup or dependency capability was added.
+- Twelve independent fact/lifetime/regression cases and source review pass.
+  Baseline checks established both B001 immutable borrowing and accepted immutable
+  null-tag origin exclusion before the change. Existing shared budgets pass;
+  this is not broad frontend scaling or release qualification.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 861 local links; schemas/catalog and Vim/Neovim pass.
+  checks 862 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime sources/ABI are unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with fatal,
   truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and the expired
   fiber local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
-  language/release qualification remains open.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. No
+  reference fixture or REQUIRED was changed; full language qualification remains open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -388,12 +398,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend `check/aliases.rs`, named-emission checking and backend storage helpers to
-   immutable reference-free emitted names. Preserve immutable tag/origin facts and
-   field mutability; writes must stay E305. Reuse Source::Slot ownership and layout
-   checks for nested names, copies, widened/discarded cells, restart and publication.
-   Keep immutable emitted borrows B001 until this storage model is implemented;
-   reference-bearing aliases and primary slots need separate initialization proof.
+1. Model immutable reference-bearing named emissions as actual slots in
+   `check/statements.rs`, `check/aliases.rs`, `borrow/` and backend storage. Preserve
+   stored-value/pointee origins separately from cell ownership, retaining inherited
+   input bounds and immutable tag facts when reading/copying a slot. Test reborrowed
+   fields, direct calls, narrowed carriers, discard/restart and publication. Prove
+   selected reference-free field addresses before enabling them; whole carrier and
+   reference-cell borrows need explicit transitive referent handling.
 2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
    Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup

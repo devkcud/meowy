@@ -291,7 +291,7 @@ implementation boundary; it does not change language rules.
   knowledge about an unmodified mutable field's initial tag.
 - Immutable aliases preserve their initializer constants, immutable variant/origin
   facts and known initialized list lengths. False Boolean conditions can still
-  suppress unreachable arithmetic, constant width failures retain E107, and a
+  suppress unreachable arithmetic, constant arithmetic overflow retains E107, and a
   known immutable alias length supports E101 element checks. No fabricated facts
   or mutable initializer values enter this immutable path.
 - Aliases of the same target block/field share a canonical conflict identity;

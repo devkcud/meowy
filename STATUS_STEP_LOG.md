@@ -6,6 +6,104 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Immutable emitted-slot handoff
+
+- State: Immutable reference-free emitted aliases and shared borrows are complete in faaa08b, with native/example/README evidence in 496b529. Declared mutability selects compatible result or discarded backing; immutable constants, variants and lengths are preserved. E305 writes, E303 publication, mutable aliases and reference-carrier copies retain their boundaries. Source and reviews are complete.
+- Validation: All 14 combined checks pass: 178 library and 164 native Rust tests, 35 Python tests, 862 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitizers. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized immutable-slots output is exact. Twelve independent cases and all 48 backend groups pass; both focused commits pass cached whitespace checks.
+- Blockers: No unfinished source work or failing checks. Reference-bearing emitted-slot addresses, proper subunion borrows, exclusive ownership/cleanup, modules and full release qualification remain open.
+- Next steps: Commit this handoff and verify clean Git state. Then separate stored-value/pointee origins from cell ownership for immutable reference-bearing emitted aliases, preserving reads, reborrows, input bounds and tag facts. Prove selected reference-free field addresses before enabling them; whole carrier/reference-cell borrows need transitive referent handling. Keep runtime/library/tooling work visible.
+
+### 2026-09-06 — Immutable emitted-slot coverage commit
+
+- State: Committed eight native groups, immutable-slots example and README as 496b529. Implementation is faaa08b. Source, optimized execution and reviews are complete; only final handoffs remain.
+- Validation: All 14 checks pass with 342 Rust and 35 Python tests. Optimized example output is exact; both focused commits pass cached whitespace checks. No source changes followed validation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize current root/compiler STATUS and next reference-bearing slot work, preserve prior logs, run final link/whitespace checks, then commit handoffs and confirm clean Git state.
+
+### 2026-09-06 — Immutable emitted-slot implementation commit
+
+- State: Committed immutable slot aliases, declared backing mutability, preserved facts, focused library evidence and obsolete boundaries as faaa08b. Native/example/README evidence remains separate; source work and reviews are complete.
+- Validation: All 14 checks and optimized exact-output smoke passed before the commit; cached whitespace and staged scope checks pass. No production source changes followed the gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit immutable_slots native coverage, example and README, then finalize root/compiler STATUS with accurate counts and next reference-bearing slot work. Preserve prior logs and verify links, whitespace and clean Git state.
+
+### 2026-09-06 — Immutable emitted-slot optimized smoke
+
+- State: Optimized immutable-slots build/run passed with exact output. Source, native evidence and ownership documentation are complete; all reviews are finished and no source changes followed the full gate. Preparing focused commits.
+- Validation: Release compiler build passed; release-profile example exited 0 with exact 7,2,ready,7,2 lines and empty stderr. All 14 checks passed with 178 library/164 native Rust tests and 35 Python tests. Whitespace is clean.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit implementation/ownership and obsolete boundaries, then native/example/README evidence. Finalize current handoffs and next immutable reference-bearing slot work, check links/preserved history and confirm a clean Git tree.
+
+### 2026-09-06 — Immutable emitted-slot combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on frozen source. Immutable slot aliases preserve declared mutability, facts and target lifetimes; reference-bearing copy behavior and mutable-alias regressions remain intact. Optimized compiler build is running for the final example smoke.
+- Validation: 178 library and 164 native Rust tests, 35 Python tests, 862 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized immutable-slots with exact output, finalize ownership prose, then split implementation/obsolete boundaries and native/example/README commits. Refresh current handoffs and preserve all step-log history before final Git checks.
+
+### 2026-09-06 — Immutable emitted-slot combined gate started
+
+- State: Source and tests are frozen. Three new semantic groups, all 48 backend groups, eight native groups and 12 independent cases pass. The complete repository/compiler/runtime gate is running outside the sandbox for sanitizer process inspection; only ownership prose remains in progress.
+- Validation: Focused evidence includes 30 new backend profile executions and explicit proper-subunion lowering rejection. Cargo check, Clippy, formatting and whitespace pass. Full-gate results are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect the complete gate results, build/run the optimized immutable-slots example, then commit source/obsolete boundaries separately from native/example evidence. Finalize STATUS/logs with accurate limits, next steps and clean Git validation.
+
+### 2026-09-06 — Immutable emitted-slot focused review
+
+- State: The implementation remains within existing slot, borrow and storage modules. Semantic coverage now checks constant-based extents and overflow, immutable list bounds, target lifetimes and null-tag/reference-origin preservation. Backend evidence covers real result pointers, wider payloads, readable subunions and discarded mutability mismatches.
+- Validation: Eight native groups and 12 independent checks pass; incremental source diff review is clean. Final focused semantic/backend results and source-freeze confirmation are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: After source freeze, run all 14 checks and the optimized immutable-slots example. Update known limits and next reference-bearing slot work without widening this slice, then make implementation, coverage and handoff commits.
+
+### 2026-09-06 — Immutable emitted-slot independent review passed
+
+- State: Independent review passes all 12 cases: immutable variant/Boolean/integer/length facts, nested-write E305, self-publication E303, target lifetime, subunion B001, existing reference-carrier origins, independent mutable copies and mutable-alias activity regression. Frontend/backend backing both match declared mutability.
+- Validation: Eight new native groups and 12 independent checks pass. No source issue was found. Focused semantic/backend evidence is finishing; full gate has not yet run on this change.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete focused checks and source freeze, run tools/verify.py --all and optimized immutable-slots example, then split implementation/legacy boundaries, native evidence and final handoff commits.
+
+### 2026-09-06 — Immutable emitted-slot native integration passed
+
+- State: All eight immutable_slots native groups pass in debug/release on the integrated compiler. Shared addresses, independent copies, named/discarded target lifetimes, opposite field mutability, widening, restart, null-tag/reference-carrier facts, E305/E303/E302 and E101/P001 behave as intended.
+- Validation: Focused native run: 8 passed, 0 failed on the first integration run. Compiler build succeeded with the new HIR mutability field. No source or fixture failures were found.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish semantic/backend groups and independent 12-case review, confirm source freeze, then run the complete repository gate and optimized example. Split implementation/obsolete boundaries, native evidence and final handoff commits.
+
+### 2026-09-06 — Immutable fact preservation baseline
+
+- State: Confirmed that the existing compiler accepts immutable null-tag exclusion of a reference-bearing result field, allowing its potential owner to be written. Native coverage preserves this behavior while adding real slot addresses and keeps ordinary reference-carrier copies unchanged.
+- Validation: Ran the pinned baseline compiler on the null-tag/reference-origin case: accepted. Immutable emitted borrowing remains the previously verified B001 baseline. Implementation and new native checks are still in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish backend consumers, execute immutable_slots groups, verify static initialized lengths and origin/tag preservation, then run independent/focused checks and freeze source for full verification.
+
+### 2026-09-06 — Immutable alias storage integration
+
+- State: Frontend edits now carry declared mutability through SlotAlias and alias proofs, register all reference-free emitted names, preserve immutable constants/tags and seed stable list lengths. Native coverage also checks a discarded immutable slot against a completing mutable field with the same name.
+- Validation: Reviewed incremental metadata and emission changes. Eight native groups and the example are ready; full compile/execution awaits backend consumers of the new HIR field. The independent 12-case review suite is prepared.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete backend HIR/storage consumers and focused semantic tests, then run immutable_slots native cases and review exact pointer backing. Resolve only concrete failures before freezing source and running the combined gate.
+
+### 2026-09-06 — Immutable alias representation aligned
+
+- State: SlotAlias and private alias metadata will carry declared mutability; compatible backing must match the final field flag. All reference-free named emissions gain real aliases, while reference-bearing names retain their existing copied origins. Immutable aliases preserve tags/constants and receive stable initialized-length facts.
+- Validation: Eight native groups and an example are written; the old immutable-name B001 native row is replaced by accepted/rejection evidence. Baseline B001 was verified before changing expectations. New implementation and README are in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish HIR/checker/backend integration, verify immutable-root E305 and exact backing selection, then run native/semantic/backend groups and independent fact/lifetime checks. Follow with the combined gate, optimized example and focused commits.
+
+### 2026-09-06 — Immutable emitted-slot acceptance coverage
+
+- State: Added eight native groups for immutable slot addresses, copied values, mutable children behind immutable roots, target/discarded lifetimes, widened payloads, restart, variant facts, existing reference carriers, E305/E303/E302 and static/dynamic bounds. Backend will preserve exact field mutability when choosing real versus discarded backing.
+- Validation: Ran the existing compiler and confirmed immutable emitted borrowing is B001. New coverage is formatted but awaits implementation. No new capability is claimed validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Align SlotAlias mutability metadata, preserve immutable proof and list-length facts, implement compatible backend cells, then run new native and semantic groups. Keep reference-bearing slot addresses and subunion layouts explicit until separately supported.
+
+### 2026-09-06 — Immutable emitted-slot implementation started
+
+- State: Starting immutable reference-free emitted-slot aliases and borrows. Frontend/proof preservation, backend storage adaptation and independent review are delegated; root owns native coverage, README and both handoffs. Reuse Source::Slot lifetimes and exact-layout gates; preserve E305 write rejection.
+- Validation: Tree starts clean at 9c6b892. Read named-emission construction, alias validation, storage helpers and language lifetime/mutability contracts. Previous full-gate evidence is historical; no new source checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Generalize alias metadata without marking immutable IDs mutable, preserve tag/constant/length facts and existing reference-carrier behavior, add native lifetime/identity/rejection evidence, then run focused/full checks and split commits.
+
 ### 2026-09-06 — Mutable emitted-borrow handoff
 
 - State: Shared mutable emitted-storage borrows are complete in dddd8ae, with native/example/README evidence in 4a012b0. Target-owned Result/Discarded cells preserve original pointee types and canonical write identities. Nested aliases, restarts, last-use writes and E303 publication are covered; source work and reviews are complete.
