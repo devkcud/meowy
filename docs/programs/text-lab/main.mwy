@@ -1,0 +1,41 @@
+fmt : @"fmt"
+io : @"io"
+unicode : @"unicode"
+measure : @"./measure.mwy"
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+
+    # The final accent is U+0301, separate from the preceding U+0065. #
+    original : "café"
+    before : measure.measure(original)
+    written_before : fmt.write_line(
+        output.write,
+        "Original: {before.bytes} bytes, {before.scalars} scalars, {before.graphemes} graphemes"
+    )
+    | written_before <error> | { status = 1; 'main.leave() }
+
+    buffer <uint8[32]> := []
+    normalized : unicode.normalize_into(original, unicode.NFC, &!buffer)
+    | normalized <error> | {
+        written : fmt.write_line(errors.write, normalized)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    after : measure.measure(normalized)
+    written_after : fmt.write_line(
+        output.write,
+        "NFC: {after.bytes} bytes, {after.scalars} scalars, {after.graphemes} graphemes"
+    )
+    | written_after <error> | { status = 1; 'main.leave() }
+
+    written_text : fmt.write_line(output.write, "Normalized: {normalized}")
+    | written_text <error> | status = 1
+}
+
+-> status

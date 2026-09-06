@@ -128,7 +128,8 @@ do not introduce overloaded operators or a target-sized default integer.
 
 A Generator is a mutable inline value that can move between tasks; sharing its
 state requires synchronization outside these calls. Its algorithm identity is
-`random.Algorithm`, part of the foundational-library version. The same seed and
+`random.Algorithm`, a static `<string>` identifying the algorithm and its version
+within the foundational library. The same seed and
 call sequence reproduce results under that identity. It is distinct from the
 OS cryptographic source: secure_fill never falls back to a deterministic seed.
 On entropy failure it clears the requested output span and reports failure.
@@ -205,3 +206,7 @@ operations: when the input type's full range proves conversion cannot fail, the
 result excludes `RangeError`. This permits explicit widening without a redundant
 runtime failure branch. `truncate` still rejects NaN, infinities, and values whose
 truncated result is out of range.
+
+Worked projects: [Unicode text lab](../../programs/text-lab/README.md),
+[typed JSON report](../../programs/json-report/README.md), and
+[seeded rolls](../../programs/seeded-rolls/README.md).

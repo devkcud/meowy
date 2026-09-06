@@ -1,0 +1,4 @@
+-> build : {
+    -> entry : "./main.mwy"
+    -> profile : "debug"
+}

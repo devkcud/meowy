@@ -1,0 +1,71 @@
+debug : @"debug"
+fmt : @"fmt"
+io : @"io"
+numbers : @"numbers"
+random : @"random"
+
+seed <uint64> : 2026
+rolls <uint32> : 600
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    generator := random.seeded(seed)
+    counts <uint32[6]> := [0, 0, 0, 0, 0, 0]
+    completed <uint32> := 0
+
+    'roll {
+        | completed == rolls | 'roll.leave()
+
+        outcome : generator.below(6)
+        | outcome <error> | {
+            debug.print(outcome)
+            status = 1
+            'main.leave()
+        }
+
+        # below(6) is zero-based; collection positions start at one. #
+        position : numbers.convert<usize>(outcome + 1)
+        | position <error> | {
+            debug.print(position)
+            status = 1
+            'main.leave()
+        }
+
+        previous : counts.get_copy(position)
+        | previous <error> | {
+            debug.print(previous)
+            status = 1
+            'main.leave()
+        }
+
+        counts[position] = previous + 1
+        completed = completed + 1
+        'roll.restart()
+    }
+
+    heading : fmt.write_line(output.write,
+        "algorithm={random.Algorithm}, seed={seed}, rolls={rolls}")
+    | heading <error> | {
+        debug.print(heading)
+        status = 1
+        'main.leave()
+    }
+
+    face <usize> := 1
+    'histogram {
+        | face > counts.size() | 'histogram.leave()
+
+        written : fmt.write_line(output.write, "{face}: {counts[face]}")
+        | written <error> | {
+            debug.print(written)
+            status = 1
+            'main.leave()
+        }
+
+        face = face + 1
+        'histogram.restart()
+    }
+}
+
+-> status

@@ -1,0 +1,34 @@
+collections : @"collections"
+numbers : @"numbers"
+
+-> <Counts> : <collections.Map<string, uint32>>
+-> <CountFailure> : <collections.Duplicate<string, uint32>><collections.InsertFailure<string, uint32>><numbers.RangeError>
+
+# True means the word was newly inserted; false means its count increased. #
+-> add <boolean><CountFailure> : (counts <&!Counts>, word <string>) 'result {
+    existed <boolean> := false
+    current <uint32> := 0
+    'lookup {
+        stored : counts.get(&word)
+        | stored <null> | 'lookup.leave()
+        existed = true
+        current = *stored
+    }
+
+    # The shared value reference has expired before either map mutation. #
+    next : numbers.checked_add(current, 1)
+    | next <error> | {
+        'result -> next
+        'result.leave()
+    }
+
+    # Removal retains capacity, so replacement can reuse the freed slot. #
+    counts.remove(&word)
+    inserted : counts.insert(word, next)
+    | inserted <error> | {
+        'result -> inserted
+        'result.leave()
+    }
+
+    -> !existed
+}

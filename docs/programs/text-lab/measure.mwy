@@ -1,0 +1,34 @@
+iter : @"iter"
+unicode : @"unicode"
+
+-> <Measurements> : <{
+    bytes <usize>
+    scalars <usize>
+    graphemes <usize>
+}>
+
+-> measure <Measurements> : (text <string>) {
+    scalar_count <usize> := 0
+    scalar_cursor := unicode.scalars(text)
+    'scalars {
+        scalar : scalar_cursor.next()
+        | scalar <iter.End> | 'scalars.leave()
+        scalar_count = scalar_count + 1
+        'scalars.restart()
+    }
+
+    grapheme_count <usize> := 0
+    grapheme_cursor := unicode.graphemes(text)
+    'graphemes {
+        grapheme : grapheme_cursor.next()
+        | grapheme <iter.End> | 'graphemes.leave()
+        grapheme_count = grapheme_count + 1
+        'graphemes.restart()
+    }
+
+    -> {
+        -> bytes : text.size()
+        -> scalars : scalar_count
+        -> graphemes : grapheme_count
+    }
+}

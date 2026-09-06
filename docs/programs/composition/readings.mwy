@@ -1,0 +1,21 @@
+-> <Reading> : <{
+    -> <int32>
+    sensor <string>
+    unit <string>
+}>
+
+-> <Checked> : <{
+    <Reading>
+    checked <boolean>
+}>
+
+-> label <Reading> : (value <int32>, sensor_name <string>) {
+    -> value
+    -> sensor : sensor_name
+    -> unit : "celsius"
+}
+
+-> check <Checked> : (reading <Reading>) {
+    -> reading
+    -> checked : reading >= -40 && reading <= 85
+}

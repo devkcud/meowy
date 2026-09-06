@@ -1,0 +1,61 @@
+iter : @"iter"
+numbers : @"numbers"
+strings : @"strings"
+
+-> <Session> : <{
+    name <string>
+    minutes <uint16>
+}>
+
+-> <Input> : <{
+    team <string>
+    sessions <Session[8]>
+}>
+
+-> <Summary> : <{
+    team <string>
+    sessions <usize>
+    minutes <uint32>
+}>
+
+-> <InvalidSession> : <{
+    position <usize>
+    reason <string>
+}>
+
+-> summarize <Summary><InvalidSession> : (input <&Input>) 'result {
+    total <uint32> := 0
+    position <usize> := 0
+    cursor := iter.slice(input.sessions.slice())
+
+    'sessions {
+        session : cursor.next()
+        | session <iter.End> | 'sessions.leave()
+        position = position + 1
+
+        | strings.trim(session.name).size() == 0 | {
+            'result -> {
+                -> position : position
+                -> reason : "A session needs a nonempty name"
+            }
+            'result.leave()
+        }
+        | session.minutes == 0 || session.minutes > 480 | {
+            'result -> {
+                -> position : position
+                -> reason : "Session minutes must be between 1 and 480"
+            }
+            'result.leave()
+        }
+
+        minutes : numbers.convert<uint32>(session.minutes)
+        total = total + minutes
+        'sessions.restart()
+    }
+
+    -> {
+        -> team : input.team
+        -> sessions : input.sessions.size()
+        -> minutes : total
+    }
+}

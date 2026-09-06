@@ -1,0 +1,55 @@
+fmt : @"fmt"
+io : @"io"
+json : @"json"
+memory : @"memory"
+report : @"./report.mwy"
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    wire : "\{\"team\":\"night shift\",\"sessions\":[\{\"name\":\"Mira\",\"minutes\":35\},\{\"name\":\"Sol\",\"minutes\":55\},\{\"name\":\"Ari\",\"minutes\":20\}]\}"
+
+    document : json.decode<report.Input>(wire, memory.heap, json.DefaultLimits)
+    | document <error> | {
+        written : fmt.write_line(errors.write, document)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    summary : report.summarize(document.root())
+    | summary <report.InvalidSession> | {
+        written : fmt.write_line(errors.write, "Session {summary.position}: {summary.reason}")
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    # Finish encoding before exposing any JSON bytes to the output stream. #
+    encoded <uint8[256]> := []
+    'encode {
+        writer := io.buffer_writer(&!encoded)
+        result : json.write(writer.write, summary)
+        | result <error> | {
+            written : fmt.write_line(errors.write, result)
+            | written <error> | { status = 1; 'main.leave() }
+            status = 1
+            'main.leave()
+        }
+    }
+
+    described : fmt.write_line(
+        output.write,
+        "{summary.team}: {summary.sessions} sessions, {summary.minutes} minutes"
+    )
+    | described <error> | { status = 1; 'main.leave() }
+
+    sent : io.write_all(output.write, encoded.slice())
+    | sent.error <io.Error> | { status = 1; 'main.leave() }
+    newline : io.write_all(output.write, "\n".bytes())
+    | newline.error <io.Error> | status = 1
+}
+
+-> status

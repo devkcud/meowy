@@ -1,0 +1,100 @@
+collections : @"collections"
+fmt : @"fmt"
+io : @"io"
+iter : @"iter"
+memory : @"memory"
+numbers : @"numbers"
+strings : @"strings"
+count : @"./count.mwy"
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    text : "  meowy  makes tiny tools\nmeowy makes tools  \n"
+    allocated : collections.map<string, uint32>(
+        memory.heap, 4, collections.hash_string, collections.equal_string
+    )
+    | allocated <error> | {
+        written : fmt.write_line(errors.write, allocated)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    counts <count.Counts> := allocated
+    order <string[16]> := []
+    lines := strings.lines(text)
+    'lines {
+        line : lines.next()
+        | line <iter.End> | 'lines.leave()
+        split : strings.split(line, " ")
+        | split <error> | {
+            written : fmt.write_line(errors.write, split)
+            | written <error> | { status = 1; 'main.leave() }
+            status = 1
+            'main.leave()
+        }
+
+        words <strings.Split> := split
+        'words {
+            segment : words.next()
+            | segment <iter.End> | 'words.leave()
+            word : strings.trim_ascii(segment)
+            | word.size() == 0 | 'words.restart()
+
+            added : count.add(&!counts, word)
+            | added <collections.Duplicate<string, uint32>> | {
+                written : fmt.write_line(errors.write, "Duplicate insertion retained {added.key}: {added.value}")
+                | written <error> | { status = 1; 'main.leave() }
+                status = 1
+                'main.leave()
+            }
+            | added <collections.InsertFailure<string, uint32>> | {
+                written : fmt.write_line(errors.write, "Could not store {added.key}: {added.value}")
+                | written <error> | { status = 1; 'main.leave() }
+                status = 1
+                'main.leave()
+            }
+            | added <numbers.RangeError> | {
+                written : fmt.write_line(errors.write, "Count overflow for {word}")
+                | written <error> | { status = 1; 'main.leave() }
+                status = 1
+                'main.leave()
+            }
+
+            | added | {
+                appended : order.try_add(word)
+                | appended <error> | {
+                    written : fmt.write_line(errors.write, "More than 16 distinct words; retained {appended.value}")
+                    | written <error> | { status = 1; 'main.leave() }
+                    status = 1
+                    'main.leave()
+                }
+                order = appended
+            }
+            'words.restart()
+        }
+        'lines.restart()
+    }
+
+    # Keep presentation deterministic without depending on map iteration order. #
+    cursor := iter.slice(order.slice())
+    'report {
+        word : cursor.next()
+        | word <iter.End> | 'report.leave()
+        value : counts.get(word)
+        | value <null> | {
+            written : fmt.write_line(errors.write, "Missing recorded word: {*word}")
+            | written <error> | { status = 1; 'main.leave() }
+            status = 1
+            'main.leave()
+        }
+        written : fmt.write_line(output.write, "{*word}: {*value}")
+        | written <error> | { status = 1; 'main.leave() }
+        'report.restart()
+    }
+}
+
+-> status

@@ -12,14 +12,20 @@ helper modules stay inside their project.
 | Project | What it combines | Inputs and effects |
 | --- | --- | --- |
 | [Age validation](age/README.md) | Typed policy module, decimal parsing, union narrowing, named exits | Four fixed inputs; diagnostic output |
+| [Block composition](composition/README.md) | Primary values, exact record shapes, dispatch, matcher/ascription contexts | Fixed sensor reading; no allocation |
 | [Packet decoder](packet/README.md) | Import aliases, package exports, borrowed wire bytes, explicit widening/shifts | Valid and truncated inline headers |
+| [Unicode text lab](text-lab/README.md) | Bytes, scalars, graphemes, normalization, borrowed output buffers | Fixed Unicode text; no allocator |
+| [Word count](word-count/README.md) | Text cursors, explicit map hashing/equality, mutation and borrow lifetimes | Fixed text; allocator-backed map |
+| [JSON report](json-report/README.md) | Typed JSON, validation, owned decoded storage, buffered encoding | Fixed JSON input; explicit decoding allocator |
+| [Seeded rolls](seeded-rolls/README.md) | Reproducible randomness, numeric conversion, bounded histogram | Fixed seed; inline counters |
 | [Ordered tasks](tasks/README.md) | Bounded groups, module callables, ordered outcomes, deadlines | Explicit executor; three child tasks |
 | [Bounded channel](channel/README.md) | Endpoint moves, backpressure, closure, partial-result handling | Explicit queue allocation and executor |
 | [Calendar CLI](calendar-cli/README.md) | Typed options, generated help, calendar conversion, writer errors | Argv; six calendar profiles |
 
-Start with age and packet for parsing, types, and module boundaries. Tasks
-and channel expose concurrency and ownership. Calendar CLI combines typed
-arguments with calendar conversion and explicit writer results.
+Start with age, composition, and packet for the language model. Text lab, word
+count, JSON report, and seeded rolls explore text, data, ownership, and storage.
+Tasks and channel make execution boundaries visible; calendar CLI combines
+several modules into an application with explicit process statuses.
 
 ## Run one project
 

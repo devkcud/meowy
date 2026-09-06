@@ -128,3 +128,7 @@ not stable. `compare` explicitly accepts two shared element borrows and returns
 order and returns `null` or AllocationFailure. It acquires scratch before moving
 any elements, so allocation failure leaves the input unchanged. Both require an
 exclusive slice and move elements without duplicating non-copyable owners.
+
+The [word-count project](../../programs/word-count/README.md) combines borrowed
+text with a map, scopes lookups before mutation, and preserves a separate bounded
+list of keys for deterministic presentation.
