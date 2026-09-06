@@ -58,7 +58,7 @@ Start with the [guide](docs/guide/README.md), or use the
 | [Collections](docs/reference/collections.md)               | Bounded lists, arrays, slices, vectors, and maps                       |
 | [Tasks and channels](docs/reference/tasks-and-channels.md) | Structured concurrency, deadlines, cancellation, and communication     |
 | [Modules and FFI](docs/reference/modules-and-ffi.md)       | Imports, exports, reproducible dependencies, and native boundaries     |
-| [Library contracts](docs/reference/standard-library.md)    | The foundational APIs used throughout the documentation                |
+| [Library contracts](docs/reference/stdlib/README.md)    | The foundational APIs used throughout the documentation                |
 | [Diagnostics](docs/reference/diagnostics.md)               | Labeled errors, ranked repairs, replay capsules, and failure behavior  |
 | [Diagnostic codes](docs/reference/diagnostic-codes.md)     | Rule catalog, required evidence, and repair guidance                   |
 | [Command line](docs/cli/README.md)                         | Check, build, run, inspect internals, apply fixes, and replay failures |

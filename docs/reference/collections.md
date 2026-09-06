@@ -138,8 +138,10 @@ aliases and exposes only contiguous elements.
 
 For runtime keys, use `collections.Map<K, V>` with an explicit allocator and
 explicit hash/equality functions for custom keys. A map is a separate data
-structure. Insertion never overloads an out-of-bounds list assignment, and maps
-do not promise numeric positions or stable iteration order.
+structure; its [API contract](stdlib/collections.md#runtime-key-maps) defines
+failed-insertion ownership, iteration, and capacity. Insertion never overloads
+an out-of-bounds list assignment, and maps do not promise numeric positions or
+stable iteration order.
 
 ## Text
 
@@ -152,3 +154,6 @@ indexing.
 Owned text uses an explicit builder and allocator. Formatting can stream to a
 writer without constructing an intermediate string. See [memory](memory.md#strings-and-formatting)
 for interpolation and lifetime rules.
+
+The [text library](stdlib/text-and-data.md) defines byte spans, Unicode cursors,
+owned builders, numeric parsing, and streaming output.

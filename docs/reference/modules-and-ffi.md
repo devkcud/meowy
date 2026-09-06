@@ -34,8 +34,9 @@ point <geometry.Point> : geometry.translate_x(geometry.origin, 10)
 ```
 
 Relative imports resolve from the importing file, not the shell's working
-directory. `@"debug"` resolves a foundational module, and `@"geometry"` can resolve
-a package dependency declared in the containing project's manifest.
+directory. `@"debug"` resolves a [foundational module](stdlib/README.md), and
+`@"geometry"` can resolve a package dependency declared in the containing
+project's manifest.
 `@"help/main.mwy"` resolves a source file through a local path alias. Foundational
 names cannot be shadowed by either kind of import alias. Import operands must be
 string literals; runtime strings cannot load executable modules.

@@ -125,7 +125,8 @@ proposal, rather than unspecified behavior inside the core:
 
 - Shared ownership and user-defined destruction protocols, including cycle policy.
 - Completion-order selection over several channels, including fairness rules.
-- Lazy streams and iterators with pull-based cancellation and borrowing.
+- General lazy pipelines and asynchronous streams beyond the standard library
+  cursor contracts.
 - Dynamic library loading, managed callbacks, and foreign exception translation.
 - Extra numeric formats, SIMD, packed data, and platform-specific intrinsics.
 

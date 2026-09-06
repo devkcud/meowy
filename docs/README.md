@@ -33,7 +33,7 @@ those rules by building small programs, and the design notes explain their inten
 | Is `T[4]` an array or a capacity limit?               | [Collections](reference/collections.md)                           |
 | Who joins a task? What does cancellation guarantee?   | [Tasks and channels](reference/tasks-and-channels.md)             |
 | How are native data and functions declared?           | [Modules and FFI](reference/modules-and-ffi.md#native-interfaces) |
-| What APIs do the snippets rely on?                    | [Library contracts](reference/standard-library.md)                |
+| What does the standard library provide?              | [Standard library](reference/stdlib/README.md)                    |
 | How do I configure mod.mwy and local import aliases?  | [Manifest guide](guide/mod.md)                                    |
 | How do I enforce coding style and code quality?       | [gatostyle](guide/gatostyle.md)                                   |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |
