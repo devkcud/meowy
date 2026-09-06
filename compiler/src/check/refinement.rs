@@ -1,0 +1,168 @@
+use super::{Checker, Constant, Place, Value};
+use crate::flow::{FALSE, Guard, TRUE};
+use crate::hir::{self, Type};
+
+impl Checker {
+    pub(crate) fn forget(&mut self, id: usize) {
+        self.tags.retain(|((root, _), _), _| *root != id);
+        self.bools.retain(|(root, _), _| *root != id);
+    }
+
+    pub(crate) fn forget_mutable(&mut self) {
+        let ids: Vec<_> = self
+            .scopes
+            .iter()
+            .flat_map(|scope| scope.values.values())
+            .filter_map(|value| match value {
+                Value::Local {
+                    id, mutable: true, ..
+                } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        for id in ids {
+            self.forget(id);
+        }
+    }
+
+    pub(crate) fn place(value: &hir::Expr) -> Option<Place> {
+        match &value.kind {
+            hir::ExprKind::Local(id) => Some((*id, Vec::new())),
+            hir::ExprKind::Coerce { value } => Self::place(value),
+            hir::ExprKind::Field { value, index } => {
+                let Type::Record { fields, .. } = &value.ty else {
+                    return None;
+                };
+                let mut place = Self::place(value)?;
+                place.1.push(fields[*index].0.clone());
+                Some(place)
+            }
+            _ => None,
+        }
+    }
+
+    pub(crate) fn variants(&mut self, place: Place, ty: &Type) -> Vec<(Type, Guard)> {
+        let key = (place, ty.clone());
+        if let Some(tags) = self.tags.get(&key) {
+            return tags.clone();
+        }
+        let mut rest = TRUE;
+        let mut tags = Vec::new();
+        let count = ty.members().len();
+        for (index, ty) in ty.members().iter().enumerate() {
+            let guard = if index + 1 == count {
+                rest
+            } else {
+                let tag = self.flow.fresh();
+                let guard = self.flow.and(rest, tag);
+                let absent = self.flow.not(tag);
+                rest = self.flow.and(rest, absent);
+                guard
+            };
+            tags.push((ty.clone(), guard));
+        }
+        self.tags.insert(key, tags.clone());
+        tags
+    }
+
+    pub(crate) fn refined(&mut self, place: Place, ty: &Type) -> Type {
+        if self.reach == FALSE || !matches!(ty, Type::Union(_)) {
+            return ty.clone();
+        }
+        let types = self
+            .variants(place, ty)
+            .into_iter()
+            .filter_map(|(ty, guard)| self.flow.overlap(self.reach, guard).then_some(ty))
+            .collect::<Vec<_>>();
+        Type::union(types)
+    }
+
+    pub(crate) fn coerce(value: hir::Expr, ty: Type) -> hir::Expr {
+        if value.ty == ty {
+            value
+        } else {
+            hir::Expr {
+                span: value.span,
+                ty,
+                kind: hir::ExprKind::Coerce {
+                    value: Box::new(value),
+                },
+            }
+        }
+    }
+
+    pub(crate) fn narrow(&mut self, value: hir::Expr) -> hir::Expr {
+        if let Some(place) = Self::place(&value) {
+            let ty = self.refined(place, &value.ty);
+            Self::coerce(value, ty)
+        } else {
+            value
+        }
+    }
+
+    pub(crate) fn storage_type(value: &hir::Expr) -> &Type {
+        match &value.kind {
+            hir::ExprKind::Coerce { value } => Self::storage_type(value),
+            _ => &value.ty,
+        }
+    }
+
+    pub(crate) fn guard(&mut self, expr: &hir::Expr) -> Guard {
+        let key = (expr.span.start, expr.span.end);
+        if let Some(guard) = self.guards.get(&key) {
+            return *guard;
+        }
+        let guard = if let Some(Constant::Bool(value)) = self.constant(expr) {
+            if value { TRUE } else { FALSE }
+        } else {
+            match &expr.kind {
+                hir::ExprKind::Unary { op, value } if op == "!" => {
+                    let guard = self.guard(value);
+                    self.flow.not(guard)
+                }
+                hir::ExprKind::Binary { op, left, right } if op == "&&" || op == "||" => {
+                    let left = self.guard(left);
+                    let right = self.guard(right);
+                    if op == "&&" {
+                        self.flow.and(left, right)
+                    } else {
+                        self.flow.or(left, right)
+                    }
+                }
+                hir::ExprKind::TypeTest { value, ty } => {
+                    if ty.accepts(&value.ty) {
+                        TRUE
+                    } else if ty.intersection(&value.ty) == Type::Never {
+                        FALSE
+                    } else if let Some(place) = Self::place(value) {
+                        let tags = self.variants(place, Self::storage_type(value));
+                        let mut guard = FALSE;
+                        for (variant, tag) in tags {
+                            if ty.accepts(&variant) {
+                                guard = self.flow.or(guard, tag);
+                            }
+                        }
+                        guard
+                    } else {
+                        self.flow.fresh()
+                    }
+                }
+                _ => {
+                    if let Some(place) = Self::place(expr) {
+                        if let Some(guard) = self.bools.get(&place) {
+                            *guard
+                        } else {
+                            let guard = self.flow.fresh();
+                            self.bools.insert(place, guard);
+                            guard
+                        }
+                    } else {
+                        self.flow.fresh()
+                    }
+                }
+            }
+        };
+        self.guards.insert(key, guard);
+        guard
+    }
+}

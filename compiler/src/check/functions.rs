@@ -1,0 +1,244 @@
+use super::{Checker, Result, Scope, Spec, Value};
+use crate::ast::{self, ExprKind, Span, StmtKind};
+use crate::diagnostic::Diagnostic;
+use crate::flow::TRUE;
+use crate::hir::{self, Type};
+use std::collections::BTreeMap;
+
+impl Checker {
+    pub(crate) fn forward(&mut self, stmts: &[ast::Stmt], start: usize) -> Result<usize> {
+        let mut index = start;
+        let mut names = BTreeMap::new();
+        while let Some(ast::Stmt {
+            kind: StmtKind::Forward { name, ty },
+            span,
+        }) = stmts.get(index)
+        {
+            let Spec::Function { params, result } = self.spec(ty)? else {
+                return Err(Self::error(
+                    "E221",
+                    "forward declarations require a concrete function signature",
+                    *span,
+                ));
+            };
+            let id = self.functions.len();
+            self.functions.push(None);
+            self.declare(
+                name,
+                Value::Function {
+                    id,
+                    params: params.clone(),
+                    result: Some(result.clone()),
+                },
+                *span,
+            )?;
+            names.insert(name.clone(), (id, params, result));
+            index += 1;
+        }
+        let count = names.len();
+        for _ in 0..count {
+            let stmt = stmts.get(index).ok_or_else(|| {
+                Self::error(
+                    "E221",
+                    "forward function group is missing a definition",
+                    stmts[start].span,
+                )
+            })?;
+            let (name, ty, params, body) = match &stmt.kind {
+                StmtKind::Bind {
+                    name,
+                    ty,
+                    mutable: false,
+                    value:
+                        ast::Expr {
+                            kind: ExprKind::Function { params, body },
+                            ..
+                        },
+                } => (name, ty, params, body),
+                _ => {
+                    return Err(Self::error(
+                        "E221",
+                        "only the reserved function definitions may follow forward signatures",
+                        stmt.span,
+                    ));
+                }
+            };
+            let (id, expected_params, expected_result) = names.remove(name).ok_or_else(|| {
+                Self::error(
+                    "E221",
+                    format!("`{name}` is not a pending forward definition"),
+                    stmt.span,
+                )
+            })?;
+            let actual_params = params
+                .iter()
+                .map(|param| self.ty(&param.ty))
+                .collect::<Result<Vec<_>>>()?;
+            let actual_result = ty
+                .as_ref()
+                .map(|ty| self.ty(ty))
+                .transpose()?
+                .unwrap_or(expected_result.clone());
+            if expected_params != actual_params || actual_result != expected_result {
+                return Err(Self::error(
+                    "E221",
+                    format!("definition of `{name}` does not match its reserved signature"),
+                    stmt.span,
+                ));
+            }
+            self.function(id, name, params, body, Some(expected_result))
+                .map_err(|error| {
+                    if error.code == "B001" && error.message.contains("captur") {
+                        Self::error(
+                            "E221",
+                            "forward functions cannot capture enclosing locals",
+                            error.span,
+                        )
+                    } else {
+                        error
+                    }
+                })?;
+            index += 1;
+        }
+        Ok(index)
+    }
+
+    pub(crate) fn function(
+        &mut self,
+        id: usize,
+        name: &str,
+        params: &[ast::Param],
+        body: &ast::Block,
+        result: Option<Type>,
+    ) -> Result<Type> {
+        let reach = std::mem::replace(&mut self.reach, TRUE);
+        let owner = self.owner;
+        self.owner = id + 1;
+        self.scopes.push(Scope::default());
+        let mut ids = Vec::new();
+        for param in params {
+            let ty = self.ty(&param.ty)?;
+            let id = self.local(ty.clone());
+            self.places.insert(id);
+            self.declare(
+                &param.name,
+                Value::Local {
+                    id,
+                    ty,
+                    mutable: false,
+                    owner: self.owner,
+                    constant: None,
+                },
+                param.span,
+            )?;
+            ids.push(id);
+        }
+        let block = self.block(body, result.clone(), None)?;
+        let result = result.unwrap_or_else(|| block.ty.clone());
+        self.functions[id] = Some(hir::Function {
+            id,
+            name: name.into(),
+            params: ids,
+            result: result.clone(),
+            body: block,
+        });
+        self.scopes.pop();
+        self.owner = owner;
+        self.reach = reach;
+        Ok(result)
+    }
+
+    pub(crate) fn call(
+        &mut self,
+        callee: &ast::Expr,
+        args: &[ast::Expr],
+        receiver: Option<&ast::Expr>,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        if receiver.is_none()
+            && let ExprKind::Field { value, name } = &callee.kind
+            && ["size", "add"].contains(&name.as_str())
+            && self
+                .symbol(value)?
+                .is_none_or(|value| matches!(value, Value::Local { .. } | Value::Constant(_)))
+        {
+            return self.list_method(value, name, args, span);
+        }
+        let value = self.symbol(callee)?.ok_or_else(|| {
+            Diagnostic::unsupported("indirect calls and callable fields", callee.span)
+        })?;
+        let args: Vec<_> = receiver.into_iter().chain(args.iter()).collect();
+        let (kind, ty) = match value {
+            Value::Print | Value::Panic => {
+                if args.len() != 1 {
+                    return Err(Self::error(
+                        "E212",
+                        "debug output operations take exactly one argument",
+                        span,
+                    ));
+                }
+                let mut parts = Vec::new();
+                self.format_parts(args[0], &mut parts)?;
+                if matches!(value, Value::Print) {
+                    (
+                        hir::ExprKind::Print {
+                            parts,
+                            newline: true,
+                        },
+                        Type::Null,
+                    )
+                } else {
+                    (hir::ExprKind::Panic { parts }, Type::Never)
+                }
+            }
+            Value::Function { id, params, result } => {
+                if params.len() != args.len() {
+                    return Err(Self::error(
+                        "E212",
+                        format!(
+                            "function expects {} arguments, found {}",
+                            params.len(),
+                            args.len()
+                        ),
+                        span,
+                    ));
+                }
+                let result = result.ok_or_else(|| {
+                    Diagnostic::unsupported(
+                        "recursive functions without an explicit result annotation",
+                        span,
+                    )
+                })?;
+                let mut values = Vec::new();
+                for (arg, ty) in args.into_iter().zip(params) {
+                    values.push(self.expr(arg, Some(&ty)).map_err(|error| {
+                        if error.code == "E207" {
+                            Self::error("E212", error.message, error.span)
+                        } else {
+                            error
+                        }
+                    })?);
+                }
+                let site = self.calls;
+                self.calls += 1;
+                self.proofs.calls.insert(site, self.reach);
+                (
+                    hir::ExprKind::Call {
+                        id,
+                        site,
+                        args: values,
+                    },
+                    result,
+                )
+            }
+            Value::Control { .. } => {
+                return Err(Diagnostic::unsupported(
+                    "scope control calls in value expressions",
+                    span,
+                ));
+            }
+            _ => return Err(Self::error("E212", "value is not callable", callee.span)),
+        };
+        Ok(hir::Expr { kind, ty, span })
+    }
+}
