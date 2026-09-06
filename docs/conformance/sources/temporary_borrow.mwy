@@ -1,0 +1,3 @@
+bytes:@"bytes"
+view:bytes.filled<4>(0).slice()
+size:view.size()

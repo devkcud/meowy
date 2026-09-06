@@ -1,0 +1,4 @@
+core:@"core"
+debug:@"debug"
+effect<core.Type>:(){debug.print("side effect");-><int32>}
+<Bad>:effect()

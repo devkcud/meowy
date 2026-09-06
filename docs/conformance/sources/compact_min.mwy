@@ -1,0 +1,1 @@
+debug:@"debug";x<int8>:-128;debug.print(x);

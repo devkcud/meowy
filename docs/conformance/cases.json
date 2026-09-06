@@ -1,0 +1,232 @@
+{
+  "version": 1,
+  "language_contract": 1,
+  "target": "x86_64-unknown-linux-gnu",
+  "cases": [
+    {
+      "id": "compact_min",
+      "phase": "run",
+      "source": "sources/compact_min.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "-128\n"
+      },
+      "reference": "../reference/syntax.md#literals-values-and-comments"
+    },
+    {
+      "id": "minimum_parenthesized",
+      "phase": "check",
+      "source": "sources/minimum_parenthesized.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E216"
+      },
+      "reference": "../reference/syntax.md#literals-values-and-comments"
+    },
+    {
+      "id": "invalid_separator",
+      "phase": "check",
+      "source": "sources/invalid_separator.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E001"
+      },
+      "reference": "../reference/syntax.md#literals-values-and-comments"
+    },
+    {
+      "id": "forward_group",
+      "phase": "run",
+      "source": "sources/forward_group.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "true\n"
+      },
+      "reference": "../reference/syntax.md#forward-function-groups"
+    },
+    {
+      "id": "forward_interrupted",
+      "phase": "check",
+      "source": "sources/forward_interrupted.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E221"
+      },
+      "reference": "../reference/syntax.md#forward-function-groups"
+    },
+    {
+      "id": "type_helper",
+      "phase": "check",
+      "source": "sources/type_helper.mwy",
+      "expected": {
+        "accepted": true
+      },
+      "reference": "../reference/compile-time.md#type-values-and-user-helpers"
+    },
+    {
+      "id": "compile_effect",
+      "phase": "check",
+      "source": "sources/compile_effect.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E219"
+      },
+      "reference": "../reference/compile-time.md#purity"
+    },
+    {
+      "id": "compile_budget",
+      "phase": "check",
+      "source": "sources/compile_budget.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E220"
+      },
+      "reference": "../reference/compile-time.md#evaluation-budgets"
+    },
+    {
+      "id": "runtime_extent",
+      "phase": "check",
+      "source": "sources/runtime_extent.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E211"
+      },
+      "reference": "../reference/compile-time.md#required-evaluation-and-staging"
+    },
+    {
+      "id": "capturing_callable",
+      "phase": "run",
+      "source": "sources/capturing_callable.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "10\n"
+      },
+      "reference": "../reference/types.md#callable-environments"
+    },
+    {
+      "id": "unconstrained_callable",
+      "phase": "check",
+      "source": "sources/unconstrained_callable.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E210"
+      },
+      "reference": "../reference/types.md#callable-environments"
+    },
+    {
+      "id": "conditional_field",
+      "phase": "check",
+      "source": "sources/conditional_field.mwy",
+      "expected": {
+        "accepted": true
+      },
+      "reference": "../reference/values-and-blocks.md#emission-is-construction"
+    },
+    {
+      "id": "mixed_list",
+      "phase": "check",
+      "source": "sources/mixed_list.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E207"
+      },
+      "reference": "../reference/collections.md#bounded-lists"
+    },
+    {
+      "id": "scalar_projection",
+      "phase": "check",
+      "source": "sources/scalar_projection.mwy",
+      "expected": {
+        "accepted": true
+      },
+      "reference": "../reference/types.md#ordinary-operator-domains"
+    },
+    {
+      "id": "slice_equality",
+      "phase": "run",
+      "source": "sources/slice_equality.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "true\n"
+      },
+      "reference": "../reference/types.md#ordinary-operator-domains"
+    },
+    {
+      "id": "reference_identity",
+      "phase": "run",
+      "source": "sources/reference_identity.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "true\nfalse\n"
+      },
+      "reference": "../reference/types.md#ordinary-operator-domains"
+    },
+    {
+      "id": "function_equality",
+      "phase": "check",
+      "source": "sources/function_equality.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E222"
+      },
+      "reference": "../reference/types.md#ordinary-operator-domains"
+    },
+    {
+      "id": "temporary_borrow",
+      "phase": "check",
+      "source": "sources/temporary_borrow.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E303"
+      },
+      "reference": "../reference/memory.md#temporary-owners"
+    },
+    {
+      "id": "named_owner_borrow",
+      "phase": "check",
+      "source": "sources/named_owner_borrow.mwy",
+      "expected": {
+        "accepted": true
+      },
+      "reference": "../reference/memory.md#temporary-owners"
+    },
+    {
+      "id": "ffi_void",
+      "phase": "check",
+      "source": "sources/ffi_void.mwy",
+      "expected": {
+        "accepted": true
+      },
+      "reference": "../reference/native-abi.md#admissible-signatures-and-fields"
+    },
+    {
+      "id": "ffi_string",
+      "phase": "check",
+      "source": "sources/ffi_string.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E602"
+      },
+      "reference": "../reference/native-abi.md#admissible-signatures-and-fields"
+    },
+    {
+      "id": "pure_item",
+      "phase": "run",
+      "source": "sources/pure_item.mwy",
+      "expected": {
+        "accepted": true,
+        "stdout": "3\n"
+      },
+      "reference": "../reference/types.md#functions-and-generics"
+    },
+    {
+      "id": "erased_purity",
+      "phase": "check",
+      "source": "sources/erased_purity.mwy",
+      "expected": {
+        "accepted": false,
+        "code": "E210"
+      },
+      "reference": "../reference/types.md#functions-and-generics"
+    }
+  ]
+}

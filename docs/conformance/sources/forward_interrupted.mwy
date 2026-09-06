@@ -1,0 +1,3 @@
+first<()->int32>;
+value:2
+first<int32>:(){->1}

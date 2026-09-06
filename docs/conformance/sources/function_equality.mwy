@@ -1,0 +1,2 @@
+f<int32>:(){->1}
+comparison:f==f

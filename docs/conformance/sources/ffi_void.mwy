@@ -1,0 +1,2 @@
+ffi:@"ffi"
+ping:ffi.extern<()->null>("C","native_ping")

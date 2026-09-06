@@ -1,0 +1,2 @@
+ffi:@"ffi"
+bad:ffi.extern<(string)->null>("C","consume_text")

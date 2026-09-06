@@ -1,0 +1,6 @@
+core:@"core"
+debug:@"debug"
+apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}
+f<int32>:(x<int32>){->x+1}
+answer:apply(&f,2)
+debug.print(answer)

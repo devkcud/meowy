@@ -1,0 +1,6 @@
+debug:@"debug"
+even<(uint32)->boolean>;
+odd<(uint32)->boolean>;
+even<boolean>:(n<uint32>) 'result {|n==0|{'result->true;'result.leave()};->odd(n-1)}
+odd<boolean>:(n<uint32>) 'result {|n==0|{'result->false;'result.leave()};->even(n-1)}
+debug.print(even(4))

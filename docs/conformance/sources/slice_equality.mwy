@@ -1,0 +1,4 @@
+debug:@"debug"
+a<int32[2]>:[1,2]
+b<int32[2]>:[1,2]
+debug.print(a.slice()==b.slice())

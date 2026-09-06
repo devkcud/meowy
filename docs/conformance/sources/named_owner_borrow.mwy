@@ -1,0 +1,4 @@
+bytes:@"bytes"
+owner:bytes.filled<4>(0)
+view:owner.slice()
+size:view.size()

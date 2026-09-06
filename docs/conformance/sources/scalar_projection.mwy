@@ -1,0 +1,2 @@
+reading:{->24;->unit:"celsius"}
+answer<int32>:reading+1

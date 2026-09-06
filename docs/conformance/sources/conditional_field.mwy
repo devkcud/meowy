@@ -1,0 +1,2 @@
+make:(flag<boolean>){|flag|->name:"hello"}
+value<{name<string><null>}>:make(false)

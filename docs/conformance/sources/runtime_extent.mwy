@@ -1,0 +1,3 @@
+core:@"core"
+bounded<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}
+use<null>:(capacity<usize>){values<(bounded(<uint8>,capacity))>:[]}

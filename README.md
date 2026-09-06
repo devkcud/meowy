@@ -53,24 +53,28 @@ For something to build, open [Pawterns](docs/pawterns/README.md), the meowy
 cookbook: 39 recipes from a first greeting through owned buffers, CLI tools,
 calendar surprises, and getting concurrent work to actually finish.
 
-| Topic                                                            | What it covers                                                                         |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Syntax](docs/reference/syntax.md)                               | Bindings, literals, operators, functions, and scopes                                   |
-| [Values and blocks](docs/reference/values-and-blocks.md)         | Evaluation, emissions, dispatch, matching, and control flow                            |
-| [Types](docs/reference/types.md)                                 | Inference, unions, narrowing, records, generics, and conversions                       |
-| [Memory](docs/reference/memory.md)                               | Ownership, borrowing, allocation, raw pointers, and cleanup                            |
-| [Memory and binary optimization](docs/reference/optimization.md) | Storage lifetimes, linker reachability, build policy, and constrained deployment       |
-| [Collections](docs/reference/collections.md)                     | Bounded lists, arrays, slices, vectors, and maps                                       |
-| [Tasks and channels](docs/reference/tasks-and-channels.md)       | Structured concurrency, deadlines, cancellation, and communication                     |
-| [Modules and FFI](docs/reference/modules-and-ffi.md)             | Imports, exports, reproducible dependencies, and native boundaries                     |
-| [Standard library](docs/reference/stdlib/README.md)              | Text, data, collections, time, calendars, system services, and CLI apps                |
-| [Errors and custom failures](docs/reference/stdlib/errors.md)    | Construct failures, read codes and payloads, preserve ownership, and box explicitly    |
-| [Testing](docs/reference/stdlib/testing.md)                      | Assertions, ordinary suite values, isolated cases, fixtures, and reproducible failures |
-| [Diagnostics](docs/reference/diagnostics.md)                     | Labeled errors, ranked repairs, replay capsules, and failure behavior                  |
-| [Diagnostic codes](docs/reference/diagnostic-codes.md)           | Rule catalog, required evidence, and repair guidance                                   |
-| [Command line](docs/cli/README.md)                               | Check, build, run, inspect internals, apply fixes, and replay failures                 |
-| [Language server](docs/reference/lsp.md)                         | Editor setup, compatibility, analysis, repairs, and manifest configuration             |
-| [gatostyle](docs/guide/gatostyle.md)                             | Configurable layout, code quality, expression styles, and safe fixes                   |
+| Topic                                                                | What it covers                                                                         |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [Syntax](docs/reference/syntax.md)                                   | Bindings, literals, operators, functions, and scopes                                   |
+| [Values and blocks](docs/reference/values-and-blocks.md)             | Evaluation, emissions, dispatch, matching, and control flow                            |
+| [Types](docs/reference/types.md)                                     | Inference, unions, narrowing, records, generics, and conversions                       |
+| [Compile-time evaluation](docs/reference/compile-time.md)            | Type-producing helpers, purity, staging, and evaluation budgets                        |
+| [Memory](docs/reference/memory.md)                                   | Ownership, borrowing, allocation, raw pointers, and cleanup                            |
+| [Memory and binary optimization](docs/reference/optimization.md)     | Storage lifetimes, linker reachability, build policy, and constrained deployment       |
+| [Collections](docs/reference/collections.md)                         | Bounded lists, arrays, slices, vectors, and maps                                       |
+| [Tasks and channels](docs/reference/tasks-and-channels.md)           | Structured concurrency, deadlines, cancellation, and communication                     |
+| [Modules and FFI](docs/reference/modules-and-ffi.md)                 | Imports, exports, reproducible dependencies, and native boundaries                     |
+| [Package build graphs](docs/reference/packages-and-builds.md)        | Root lock authority, revision identity, and transitive native inputs                   |
+| [Target and native ABI](docs/reference/target-profile.md)            | Initial platform requirements and the explicit C boundary                              |
+| [Standard library](docs/reference/stdlib/README.md)                  | Text, data, collections, time, calendars, system services, and CLI apps                |
+| [Errors and custom failures](docs/reference/stdlib/errors.md)        | Construct failures, read codes and payloads, preserve ownership, and box explicitly    |
+| [Testing](docs/reference/stdlib/testing.md)                          | Assertions, ordinary suite values, isolated cases, fixtures, and reproducible failures |
+| [Diagnostics](docs/reference/diagnostics.md)                         | Labeled errors, ranked repairs, replay capsules, and failure behavior                  |
+| [Recording and artifact formats](docs/reference/artifact-formats.md) | Versioned schemas, reader compatibility, and recorded event contracts                  |
+| [Diagnostic codes](docs/reference/diagnostic-codes.md)               | Rule catalog, required evidence, and repair guidance                                   |
+| [Command line](docs/cli/README.md)                                   | Check, build, run, inspect internals, apply fixes, and replay failures                 |
+| [Language server](docs/reference/lsp.md)                             | Editor setup, compatibility, analysis, repairs, and manifest configuration             |
+| [gatostyle](docs/guide/gatostyle.md)                                 | Configurable layout, code quality, expression styles, and safe fixes                   |
 
 The [worked projects](docs/programs/README.md) put these rules together in 16
 self-contained directories, each with its own manifest and run instructions.
@@ -78,6 +82,8 @@ They cover composition, custom errors, Unicode, JSON, maps, randomness, tasks,
 channels, timers, calendars, nested CLIs, streaming file tools, and a complete
 [test suite](docs/programs/testing/README.md). The [design notes](docs/design.md)
 explain the choices and the boundaries of the core.
+The [conformance cases](docs/conformance/README.md) pin parsing, typing, ownership,
+and native-signature decisions with accepted and rejected source fixtures.
 The [time and calendar guide](docs/guide/time-and-date.md) builds toward a small
 CLI that converts dates between six calendar systems, including Chinese.
 

@@ -1,0 +1,3 @@
+core:@"core"
+forever<core.Type>:(){'again{'again.restart()}}
+<Bad>:forever()

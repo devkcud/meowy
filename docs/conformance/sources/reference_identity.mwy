@@ -1,0 +1,8 @@
+debug:@"debug"
+a:1
+b:1
+left:&a
+same:&a
+other:&b
+debug.print(left==same)
+debug.print(left==other)

@@ -1,0 +1,6 @@
+core:@"core"
+debug:@"debug"
+apply<:F:core.Call<(int32)->int32>><int32>:(f<&F>,x<int32>){->f(x)}
+offset:7
+add:(x<int32>){->x+offset}
+debug.print(apply(&add,3))

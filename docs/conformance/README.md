@@ -1,0 +1,43 @@
+# Language conformance cases
+
+[Documentation index](../README.md)
+
+These cases pin observable rules to small source files. `cases.json` is version 1
+of the fixture catalog and targets language contract revision 1. Every case is
+independent: do not concatenate sources or let a failed declaration contaminate
+another case's name lookup. This is a core regression set, not a claim to cover
+every library operation or every possible program.
+
+For each case, run checking on its `source` using the catalog's target and the
+bundled foundational library, outside any ancestor application's manifest policy.
+For accepted `run` cases, additionally build and execute the source with default
+runtime settings and compare stdout bytes exactly. Successful checking/execution
+must exit zero. Rejected cases must fail during checking with the indicated
+primary diagnostic code; diagnostic wording, extra explanatory notes and display
+columns are not golden strings. A missing toolchain/target or host failure is an
+infrastructure failure, never a passing rejection test.
+
+The catalog fields are closed: `version`, `language_contract`, `target`, `cases`.
+Each case has a unique ASCII `id`, `phase` (`check` or `run`), relative `source`,
+`expected`, and a documentation `reference`. `expected` is either
+`{"accepted":false,"code":"E..."}` or `{"accepted":true}`; an accepted run
+additionally has `stdout`. No source, reference or command is fetched remotely.
+The files intentionally include invalid source; formatting or repairing them
+changes the test input and must be reviewed as a contract change.
+
+```sh
+python3 docs/conformance/check.py
+```
+
+This command validates the **fixture catalog**, source paths, expected diagnostic
+codes and documentation references. It does not run the language cases and must
+not be reported as a successful language conformance run. Artifact-format examples
+have separate [JSON schemas](../reference/artifact-formats.md) that consumers can
+validate with a Draft 2020-12 JSON Schema validator.
+
+Compiler releases should run accepted cases under both debug and release profiles;
+checking results and defined output must agree. Add boundaries alongside each
+language change: zero-space parsing, type construction, callable captures, union
+joins, borrow rejection and foreign signatures. Task/replay suites additionally
+need controlled scheduling and saved event fixtures; the [replay contract](../reference/replay-recording.md)
+defines matching independently of a particular operating-system schedule.

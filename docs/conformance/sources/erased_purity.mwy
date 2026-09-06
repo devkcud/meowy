@@ -1,0 +1,5 @@
+core:@"core"
+apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}
+f<int32>:(x<int32>){->x+1}
+pointer<(int32)->int32>:f
+answer:apply(&pointer,2)
