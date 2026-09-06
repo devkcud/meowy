@@ -144,18 +144,27 @@ foreign call can occupy a worker until it returns.
 
 ## Native interfaces
 
-An ordinary meowy record has no stable C layout. Use `layout("C")` on a concrete
-record declaration when fields must follow the target C ABI:
+An ordinary meowy record has no stable C layout. The compile-time function
+`ffi.record` constructs a native record type from a convention and an ordered
+list of named field types:
 
 ```meowy
-<Position> : <{
-    x <float32>
-    y <float32>
-}> layout("C")
+ffi : @"ffi"
+
+<Position> : ffi.record("C", [
+    "x" : <float32>,
+    "y" : <float32>
+])
 ```
 
-C-layout records preserve declaration order and use the target ABI's padding and
-alignment. They cannot contain a meowy primary emission, expanded fields,
+`ffi.record` is an ordinary named intrinsic, not a declaration modifier. It can
+be aliased like other compile-time functions; the alias retains the constructor's
+rules. Its arguments and result must be known at compile time. Each list element
+has one unique literal name. List position determines native field order, so
+layout does not depend on an ordinary structural record type's declaration order.
+
+C-layout records preserve that explicit field order and use the target ABI's
+padding and alignment. They cannot contain a meowy primary emission, expanded fields,
 references, tasks, channels, erased values, or ordinary meowy unions. Use fixed
 arrays for C arrays and raw pointers for C pointer fields. A C-layout wrapper is
 nominal; a structurally similar ordinary record is not ABI-compatible.
@@ -165,7 +174,8 @@ than assuming a C integer always has a particular width. `usize` is used only
 where the foreign contract really specifies a pointer-sized unsigned value.
 
 Foreign symbols are declared with `ffi.extern<Signature>(convention, symbol)`.
-The result is an unsafe function pointer; calling it requires an `unsafe` block.
+The result is a function pointer with a `!` safety requirement; calling it requires
+a `!{ ... }` block.
 For example, a native library can expose a pointer-and-length entry point:
 
 ```meowy

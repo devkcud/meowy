@@ -21,14 +21,19 @@ ordinary runtime control flow cannot change a type or specialize a function.
 | `<error>`                | Common descriptor for recoverable error values           |
 | `<T[N]>`                 | Inline list with length at most constant `N`             |
 | `<T[]>`                  | Borrowed immutable slice, with runtime length            |
-| `<&T>`, `<&mut T>`       | Shared and exclusive references                          |
-| `<*T>`, `<*mut T>`       | Read-only and writable raw pointers                      |
+| `<&T>`, `<&!T>`       | Shared and exclusive references                          |
+| `<*T>`, `<*!T>`       | Read-only and writable raw pointers                      |
 | `<(T, U) -> R>`          | Non-capturing function pointer                           |
-| `<unsafe (T, U) -> R>`   | Function pointer requiring an unsafe call boundary       |
+| `<!(T, U) -> R>`         | Function pointer requiring a caller-proven safety boundary |
 
 `N` is a non-negative compile-time integer. A type alias can name any composite
 type. Extended numeric widths belong in libraries with explicit representation
 and conversion rules; there is no target-dependent meaning of a built-in `int`.
+
+Primitive type names denote well-known type values, not reserved words. A type
+alias's right-hand side can be a type literal or a compile-time expression that
+produces a type, such as `ffi.record("C", ["x" : <float32>])`. Name lookup and
+aliasing do not change a type's identity or its representation.
 
 An error's common representation is a tagged, fixed-size descriptor with a static
 code and message plus an optional owned payload box. Errors without a payload do
@@ -188,6 +193,12 @@ function type. Function parameters are required, including nullable parameters;
 `<null>` permits a value, not an omitted argument. Parameter and result types of
 public functions must be explicit. Local function results may be inferred.
 
+`(parameters) !{ ... }` creates a function with a caller-proven safety contract.
+Its type is `<!(Parameters) -> Result>` and its calls require a `!{ ... }` block.
+Assigning it to an ordinary function pointer cannot erase that requirement.
+An ordinary function may use an inner `!{ ... }` block after checking the necessary
+preconditions itself. Neither form introduces a keyword.
+
 `<:T>` declares a generic result parameter and makes `<T>` available throughout
 the signature and body, as in `fallback` above. Generic type aliases use binders
 inside their parameter list:
@@ -209,8 +220,22 @@ operator overloading or automatic dictionary lookup.
 Generic values can be moved or borrowed without requiring them to be copyable.
 A body using the same owned generic value twice is rejected unless its declared
 constraint proves copying legal. `memory.Copy` and `tasks.Send` are compiler-known
-capabilities, expressed with `where T : memory.Copy` or `where T : tasks.Send`
-between a signature and its body. Multiple constraints are comma-separated.
+capability values. A second `:` in a generic binder declares its requirement:
+`<:T : memory.Copy>` accepts only copyable types. `&` joins requirements in this
+position: `<:T : memory.Copy & tasks.Send>` requires both capabilities.
+
+```meowy
+memory : @"memory"
+
+copy <:T : memory.Copy> : (value <&T>) {
+    -> *value
+}
+```
+
+Constraint names follow ordinary lookup in the type namespace. An alias of a
+capability has the same meaning; an unrelated value with the same name cannot
+grant copying or transfer privileges. There is no trailing constraint clause or
+word-based modifier on a declaration.
 
 Capturing functions have an inferred, concrete environment type. They are not
 function pointers and do not implicitly allocate. A closure borrows captures

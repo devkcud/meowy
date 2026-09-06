@@ -13,6 +13,18 @@ those components without ending execution. Dispatch composes transformations.
 Independent matchers control which statements run. Named scopes express early
 completion and repetition.
 
+The grammar has no reserved keywords. Punctuation supplies structure; names
+refer to ordinary values, type values, or scoped operations. `true`, `false`,
+`null`, and primitive types come from a small predefined environment, while
+`self` is introduced by dispatch. Local shadowing and aliasing follow the same
+rules as other bindings. Compiler knowledge follows an intrinsic's identity,
+not the letters in its name.
+
+Lower-level features follow that rule too: `&!` marks an exclusive borrow,
+`!{ ... }` marks a caller-proven safety boundary, and constraints appear after
+`:` in a generic binder. Lifetimes follow the borrow contract without a word-based
+clause. `ffi.record` chooses native layout through an ordinary compile-time call.
+
 This provides the common vocabulary for functions, records, modules, and
 configuration. It does not make their execution rules interchangeable: a block
 evaluates now, a function evaluates on a call, a field access reads data, and a
@@ -66,9 +78,9 @@ make end-of-stream ambiguous. Failed sends return their unsent owner.
 ## Keep ordinary programs safe at a low level
 
 Inline storage and explicit allocators avoid automatic garbage collection.
-Moves, borrows, and deterministic cleanup keep ownership inspectable. Unsafe
-blocks permit native memory operations with stated preconditions; they cannot
-excuse a data race or extend a dead allocation's lifetime.
+Moves, borrows, and deterministic cleanup keep ownership inspectable. Explicit
+`!{ ... }` blocks permit native memory operations with stated preconditions; they
+cannot excuse a data race or extend a dead allocation's lifetime.
 
 Formatting can stream output. Allocated strings, vectors, erased owners, task
 storage, and channel queues have visible construction boundaries. A library

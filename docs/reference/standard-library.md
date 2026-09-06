@@ -7,10 +7,22 @@ programs. They are imported with `@"name"` and share the language's versioned
 foundational-library contract. This chapter specifies behavior and failure types;
 it does not imply a particular package host, release tag, or native dependency.
 
-In tables, `T` is a compile-time type parameter. `&T` borrows, `&mut T` borrows
+In tables, `T` is a compile-time type parameter. `&T` borrows, `&!T` borrows
 exclusively, and an unborrowed non-copyable argument transfers ownership. Intrinsic
 member operations on collections, tasks, and channel endpoints borrow their
 receiver unless explicitly described as consuming it.
+
+## Predefined values
+
+`@"core"` exposes the constants `true`, `false`, and `null`, along with the
+fundamental type values listed in the type reference. These bindings are also
+available through the program's enclosing prelude scope. Source declarations
+can shadow them normally; `core.true` and `<core.boolean>`, for example, still
+refer to their intrinsic values when local names differ.
+
+An intrinsic's behavior follows its resolved identity, including through aliases.
+No API name is a keyword, and defining a new binding with an intrinsic's spelling
+does not give it that intrinsic's compiler privileges or representation.
 
 ## Output and text
 
@@ -150,7 +162,12 @@ access to that endpoint; each producer uses its own sender owner.
 ## Native access
 
 `ffi.extern<Signature>("C", symbol)` resolves a declared link-time symbol as an
-unsafe function pointer. The signature must contain only ABI-compatible types.
+unchecked function pointer with type `<!(Parameters) -> Result>`. The signature
+must contain only ABI-compatible types, and calls require a `!{ ... }` block.
+`ffi.record("C", fields)` is a compile-time type constructor taking an ordered
+list of named field types, such as `["x" : <float32>, "y" : <float32>]`. It
+applies the target C ABI in list order. Both are ordinary named function values;
+they are not special words in the grammar.
 `ffi.c_int` and related aliases reflect the build target. There is no implicit
 marshalling of strings, records, callbacks, or unions. See
 [native interfaces](modules-and-ffi.md#native-interfaces).

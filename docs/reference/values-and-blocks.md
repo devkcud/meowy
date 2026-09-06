@@ -202,6 +202,11 @@ exclusive mutation. The type chapter explains union subtraction in this model.
 `'name { ... }` evaluates once unless restarted. A label is a control target, not
 a value, closure, or reference that can escape.
 
+Its `leave` and `restart` members are well-known scoped operation values accessed
+through ordinary member lookup. They can be aliased within that scope, but an alias
+retains the same function, task, and lifetime restrictions. A similarly named
+member on an ordinary record has only the behavior of the value stored there.
+
 - `'name -> value` initializes that scope's primary slot and keeps executing.
 - `'name.leave()` cleans up inner scopes, then completes the named scope with its
   emissions so far. A required uninitialized result is a static error.

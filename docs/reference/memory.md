@@ -60,7 +60,7 @@ same : point       # an inline copy #
 view : &point      # a shared borrow #
 ```
 
-`&value` creates a shared reference. `&mut value` creates an exclusive reference
+`&value` creates a shared reference. `&!value` creates an exclusive reference
 and requires a mutable location. Shared references permit concurrent reads;
 exclusive references exclude all other access to the same storage until their
 last use. Field access through a reference projects a reference or copies a
@@ -82,19 +82,27 @@ Reference lifetimes follow the borrowed owner. Local uses are inferred through
 the last use of a borrow. A returned reference must borrow from an input or static
 storage, never a function local.
 
-Public APIs returning views use `borrows(parameter)` after the signature to state
-the source of the result's lifetime. A result borrowing several inputs lists
-them comma-separated and cannot outlive any of them.
+Returned views use an inferred lifetime contract. The body must prove that every
+returned reference points into borrowed input storage, a borrowed receiver or
+capture, or static storage. For a public signature, the result is conservatively
+bounded by all borrow-carrying inputs and captures; it cannot outlive any of them.
+With no such inputs or captures, a returned borrowed view must be static. This
+rule is available to callers without inspecting the body or parsing an extra
+declaration modifier.
 
 ```meowy
-bytes <uint8[]> : (text <string>) borrows(text) {
+bytes <uint8[]> : (text <string>) {
     -> text.bytes()
 }
 ```
 
+Here the returned slice cannot outlive `text`. With multiple borrowed inputs,
+the conservative contract may shorten a view's usable lifetime; separate the
+operation into smaller functions when an independent view should live longer.
 This rule applies to records containing references too. A static string literal
 can be returned freely. A string built into a local buffer cannot be returned as
-a view unless that buffer's owner is returned or supplied by the caller.
+a borrowed view. Return the owning buffer instead, or write into caller-owned
+storage and borrow that.
 
 Non-copyable field moves mark that field uninitialized. Remaining fields are
 still cleaned up, but the whole record cannot be used until all fields are valid.
@@ -172,28 +180,33 @@ Process termination, a fatal trap, and an explicit abort do not promise cleanup.
 ## Raw pointers and unsafe operations
 
 Raw pointers describe addresses without proving validity. They may be null or
-dangling, but reading or writing through them requires an `unsafe` block and a
+dangling, but reading or writing through them requires a `!{ ... }` block and a
 proof of allocation lifetime, bounds, alignment, initialization, and access rights.
 Creating a reference from a raw pointer must establish all safe-reference rules.
 
 ```meowy
 memory : @"memory"
 
-read_word <uint32> : unsafe (address <*uint32>) {
-    -> unsafe {
-        -> memory.read<uint32>(address)
-    }
+read_word <uint32> : (address <*uint32>) !{
+    -> memory.read<uint32>(address)
 }
 ```
 
-The `unsafe` declaration preserves the caller's precondition: `address` must point
-to a live, aligned, initialized `uint32` that can be read without racing a writer.
-Calling this wrapper requires an unsafe block even though it has a meowy body.
+The function's `!{ ... }` body preserves the caller's precondition: `address` must
+point to a live, aligned, initialized `uint32` that can be read without racing a writer.
+Its type is `<!(*uint32) -> uint32>`; calling it requires a `!{ ... }` block even
+though it has a meowy body.
 Prefer a safe slice parameter when bounds and ownership can be expressed in the type.
+
+Inside an ordinary function, an inner `!{ ... }` block marks a locally justified
+operation. It does not grant permission to a separately declared function or a
+spawned task: each must establish its own boundary. An intrinsic such as
+`memory.read` keeps its calling requirements when assigned another name. A local
+binding named `unsafe` has no special meaning.
 
 Pointer arithmetic uses byte offsets (`memory.offset_bytes`); collection indexing
 remains one-based. Integer-to-pointer conversion cannot establish provenance or
-make an arbitrary address valid. `unsafe` never disables integer checks, type
+make an arbitrary address valid. `!{ ... }` never disables integer checks, type
 checking, cleanup, or task ownership rules.
 
 For memory shared between tasks, use channels, locks, or atomics. Ordinary shared

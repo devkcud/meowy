@@ -8,6 +8,10 @@ representation, allocation has a visible cause, and concurrent work has an owner
 The same block vocabulary describes a calculation, a record, a module, or a
 function body.
 
+The grammar is punctuation-based and has no reserved keywords. `true`, `false`,
+`null`, types, and contextual names such as `self` are well-known values and
+bindings. See [names and syntax](docs/reference/syntax.md#no-keywords).
+
 ```meowy
 <Reading> : <{
     sensor <uint16>

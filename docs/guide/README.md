@@ -13,6 +13,10 @@ print("Hello, {name}!")
 `@"debug"` imports a foundational module, `.print` selects an exported function,
 and `(...)` calls it. Strings interpolate expressions inside braces.
 
+The grammar uses punctuation, with no reserved keywords. `true`, `false`, `null`,
+type names, and the contextual `self` are well-known bindings. Names such as
+`print`, `leave`, and `restart` refer to values; their spelling is not syntax.
+
 ## Bindings have stable types
 
 `:` creates an immutable binding. `:=` creates a mutable binding, and `=` assigns
@@ -164,7 +168,7 @@ iteration. The surrounding `index` and `total` remain alive.
 ## Make costs visible
 
 Records and bounded lists use value storage. Borrow them with `&value` to avoid
-copying; use `&mut value` for exclusive mutation. Dynamic storage uses an explicit
+copying; use `&!value` for exclusive mutation. Dynamic storage uses an explicit
 allocator. Resources are released when their owner leaves scope.
 
 `>> computation()` starts an owned task, and `<< task` joins it. Named groups

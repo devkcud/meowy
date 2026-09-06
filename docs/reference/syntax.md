@@ -6,11 +6,52 @@ Source files use UTF-8 and the `.mwy` extension. Names are case-sensitive. The
 portable identifier set is ASCII letters, digits, and `_`, with a letter or `_`
 first. Type aliases conventionally start with an uppercase letter.
 
-## Literals and comments
+## No keywords
+
+No identifier spelling is reserved by the grammar. Punctuation introduces
+bindings, functions, blocks, types, matchers, and control targets. Words resolve
+to values in a scope, including the well-known names supplied by the language.
+
+`true`, `false`, and `null` are predefined constant values. Primitive types such
+as `<boolean>` and `<uint8>` are predefined values in the type namespace. `self`
+is a binding introduced by dispatch. All follow ordinary name resolution and
+can be shadowed in an inner scope; shadowing cannot change their intrinsic
+identity, representation, or implicit language behavior.
+
+The foundational module `@"core"` exposes the predefined constants and types when
+a local name shadows one of them. A missing primary emission, for example, still
+produces the intrinsic null value regardless of a local binding named `null`.
+
+```meowy
+core : @"core"
+
+{
+    true : "an ordinary local name"
+    enabled <core.boolean> : core.true
+}
+```
+
+`leave`, `restart`, `Copy`, `Send`, and library operation names are not keywords.
+Their behavior belongs to the value found through lookup. Aliasing an intrinsic
+preserves its rules; giving an unrelated value the same name grants no special
+behavior. For example, a scoped control operation can be called through an alias:
+
+```meowy
+'work {
+    finish : 'work.leave
+    finish()
+}
+```
+
+The alias must stay inside its target's function, task, and lexical lifetime.
+An ordinary record field named `leave` has no scope-control behavior unless it
+actually contains that intrinsic value.
+
+## Literals, values, and comments
 
 | Form                            | Meaning                           |
 | ------------------------------- | --------------------------------- |
-| `null`, `true`, `false`         | Null and boolean literals         |
+| `null`, `true`, `false`         | Predefined null and boolean values |
 | `42`, `1_024`, `0xff`, `0b1010` | Integer literals                  |
 | `3.5`, `1.0e-3`                 | Floating-point literals           |
 | `"hello"`                       | UTF-8 string literal              |
@@ -67,11 +108,14 @@ discards its result; it does not implicitly emit that result.
 | `value<>`                   | Compile-time type query                       |
 | `value<T>`                  | Proven type ascription; no conversion         |
 | `@"name"`                   | Module import                                 |
-| `&value`, `&mut value`      | Shared or exclusive borrow                    |
+| `&value`, `&!value`      | Shared or exclusive borrow                    |
 | `*reference`                | Access a safe reference's referent            |
 | `>> expression`, `<< task`  | Start or join a task                          |
 | `&group<T[N]>`              | Declare a bounded task group                  |
 | `&group >> expression`      | Submit a task to a group                      |
+| `!{ ... }` | Block permitting operations with caller-proven safety conditions |
+| `(x <T>) !{ ... }` | Function whose callers must establish those conditions |
+| `<:T : memory.Copy>` | Generic type binder constrained by a capability value |
 
 The escaped pipes in the table stand for literal `|` characters. Type ascription
 and generic specialization attach directly to their subject (`value<T>`,
@@ -90,7 +134,7 @@ From highest to lowest precedence:
 | Level | Operators/forms                                                                      |
 | ----- | ------------------------------------------------------------------------------------ |
 | 1     | Calls, field selection, indexing, dispatch, type query/ascription                    |
-| 2     | Unary `!`, `-`, `~`, dereference `*`, borrow `&`, `&mut`, task start `>>`, join `<<` |
+| 2     | Unary `!`, `-`, `~`, dereference `*`, borrow `&`, `&!`, task start `>>`, join `<<` |
 | 3     | `*`, `/`, `%`                                                                        |
 | 4     | `+`, `-`                                                                             |
 | 5     | Integer bitwise `&`, then `^`, then `\|`                                             |
@@ -104,6 +148,12 @@ chained. Assignment, emissions, and matchers are statement forms. Parentheses
 override precedence. `>>` and `<<` are never bit shifts; use `bits.shl` and
 `bits.shr`. Put a bitwise `|` expression in parentheses inside a matcher so it
 cannot be confused with an arm delimiter.
+
+`&!` is the exclusive-borrow operator; `&(!value)` instead borrows a negated
+boolean. In type expressions, `<&!T>` is an exclusive reference and `<*!T>` is a
+writable raw pointer. A `!` followed by a block opener marks an unchecked block,
+with or without intervening whitespace. To negate a block's boolean primary,
+write `!({ ... })`. These forms have distinct punctuation, not contextual words.
 
 Operands and call arguments evaluate left-to-right. `&&` and `||` short-circuit.
 Dispatch evaluates its receiver once. Task start captures its inputs at submission
@@ -122,6 +172,8 @@ the spelling of a borrow expression, so a group and a value must not have the sa
 name in overlapping scopes. Label operations can only target a lexically enclosing
 scope in the current function and task.
 
-`null`, `true`, `false`, and the type operators are reserved. `leave` and `restart`
-are control operations only on labels. `unsafe { ... }` marks a checked boundary
-for operations requiring a safety proof; it is not a way to disable type checking.
+The names of intrinsic values never introduce extra parser productions. Function
+constraints use punctuation in their type binders; returned borrows follow the
+[lifetime rules](memory.md#lifetimes); native layout is selected by a normal
+compile-time call to `ffi.record`. `!{ ... }` marks a boundary for operations
+requiring a safety proof; it does not disable type checking.
