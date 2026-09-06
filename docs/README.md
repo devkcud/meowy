@@ -14,6 +14,8 @@ those rules by building small programs, and the design notes explain their inten
 4. Read [memory](reference/memory.md) for ownership and predictable storage.
 5. Read [tasks and channels](reference/tasks-and-channels.md) before introducing
    concurrent work.
+6. Use the [CLI guide](cli/README.md) to check and run programs, then inspect and
+   reproduce failures from their saved executable capsules.
 
 ## Look something up
 
@@ -29,6 +31,11 @@ those rules by building small programs, and the design notes explain their inten
 | How are native data and functions declared?           | [Modules and FFI](reference/modules-and-ffi.md#native-interfaces) |
 | What APIs do the snippets rely on?                    | [Library contracts](reference/standard-library.md)                |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |
+| What does a diagnostic code mean?                     | [Code catalog](reference/diagnostic-codes.md)                     |
+| How do I check, build, and run a program?             | [Command line](cli/README.md#check-build-and-run)                 |
+| How do I review and apply suggested fixes?            | [Repair workflow](cli/README.md#preview-and-apply-repairs)        |
+| Can I see the original compiler and runtime evidence? | [Replay capsules](reference/diagnostics.md#replay-capsules)       |
+| How do I replay a failure without the project?        | [Export a replay executable](cli/README.md#export-one-executable) |
 
 ## Read complete programs
 
@@ -52,3 +59,8 @@ is implied by a code listing.
 
 The documentation uses four-space indentation and omits semicolons at line ends.
 Formatting never rewrites evaluation order or merges bindings.
+
+Shell examples use uppercase placeholders such as `PATH` and `TRIPLE`; help
+output may use `<id>` for a command argument. Those command placeholders are
+separate from meowy's type syntax. Diagnostic transcripts illustrate the format
+and contract rather than reporting a particular local run.

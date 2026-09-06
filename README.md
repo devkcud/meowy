@@ -45,17 +45,19 @@ shape; composing blocks does not require a dynamic object table.
 Start with the [guide](docs/guide/README.md), or use the
 [documentation index](docs/README.md) to browse the full reference.
 
-| Topic                                                      | What it covers                                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------------------ |
-| [Syntax](docs/reference/syntax.md)                         | Bindings, literals, operators, functions, and scopes               |
-| [Values and blocks](docs/reference/values-and-blocks.md)   | Evaluation, emissions, dispatch, matching, and control flow        |
-| [Types](docs/reference/types.md)                           | Inference, unions, narrowing, records, generics, and conversions   |
-| [Memory](docs/reference/memory.md)                         | Ownership, borrowing, allocation, raw pointers, and cleanup        |
-| [Collections](docs/reference/collections.md)               | Bounded lists, arrays, slices, vectors, and maps                   |
-| [Tasks and channels](docs/reference/tasks-and-channels.md) | Structured concurrency, deadlines, cancellation, and communication |
-| [Modules and FFI](docs/reference/modules-and-ffi.md)       | Imports, exports, reproducible dependencies, and native boundaries |
-| [Library contracts](docs/reference/standard-library.md)    | The foundational APIs used throughout the documentation            |
-| [Diagnostics](docs/reference/diagnostics.md)               | Static errors, recoverable failures, and panics                    |
+| Topic                                                      | What it covers                                                         |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Syntax](docs/reference/syntax.md)                         | Bindings, literals, operators, functions, and scopes                   |
+| [Values and blocks](docs/reference/values-and-blocks.md)   | Evaluation, emissions, dispatch, matching, and control flow            |
+| [Types](docs/reference/types.md)                           | Inference, unions, narrowing, records, generics, and conversions       |
+| [Memory](docs/reference/memory.md)                         | Ownership, borrowing, allocation, raw pointers, and cleanup            |
+| [Collections](docs/reference/collections.md)               | Bounded lists, arrays, slices, vectors, and maps                       |
+| [Tasks and channels](docs/reference/tasks-and-channels.md) | Structured concurrency, deadlines, cancellation, and communication     |
+| [Modules and FFI](docs/reference/modules-and-ffi.md)       | Imports, exports, reproducible dependencies, and native boundaries     |
+| [Library contracts](docs/reference/standard-library.md)    | The foundational APIs used throughout the documentation                |
+| [Diagnostics](docs/reference/diagnostics.md)               | Labeled errors, ranked repairs, replay capsules, and failure behavior  |
+| [Diagnostic codes](docs/reference/diagnostic-codes.md)     | Rule catalog, required evidence, and repair guidance                   |
+| [Command line](docs/cli/README.md)                         | Check, build, run, inspect internals, apply fixes, and replay failures |
 
 The [worked programs](docs/programs/README.md) put these rules together. The
 [design notes](docs/design.md) explain the choices and the boundaries of the core.
@@ -65,7 +67,7 @@ The [worked programs](docs/programs/README.md) put these rules together. The
 - `.mwy` files contain meowy source.
 - `mod.mwy` describes a module's imports, exports, and build settings. See the
   [annotated manifest](mod.sample.mwy).
-- [Neovim support](editor/nvim/README.md) provides file detection and basic syntax
-  highlighting.
+- [Vim and Neovim support](editor/nvim/README.md) provides syntax highlighting,
+  file detection, and buffer settings.
 
 Inspired by Smalltalk, OCaml, Go, and Lisp.

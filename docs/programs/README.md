@@ -10,6 +10,8 @@ The [sample manifest](../../mod.sample.mwy) selects `main.mwy` as the entry and
 exports the packet module. To select another listing, set `build.entry` to that
 file's path. The task and channel programs additionally require an
 [executor configuration](../reference/modules-and-ffi.md#build-settings).
+The [CLI guide](../cli/README.md#check-build-and-run) covers entry selection and
+the check, build, and run commands.
 
 ## Validate an age
 

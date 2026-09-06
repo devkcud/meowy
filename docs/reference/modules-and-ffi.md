@@ -77,7 +77,9 @@ be declared so dependency resolution and code generation do not depend on hidden
 machine state.
 
 See the [sample manifest](../../mod.sample.mwy), which points to the documented
-packet module and its companion entry file.
+packet module and its companion entry file. The
+[CLI guide](../cli/README.md#projects-and-entry-selection) defines manifest
+discovery, entry overrides, and command-line build options.
 
 ## Dependency resolution
 
@@ -98,6 +100,8 @@ Moving a tag or branch never silently changes an already locked build. A locked
 build fails when source content differs from its digest, a required lock entry is
 missing, or a manifest selector conflicts with the lock. Resolution is an explicit
 dependency-update operation; ordinary compilation does not rewrite the lock.
+Use [dependency commands](../cli/README.md#profiles-targets-and-dependencies) to
+resolve missing entries or deliberately update selected revisions.
 
 Native libraries and generated bindings are also declared inputs. Link search
 paths cannot silently select an unrelated system library with the same filename.
