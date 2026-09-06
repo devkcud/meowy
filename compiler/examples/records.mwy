@@ -1,0 +1,14 @@
+debug : @"debug"
+
+double <int32> : (value <int32>) {
+    -> value * 2
+}
+
+reading : {
+    -> 24
+    -> sensor : 7
+    -> unit : "celsius"
+}
+
+debug.print("Sensor {reading.sensor}: {reading} {reading.unit}")
+debug.print(reading.(double))

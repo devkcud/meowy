@@ -1,0 +1,11 @@
+debug : @"debug"
+
+factorial <uint64> : (n <uint64>) 'result {
+    | n <= 1 | {
+        'result -> 1
+        'result.leave()
+    }
+    -> n * factorial(n - 1)
+}
+
+debug.print(factorial(10))
