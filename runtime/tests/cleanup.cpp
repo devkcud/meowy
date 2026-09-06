@@ -93,7 +93,7 @@ void partial_initialization() {
     check(failed.status == Status::ok);
     check(stack.disarm(failed.token) == Status::invalid);
     const auto result = stack.unwind(root, Reason::panic, {6, "constructor failed"});
-    check(result.status == Status::ok && result.panic.message == "constructor failed");
+    check(result.status == Status::ok && result.panic.message() == "constructor failed");
     log.expect({1});
 }
 
@@ -258,7 +258,7 @@ void recoverable_panic_preserves_cause() {
     const Panic panic{2, "body overflow"};
     const auto result = stack.unwind(root, Reason::panic, panic);
     check(result.status == Status::ok && result.reason == Reason::panic);
-    check(result.panic.code == 2 && result.panic.message == "body overflow");
+    check(result.panic.code == 2 && result.panic.message() == "body overflow");
     log.expect({2, 1});
 }
 

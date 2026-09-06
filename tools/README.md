@@ -37,6 +37,8 @@ failed admission, panic cleanup and join retries. Explicit scope-close checks co
 nested marks, owned child-result release and retry-safe failure reports. Caller
 buffers collect failure details in bounded batches; full buffers leave the next
 failed child pending, and retries preserve ticket identity and cumulative counts.
+Panic messages own bounded snapshots; checks cover callback/capture destruction,
+copy independence, UTF-8 truncation, exact P008 evidence and per-profile storage size.
 Automatic cancellation, scope-exit joins and DWARF unwinding are pending.
 LeakSanitizer needs an execution environment without ptrace supervision; a blocked
 sanitizer check fails visibly. This protocol does not qualify native stack unwinding.

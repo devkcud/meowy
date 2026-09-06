@@ -34,6 +34,21 @@ class CheckTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             check.check_fatal(result, False)
 
+    def test_truncated_panic_requires_both_owned_messages_and_lengths(self):
+        error = ("panic[P008]: panic during cleanup\n"
+                 f"original: panic P006: {'b' * 256} [truncated from 300 bytes]\n"
+                 "cleanup: truncated messages\n"
+                 f"second: P006: {'c' * 256} [truncated from 260 bytes]\n")
+        result = subprocess.CompletedProcess(["binary"], -signal.SIGABRT, "", error)
+        check.check_truncated_panic(result)
+        for code, out, text in ((0, "", error), (-signal.SIGSEGV, "", error),
+                                (-signal.SIGABRT, "unexpected", error),
+                                (-signal.SIGABRT, "", error.replace("300 bytes", "256 bytes")),
+                                (-signal.SIGABRT, "", error.replace(" [truncated from 260 bytes]", ""))):
+            with self.subTest(code=code, out=out, text=text):
+                with self.assertRaises(RuntimeError):
+                    check.check_truncated_panic(subprocess.CompletedProcess(["binary"], code, out, text))
+
     def test_wrong_toolchain_fails_before_build(self):
         result = subprocess.CompletedProcess(["clang"], 0, "clang version 21.1.8\n", "")
         with mock.patch.object(check, "invoke", return_value=result) as invoke:

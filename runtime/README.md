@@ -12,15 +12,16 @@ python3 -B -m unittest discover -s runtime/tests -p 'test_*.py'
 ```
 
 The runner builds debug, optimized release, and ASan/UBSan executables in a
-temporary directory. Each executes 14 cleanup cases and two fatal subprocesses,
+temporary directory. Each executes six owning-diagnostic groups and an exact
+fatal-truncation probe, plus 14 cleanup cases and two fatal subprocesses,
 plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
 ASan stack-use-after-return report for a deliberately expired fiber local.
 Each profile also runs 25 scheduler cases, a real admission-refusal subprocess,
 a fatal task-cleanup subprocess and four child/scope protocol probes.
-Each profile also runs 13 owned-value cases and three fatal owned-cleanup probes,
-including rejected admission and owned-result discard during scope closing.
+Each profile also runs 14 owned-value cases and four fatal owned-cleanup probes,
+including rejected admission, scope-result discard and message-source destruction.
 Cleanup panic cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
@@ -165,17 +166,16 @@ foundation for future generated scope-exit code, not automatic joining or unwind
   report. The original one-argument `close(mark)` remains an explicit summary-only
   operation, retaining counts and the first failure without writing batches.
 - Report buffers must contain valid `ChildFailure` objects and remain exclusively
-  available throughout the close call, including worker-yielding waits. No report
-  allocation or diagnostic-string copy occurs. Borrowed diagnostic storage must
-  survive all waits, retries and processing of every batch; reporting does not
-  extend the lifetime of text owned by a released child.
+  available throughout the close call, including worker-yielding waits. Reports
+  copy bounded owning diagnostic snapshots without allocating. A copied report
+  keeps its own message bytes after child reclamation or source-slot reuse.
 - Counts summarize every failure consumed by close; summary-only mode retains
   just the first diagnostic. Batch mode can collect all consumed failure details;
-  automatic diagnostic attachment and owned diagnostic payloads are not provided.
+  automatic diagnostic attachment and richer diagnostic payloads are not provided.
   The caller must handle child failures explicitly. `ok` means scope closing
   finished, not that all children succeeded; close does not automatically raise a
-  Meowy panic or propagate cancellation. Panic text remains borrowed and must
-  survive the entire close, any retries and subsequent report use. Children manually joined elsewhere are
+  Meowy panic or propagate cancellation. Keep the report/Panic value alive while
+  using its `message()` view. Children manually joined elsewhere are
   already observed and do not contribute to a later close's counts.
 - A body or cleanup callback must close all its marks before returning. An open
   mark is a private fatal protocol violation, even when it contains no children.
@@ -217,8 +217,9 @@ API; it does not implement the complete Meowy task or group contract.
   child `join()` within body/cleanup calls. Child APIs require the exact active
   task identity; a parked parent's or sibling's capability cannot control work
   while another task is running.
-  All borrowed data and result/panic text must outlive their use, including later
-  outcome inspection or use after join.
+  Borrowed data and ordinary result views must outlive their use, including later
+  outcome inspection or use after join. Panic message text is captured before
+  callback storage expires and travels in the owning outcome snapshot.
 - The body executes first; its optional cleanup executes on the same context
   before the outcome becomes settled. Cleanup may yield, retaining the occupied
   slot and unpublished outcome until it finishes. Cleanup receives the same
@@ -435,10 +436,11 @@ compiler bridge, public FFI or qualified private Meowy runtime ABI.
   admission succeeds. Failure leaves the source responsible. **Object storage
   does not move, and its lifetime is not extended.** A later owner must already
   have valid surviving storage; this operation provides no relocation algorithm.
-- Payload storage must survive its callback; operation names and second-panic
-  messages must survive fatal reporting after the callback returns. Original panic
-  messages must survive the entire unwind and outcome inspection. These addresses
-  remain the caller's responsibility, including after a transfer.
+- Payload storage must survive its callback. Operation names remain separately
+  borrowed and must survive fatal reporting after the callback returns. Original
+  and second panic messages are owning snapshots, constructed while their source
+  text is live. A drop callback must construct its snapshot before destroying any
+  source text inside the resource it releases.
 - Successful `unwind()` returns its exit reason and original panic unchanged.
   Cleanup panic is always fatal, including on normal completion. P008 writes the
   original cause, operation and second panic to stderr, then aborts. Fatal process
@@ -479,30 +481,56 @@ and [task scope exit](../docs/reference/tasks-and-channels.md#scope-exit).
 [COMPILER.md](../COMPILER.md#prove-the-runtime-before-it-gets-comfortable) specifies
 the actual stack/unwind implementation plan.
 
-## Owned diagnostic continuation
+## Owning diagnostic snapshots
 
-The current borrowed-message contract remains required. The next diagnostic
-implementation should capture text in an owning `Panic` value while the source
-bytes are live. Copying in the scheduler after a body/drop callback returns can
-already be too late; copying after child reclamation cannot repair that lifetime.
+`Panic(code, text)` captures message bytes immediately, while `text` is still valid.
+`Panic()` retains code zero and an empty message as the no-panic value. Capturing
+inside the constructor allows callbacks to return diagnostics formed from local or
+capture-owned text; no scheduler-side copy tries to repair an expired string view.
+If a drop callback destroys its text explicitly, it must construct the `Panic`
+before that destruction.
 
-A bounded inline representation can keep existing by-value `TaskOutcome`, `Joined`,
-`ChildFailure` and scope-summary copies independent. It should store bytes and
-lengths, with `message()` creating a fresh view rather than caching a pointer into
-its own storage. Drop callbacks must construct that snapshot before destroying
-their message storage. Static operation names keep their existing lifetime rule.
+`Panic::message_capacity` is 256 bytes. The value stores only inline bytes and
+scalar lengths: `message()` builds a fresh view into that particular snapshot,
+`original_size()` reports the input byte length, and `truncated()` reports omitted
+bytes. Copies and moves of outcomes/reports own independent bytes with no cached
+self-pointer. Keep the `Panic`, `Joined`, `TaskInfo` or `ScopeClose` object alive
+while using its view; retaining only a view from a temporary outcome is invalid.
 
-Before implementing it, choose an explicit byte capacity and visible overflow
-policy consistent with the [diagnostic contract](../docs/reference/diagnostics.md).
-If truncation is supported, preserve the original code/length, report incompleteness
-and avoid splitting UTF-8. Measure the added size of task outcomes, all 16 scope
-records per task and caller report buffers; this design must not hide allocation.
+Messages longer than the capacity retain a prefix. For valid UTF-8 input,
+truncation backs up to a codepoint boundary; the constructor does not validate or
+repair arbitrary native byte strings. Explicit lengths preserve embedded NULs.
+Truncation never changes the original panic code. Fatal reporting appends
+` [truncated from N bytes]` with the original byte length; ordinary short-message
+output remains byte-identical. Consumers of structured outcomes must inspect the
+truncation metadata rather than treating the prefix as complete evidence.
 
-Required checks: overwrite callback-local text, destroy capture-owned text, copy
-outcomes, reuse task slots and report buffers, retry release/report-full returns,
-exercise capacity boundaries, and verify P008 retains both original and cleanup
-snapshots. This is a reviewed implementation plan; no owning diagnostic storage
-has been added or qualified yet.
+The snapshots survive source-buffer overwrite, capture destruction, task-stack
+release, same-slot reuse, close/report-buffer reuse and failed release/report-full
+retries. P008 carries independent original and cleanup snapshots after both source
+buffers have been overwritten or destroyed. Operation names remain under their
+separate surviving-storage rule; owning message text does not repair a dangling
+`Entry` name. No diagnostic allocation, reference count or implicit destructor
+cleanup was added.
+
+Measured sizes on this Linux x86-64 host with Clang 22.1.8:
+
+| Value | Previous bytes | Owning snapshot bytes |
+| --- | ---: | ---: |
+| `Panic` | 24 | 280 |
+| `TaskOutcome` | 56 | 312 |
+| `TaskSlot` | 1,912 | 6,264 |
+| `TaskInfo` | 136 | 392 |
+| `Joined` | 88 | 344 |
+| `ChildFailure` | 80 | 336 |
+| `ScopeClose` | 208 | 720 |
+
+These are private layout measurements, not portable ABI guarantees. A task slot
+contains its outcome plus 16 first-failure scope snapshots, adding 4,352 bytes to
+its caller-provided metadata. Report buffers likewise account for their full
+inline snapshots. Source spans, related diagnostic attachments, serialization and
+generated compiler panic/unwind integration remain separate work under the
+[diagnostic contract](../docs/reference/diagnostics.md).
 
 ## Validation boundary and next steps
 
@@ -513,7 +541,7 @@ documented v0.0.1 release. The bounded scheduler supplies one worker, explicit
 parent/child ownership and waiting child joins. There is no automatic scope-exit
 join, cancellation unwinding, timer, channel or multi-worker executor.
 There is no LLVM landing pad, Meowy personality function or pinned unwind library.
-Panic codes/messages are borrowed test inputs; source spans and diagnostic
+Panic messages are bounded owning snapshots; source spans and diagnostic
 attachment are absent. Tickets provide prototype task identity, not a recorded
 runtime-event identity. Cancellation is an explicit cleanup edge only.
 Nothing promotes owners or borrows into arbitrary heap storage.

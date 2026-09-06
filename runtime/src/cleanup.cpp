@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <charconv>
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <unistd.h>
 
@@ -23,7 +24,7 @@ void write(std::string_view text) noexcept {
     }
 }
 
-void write(Panic panic) noexcept {
+void write(const Panic &panic) noexcept {
     char code[10];
     const auto result = std::to_chars(code, code + sizeof(code), panic.code);
     write("P");
@@ -32,7 +33,14 @@ void write(Panic panic) noexcept {
     }
     write({code, static_cast<std::size_t>(result.ptr - code)});
     write(": ");
-    write(panic.message);
+    write(panic.message());
+    if (panic.truncated()) {
+        char size[20];
+        const auto count = std::to_chars(size, size + sizeof(size), panic.original_size());
+        write(" [truncated from ");
+        write({size, static_cast<std::size_t>(count.ptr - size)});
+        write(" bytes]");
+    }
 }
 
 std::string_view name(Reason reason) noexcept {
@@ -51,8 +59,8 @@ std::string_view name(Reason reason) noexcept {
     return "invalid";
 }
 
-[[noreturn]] void fatal(Reason reason, Panic first, std::string_view operation,
-                       Panic second) noexcept {
+[[noreturn]] void fatal(Reason reason, const Panic &first, std::string_view operation,
+                       const Panic &second) noexcept {
     write("panic[P008]: panic during cleanup\noriginal: ");
     write(name(reason));
     if (first.code != 0) {
@@ -67,6 +75,30 @@ std::string_view name(Reason reason) noexcept {
     std::abort();
 }
 
+}
+
+Panic::Panic(std::uint32_t value, std::string_view text) noexcept
+    : code(value), length(text.size() < message_capacity ? text.size() : message_capacity), original(text.size()) {
+    if (length < original) {
+        while (length != 0 && (static_cast<unsigned char>(text[length]) & 0xc0) == 0x80) {
+            --length;
+        }
+    }
+    if (length != 0) {
+        std::memcpy(bytes.data(), text.data(), length);
+    }
+}
+
+std::string_view Panic::message() const noexcept {
+    return {bytes.data(), length};
+}
+
+std::size_t Panic::original_size() const noexcept {
+    return original;
+}
+
+bool Panic::truncated() const noexcept {
+    return length < original;
 }
 
 Stack::Stack(std::span<Entry> storage) noexcept : entries(storage) {}

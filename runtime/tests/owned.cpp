@@ -1,10 +1,12 @@
 #include "meowy/owned.hpp"
 #include "meowy/scheduler.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <fcntl.h>
 #include <memory>
 #include <source_location>
@@ -304,7 +306,7 @@ void normal_and_panicked_results_have_exact_cleanup_order() {
             check(!fixture.scheduler.inspect(submitted.ticket).has_result);
             const auto joined = fixture.scheduler.join(submitted.ticket);
             check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::panicked);
-            check(joined.outcome.panic.message == "body failed");
+            check(joined.outcome.panic.message() == "body failed");
             if (body == produce_then_panic) { check(log.count == 2 && log.drops[0] == 2 && log.drops[1] == 1); }
             else { check(log.count == 1 && log.drops[0] == 1); }
         }
@@ -475,8 +477,8 @@ public:
         value.first = task.close(opened.mark, failures);
         fail_release = false;
         check(value.first.status == ScheduleStatus::context_failed && value.first.joined == 1 && value.first.panicked == 1);
-        check(value.first.reported == 1 && failures[0].outcome.panic.message == "first child failed");
-        check(value.first.first_failure.panic.message == "first child failed");
+        check(value.first.reported == 1 && failures[0].outcome.panic.message() == "first child failed");
+        check(value.first.first_failure.panic.message() == "first child failed");
         check(value.first.pending == child.ticket && value.first.pending_result.context.memory.error == EIO);
         check(value.first.pending_result.outcome.kind == OutcomeKind::completed && value.log.count == 0);
         value.paused = true;
@@ -484,8 +486,8 @@ public:
         value.log.task = &task;
         const auto closed = task.close(copy, failures);
         check(closed.status == ScheduleStatus::ok && closed.joined == 2 && closed.panicked == 1 && closed.spawn_failed == 0);
-        check(closed.reported == 0 && failures[0].outcome.panic.message == "first child failed");
-        check(closed.first_failure.panic.message == "first child failed" && closed.pending.scheduler == nullptr);
+        check(closed.reported == 0 && failures[0].outcome.panic.message() == "first child failed");
+        check(closed.first_failure.panic.message() == "first child failed" && closed.pending.scheduler == nullptr);
         check(value.log.count == 1 && !value.log.live[1]);
         check(task.close(opened.mark).status == ScheduleStatus::invalid);
         value.done = true;
@@ -523,6 +525,97 @@ Panic scope_drop_failure(Task &task, void *data) noexcept {
     return {};
 }
 
+struct MessageCapture final {
+public:
+    Log *log;
+    std::array<char, 32> body{};
+    std::array<char, 32> cleanup{};
+    std::size_t body_size = 0;
+    std::size_t cleanup_size = 0;
+    bool fail = false;
+
+    static void move(void *destination, void *source) noexcept {
+        auto &value = *static_cast<MessageCapture *>(source);
+        auto *const log = value.log;
+        std::construct_at(static_cast<MessageCapture *>(destination), value);
+        value.body.fill('x');
+        value.cleanup.fill('y');
+        std::destroy_at(&value);
+        ++log->moves;
+    }
+
+    static Panic drop(void *data) noexcept {
+        auto &value = *static_cast<MessageCapture *>(data);
+        auto *const log = value.log;
+        const auto panic = value.fail ? Panic{6, {value.cleanup.data(), value.cleanup_size}} : Panic{};
+        value.body.fill('z');
+        value.cleanup.fill('z');
+        std::destroy_at(&value);
+        ++log->count;
+        if (panic.code != 0) {
+            constexpr std::string_view text = "release-trigger\n";
+            check(::write(STDERR_FILENO, text.data(), text.size()) == static_cast<ssize_t>(text.size()));
+        }
+        return panic;
+    }
+
+    static Panic run(Task &, void *data) noexcept {
+        auto &value = *static_cast<MessageCapture *>(data);
+        auto local = value.body;
+        const Panic panic{6, {local.data(), value.body_size}};
+        local.fill('x');
+        value.body.fill('y');
+        ++value.log->calls;
+        return panic;
+    }
+};
+
+constexpr ValueOps message_ops{sizeof(MessageCapture), alignof(MessageCapture), MessageCapture::move,
+                               MessageCapture::drop, "message capture"};
+
+void initialize_message(Owned &owner, Log &log, std::string_view text, bool fail = false) {
+    check(owner.reserve(message_ops) == OwnedStatus::ok);
+    auto &value = *std::construct_at(static_cast<MessageCapture *>(owner.data()), MessageCapture{&log});
+    check(text.size() <= value.body.size());
+    std::memcpy(value.body.data(), text.data(), text.size());
+    value.body_size = text.size();
+    constexpr std::string_view cleanup = "release failed";
+    std::memcpy(value.cleanup.data(), cleanup.data(), cleanup.size());
+    value.cleanup_size = cleanup.size();
+    value.fail = fail;
+    check(owner.commit() == OwnedStatus::ok);
+}
+
+void diagnostic_snapshots_survive_capture_cleanup_release_retry_and_slot_reuse() {
+    Fixture fixture;
+    Buffer buffer;
+    Log log;
+    Owned capture(buffer.bytes);
+    initialize_message(capture, log, "body failed");
+    const auto first = fixture.scheduler.submit_owned(MessageCapture::run, capture);
+    check(first.status == ScheduleStatus::ok && capture.empty());
+    buffer.bytes.fill(std::byte{0x5a});
+    check(fixture.scheduler.pump(1).resumed == 1 && log.count == 1);
+    const auto inspected = fixture.scheduler.inspect(first.ticket);
+    check(inspected.outcome.panic.message() == "body failed");
+    fail_release = true;
+    const auto retry = fixture.scheduler.join(first.ticket);
+    fail_release = false;
+    check(retry.status == ScheduleStatus::context_failed && retry.outcome.panic.message() == "body failed");
+    const auto joined = fixture.scheduler.join(first.ticket);
+    check(joined.status == ScheduleStatus::ok && joined.outcome.panic.message() == "body failed");
+    initialize_message(capture, log, "next failure");
+    const auto second = fixture.scheduler.submit_owned(MessageCapture::run, capture);
+    check(second.status == ScheduleStatus::ok && second.ticket.index == first.ticket.index && second.ticket.id != first.ticket.id);
+    check(fixture.scheduler.pump(1).resumed == 1);
+    const auto newer = fixture.scheduler.join(second.ticket);
+    check(newer.status == ScheduleStatus::ok && newer.outcome.panic.message() == "next failure");
+    check(inspected.outcome.panic.message() == "body failed");
+    check(retry.outcome.panic.message() == "body failed" && joined.outcome.panic.message() == "body failed");
+    check(joined.outcome.panic.original_size() == 11 && !joined.outcome.panic.truncated());
+    check(log.count == 2 && log.calls == 2);
+}
+
 struct Case final {
 public:
     std::string_view name;
@@ -543,6 +636,7 @@ constexpr std::array cases{
     Case{"transferred_file_descriptor_closes_only_at_final_owner_release", transferred_file_descriptor_closes_only_at_final_owner_release},
     Case{"cleanup_cannot_emit_an_owned_result", cleanup_cannot_emit_an_owned_result},
     Case{"scope_close_preserves_progress_and_owned_result_until_release_succeeds", scope_close_preserves_progress_and_owned_result_until_release_succeeds},
+    Case{"diagnostic_snapshots_survive_capture_cleanup_release_retry_and_slot_reuse", diagnostic_snapshots_survive_capture_cleanup_release_retry_and_slot_reuse},
 };
 
 }
@@ -567,6 +661,18 @@ extern "C" int __wrap_munmap(void *address, std::size_t size) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "--fatal-owned-message-lifetime") {
+        const rlimit limit{0, 0};
+        check(setrlimit(RLIMIT_CORE, &limit) == 0);
+        Fixture fixture;
+        Buffer input;
+        Log log;
+        Owned capture(input.bytes);
+        initialize_message(capture, log, "body failed", true);
+        check(fixture.scheduler.submit_owned(MessageCapture::run, capture).status == ScheduleStatus::ok);
+        static_cast<void>(fixture.scheduler.pump(1));
+        return 3;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "--fatal-scope-owned-cleanup") {
         const rlimit limit{0, 0};
         check(setrlimit(RLIMIT_CORE, &limit) == 0);

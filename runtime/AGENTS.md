@@ -38,6 +38,10 @@
   settlement but before reclaiming a failed child; report_full retains its ticket
   and mark. Publish/count each detail only after successful consumption, and keep
   per-call reported counts distinct from cumulative scope progress.
+- Construct owning Panic snapshots while their source bytes are valid, including
+  before a drop callback destroys its text. Keep fixed storage, visible truncation
+  metadata and copy-independent message views; never store a self-pointer or copy
+  a dangling view after callback return. Operation-name lifetimes remain separate.
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the

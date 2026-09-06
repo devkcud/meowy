@@ -13,10 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 VERSION = "22.1.8"
 CASES = 14
+DIAGNOSTIC_CASES = 6
 STACK_CASES = 10
 CONTEXT_CASES = 10
 SCHEDULER_CASES = 25
-OWNED_CASES = 13
+OWNED_CASES = 14
 
 
 def invoke(args, timeout=60, env=None):
@@ -49,6 +50,16 @@ def check_fatal(result, panicked, operation="newer"):
                 f"original: {original}\ncleanup: {operation}\nsecond: P006: release failed\n")
     if result.stdout or result.stderr != expected:
         raise RuntimeError(f"fatal cleanup evidence differs:\n{result.stdout}{result.stderr}")
+
+
+def check_truncated_panic(result):
+    require(result, -signal.SIGABRT)
+    expected = ("panic[P008]: panic during cleanup\n"
+                f"original: panic P006: {'b' * 256} [truncated from 300 bytes]\n"
+                "cleanup: truncated messages\n"
+                f"second: P006: {'c' * 256} [truncated from 260 bytes]\n")
+    if result.stdout or result.stderr != expected:
+        raise RuntimeError(f"truncated panic evidence differs:\n{result.stdout}{result.stderr}")
 
 
 def check_guard(result, high):
@@ -118,7 +129,24 @@ def check(clang, directory, sanitizers=True):
                                         "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"]))
     env = dict(os.environ, ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1:detect_stack_use_after_return=1",
                UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1")
+    layout = None
     for name, flags in profiles:
+        diagnostic = directory / f"diagnostic-{name}"
+        print(f"CHECK runtime diagnostic snapshots: {name}", flush=True)
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "tests/diagnostic.cpp"),
+                        "-o", str(diagnostic)]))
+        check_cases(invoke([str(diagnostic)], env=env), DIAGNOSTIC_CASES, "diagnostic snapshot")
+        check_truncated_panic(invoke([str(diagnostic), "--fatal-truncated"], env=env))
+        sizes = invoke([str(diagnostic), "--layout"], env=env)
+        require(sizes)
+        if (sizes.stderr or not re.fullmatch(
+                r"Panic=\d+ TaskOutcome=\d+ TaskSlot=\d+ TaskInfo=\d+ Joined=\d+ ChildFailure=\d+ ScopeClose=\d+\n",
+                sizes.stdout) or (layout is not None and layout != sizes.stdout)):
+            raise RuntimeError(f"diagnostic storage layout differs:\n{sizes.stdout}{sizes.stderr}")
+        layout = sizes.stdout
+        print(f"PASS runtime diagnostic snapshots: {name}; {DIAGNOSTIC_CASES} cases, exact fatal truncation; {layout.strip()}", flush=True)
         binary = directory / f"cleanup-{name}"
         args = [clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                 "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"),
@@ -203,7 +231,8 @@ def check(clang, directory, sanitizers=True):
         check_fatal(invoke([str(owned), "--fatal-owned-cleanup"], env=env), True, "owned capture")
         check_fatal(invoke([str(owned), "--fatal-owned-admission"], env=env), False, "owned resource")
         check_fatal(invoke([str(owned), "--fatal-scope-owned-cleanup"], env=env), False, "owned resource")
-        print(f"PASS runtime owned values: {name}; {OWNED_CASES} cases and 3 fatal owned-cleanup probes", flush=True)
+        check_fatal(invoke([str(owned), "--fatal-owned-message-lifetime"], env=env), True, "owned capture")
+        print(f"PASS runtime owned values: {name}; {OWNED_CASES} cases and 4 fatal owned-cleanup probes", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
     print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, compiler integration and DWARF unwinding remain pending.")

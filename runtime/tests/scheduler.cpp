@@ -1,5 +1,6 @@
 #include "meowy/scheduler.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstdio>
@@ -161,7 +162,7 @@ void panic_settles_only_after_cleanup() {
     check(scheduler.pump(1).resumed == 1 && work.cleaned);
     const auto joined = scheduler.join(submitted.ticket);
     check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::panicked);
-    check(joined.outcome.panic.code == 6 && joined.outcome.panic.message == "body failed");
+    check(joined.outcome.panic.code == 6 && joined.outcome.panic.message() == "body failed");
 }
 
 void tickets_reject_other_schedulers_and_invalid_identity() {
@@ -464,7 +465,7 @@ public:
         check(task.join(failed.ticket).status == ScheduleStatus::invalid);
         const auto joined = task.join(child.ticket);
         check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::panicked && work.cleaned);
-        check(joined.outcome.panic.message == "child failed");
+        check(joined.outcome.panic.message() == "child failed");
         static_cast<ChildFailures *>(data)->done = true;
         return {};
     }
@@ -844,7 +845,7 @@ Panic scope_failures(Task &task, void *) noexcept {
     check(task.spawn(Work::run, &failed).status == ScheduleStatus::full);
     const auto closed = task.close(opened.mark);
     check(closed.status == ScheduleStatus::ok && closed.joined == 4 && closed.panicked == 2 && closed.spawn_failed == 1);
-    check(closed.first_failure.kind == OutcomeKind::panicked && closed.first_failure.panic.message == "first failed");
+    check(closed.first_failure.kind == OutcomeKind::panicked && closed.first_failure.panic.message() == "first failed");
     check(normal.cleaned && first.cleaned && second.cleaned && failed.steps == 0 && failed.cleanups == 0);
     check(task.close(opened.mark).status == ScheduleStatus::invalid);
     return {};
@@ -868,8 +869,12 @@ public:
         const auto scope = task.mark();
         check(scope.status == ScheduleStatus::ok);
         std::array<Work, 7> work;
-        work[1].panic = {6, "batch first"};
-        work[3].panic = {2, "batch second"};
+        char first_text[] = "batch first";
+        char second_text[] = "batch second";
+        work[1].panic = {6, {first_text, sizeof(first_text) - 1}};
+        work[3].panic = {2, {second_text, sizeof(second_text) - 1}};
+        std::fill_n(first_text, sizeof(first_text), 'x');
+        std::fill_n(second_text, sizeof(second_text), 'y');
         std::array<TaskTicket, 5> tickets;
         for (std::size_t index = 0; index < 4; ++index) {
             const auto child = task.spawn(Work::run, &work[index], Work::clean);
@@ -885,9 +890,10 @@ public:
         const auto first = task.close(scope.mark, batch);
         check(first.status == ScheduleStatus::report_full && first.reported == 1 && first.joined == 3 && first.panicked == 1);
         check(first.pending == tickets[3] && first.pending_result.status == ScheduleStatus::report_full);
-        check(first.pending_result.outcome.panic.message == "batch second");
+        check(first.pending_result.outcome.panic.message() == "batch second");
         value.seen[0] = batch[0];
-        check(value.seen[0].ticket == tickets[1] && value.seen[0].outcome.panic.message == "batch first");
+        work[1].panic = {};
+        check(value.seen[0].ticket == tickets[1] && value.seen[0].outcome.panic.message() == "batch first");
         const auto extra = task.spawn(Work::run, &work[5], Work::clean);
         const auto reused = task.spawn(Work::run, &work[6], Work::clean);
         check(extra.status == ScheduleStatus::ok && reused.status == ScheduleStatus::ok);
@@ -897,10 +903,11 @@ public:
         check(second.status == ScheduleStatus::report_full && second.reported == 1 && second.joined == 4 && second.panicked == 2);
         check(second.pending == tickets[4] && second.spawn_failed == 0);
         value.seen[1] = batch[0];
-        check(value.seen[1].ticket == tickets[3] && value.seen[1].outcome.panic.message == "batch second");
+        work[3].panic = {};
+        check(value.seen[1].ticket == tickets[3] && value.seen[1].outcome.panic.message() == "batch second");
         const auto third = task.close(scope.mark, batch);
         check(third.status == ScheduleStatus::ok && third.reported == 1 && third.joined == 7);
-        check(third.panicked == 2 && third.spawn_failed == 1 && third.first_failure.panic.message == "batch first");
+        check(third.panicked == 2 && third.spawn_failed == 1 && third.first_failure.panic.message() == "batch first");
         value.seen[2] = batch[0];
         check(value.seen[2].ticket == tickets[4] && value.seen[2].outcome.kind == OutcomeKind::spawn_failed);
         check(value.seen[2].outcome.context.memory.error == ENOMEM);
@@ -940,7 +947,7 @@ Panic zero_report_capacity(Task &task, void *) noexcept {
     failures[1].ticket.id = 777;
     const auto closed = task.close(scope.mark, failures);
     check(closed.status == ScheduleStatus::ok && closed.reported == 1 && closed.joined == 2 && closed.panicked == 1);
-    check(failures[0].ticket == child.ticket && failures[0].outcome.panic.message == "needs space");
+    check(failures[0].ticket == child.ticket && failures[0].outcome.panic.message() == "needs space");
     check(failures[1].ticket.id == 777 && success.cleanups == 1 && failure.cleanups == 1);
     return {};
 }
@@ -960,12 +967,20 @@ public:
     bool paused = false;
     bool done = false;
 
-    static Panic first_child(Task &, void *) noexcept { return {6, "first consumed"}; }
+    static Panic first_child(Task &, void *) noexcept {
+        char text[] = "first consumed";
+        const Panic panic{6, {text, sizeof(text) - 1}};
+        std::fill_n(text, sizeof(text), 'x');
+        return panic;
+    }
 
     static Panic second_child(Task &task, void *) noexcept {
         check(task.yield() == ContextStatus::ok);
         fail_release = true;
-        return {2, "second retained"};
+        char text[] = "second retained";
+        const Panic panic{2, {text, sizeof(text) - 1}};
+        std::fill_n(text, sizeof(text), 'y');
+        return panic;
     }
 
     static Panic parent(Task &task, void *data) noexcept {
@@ -980,13 +995,13 @@ public:
         fail_release = false;
         check(value.first.status == ScheduleStatus::context_failed && value.first.reported == 1);
         check(value.first.joined == 1 && value.first.panicked == 1 && value.first.pending == second.ticket);
-        check(value.first.pending_result.outcome.panic.message == "second retained");
+        check(value.first.pending_result.outcome.panic.message() == "second retained");
         check(value.failures[0].ticket == first.ticket && value.failures[1].ticket.id == 777);
         value.paused = true;
         check(task.yield() == ContextStatus::ok);
         const auto closed = task.close(scope.mark, value.failures);
         check(closed.status == ScheduleStatus::ok && closed.reported == 1 && closed.joined == 2 && closed.panicked == 2);
-        check(closed.first_failure.panic.message == "first consumed");
+        check(closed.first_failure.panic.message() == "first consumed");
         check(value.failures[0].ticket == second.ticket && value.failures[1].ticket.id == 777);
         value.done = true;
         return {};

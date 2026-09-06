@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -12,8 +13,19 @@ enum class Reason : std::uint8_t { complete, leave, restart, panic, cancel };
 
 struct Panic final {
 public:
+    static constexpr std::size_t message_capacity = 256;
+    Panic() noexcept = default;
+    Panic(std::uint32_t code, std::string_view text) noexcept;
+
     std::uint32_t code = 0;
-    std::string_view message;
+    [[nodiscard]] std::string_view message() const noexcept;
+    [[nodiscard]] std::size_t original_size() const noexcept;
+    [[nodiscard]] bool truncated() const noexcept;
+
+private:
+    std::array<char, message_capacity> bytes{};
+    std::size_t length = 0;
+    std::size_t original = 0;
 };
 
 using Drop = Panic (*)(void *) noexcept;
