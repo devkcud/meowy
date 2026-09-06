@@ -30,9 +30,10 @@ the harness executes that build's binary even when Cargo environment defaults
 select a different target or directory.
 `--runtime` runs the [native runtime prototypes](../runtime/README.md), their Python
 regressions, and debug/release/ASan/UBSan checks, including fatal cleanup, guard-page
-and context-switch checks, plus fixed-capacity scheduling and explicit join.
-Stack allocation is bounded and contexts remain on their worker thread. Structured
-child cancellation/join and DWARF unwinding are pending.
+and context-switch checks, plus fixed-capacity scheduling and parent-owned child
+joins that yield the worker. Stack allocation is bounded and contexts remain on
+their worker thread. Automatic cancellation, scope-exit joins and DWARF unwinding
+are pending.
 LeakSanitizer needs an execution environment without ptrace supervision; a blocked
 sanitizer check fails visibly. This protocol does not qualify native stack unwinding.
 `--all` includes both editors, compiler verification and native runtime checks.

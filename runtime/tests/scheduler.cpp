@@ -285,6 +285,373 @@ void failed_join_preserves_settled_ticket() {
     check(scheduler.join(submitted.ticket).status == ScheduleStatus::ok && work.cleanups == 1);
 }
 
+struct Family final {
+public:
+    TaskTicket child;
+    int result = 0;
+    bool child_cleaned = false;
+    bool parent_cleaned = false;
+
+    struct Borrow final {
+    public:
+        int &value;
+        Family &family;
+    };
+
+    static Panic child_body(Task &task, void *data) noexcept {
+        auto &borrow = *static_cast<Borrow *>(data);
+        check(borrow.value == 41);
+        ++borrow.value;
+        check(task.yield() == ContextStatus::ok);
+        check(borrow.value == 42);
+        ++borrow.value;
+        return {};
+    }
+
+    static Panic child_cleanup(Task &task, void *data) noexcept {
+        auto &borrow = *static_cast<Borrow *>(data);
+        check(borrow.value == 43);
+        check(task.yield() == ContextStatus::ok);
+        borrow.family.child_cleaned = true;
+        return {};
+    }
+
+    static Panic parent_body(Task &task, void *data) noexcept {
+        auto &family = *static_cast<Family *>(data);
+        int local = 41;
+        Borrow borrow{local, family};
+        const auto submitted = task.spawn(child_body, &borrow, child_cleanup);
+        check(submitted.status == ScheduleStatus::ok);
+        family.child = submitted.ticket;
+        const auto joined = task.join(submitted.ticket);
+        check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::completed);
+        check(local == 43 && family.child_cleaned);
+        family.result = local;
+        check(task.join(submitted.ticket).status == ScheduleStatus::invalid);
+        return {};
+    }
+
+    static Panic parent_cleanup(Task &, void *data) noexcept {
+        auto &family = *static_cast<Family *>(data);
+        check(family.child_cleaned && family.result == 43);
+        family.parent_cleaned = true;
+        return {};
+    }
+};
+
+void waiting_parent_keeps_locals_alive_and_releases_worker() {
+    std::array<TaskSlot, 3> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    Family family;
+    Work other;
+    const auto parent = scheduler.submit(Family::parent_body, &family, Family::parent_cleanup);
+    const auto unrelated = scheduler.submit(Work::run, &other);
+    check(parent.status == ScheduleStatus::ok && unrelated.status == ScheduleStatus::ok);
+    const auto first = scheduler.pump(1);
+    check(first.status == ScheduleStatus::ok && first.resumed == 1 && first.waiting == 1 && first.runnable == 2);
+    const auto waiting = scheduler.inspect(parent.ticket);
+    check(waiting.state == TaskState::waiting && waiting.children == 1 && waiting.waiting == family.child);
+    check(scheduler.inspect(family.child).parent == parent.ticket);
+    check(scheduler.join(family.child).status == ScheduleStatus::invalid);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::invalid);
+    check(scheduler.pump(1).resumed == 1 && other.steps == 1 && family.result == 0);
+    const auto rest = scheduler.pump(10);
+    check(rest.status == ScheduleStatus::ok && rest.runnable == 0 && rest.waiting == 0);
+    check(family.parent_cleaned && family.result == 43);
+    check(scheduler.inspect(family.child).status == ScheduleStatus::invalid);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+    check(scheduler.join(unrelated.ticket).status == ScheduleStatus::ok);
+}
+
+struct Chain final {
+public:
+    int depth;
+    int &result;
+
+    static Panic run(Task &task, void *data) noexcept {
+        auto &chain = *static_cast<Chain *>(data);
+        int local = 1;
+        if (chain.depth != 0) {
+            Chain nested{chain.depth - 1, local};
+            const auto child = task.spawn(run, &nested);
+            check(child.status == ScheduleStatus::ok);
+            check(task.join(child.ticket).status == ScheduleStatus::ok);
+        }
+        check(local == chain.depth + 1);
+        chain.result = local + 1;
+        return {};
+    }
+};
+
+void nested_children_use_fixed_slots_and_join_each_parent() {
+    std::array<TaskSlot, 5> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    int result = 0;
+    Chain chain{4, result};
+    const auto parent = scheduler.submit(Chain::run, &chain);
+    check(parent.status == ScheduleStatus::ok);
+    const auto pumped = scheduler.pump(20);
+    check(pumped.status == ScheduleStatus::ok && pumped.resumed == 9 && pumped.waiting == 0);
+    check(result == 6 && scheduler.inspect(parent.ticket).children == 0);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+struct CleanupChild final {
+public:
+    int result = 0;
+
+    static Panic body(Task &, void *) noexcept { return {}; }
+
+    static Panic child(Task &task, void *data) noexcept {
+        auto &value = *static_cast<int *>(data);
+        check(value == 5);
+        check(task.yield() == ContextStatus::ok);
+        ++value;
+        return {};
+    }
+
+    static Panic clean(Task &task, void *data) noexcept {
+        int local = 5;
+        const auto submitted = task.spawn(child, &local);
+        check(submitted.status == ScheduleStatus::ok);
+        check(task.join(submitted.ticket).status == ScheduleStatus::ok);
+        static_cast<CleanupChild *>(data)->result = local;
+        return {};
+    }
+};
+
+void parent_cleanup_can_spawn_and_wait_for_its_child() {
+    std::array<TaskSlot, 2> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    CleanupChild value;
+    const auto parent = scheduler.submit(CleanupChild::body, &value, CleanupChild::clean);
+    check(parent.status == ScheduleStatus::ok);
+    check(scheduler.pump(1).waiting == 1);
+    check(scheduler.inspect(parent.ticket).outcome.kind == OutcomeKind::pending);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::invalid);
+    check(scheduler.pump(5).waiting == 0 && value.result == 6);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+struct ChildFailures final {
+public:
+    bool done = false;
+    TaskTicket child;
+
+    static Panic full(Task &task, void *data) noexcept {
+        Work work;
+        const auto child = task.spawn(Work::run, &work, Work::clean);
+        check(child.status == ScheduleStatus::full && child.ticket.scheduler == nullptr);
+        check(task.join(child.ticket).status == ScheduleStatus::invalid);
+        check(work.steps == 0 && work.cleanups == 0);
+        static_cast<ChildFailures *>(data)->done = true;
+        return {};
+    }
+
+    static Panic admission(Task &task, void *data) noexcept {
+        Work work;
+        fail_map = true;
+        const auto failed = task.spawn(Work::run, &work, Work::clean);
+        fail_map = false;
+        check(failed.status == ScheduleStatus::context_failed && failed.context.memory.error == ENOMEM);
+        const auto result = task.join(failed.ticket);
+        check(result.status == ScheduleStatus::ok && result.outcome.kind == OutcomeKind::spawn_failed);
+        check(work.steps == 0 && work.cleanups == 0);
+        work.panic = {6, "child failed"};
+        work.cleanup_yields = true;
+        const auto child = task.spawn(Work::run, &work, Work::clean);
+        check(child.status == ScheduleStatus::ok && child.ticket.id != failed.ticket.id);
+        check(task.join(failed.ticket).status == ScheduleStatus::invalid);
+        const auto joined = task.join(child.ticket);
+        check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::panicked && work.cleaned);
+        check(joined.outcome.panic.message == "child failed");
+        static_cast<ChildFailures *>(data)->done = true;
+        return {};
+    }
+
+    static Panic release(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ChildFailures *>(data);
+        Work work;
+        const auto child = task.spawn(Work::run, &work, Work::clean);
+        check(child.status == ScheduleStatus::ok);
+        value.child = child.ticket;
+        fail_release = true;
+        const auto failed = task.join(child.ticket);
+        fail_release = false;
+        check(failed.status == ScheduleStatus::context_failed && failed.context.memory.error == EIO);
+        check(work.cleaned && work.cleanups == 1);
+        check(task.yield() == ContextStatus::ok);
+        check(task.join(child.ticket).status == ScheduleStatus::ok && work.cleanups == 1);
+        value.done = true;
+        return {};
+    }
+
+    static Panic rollback(Task &task, void *data) noexcept {
+        Work work;
+        fail_protect = true;
+        fail_release = true;
+        const auto child = task.spawn(Work::run, &work, Work::clean);
+        fail_protect = false;
+        check(child.status == ScheduleStatus::context_failed && child.context.memory.rollback_error == EIO);
+        check(task.join(child.ticket).status == ScheduleStatus::context_failed);
+        fail_release = false;
+        const auto joined = task.join(child.ticket);
+        check(joined.status == ScheduleStatus::ok && joined.outcome.kind == OutcomeKind::spawn_failed);
+        check(work.steps == 0 && work.cleanups == 0);
+        static_cast<ChildFailures *>(data)->done = true;
+        return {};
+    }
+};
+
+void child_admission_obeys_parent_capacity_and_failure_ownership() {
+    for (const auto body : {ChildFailures::full, ChildFailures::admission, ChildFailures::rollback}) {
+        std::array<TaskSlot, 2> slots;
+        const auto count = body == ChildFailures::full ? 1 : 2;
+        Scheduler scheduler(std::span(slots).first(count), stack_bytes);
+        ChildFailures value;
+        const auto parent = scheduler.submit(body, &value);
+        check(parent.status == ScheduleStatus::ok);
+        check(scheduler.pump(10).status == ScheduleStatus::ok && value.done);
+        check(scheduler.inspect(parent.ticket).children == 0);
+        check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+    }
+}
+
+void failed_child_release_retains_parent_ownership_until_retry() {
+    std::array<TaskSlot, 2> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    ChildFailures value;
+    const auto parent = scheduler.submit(ChildFailures::release, &value);
+    check(parent.status == ScheduleStatus::ok);
+    check(scheduler.pump(3).resumed == 3);
+    check(!value.done && scheduler.inspect(parent.ticket).children == 1);
+    check(scheduler.inspect(value.child).state == TaskState::settled);
+    check(scheduler.join(value.child).status == ScheduleStatus::invalid);
+    check(scheduler.pump(1).resumed == 1 && value.done);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+struct Capabilities final {
+public:
+    Task *first = nullptr;
+    Task *second = nullptr;
+    TaskTicket first_root;
+    TaskTicket second_root;
+    TaskTicket first_child;
+    TaskTicket second_child;
+    TaskTicket foreign;
+    bool checked = false;
+
+    static Panic inspect(Task &task, void *data) noexcept {
+        auto &value = *static_cast<Capabilities *>(data);
+        Work work;
+        check(value.first != nullptr && value.second != nullptr);
+        for (auto *owner : {value.first, value.second}) {
+            check(owner->spawn(Work::run, &work).status == ScheduleStatus::invalid);
+            check(owner->join(value.first_child).status == ScheduleStatus::invalid);
+            check(owner->yield() == ContextStatus::invalid);
+        }
+        for (const auto ticket : {value.first_root, value.second_root, value.first_child, value.second_child, value.foreign}) {
+            check(task.join(ticket).status == ScheduleStatus::invalid);
+        }
+        value.checked = true;
+        return {};
+    }
+
+    static Panic first_body(Task &task, void *data) noexcept {
+        auto &value = *static_cast<Capabilities *>(data);
+        value.first = &task;
+        const auto child = task.spawn(inspect, &value);
+        check(child.status == ScheduleStatus::ok);
+        value.first_child = child.ticket;
+        check(task.join(child.ticket).status == ScheduleStatus::ok);
+        value.first = nullptr;
+        return {};
+    }
+
+    static Panic second_body(Task &task, void *data) noexcept {
+        auto &value = *static_cast<Capabilities *>(data);
+        value.second = &task;
+        Work work;
+        const auto child = task.spawn(Work::run, &work);
+        check(child.status == ScheduleStatus::ok);
+        value.second_child = child.ticket;
+        check(task.join(child.ticket).status == ScheduleStatus::ok);
+        value.second = nullptr;
+        return {};
+    }
+};
+
+void child_apis_reject_parent_sibling_root_and_foreign_capabilities() {
+    std::array<TaskSlot, 4> slots;
+    std::array<TaskSlot, 1> other;
+    Scheduler scheduler(slots, stack_bytes);
+    Scheduler foreign(other, stack_bytes);
+    Capabilities value;
+    Work work;
+    const auto external = foreign.submit(Work::run, &work);
+    value.foreign = external.ticket;
+    const auto first = scheduler.submit(Capabilities::first_body, &value);
+    const auto second = scheduler.submit(Capabilities::second_body, &value);
+    check(first.status == ScheduleStatus::ok && second.status == ScheduleStatus::ok);
+    value.first_root = first.ticket;
+    value.second_root = second.ticket;
+    check(scheduler.pump(20).status == ScheduleStatus::ok && value.checked);
+    check(scheduler.join(first.ticket).status == ScheduleStatus::ok);
+    check(scheduler.join(second.ticket).status == ScheduleStatus::ok);
+    check(foreign.pump(1).resumed == 1);
+    check(foreign.join(external.ticket).status == ScheduleStatus::ok);
+}
+
+struct WaitOrder final {
+public:
+    TaskTicket first;
+    TaskTicket second;
+    bool resumed = false;
+
+    static Panic parent(Task &task, void *data) noexcept {
+        auto &order = *static_cast<WaitOrder *>(data);
+        Work slow;
+        slow.yields = 2;
+        Work fast;
+        const auto a = task.spawn(Work::run, &slow);
+        const auto b = task.spawn(Work::run, &fast);
+        check(a.status == ScheduleStatus::ok && b.status == ScheduleStatus::ok);
+        order.first = a.ticket;
+        order.second = b.ticket;
+        check(task.join(a.ticket).status == ScheduleStatus::ok);
+        order.resumed = true;
+        check(task.join(b.ticket).status == ScheduleStatus::ok);
+        return {};
+    }
+};
+
+void only_the_selected_child_wakes_its_waiting_parent() {
+    std::array<TaskSlot, 3> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    WaitOrder value;
+    const auto parent = scheduler.submit(WaitOrder::parent, &value);
+    check(parent.status == ScheduleStatus::ok);
+    check(scheduler.pump(3).resumed == 3);
+    check(scheduler.inspect(value.second).state == TaskState::settled);
+    const auto waiting = scheduler.inspect(parent.ticket);
+    check(waiting.state == TaskState::waiting && waiting.waiting == value.first && !value.resumed);
+    check(scheduler.pump(10).waiting == 0 && value.resumed);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+Panic unjoined_child(Task &, void *) noexcept {
+    constexpr std::string_view text = "child must not run after callback return\n";
+    static_cast<void>(::write(STDERR_FILENO, text.data(), text.size()));
+    return {};
+}
+
+Panic leave_child(Task &task, void *) noexcept {
+    int local = 42;
+    check(task.spawn(unjoined_child, &local).status == ScheduleStatus::ok);
+    return {};
+}
+
 void os_admission_failure() {
     std::array<TaskSlot, 1> slots;
     Scheduler scheduler(slots, stack_bytes);
@@ -332,6 +699,13 @@ constexpr std::array cases{
     Case{"failed_admission_is_joinable_without_running_callbacks", failed_admission_is_joinable_without_running_callbacks},
     Case{"failed_admission_retains_rollback_mapping_until_join", failed_admission_retains_rollback_mapping_until_join},
     Case{"failed_join_preserves_settled_ticket", failed_join_preserves_settled_ticket},
+    Case{"waiting_parent_keeps_locals_alive_and_releases_worker", waiting_parent_keeps_locals_alive_and_releases_worker},
+    Case{"nested_children_use_fixed_slots_and_join_each_parent", nested_children_use_fixed_slots_and_join_each_parent},
+    Case{"parent_cleanup_can_spawn_and_wait_for_its_child", parent_cleanup_can_spawn_and_wait_for_its_child},
+    Case{"child_admission_obeys_parent_capacity_and_failure_ownership", child_admission_obeys_parent_capacity_and_failure_ownership},
+    Case{"failed_child_release_retains_parent_ownership_until_retry", failed_child_release_retains_parent_ownership_until_retry},
+    Case{"child_apis_reject_parent_sibling_root_and_foreign_capabilities", child_apis_reject_parent_sibling_root_and_foreign_capabilities},
+    Case{"only_the_selected_child_wakes_its_waiting_parent", only_the_selected_child_wakes_its_waiting_parent},
 };
 
 }
@@ -366,6 +740,16 @@ extern "C" int __wrap_munmap(void *address, std::size_t size) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && (std::string_view(argv[1]) == "--unjoined-body" || std::string_view(argv[1]) == "--unjoined-cleanup")) {
+        const rlimit limit{0, 0};
+        check(setrlimit(RLIMIT_CORE, &limit) == 0);
+        std::array<TaskSlot, 2> slots;
+        Scheduler scheduler(slots, stack_bytes);
+        const bool body = std::string_view(argv[1]) == "--unjoined-body";
+        check(scheduler.submit(body ? leave_child : CleanupChild::body, nullptr, body ? nullptr : leave_child).status == ScheduleStatus::ok);
+        static_cast<void>(scheduler.pump(10));
+        return 3;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "--os-admission-failure") {
         os_admission_failure();
         return 0;

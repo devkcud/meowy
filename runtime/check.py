@@ -15,7 +15,7 @@ VERSION = "22.1.8"
 CASES = 14
 STACK_CASES = 10
 CONTEXT_CASES = 10
-SCHEDULER_CASES = 11
+SCHEDULER_CASES = 18
 
 
 def invoke(args, timeout=60, env=None):
@@ -56,6 +56,13 @@ def check_guard(result, high):
     expected = f"guard-{side}: SEGV_ACCERR at expected address on alternate stack\n"
     if result.stdout or result.stderr != expected:
         raise RuntimeError(f"guard fault evidence differs:\n{result.stdout}{result.stderr}")
+
+
+def check_unjoined(result, phase):
+    require(result, -signal.SIGABRT)
+    expected = f"fatal runtime protocol: {phase} returned with unjoined children\n"
+    if result.stdout or result.stderr != expected:
+        raise RuntimeError(f"unjoined child evidence differs:\n{result.stdout}{result.stderr}")
 
 
 def check_cases(result, count, suite):
@@ -175,10 +182,12 @@ def check(clang, directory, sanitizers=True):
         if admission.stderr or admission.stdout != "PASS scheduler kernel refusal: ENOMEM, no body, joined failure\n":
             raise RuntimeError(f"scheduler admission evidence differs:\n{admission.stdout}{admission.stderr}")
         check_fatal(invoke([str(scheduler), "--fatal-task-cleanup"], env=env), True, "task cleanup")
-        print(f"PASS runtime scheduler: {name}; {SCHEDULER_CASES} cases, kernel refusal and fatal cleanup", flush=True)
+        check_unjoined(invoke([str(scheduler), "--unjoined-body"], env=env), "body")
+        check_unjoined(invoke([str(scheduler), "--unjoined-cleanup"], env=env), "cleanup")
+        print(f"PASS runtime scheduler: {name}; {SCHEDULER_CASES} cases, kernel refusal, fatal cleanup and unjoined-child probes", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
-    print("Bounded single-worker prototype only; structured cancellation/join, compiler integration and DWARF unwinding remain pending.")
+    print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, compiler integration and DWARF unwinding remain pending.")
 
 
 def main():

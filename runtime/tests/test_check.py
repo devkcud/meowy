@@ -121,6 +121,18 @@ class CheckTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             check.check_fatal(result, True)
 
+    def test_unjoined_child_requires_a_precise_private_protocol_failure(self):
+        for code, text in ((1, ""), (-signal.SIGSEGV, ""), (-signal.SIGABRT, "panic[P008]\n")):
+            with self.subTest(code=code):
+                result = subprocess.CompletedProcess(["scheduler"], code, "", text)
+                with self.assertRaises(RuntimeError):
+                    check.check_unjoined(result, "body")
+        result = subprocess.CompletedProcess(["scheduler"], -signal.SIGABRT, "",
+                                             "fatal runtime protocol: body returned with unjoined children\n")
+        check.check_unjoined(result, "body")
+        with self.assertRaises(RuntimeError):
+            check.check_unjoined(result, "cleanup")
+
 
 if __name__ == "__main__":
     unittest.main()

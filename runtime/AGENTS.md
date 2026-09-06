@@ -3,8 +3,9 @@
 - Read [README.md](README.md), the root [STATUS.md](../STATUS.md),
   [COMPILER.md](../COMPILER.md) and the relevant language reference before edits.
 - The current code prototypes cleanup, guarded allocation, pinned contexts and a
-  bounded single-worker scheduler. Do not describe it as a complete task runtime,
-  structured cancellation/join, compiler integration or qualified DWARF unwinding.
+  bounded single-worker scheduler with explicit waiting child joins. Do not describe
+  it as a complete task runtime, automatic scope-exit joining/cancellation, compiler
+  integration or qualified DWARF unwinding.
 - Keep storage bounded and caller-owned. Document ownership, failure, suspension
   and unwind behavior for every API. Never silently allocate to extend a borrow.
 - Use explicit cleanup edges and initialized-state tracking. Host destructors or
@@ -21,6 +22,10 @@
 - Scheduler slots remain occupied through cleanup and settlement until successful
   join/release. Failed admission with a retained mapping must remain reclaimable;
   stale tickets, callback reentry and foreign-worker access must reject.
+- Only the active parent's Task capability may admit or consume its children.
+  Never resume or reclaim a child after the scope of its borrowed locals has ended.
+  Keep missing explicit joins a private fatal protocol violation until generated
+  scope-exit joins and unwind support can preserve those lifetimes.
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the
