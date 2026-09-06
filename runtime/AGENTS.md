@@ -8,6 +8,10 @@
   integration or qualified DWARF unwinding.
 - Keep storage bounded and caller-owned. Document ownership, failure, suspension
   and unwind behavior for every API. Never silently allocate to extend a borrow.
+- Preserve owned payload initialization and actual relocation. Once valid owned
+  submission accepts a capture, failed admission must release it exactly once.
+  Failed joins must retain result ownership until context release and transfer
+  succeed. Keep descriptor lifetime static and move/drop callbacks non-suspending.
 - Use explicit cleanup edges and initialized-state tracking. Host destructors or
   exceptions cannot supply Meowy ownership or cancellation semantics.
 - Preserve fatal cleanup-panic probes as subprocesses with exact evidence. Do not

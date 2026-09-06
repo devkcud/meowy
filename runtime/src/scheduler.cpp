@@ -33,9 +33,55 @@ Submission Task::spawn(TaskBody body, void *data, TaskBody cleanup) noexcept {
     return scheduler.admit(body, data, cleanup, ticket);
 }
 
+Submission Task::spawn_owned(TaskBody body, Owned &capture) noexcept {
+    const auto status = scheduler.task_access(ticket);
+    if (status != ScheduleStatus::ok || body == nullptr || !capture.initialized()) {
+        return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
+    }
+    scheduler.owning = true;
+    const auto result = scheduler.admit(body, nullptr, nullptr, ticket, &capture);
+    scheduler.owning = false;
+    return result;
+}
+
 Joined Task::join(TaskTicket child) noexcept {
     return scheduler.join_child(ticket, child);
 }
+
+Joined Task::join_owned(TaskTicket child, Owned &destination) noexcept {
+    return scheduler.join_child(ticket, child, &destination);
+}
+
+OwnedStatus Task::set_result(Owned &value) noexcept {
+    if (scheduler.task_access(ticket) != ScheduleStatus::ok) {
+        return OwnedStatus::invalid;
+    }
+    auto &slot = scheduler.slots[ticket.index];
+    if (!slot.producing || slot.children != 0) {
+        return OwnedStatus::invalid;
+    }
+    scheduler.owning = true;
+    const auto status = value.move_to(slot.result);
+    scheduler.owning = false;
+    return status;
+}
+
+OwnedStatus Task::emit_capture() noexcept {
+    if (scheduler.task_access(ticket) != ScheduleStatus::ok) {
+        return OwnedStatus::invalid;
+    }
+    auto &slot = scheduler.slots[ticket.index];
+    if (!slot.producing || !slot.owned || slot.children != 0) {
+        return OwnedStatus::invalid;
+    }
+    scheduler.owning = true;
+    const auto status = slot.capture.move_to(slot.result);
+    scheduler.owning = false;
+    return status;
+}
+
+TaskSlot::TaskSlot(std::span<std::byte> input, std::span<std::byte> output) noexcept
+    : capture(input), result(output) {}
 
 bool TaskSlot::runnable() const noexcept {
     return state == TaskState::runnable;
@@ -60,8 +106,20 @@ Submission Scheduler::submit(TaskBody body, void *data, TaskBody cleanup) noexce
     return admit(body, data, cleanup, {});
 }
 
-Submission Scheduler::admit(TaskBody body, void *data, TaskBody cleanup, TaskTicket parent) noexcept {
+Submission Scheduler::submit_owned(TaskBody body, Owned &capture) noexcept {
+    const auto status = access();
+    if (status != ScheduleStatus::ok || body == nullptr || !capture.initialized()) {
+        return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
+    }
+    owning = true;
+    const auto result = admit(body, nullptr, nullptr, {}, &capture);
+    owning = false;
+    return result;
+}
+
+Submission Scheduler::admit(TaskBody body, void *data, TaskBody cleanup, TaskTicket parent, Owned *capture) noexcept {
     if (next == std::numeric_limits<std::uint64_t>::max()) {
+        if (capture != nullptr && capture->release() != OwnedStatus::ok) { std::abort(); }
         return {ScheduleStatus::full, {}, {}};
     }
     for (std::size_t index = 0; index < slots.size(); ++index) {
@@ -79,12 +137,25 @@ Submission Scheduler::admit(TaskBody body, void *data, TaskBody cleanup, TaskTic
         slot.parent = parent;
         slot.waiting = {};
         slot.children = 0;
+        slot.owned = capture != nullptr;
+        slot.producing = false;
         if (parent.scheduler != nullptr) {
             ++slots[parent.index].children;
         }
         const TaskTicket ticket{this, index, slot.id};
+        if (capture != nullptr) {
+            const auto moved = capture->move_to(slot.capture);
+            if (moved != OwnedStatus::ok) {
+                if (capture->release() != OwnedStatus::ok) { std::abort(); }
+                slot.state = TaskState::settled;
+                slot.outcome = {OutcomeKind::spawn_failed, {}, {}, moved};
+                return {ScheduleStatus::storage_failed, ticket, {}, moved};
+            }
+            slot.data = slot.capture.data();
+        }
         const auto result = slot.context.initialize(stack_bytes, run, &slot);
         if (result.status != ContextStatus::ok) {
+            if (slot.capture.release() != OwnedStatus::ok) { std::abort(); }
             slot.state = TaskState::settled;
             slot.outcome = {OutcomeKind::spawn_failed, {}, result};
             return {ScheduleStatus::context_failed, ticket, result};
@@ -92,6 +163,7 @@ Submission Scheduler::admit(TaskBody body, void *data, TaskBody cleanup, TaskTic
         slot.state = TaskState::runnable;
         return {ScheduleStatus::ok, ticket, {}};
     }
+    if (capture != nullptr && capture->release() != OwnedStatus::ok) { std::abort(); }
     return {ScheduleStatus::full, {}, {}};
 }
 
@@ -148,7 +220,7 @@ TaskInfo Scheduler::inspect(TaskTicket ticket) const noexcept {
         return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, TaskState::vacant, {}, {}, {}, 0};
     }
     const auto &slot = slots[ticket.index];
-    return {ScheduleStatus::ok, slot.state, slot.outcome, slot.parent, slot.waiting, slot.children};
+    return {ScheduleStatus::ok, slot.state, slot.outcome, slot.parent, slot.waiting, slot.children, slot.result.initialized()};
 }
 
 Joined Scheduler::join(TaskTicket ticket) noexcept {
@@ -159,7 +231,15 @@ Joined Scheduler::join(TaskTicket ticket) noexcept {
     return consume(ticket);
 }
 
-Joined Scheduler::join_child(TaskTicket parent, TaskTicket child) noexcept {
+Joined Scheduler::join_owned(TaskTicket ticket, Owned &destination) noexcept {
+    const auto status = access();
+    if (status != ScheduleStatus::ok || !valid(ticket) || slots[ticket.index].parent.scheduler != nullptr) {
+        return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
+    }
+    return consume(ticket, &destination);
+}
+
+Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destination) noexcept {
     const auto status = task_access(parent);
     if (status != ScheduleStatus::ok || !valid(child) || slots[child.index].parent != parent) {
         return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
@@ -175,18 +255,37 @@ Joined Scheduler::join_child(TaskTicket parent, TaskTicket child) noexcept {
             return {ScheduleStatus::context_failed, {}, {result, {}}};
         }
     }
-    return consume(child);
+    return consume(child, destination);
 }
 
-Joined Scheduler::consume(TaskTicket ticket) noexcept {
+Joined Scheduler::consume(TaskTicket ticket, Owned *destination) noexcept {
     auto &slot = slots[ticket.index];
     if (slot.state != TaskState::settled || slot.children != 0) {
         return {};
     }
+    if (destination != nullptr && !destination->empty()) {
+        return {ScheduleStatus::storage_failed, slot.outcome, {}, OwnedStatus::occupied};
+    }
+    if (slot.result.initialized()) {
+        const auto status = destination == nullptr ? OwnedStatus::invalid : slot.result.fits(*destination);
+        if (status != OwnedStatus::ok) {
+            return {ScheduleStatus::storage_failed, slot.outcome, {}, status};
+        }
+    }
+    owning = true;
     const auto result = slot.context.release();
     if (result.status != ContextStatus::ok) {
+        owning = false;
         return {ScheduleStatus::context_failed, slot.outcome, result};
     }
+    if (slot.result.initialized()) {
+        const auto moved = slot.result.move_to(*destination);
+        if (moved != OwnedStatus::ok) {
+            owning = false;
+            return {ScheduleStatus::storage_failed, slot.outcome, {}, moved};
+        }
+    }
+    owning = false;
     const auto outcome = slot.outcome;
     if (slot.parent.scheduler != nullptr) {
         if (!valid(slot.parent) || slots[slot.parent.index].children == 0) {
@@ -202,6 +301,8 @@ Joined Scheduler::consume(TaskTicket ticket) noexcept {
     slot.owner = nullptr;
     slot.parent = {};
     slot.waiting = {};
+    slot.owned = false;
+    slot.producing = false;
     return {ScheduleStatus::ok, outcome, {}};
 }
 
@@ -218,7 +319,7 @@ void Scheduler::wake(TaskTicket child) noexcept {
 void Scheduler::run(Context &context, void *data) noexcept {
     auto &slot = *static_cast<TaskSlot *>(data);
     Activation activation{Task{*slot.owner, context, {slot.owner, slot.index, slot.id}}, slot};
-    std::array<Entry, 1> entries;
+    std::array<Entry, 2> entries;
     Stack cleanup(entries);
     const auto root = cleanup.mark();
     if (slot.cleanup != nullptr) {
@@ -228,9 +329,25 @@ void Scheduler::run(Context &context, void *data) noexcept {
             std::abort();
         }
     }
+    if (slot.capture.initialized()) {
+        const auto reserved = cleanup.reserve();
+        if (reserved.status != Status::ok ||
+            cleanup.arm(reserved.token, &slot, drop_capture, "owned capture") != Status::ok) {
+            std::abort();
+        }
+    }
+    slot.producing = true;
     const auto panic = slot.body(activation.task, slot.data);
+    slot.producing = false;
     if (slot.children != 0) {
         unjoined("body");
+    }
+    if (panic.code != 0 && slot.result.initialized()) {
+        const auto reserved = cleanup.reserve();
+        if (reserved.status != Status::ok ||
+            cleanup.arm(reserved.token, &slot, drop_result, "owned result") != Status::ok) {
+            std::abort();
+        }
     }
     const auto result = cleanup.unwind(root, panic.code == 0 ? Reason::complete : Reason::panic, panic);
     if (result.status != Status::ok) {
@@ -245,6 +362,22 @@ Panic Scheduler::clean(void *data) noexcept {
     if (activation.slot.children != 0) {
         unjoined("cleanup");
     }
+    return panic;
+}
+
+Panic Scheduler::drop_capture(void *data) noexcept {
+    auto &slot = *static_cast<TaskSlot *>(data);
+    slot.owner->owning = true;
+    const auto panic = Owned::drop(&slot.capture);
+    slot.owner->owning = false;
+    return panic;
+}
+
+Panic Scheduler::drop_result(void *data) noexcept {
+    auto &slot = *static_cast<TaskSlot *>(data);
+    slot.owner->owning = true;
+    const auto panic = Owned::drop(&slot.result);
+    slot.owner->owning = false;
     return panic;
 }
 
@@ -269,7 +402,7 @@ ScheduleStatus Scheduler::access() const noexcept {
     if (pthread_equal(worker, pthread_self()) == 0) {
         return ScheduleStatus::wrong_thread;
     }
-    if (pumping || !configured) {
+    if (pumping || owning || !configured) {
         return ScheduleStatus::invalid;
     }
     return ScheduleStatus::ok;
@@ -279,7 +412,7 @@ ScheduleStatus Scheduler::task_access(TaskTicket ticket) const noexcept {
     if (pthread_equal(worker, pthread_self()) == 0) {
         return ScheduleStatus::wrong_thread;
     }
-    if (!pumping || active != ticket || !valid(ticket) || slots[ticket.index].state != TaskState::running) {
+    if (!pumping || owning || active != ticket || !valid(ticket) || slots[ticket.index].state != TaskState::running) {
         return ScheduleStatus::invalid;
     }
     return ScheduleStatus::ok;

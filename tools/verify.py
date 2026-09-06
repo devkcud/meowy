@@ -101,7 +101,7 @@ def main():
     else:
         print("Scope: repository contracts and full reference catalog execution.", flush=True)
     if runtime:
-        print("Native cleanup, guarded stacks, contexts and child waits are selected; automatic cancellation/scope-exit joins and DWARF unwinding remain unqualified.", flush=True)
+        print("Native cleanup, guarded stacks, contexts, child waits and owned task values are selected; automatic cancellation/scope-exit joins and DWARF unwinding remain unqualified.", flush=True)
     if not editor:
         print("Editor runtimes are not selected; use --editor both to include them.", flush=True)
     for check in checks:

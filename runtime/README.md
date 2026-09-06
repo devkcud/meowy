@@ -1,7 +1,7 @@
 # Native runtime prototypes
 
-This directory exercises explicit cleanup, guarded stack allocation and pinned
-native context switching with bounded scheduling independently of the compiler. It uses C++20 and
+This directory exercises explicit cleanup, owned payloads, guarded stack allocation
+and pinned context switching with bounded scheduling independently of the compiler. It uses C++20 and
 Clang 22.1.8 with exceptions and RTTI disabled. The
 compiler still links its existing scalar runtime; this prototype adds no Meowy
 syntax or runtime symbols to generated programs.
@@ -19,6 +19,8 @@ cleanup-after-resume subprocess. The sanitizer profile additionally requires an
 ASan stack-use-after-return report for a deliberately expired fiber local.
 Each profile also runs 18 scheduler cases, a real admission-refusal subprocess,
 a fatal task-cleanup subprocess and two unjoined-child protocol probes.
+Each profile also runs 12 owned-value cases and two fatal owned-cleanup probes,
+including cleanup of a capture after rejected admission.
 Cleanup panic cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
@@ -37,6 +39,79 @@ omits sanitizer checks. Missing tools, sanitizer failures and unsupported execut
 environments fail the selected checks. LeakSanitizer requires an environment
 without ptrace-based sandbox supervision; run the normal command with the required
 environment access when that restriction applies.
+
+## Explicit owned values and task payloads
+
+[include/meowy/owned.hpp](include/meowy/owned.hpp) adds a noncopyable `Owned` token
+over fixed caller-provided bytes. This owns an initialized resource in real
+storage; it is separate from the cleanup stack's obligation-only transfer.
+
+- Backing buffers must be valid, exclusively held, stable and nonoverlapping across
+  live `Owned` values and scheduler slots. They must outlive their tokens and any
+  borrowed views. The primitive checks destination capacity/alignment and rejects
+  overlapping source/destination buffers; it cannot validate arbitrary C++ pointers.
+- A `ValueOps` descriptor supplies size, alignment, move, drop and diagnostic name.
+  It must have static lifetime. Move is infallible and non-suspending: it constructs
+  the destination and ends the source object's lifetime without releasing the
+  transferred resource. Drop is non-suspending and ends the object's lifetime;
+  returning a panic takes the existing fatal P008 cleanup path. Neither callback
+  may rely on automatic C++ destructors to implement Meowy ownership.
+- `reserve(ops)` validates empty storage before construction. The caller explicitly
+  constructs the object and then calls `commit()`. A failed or cancelled constructor
+  leaves the token reserved, and `release()` skips destruction of that uninitialized
+  slot. Partial construction must clean its own initialized pieces before release.
+- `move_to(destination)` preflights both tokens, relocates the object and empties
+  the source. Failure leaves source ownership intact. Both tokens reject reentry
+  during relocation; a moved-from token cannot expose the old object through
+  `data()`. `release()` explicitly destroys a live value once and is harmless on
+  empty storage. Token destruction never silently releases an object.
+- `TaskSlot(capture_bytes, result_bytes)` admits fixed payload buffers independently
+  of its guarded execution stack. Default slots still support borrowed callbacks
+  but have no owned-payload capacity. No owned operation grows these buffers or
+  allocates an auxiliary container. Owned result storage must remain valid even
+  after the completed task's execution stack is unmapped.
+- `submit_owned(body, capture)` and `Task::spawn_owned(body, capture)` accept a live
+  capture after worker/capability/body checks. Invalid API preconditions preserve
+  caller ownership. Valid submission consumes it **before executor admission**:
+  full capacity or generation exhaustion drops it once even though no ticket can
+  be admitted; payload-capacity or OS admission failure also releases it without
+  running the body. An admitted failure ticket retains `spawn_failed` and any
+  failed stack rollback for explicit join retry. Storage failures are reported
+  separately from context failures.
+- On accepted admission, the body receives a pointer to the relocated capture in
+  its slot, not the original caller buffer. Owned submission has no separate user
+  cleanup callback; its descriptor handles capture release after the body and all
+  children finish. The borrowed submission API keeps its existing callback cleanup.
+- During its body, an active task can `set_result(value)` from an initialized
+  `Owned` token or `emit_capture()` to move its capture directly into the result.
+  Result storage is initialized at most once. Failure preserves the source value.
+  Both operations reject outstanding children and cleanup-phase calls; capture
+  borrows must finish at explicit joins before capture storage can move. After
+  `emit_capture()`, the body must stop using its old capture pointer.
+- A normal result survives settlement while the remaining capture is released.
+  A body panic releases an already emitted result before the capture, in reverse
+  initialization order. Cleanup panic is fatal and does not promise further drops.
+  Results must own their transferred resources or refer only to independently
+  surviving storage: a result cannot borrow task-stack or capture storage that
+  settlement releases. This prototype has no compiler-enforced payload type/lifetime
+  contract; descriptors and callbacks must uphold those requirements.
+- `Scheduler::join_owned(ticket, destination)` and `Task::join_owned(child, destination)`
+  require an empty destination. They preflight the result move, release the completed
+  context, then relocate the result and consume the ticket. A failed destination
+  check or context release leaves the result in its original slot, destination
+  untouched, and ticket/parent obligation valid for retry. Joining allocates no
+  additional result storage. Plain `join()` rejects a live owned result rather
+  than silently discarding it; use `join_owned()` and explicitly release the owner.
+- Scheduler-owned move/drop callbacks reject scheduler reentry and task suspension.
+  Generic `Owned` operations still require caller-exclusive access and non-suspending
+  callbacks. Admission and join never manufacture ownership for a borrowed pointer.
+
+Native tests cover relocation, initialized-only cleanup, alignment/capacity and
+overlap errors, callback reentry, accepted full/storage/OS failures, panic ordering,
+destination/release retry, owned child-to-parent transfer and parent capture borrows.
+A real pipe descriptor remains open through transfers and closes only when its final
+owner is explicitly released. Automatic compiler payload layout, full typed task
+results, allocation policy and cancellation unwinding remain separate work.
 
 ## Bounded worker scheduler
 
@@ -57,8 +132,9 @@ API; it does not implement the complete Meowy task or group contract.
   any retained mapping from a failed rollback. No body or cleanup runs on failed
   admission; the caller remains responsible for its data and resources.
 - Callback type is `Panic (Task &, void *) noexcept`; a zero code is normal
-  completion. `data` is borrowed caller-owned storage, not an automatically copied
-  or moved capture. The temporary `Task` capability cannot be copied or outlive
+  completion. For plain `submit`/`spawn`, `data` is borrowed caller-owned storage,
+  not an automatically copied or moved capture. Owned submission is described
+  above. The temporary `Task` capability cannot be copied or outlive
   its callback activation. It exposes `yield()`, child `spawn()` and waiting
   child `join()` within body/cleanup calls. Child APIs require the exact active
   task identity; a parked parent's or sibling's capability cannot control work
@@ -131,7 +207,7 @@ mapping through a failed join; a kernel `RLIMIT_AS` refusal verifies a joined
 cleanup locals alive across waits, exercise nested chains and unrelated worker
 progress, and reject active-capability misuse. Unjoined-child probes require exact
 private failure text and `SIGABRT`; no abandoned child is resumed to fake cleanup.
-Scoped groups, automatically transferred captures/results, implicit scope-exit
+Scoped groups, automatically lowered captures/results, implicit scope-exit
 joins, cancellation unwinding, timers, channels and a multi-worker executor remain
 unimplemented. An observed child panic is returned to the explicit join caller;
 automatic propagation of unobserved child failures is not provided.
@@ -339,8 +415,8 @@ Nothing promotes owners or borrows into arbitrary heap storage.
 1. Design the compiler's generated cleanup edges and initialized-slot metadata
    alongside moves and partial initialization. Decide whether the experimental
    ordered reservation restriction should survive that design.
-2. Add owned capture/result storage and compiler-generated scope-exit joins over
-   the fixed parent/child scheduler. Keep context release behind terminal cleanup
+2. Connect typed compiler moves/results and generated scope-exit joins to the owned
+   payload and parent/child primitives. Keep context release behind terminal cleanup
    and child completion; preserve worker, admission and sanitizer invariants.
 3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.

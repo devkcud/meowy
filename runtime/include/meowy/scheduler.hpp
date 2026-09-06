@@ -2,12 +2,13 @@
 
 #include "meowy/cleanup.hpp"
 #include "meowy/context.hpp"
+#include "meowy/owned.hpp"
 
 #include <span>
 
 namespace meowy::prototype::v0 {
 
-enum class ScheduleStatus : unsigned char { ok, full, invalid, wrong_thread, context_failed };
+enum class ScheduleStatus : unsigned char { ok, full, invalid, wrong_thread, context_failed, storage_failed };
 enum class TaskState : unsigned char { vacant, runnable, running, waiting, settled };
 enum class OutcomeKind : unsigned char { pending, completed, panicked, spawn_failed };
 
@@ -21,6 +22,7 @@ public:
     OutcomeKind kind = OutcomeKind::pending;
     Panic panic;
     ContextResult context;
+    OwnedStatus storage = OwnedStatus::ok;
 };
 
 struct TaskTicket final {
@@ -36,6 +38,7 @@ public:
     ScheduleStatus status = ScheduleStatus::invalid;
     TaskTicket ticket;
     ContextResult context;
+    OwnedStatus storage = OwnedStatus::ok;
 };
 
 struct TaskInfo final {
@@ -46,6 +49,7 @@ public:
     TaskTicket parent;
     TaskTicket waiting;
     std::size_t children = 0;
+    bool has_result = false;
 };
 
 struct PumpResult final {
@@ -62,6 +66,7 @@ public:
     ScheduleStatus status = ScheduleStatus::invalid;
     TaskOutcome outcome;
     ContextResult context;
+    OwnedStatus storage = OwnedStatus::ok;
 };
 
 class Task final {
@@ -72,7 +77,11 @@ public:
     Task &operator=(Task &&) = delete;
     [[nodiscard]] ContextStatus yield() noexcept;
     [[nodiscard]] Submission spawn(TaskBody body, void *data, TaskBody cleanup = nullptr) noexcept;
+    [[nodiscard]] Submission spawn_owned(TaskBody body, Owned &capture) noexcept;
     [[nodiscard]] Joined join(TaskTicket child) noexcept;
+    [[nodiscard]] Joined join_owned(TaskTicket child, Owned &destination) noexcept;
+    [[nodiscard]] OwnedStatus set_result(Owned &value) noexcept;
+    [[nodiscard]] OwnedStatus emit_capture() noexcept;
 
 private:
     friend class Scheduler;
@@ -85,11 +94,13 @@ private:
 class TaskSlot final {
 public:
     TaskSlot() = default;
+    TaskSlot(std::span<std::byte> capture, std::span<std::byte> result) noexcept;
     [[nodiscard]] bool runnable() const noexcept;
     [[nodiscard]] std::uint64_t sequence() const noexcept;
 
 private:
     friend class Scheduler;
+    friend class Task;
     Context context;
     TaskState state = TaskState::vacant;
     TaskOutcome outcome;
@@ -102,6 +113,10 @@ private:
     TaskTicket parent;
     TaskTicket waiting;
     std::size_t children = 0;
+    Owned capture;
+    Owned result;
+    bool owned = false;
+    bool producing = false;
 };
 
 [[nodiscard]] std::size_t select_task(std::span<const TaskSlot> slots, std::size_t cursor) noexcept;
@@ -115,21 +130,26 @@ public:
     Scheduler &operator=(Scheduler &&) = delete;
 
     [[nodiscard]] Submission submit(TaskBody body, void *data, TaskBody cleanup = nullptr) noexcept;
+    [[nodiscard]] Submission submit_owned(TaskBody body, Owned &capture) noexcept;
     [[nodiscard]] PumpResult pump(std::size_t limit) noexcept;
     [[nodiscard]] TaskInfo inspect(TaskTicket ticket) const noexcept;
     [[nodiscard]] Joined join(TaskTicket ticket) noexcept;
+    [[nodiscard]] Joined join_owned(TaskTicket ticket, Owned &destination) noexcept;
 
 private:
     friend class Task;
     struct Activation;
     static void run(Context &context, void *data) noexcept;
     static Panic clean(void *data) noexcept;
+    static Panic drop_capture(void *data) noexcept;
+    static Panic drop_result(void *data) noexcept;
     [[noreturn]] static void unjoined(std::string_view phase) noexcept;
     [[nodiscard]] ScheduleStatus access() const noexcept;
     [[nodiscard]] ScheduleStatus task_access(TaskTicket ticket) const noexcept;
-    [[nodiscard]] Submission admit(TaskBody body, void *data, TaskBody cleanup, TaskTicket parent) noexcept;
-    [[nodiscard]] Joined join_child(TaskTicket parent, TaskTicket child) noexcept;
-    [[nodiscard]] Joined consume(TaskTicket ticket) noexcept;
+    [[nodiscard]] Submission admit(TaskBody body, void *data, TaskBody cleanup, TaskTicket parent,
+                                   Owned *capture = nullptr) noexcept;
+    [[nodiscard]] Joined join_child(TaskTicket parent, TaskTicket child, Owned *destination = nullptr) noexcept;
+    [[nodiscard]] Joined consume(TaskTicket ticket, Owned *destination = nullptr) noexcept;
     void wake(TaskTicket child) noexcept;
     [[nodiscard]] bool valid(TaskTicket ticket) const noexcept;
     [[nodiscard]] std::size_t runnable_count() const noexcept;
@@ -141,6 +161,7 @@ private:
     std::uint64_t next = 1;
     const pthread_t worker;
     bool pumping = false;
+    bool owning = false;
     TaskTicket active;
     const bool configured;
 };

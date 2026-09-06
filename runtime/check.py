@@ -16,6 +16,7 @@ CASES = 14
 STACK_CASES = 10
 CONTEXT_CASES = 10
 SCHEDULER_CASES = 18
+OWNED_CASES = 12
 
 
 def invoke(args, timeout=60, env=None):
@@ -174,6 +175,7 @@ def check(clang, directory, sanitizers=True):
                         "-pthread", "-I", str(ROOT / "include"), *flags,
                         str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/stack_memory.cpp"),
                         str(ROOT / "src/context.cpp"), str(ROOT / "src/scheduler.cpp"),
+                        str(ROOT / "src/owned.cpp"),
                         str(ROOT / "src/task_policy.cpp"), str(ROOT / "tests/scheduler.cpp"),
                         "-Wl,--wrap=mmap,--wrap=mprotect,--wrap=munmap", *objects, "-o", str(scheduler)]))
         check_cases(invoke([str(scheduler)], env=env), SCHEDULER_CASES, "scheduler")
@@ -185,6 +187,20 @@ def check(clang, directory, sanitizers=True):
         check_unjoined(invoke([str(scheduler), "--unjoined-body"], env=env), "body")
         check_unjoined(invoke([str(scheduler), "--unjoined-cleanup"], env=env), "cleanup")
         print(f"PASS runtime scheduler: {name}; {SCHEDULER_CASES} cases, kernel refusal, fatal cleanup and unjoined-child probes", flush=True)
+        print(f"CHECK runtime owned values: {name}", flush=True)
+        owned = directory / f"owned-{name}"
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-fcf-protection=none", "-fstack-protector-strong",
+                        "-pthread", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/stack_memory.cpp"),
+                        str(ROOT / "src/context.cpp"), str(ROOT / "src/scheduler.cpp"),
+                        str(ROOT / "src/owned.cpp"), str(ROOT / "src/task_policy.cpp"),
+                        str(ROOT / "tests/owned.cpp"), "-Wl,--wrap=mmap,--wrap=mprotect,--wrap=munmap",
+                        *objects, "-o", str(owned)]))
+        check_cases(invoke([str(owned)], env=env), OWNED_CASES, "owned value")
+        check_fatal(invoke([str(owned), "--fatal-owned-cleanup"], env=env), True, "owned capture")
+        check_fatal(invoke([str(owned), "--fatal-owned-admission"], env=env), False, "owned resource")
+        print(f"PASS runtime owned values: {name}; {OWNED_CASES} cases and 2 fatal owned-cleanup probes", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
     print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, compiler integration and DWARF unwinding remain pending.")
