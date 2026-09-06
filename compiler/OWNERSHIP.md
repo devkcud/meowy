@@ -344,29 +344,38 @@ implementation boundary; it does not change language rules.
   conservatively overlap all indices within a list, preserving enclosing record
   fields and nested list prefixes without enumerating capacity. They retain every
   direct-function all-input dependency.
-- `values[index] = rhs` replaces one initialized element of a direct mutable
-  reference-free Copy list local. Parentheses around that local are allowed;
-  nested indices, field/reference targets and temporary owners remain B001.
+- `values[first][next] = rhs` replaces one initialized element through one or
+  more concrete list layers of a direct mutable reference-free Copy local.
+  Parentheses around local/path prefixes are allowed; field/reference targets,
+  union-payload projections and temporary owners remain B001.
   Immutable list bindings report E305. This adds no source exclusive-reference
   value or `&!` semantics; the final store requires exclusive collection access.
-- `SetElement` retains the target local ID and original target span. Lowering
-  captures storage and initialized length, evaluates the index once, checks bounds
-  before any RHS effect, then evaluates the contextually typed RHS once and writes
-  only the selected element. Length, capacity and other elements are unchanged.
-  Static positions use ordinary E101; P001 reports the target span, excluding RHS.
-- The CFG defines an internal storage reservation before the index, reads it at
-  the bounds/address phase, then consumes it at the final store. Completing index
+- `SetElement` retains the local ID, final target span and ordered `IndexStep`
+  entries. Each step contains its once-evaluated index and original prefix span.
+  Lowering captures each current list's initialized length, evaluates/checks that
+  index and forms its actual element address before inspecting the next layer.
+  After every index succeeds, it evaluates the contextually typed RHS once and
+  stores only the selected leaf. Lengths, capacities and other elements stay intact.
+  Static positions use E101; P001 identifies the failing prefix, excluding later
+  indices and RHS. Later effects cannot run before an earlier bounds check.
+- The CFG defines an internal storage reservation before the first index, reads
+  it at every returning bounds/address phase, then consumes it at the final store. Completing index
   or RHS owner replacements/nested writes conflict (E302), while shared reads and
   final-use RHS borrows can finish before the store. All element indices overlap
   for exclusive-access checks; an external shared loan live after the store is
   rejected. The reservation is not a user reference and never escapes.
-- A nonreturning index skips bounds/RHS/store; a nonreturning RHS skips the store.
+- A nonreturning index skips its bounds check, later indices, RHS and store;
+  a nonreturning RHS skips the store. Earlier returning phases retain their uses.
   The reservation has no use after the corresponding last executed phase, so
   owner replacement before an immediate panic/leave is allowed when no other loan
   survives. Returning index effects still require valid parent storage even when
   RHS later diverges. Only target-root refinement facts are forgotten after RHS
   checking; immutable copied elements keep their own type/variant facts. Nodes,
   reservation values and conflict work use the existing bounded CFG budgets.
+  Target flattening is iterative and limited to 256 indices before step allocation;
+  parser depth bounds also apply. Root types are charged once and consumed layer
+  by layer, avoiding repeated suffix copies. Every target/typed/CFG step is charged,
+  independently of list capacities.
 - Exclusive references, slices, aliases, removal, reference-bearing/owned elements
   and list formatting remain B001.
 
@@ -388,9 +397,10 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Extend initialized assignment targets to nested checked paths, preserving each
-   bounds phase, storage reservation and exact evaluation order. Add exclusive
-   references, slice/alias metadata and non-Copy element state separately.
+7. Define mutable record-field shapes/types before extending initialized assignment
+   targets through fields; current fields remain immutable. Preserve each bounds
+   phase, storage reservation and exact evaluation order. Add exclusive references,
+   slice/alias metadata and non-Copy element state separately.
 
 ## Verification
 

@@ -3022,7 +3022,6 @@ pub fn element_writes_check_mutability_types_and_remaining_place_boundaries() {
         ("a:=[1];r:&a;r[1]=2", "B001"),
         ("a:=[1];r:&a;(*r)[1]=2", "B001"),
         ("a:={->items:[1]};a.items[1]=2", "B001"),
-        ("a:=[[1]];a[1][1]=2", "B001"),
         ("[1][1]=2", "B001"),
         ("a:=[1];r:&!a[1]", "B001"),
     ] {

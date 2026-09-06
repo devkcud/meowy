@@ -155,6 +155,12 @@ pub struct Block {
 }
 
 #[derive(Clone, Debug)]
+pub struct IndexStep {
+    pub index: Expr,
+    pub span: Span,
+}
+
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Bind {
         id: LocalId,
@@ -166,7 +172,7 @@ pub enum Stmt {
     },
     SetElement {
         id: LocalId,
-        index: Expr,
+        path: Vec<IndexStep>,
         value: Expr,
         span: Span,
     },

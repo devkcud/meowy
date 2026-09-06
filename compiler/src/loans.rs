@@ -326,7 +326,7 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::SetElement {
                     id,
-                    index,
+                    path,
                     value,
                     span,
                 } => {
@@ -343,16 +343,22 @@ impl<'a> Graph<'a> {
                         defs: vec![reservation],
                         ..Node::default()
                     })?;
-                    let index = self.expression(index)?;
+                    for step in path {
+                        self.charge(1)?;
+                        let index = self.expression(&step.index)?;
+                        if self.current.is_empty() {
+                            break;
+                        }
+                        self.append(Node {
+                            uses: std::iter::once(reservation)
+                                .chain(index.into_values())
+                                .collect(),
+                            ..Node::default()
+                        })?;
+                    }
                     if self.current.is_empty() {
                         continue;
                     }
-                    self.append(Node {
-                        uses: std::iter::once(reservation)
-                            .chain(index.into_values())
-                            .collect(),
-                        ..Node::default()
-                    })?;
                     let value = self.expression(value)?;
                     if self.current.is_empty() {
                         continue;
@@ -864,6 +870,30 @@ impl<'a> Graph<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    pub(crate) fn nested_store_reservations_cover_each_returning_index() {
+        for source in [
+            "a:=[[1,2],[3,4]];r:&a[1][1];a[2][2]=*r+1",
+            "a:=[[1,2],[3,4]];b:=0;a[{b=1;->1}][{b=2;->2}]=3",
+            "d:@\"debug\";a:=[[1,2],[3,4]];a[1][{a=[[5,6],[7,8]];d.panic(\"stop\")}]=9",
+            "d:@\"debug\";a:=[[1,2],[3,4]];a[1][2]={a=[[5,6],[7,8]];d.panic(\"stop\")}",
+            "a:=[[1,2],[3,4]];'out{a[1][{a=[[5,6],[7,8]];'out.leave()}]=9}",
+            "a:=[[1,2],[3,4]];|false|a[1][{a=[[5,6],[7,8]];->2}]=9",
+        ] {
+            accepts(source);
+        }
+        for source in [
+            "a:=[[1,2],[3,4]];r:&a[1][1];a[2][2]=5;v:*r",
+            "a:=[[1,2],[3,4]];a[{a=[[5,6],[7,8]];->1}][1]=9",
+            "a:=[[1,2],[3,4]];a[1][{a=[[5,6],[7,8]];->1}]=9",
+            "a:=[[1,2],[3,4]];a[1][1]={a[2][2]=8;->9}",
+            "d:@\"debug\";a:=[[1,2],[3,4]];a[{a=[[5,6],[7,8]];->1}][{d.panic(\"stop\")}]=9",
+            "d:@\"debug\";a:=[[1,2],[3,4]];a[1][{a=[[5,6],[7,8]];->1}]=d.panic(\"stop\")",
+        ] {
+            rejects(source, "E302");
+        }
+    }
+
     #[test]
     pub(crate) fn element_store_reservations_end_at_each_actual_access() {
         for source in [

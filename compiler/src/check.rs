@@ -1121,8 +1121,8 @@ impl Checker {
                 while let ExprKind::Group(value) = &form.kind {
                     form = value;
                 }
-                if let ExprKind::Index { value: list, index } = &form.kind {
-                    return Ok(vec![self.set_element(list, index, value, target.span)?]);
+                if matches!(form.kind, ExprKind::Index { .. }) {
+                    return Ok(vec![self.set_element(target, value)?]);
                 }
                 let ExprKind::Name(name) = &target.kind else {
                     return Err(Diagnostic::unsupported(

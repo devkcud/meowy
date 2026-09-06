@@ -6,6 +6,7 @@ use crate::hir::{self, Type};
 
 pub(crate) const MAX_CAPACITY: usize = 65_536;
 pub(crate) const MAX_BYTES: usize = 1_048_576;
+pub(crate) const MAX_WRITE_PATH: usize = 256;
 
 #[derive(Clone)]
 pub(crate) struct Fact {
@@ -533,14 +534,33 @@ impl Checker {
 
     pub(crate) fn set_element(
         &mut self,
-        list: &ast::Expr,
-        index: &ast::Expr,
+        target: &ast::Expr,
         value: &ast::Expr,
-        span: Span,
     ) -> Result<hir::Stmt> {
-        let mut list = list;
-        while let ExprKind::Group(value) = &list.kind {
-            list = value;
+        let span = target.span;
+        let mut list = target;
+        let mut indices = Vec::new();
+        loop {
+            if !self.flow.spend(1) {
+                return Err(Diagnostic::unsupported(
+                    "element assignment path budget exhausted",
+                    span,
+                ));
+            }
+            match &list.kind {
+                ExprKind::Group(value) => list = value,
+                ExprKind::Index { value, index } => {
+                    if indices.len() == MAX_WRITE_PATH {
+                        return Err(Diagnostic::unsupported(
+                            "element assignment path budget exhausted",
+                            span,
+                        ));
+                    }
+                    indices.push((index.as_ref(), list.span));
+                    list = value;
+                }
+                _ => break,
+            }
         }
         let ExprKind::Name(name) = &list.kind else {
             return Err(Diagnostic::unsupported(
@@ -549,10 +569,7 @@ impl Checker {
             ));
         };
         let Value::Local {
-            id,
-            ty: Type::List { element, capacity },
-            mutable,
-            ..
+            id, ty, mutable, ..
         } = self.value(name, list.span)?
         else {
             return Err(Diagnostic::unsupported(
@@ -560,6 +577,12 @@ impl Checker {
                 span,
             ));
         };
+        if !matches!(ty, Type::List { .. }) {
+            return Err(Diagnostic::unsupported(
+                "element assignment outside direct local lists",
+                span,
+            ));
+        }
         if !mutable {
             return Err(Self::error(
                 "E305",
@@ -567,19 +590,42 @@ impl Checker {
                 list.span,
             ));
         }
-        if !self.places.contains(&id) || element.has_reference() {
+        if !self.places.contains(&id) || ty.has_reference() {
             return Err(Diagnostic::unsupported(
                 "element assignment requires addressable reference-free storage",
                 span,
             ));
         }
-        crate::borrow_contract::type_weight(&element, &mut self.flow, span)?;
-        let index = self.list_position(index, None, capacity)?;
-        let value = self.expr(value, Some(&element))?;
+        crate::borrow_contract::type_weight(&ty, &mut self.flow, span)?;
+        let mut ty = ty;
+        let mut path = Vec::new();
+        for (index, span) in indices.into_iter().rev() {
+            if !self.flow.spend(1) {
+                return Err(Diagnostic::unsupported(
+                    "element assignment path budget exhausted",
+                    span,
+                ));
+            }
+            let Type::List { element, capacity } = ty else {
+                return Err(Diagnostic::unsupported(
+                    "nested element assignment requires concrete lists",
+                    span,
+                ));
+            };
+            path.push(hir::IndexStep {
+                index: self.list_position(index, None, capacity)?,
+                span,
+            });
+            ty = *element;
+        }
+        if let Some(last) = path.last_mut() {
+            last.span = span;
+        }
+        let value = self.expr(value, Some(&ty))?;
         self.forget(id);
         Ok(hir::Stmt::SetElement {
             id,
-            index,
+            path,
             value,
             span,
         })
@@ -680,11 +726,56 @@ mod tests {
             ("a:=[1,2];a[1]=\"x\"", "E207"),
             ("a<uint8[2]>:=[1,2];a[1]=256", "E216"),
             ("a:=[1,2];p:&a;p[1]=3", "B001"),
-            ("a:=[[1,2],[3,4]];a[1][1]=3", "B001"),
             ("a:={->items:[1,2]};a.items[1]=3", "B001"),
             ("[1,2][1]=3", "B001"),
         ] {
             rejects(source, code);
+        }
+    }
+
+    #[test]
+    pub(crate) fn nested_assignment_paths_preserve_prefix_spans_and_leaf_context() {
+        for source in [
+            "a:=[[1,2],[3,4]];a[1][2]=5",
+            "a<uint8[2][2]>:=[[1,2],[3,4]];((a)[1])[2]=255",
+            "a:=[[[1,2]],[[3,4]]];a[2][1]=[5,6]",
+            "a:=[[{->n:1}],[{->n:2}]];a[2][1]={->n:3}",
+        ] {
+            let result = crate::compile(source);
+            assert!(result.is_ok(), "{source}: {result:?}");
+        }
+        for (source, code) in [
+            ("a:=[[1,2],[3,4]];a[1][0]=5", "E101"),
+            ("a:=[[1,2],[3,4]];a[0][1]=5", "E101"),
+            ("a<uint8[2][2]>:=[[1,2],[3,4]];a[1][2]=256", "E216"),
+            ("a:=[[1,2],[3,4]];a[1][2]=\"x\"", "E207"),
+            ("a:=[{->items:[1,2]}];a[1].items[2]=5", "B001"),
+            ("a:=[[1,2],[3,4]];r:&a;r[1][2]=5", "B001"),
+        ] {
+            rejects(source, code);
+        }
+        let source = "a:=[[1,2],[3,4]];a[1][2]=5";
+        let program = crate::compile(source).unwrap();
+        let Some(crate::hir::Stmt::SetElement { path, .. }) = program.body.stmts.last() else {
+            panic!("expected initialized assignment");
+        };
+        let prefixes = path
+            .iter()
+            .map(|step| &source[step.span.start..step.span.end])
+            .collect::<Vec<_>>();
+        assert_eq!(prefixes, ["a[1]", "a[1][2]"]);
+        for depth in [32, 64] {
+            let mut value = "1".to_owned();
+            for _ in 0..depth {
+                value = format!("[{value}]");
+            }
+            let source = format!("a:={value};a{}=2", "[1]".repeat(depth));
+            if depth == 32 {
+                let result = crate::compile(&source);
+                assert!(result.is_ok(), "{result:?}");
+            } else {
+                rejects(&source, "B001");
+            }
         }
     }
 

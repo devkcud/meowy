@@ -586,7 +586,7 @@ impl Checker<'_> {
                 }
                 Stmt::SetElement {
                     id,
-                    index,
+                    path,
                     value,
                     span,
                 } => {
@@ -596,7 +596,24 @@ impl Checker<'_> {
                     {
                         return Err(Self::unsupported(*span));
                     }
-                    let mut result = self.expression(index)?.flow;
+                    let mut result = Flow::new();
+                    let mut ty = &self.program.locals[*id];
+                    if path.is_empty() {
+                        return Err(Self::unsupported(*span));
+                    }
+                    for step in path {
+                        if !result.next {
+                            break;
+                        }
+                        if !self.guards.spend(1) {
+                            return Err(State::budget(step.span));
+                        }
+                        let Type::List { element, .. } = ty else {
+                            return Err(Self::unsupported(step.span));
+                        };
+                        ty = element;
+                        result.append(self.expression(&step.index)?.flow);
+                    }
                     if result.next {
                         let value = self.expression(value)?;
                         if value.flow.next
