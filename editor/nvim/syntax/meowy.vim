@@ -46,6 +46,10 @@ syntax region meowyList matchgroup=meowyDelimiter start=/\[/ end=/\]/ transparen
 " A named outer type must reach a type delimiter. In particular, '< limit'
 " and '<< task' must not start a region that consumes the rest of the file.
 syntax region meowyType matchgroup=meowyTypeDelimiter start=/\%(<\)\@<!<\ze\_s*\%([:&*!({"]\|>\|[A-Za-z_][A-Za-z0-9_]*\%(\.[A-Za-z_][A-Za-z0-9_]*\)*\_s*\%([><]\|\[\)\)/ end=/\%(-\)\@<!>/ contains=@meowyTypeBody
+" A bare first argument can instead reach a comma. Require a closed list and
+" following punctuation so call(x<limit,other>0) keeps comparison highlighting.
+" Nested named arguments and extents remain valid with or without whitespace.
+syntax region meowyType matchgroup=meowyTypeDelimiter start=/\%(<\)\@<!<\ze\_s*[A-Za-z_][A-Za-z0-9_]*\%(\.[A-Za-z_][A-Za-z0-9_]*\)*\_s*,\%(\_s\|[A-Za-z0-9_.,<>:&*!]\|\[\|\]\)*>\_s*\%((\|)\|\]\|[,:;.}>|]\|$\)/ end=/\%(-\)\@<!>/ contains=@meowyTypeBody
 " Once inside a type, angle brackets nest; adjacent '>>' close two levels.
 " The '>' in a function arrow never closes either region.
 syntax region meowyTypeArguments matchgroup=meowyTypeDelimiter start=/</ end=/\%(-\)\@<!>/ contained contains=@meowyTypeBody

@@ -70,7 +70,8 @@ when the client omits that capability.
 The highlighter handles:
 
 - Nested generic types, record types, function signatures, constrained binders,
-  union alternatives, type subtraction, and type queries.
+  multiple parameters and arguments, union alternatives, type subtraction, and
+  type queries.
 - References and pointers, including `<&!T>`, `<*!T>`, and `&!value`, plus `!{ ... }`
   safety boundaries.
 - Task submission and joins (`>>`, `<<`), group declarations, labeled scopes,
@@ -85,6 +86,9 @@ Type regions nest, so `>>` inside a generic type closes two type arguments while
 `>>` in an expression denotes task submission. A function type's `->` does not
 close its angle brackets. A comparison such as `count < limit` does not start a
 multiline type region. Unrecognized string escapes are highlighted as errors.
+Comma-separated specializations such as `make_d<string,uint32,boolean,string>(...)`
+also retain type highlighting; `call(x<limit,other>0)` keeps its comparison
+operators.
 
 Spaced and unspaced types share highlighting. In `|value<T>|statement`, the type
 is a matcher predicate; outside a condition it is an ascription. The highlighter

@@ -55,7 +55,10 @@ with explicit fixtures, failure expectations, and case-process budgets.
 ## Read the contracts
 
 In API tables, `T` is a compile-time type parameter and `N` is a compile-time
-capacity. `T or Error` denotes a concrete union, written `<T><Error>` in source.
+capacity. Names such as `K` and `V` are independent type parameters, as in
+`collections.Map<K,V>`; [generic declarations](../types.md#multiple-type-parameters)
+explain how to declare your own types and functions with several parameters.
+`T or Error` denotes a concrete union, written `<T><Error>` in source.
 `&T` borrows and `&!T` borrows exclusively. An unborrowed non-copyable argument
 transfers ownership. Collection, task, and endpoint operations borrow their
 receiver unless explicitly described as consuming it. Stateful mutation requires

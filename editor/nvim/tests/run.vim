@@ -92,6 +92,42 @@ call s:At('>> : nested', '>>', 'meowyTypeDelimiter')
 call s:At('>> : nested', '>>', 'meowyTypeDelimiter', 1)
 call s:At('after_generic : 43', 'after_generic', 'meowyBinding')
 
+" Multiple binders and arguments have the same punctuation in compact source.
+call s:At('<D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;extra<Y>;tail<Z>}>', 'K', 'meowyTypeName')
+call s:At('<D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;extra<Y>;tail<Z>}>', ':Z', 'meowyTypeOperator')
+call s:At('<D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;extra<Y>;tail<Z>}>', ':Z', 'meowyTypeName', 1)
+call s:At('pick<:K,:V><V>:(key<K>,value<V>){->value}', ':V', 'meowyTypeName', 1)
+call s:At('pick<:K,:V><V>:(key<K>,value<V>){->value}', '><V>', 'meowyTypeName', 2)
+call s:At('pick<:K,:V><V>:(key<K>,value<V>){->value}', '->', 'meowyEmit')
+call s:At('<Bound<:K:memory.Copy&tasks.Send,:V:memory.Copy&tasks.Send>>:<{key<K>;value<V>}>', 'Copy', 'meowyTypeName')
+call s:At('<Bound<:K:memory.Copy&tasks.Send,:V:memory.Copy&tasks.Send>>:<{key<K>;value<V>}>', 'Send,:V', 'meowyTypeName', 6)
+call s:At('<Bound<:K:memory.Copy&tasks.Send,:V:memory.Copy&tasks.Send>>:<{key<K>;value<V>}>', '&', 'meowyTypeOperator')
+for s:line in ['packed:make_d<string,uint32,boolean,string>("key",7,true,"tail")', 'spaced : make_d < string, uint32, boolean, string > ("key",7,true,"tail")']
+  call s:At(s:line, 'make_d', 'meowyCall')
+  for s:type in ['string', 'uint32', 'boolean']
+    call s:At(s:line, s:type, 'meowyTypeName')
+  endfor
+  call s:At(s:line, 'true', 'meowyBuiltinValue')
+endfor
+call s:At('table:collections.map<string,uint32>(memory.heap)', 'map', 'meowyCall')
+call s:At('table:collections.map<string,uint32>(memory.heap)', 'string', 'meowyTypeName')
+call s:At('table:collections.map<string,uint32>(memory.heap)', 'heap', 'meowyIdentifier')
+call s:At('later_nested:make_d<string,collections.Map<string,uint32>,boolean,string>(key,value,true,tail)', 'Map', 'meowyTypeName')
+call s:At('later_nested:make_d<string,collections.Map<string,uint32>,boolean,string>(key,value,true,tail)', 'boolean', 'meowyTypeName')
+call s:At('first_nested:make_d<collections.Map<string,uint32>,boolean,string,uint32>(key,true,value,7)', 'uint32', 'meowyTypeName')
+call s:At('first_nested:make_d<collections.Map<string,uint32>,boolean,string,uint32>(key,true,value,7)', 'boolean', 'meowyTypeName')
+call s:At('    string,', 'string', 'meowyTypeName')
+call s:At('    boolean,', 'boolean', 'meowyTypeName')
+call s:At('>(key,7,true,tail)', '>', 'meowyTypeDelimiter')
+call s:At('>(key,7,true,tail)', 'key', 'meowyIdentifier')
+for s:line in ['call(x<limit,other>0)', 'call(x < limit, other > 0)']
+  call s:At(s:line, 'limit', 'meowyIdentifier')
+  call s:At(s:line, 'other', 'meowyIdentifier')
+  call s:At(s:line, '>', 'meowyOperator')
+  call s:At(s:line, '0', 'meowyNumber')
+endfor
+call s:At('after_multi:47', 'after_multi', 'meowyBinding')
+
 " Matcher context, not spacing, determines the role of a nonempty type suffix.
 call s:At('|value<int32>|debug.print("{value}")', 'int32', 'meowyTypeName')
 call s:At('| value < int32 > | debug.print("{value}")', 'int32', 'meowyTypeName')

@@ -101,40 +101,42 @@ literal contents retain their own bytes regardless of the surrounding layout.
 
 ## Forms at a glance
 
-| Form                         | Meaning                                                          |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `name : value`               | Immutable binding                                                |
-| `name := value`              | Mutable binding                                                  |
-| `name <T> : value`           | Explicit binding type                                            |
-| `name = value`               | Reassign a mutable binding                                       |
-| `<Name> : <T>`               | Type alias                                                       |
-| `-> value`                   | Primary emission                                                 |
-| `-> name : value`            | Immutable named emission                                         |
-| `-> name := value`           | Mutable named emission                                           |
-| `(x <T>) { ... }`            | Function value                                                   |
-| `f <R> : (x <T>) { ... }`    | Function declaration with result type `R`                        |
-| `f(value)`                   | Function call                                                    |
-| `value.name`                 | Field selection                                                  |
-| `value.(f)`                  | Call `f` with `value` as its first argument                      |
-| `value.{ ... }`              | Evaluate block with `self` bound to `value`                      |
-| `\| condition \| statement`  | Conditional matcher arm                                          |
-| `'scope { ... }`             | Named, immediately evaluated block                               |
-| `'scope -> value`            | Primary emission into a named enclosing block                    |
-| `'scope.leave()`             | Finish that named block                                          |
-| `'scope.restart()`           | Clean up and restart that named block                            |
-| `\| value<T> \| statement`   | Type predicate in a matcher condition                            |
-| `value<>`                    | Compile-time type query                                          |
-| `value<T>`                   | Proven type ascription in a value expression; no conversion      |
-| `name<(expression)> : value` | Binding annotated by a computed type                             |
-| `@"name"`                    | Module import                                                    |
-| `&value`, `&!value`          | Shared or exclusive borrow                                       |
-| `*reference`                 | Access a safe reference's referent                               |
-| `>> expression`, `<< task`   | Start or join a task                                             |
-| `&group<T[N]>`               | Declare a bounded task group                                     |
-| `&group >> expression`       | Submit a task to a group                                         |
-| `!{ ... }`                   | Block permitting operations with caller-proven safety conditions |
-| `(x <T>) !{ ... }`           | Function whose callers must establish those conditions           |
-| `<:T : memory.Copy>`         | Generic type binder constrained by a capability value            |
+| Form                                    | Meaning                                                          |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `name : value`                          | Immutable binding                                                |
+| `name := value`                         | Mutable binding                                                  |
+| `name <T> : value`                      | Explicit binding type                                            |
+| `name = value`                          | Reassign a mutable binding                                       |
+| `<Name> : <T>`                          | Type alias                                                       |
+| `-> value`                              | Primary emission                                                 |
+| `-> name : value`                       | Immutable named emission                                         |
+| `-> name := value`                      | Mutable named emission                                           |
+| `(x <T>) { ... }`                       | Function value                                                   |
+| `f <R> : (x <T>) { ... }`               | Function declaration with result type `R`                        |
+| `f(value)`                              | Function call                                                    |
+| `value.name`                            | Field selection                                                  |
+| `value.(f)`                             | Call `f` with `value` as its first argument                      |
+| `value.{ ... }`                         | Evaluate block with `self` bound to `value`                      |
+| `\| condition \| statement`             | Conditional matcher arm                                          |
+| `'scope { ... }`                        | Named, immediately evaluated block                               |
+| `'scope -> value`                       | Primary emission into a named enclosing block                    |
+| `'scope.leave()`                        | Finish that named block                                          |
+| `'scope.restart()`                      | Clean up and restart that named block                            |
+| `\| value<T> \| statement`              | Type predicate in a matcher condition                            |
+| `value<>`                               | Compile-time type query                                          |
+| `value<T>`                              | Proven type ascription in a value expression; no conversion      |
+| `name<(expression)> : value`            | Binding annotated by a computed type                             |
+| `@"name"`                               | Module import                                                    |
+| `&value`, `&!value`                     | Shared or exclusive borrow                                       |
+| `*reference`                            | Access a safe reference's referent                               |
+| `>> expression`, `<< task`              | Start or join a task                                             |
+| `&group<T[N]>`                          | Declare a bounded task group                                     |
+| `&group >> expression`                  | Submit a task to a group                                         |
+| `!{ ... }`                              | Block permitting operations with caller-proven safety conditions |
+| `(x <T>) !{ ... }`                      | Function whose callers must establish those conditions           |
+| `<:T : memory.Copy>`                    | Generic type binder constrained by a capability value            |
+| `<D<:K,:V,:Y,:Z>> : <{...}>`            | Generic type alias with four independent type parameters         |
+| `f<:K,:V><V> : (key<K>,value<V>) {...}` | Generic function with an explicit result type                    |
 
 The escaped pipes in the table stand for literal `|` characters. Spaces around
 angle brackets do not change their role: `value<T>` and `value <T>` have the same
@@ -142,7 +144,18 @@ meaning in the same grammatical position. See the contextual rules below.
 
 `<T><U>` is a union in a type position, and `!<U>` subtracts members from a type.
 Generic arguments name types without an extra pair of angle brackets:
-`<task<int32>>`. Use a type alias for a union inside a generic argument.
+`<task<int32>>` or `<D<string,uint32,boolean,string>>`. Use a type alias for a
+union inside a generic argument. Declaration lists introduce each type binder
+with `:`, as in `<:K,:V>`; argument lists omit those markers, as in `<K,V>`.
+Parameters are positional, and an explicit list supplies every argument.
+See [multiple type parameters](types.md#multiple-type-parameters) for complete
+type declarations, functions, inference, and constraints.
+
+A function's leading binder list is separate from its result annotations.
+`f<:K,:V><V>` declares two parameters and result `<V>`; the binders are not union
+alternatives. The existing `f<:T>` shorthand declares `T` and result `<T>` when
+no separate result is written. `f<:T><T><null>` explicitly returns their union.
+These forms retain the same meaning without spaces.
 
 ## Angle brackets in context
 

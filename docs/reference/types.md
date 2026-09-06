@@ -224,9 +224,10 @@ Assigning it to an ordinary function pointer cannot erase that requirement.
 An ordinary function may use an inner `!{ ... }` block after checking the necessary
 preconditions itself. Neither form introduces a keyword.
 
-`<:T>` declares a generic result parameter and makes `<T>` available throughout
-the signature and body, as in `fallback` above. Generic type aliases use binders
-inside their parameter list:
+### Generic type declarations
+
+A leading `:` declares a type parameter. Generic type aliases put these binders
+inside the alias name's parameter list:
 
 ```meowy
 <Pair<:T>> : <{
@@ -235,12 +236,175 @@ inside their parameter list:
 }>
 ```
 
-Generic calls are specialized for concrete compile-time arguments. Inference may
-deduce those arguments from parameters; ambiguity requires an explicit argument.
-The body must be valid for every accepted type, so an unconstrained `T` cannot be
-added, indexed, or copied merely because one call happens to use an integer.
-Pass a typed function parameter for such operations. The core has no implicit
-operator overloading or automatic dictionary lookup.
+`<Pair<uint32>>` substitutes `<uint32>` for both fields. The `:` belongs to the
+declaration; supplying an argument uses the type's name without that binder
+marker or an extra pair of angle brackets. The alias does not create a runtime
+constructor named `Pair`; construct a record with the desired annotation or
+write an ordinary function that returns it.
+
+### Multiple type parameters
+
+Separate binders with commas and introduce **each** one with `:`. There is no
+single-parameter restriction. This complete example declares and uses four
+independent type parameters:
+
+```meowy
+-> <D<:K, :V, :Y, :Z>> : <{
+    key <K>
+    value <V>
+    context <Y>
+    status <Z>
+}>
+
+record <D<string, uint32, boolean, string>> : {
+    -> key : "attempts"
+    -> value : 3
+    -> context : true
+    -> status : "ready"
+}
+```
+
+`K`, `V`, `Y`, and `Z` are ordinary names in the type namespace. They are scoped
+to this declaration, must be unique within the binder list, and need not denote
+different concrete types: the example supplies `<string>` twice. The leading
+`->` exports the generic alias; omit it for a private alias.
+
+Arguments are positional: the example binds `K = string`, `V = uint32`,
+`Y = boolean`, and `Z = string`. A type use must supply exactly the declared
+number of type arguments. There are no default type arguments, named arguments,
+partial lists, or placeholder arguments. `<D<string, uint32>>` therefore does
+not leave `Y` and `Z` for later. An ordinary binding may still omit its entire
+annotation and infer its type from a value.
+
+Each argument can itself be a concrete reference, list, function, or instantiated
+generic type. Use a type alias when supplying a union:
+
+```meowy
+<MaybeStatus> : <string><null>
+<OptionalStatusRecord> : <D<string, uint32, boolean, MaybeStatus>>
+```
+
+`D<K,V,Y,Z>` describes four parameter positions; `<K><V><Y><Z>` instead describes
+one union. A union argument occupies one position. `<D<K,V,Y,Z>>` remains a
+structural alias after substitution: its parameter list does not add a hidden
+nominal tag, erase fields, introduce variance, or perform conversions.
+
+Whitespace does not select any of these forms. For example, this is the same
+declaration with a private alias and no spaces:
+
+```meowy
+<D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;context<Y>;status<Z>}>
+```
+
+These are **type** binders. Library APIs such as `collections.Array<T,N>` also
+accept a compile-time capacity in their documented `N` position; a declaration
+`:N` would introduce a type parameter, not an integer capacity parameter.
+
+### Generic functions and result types
+
+A function's binder list comes after its name, before any explicit result
+annotation. Using `D` from the preceding example, this exported constructor moves
+each input into its corresponding result field:
+
+```meowy
+-> make_d<:K, :V, :Y, :Z><D<K, V, Y, Z>> : (
+    key <K>, value <V>, context <Y>, status <Z>
+) {
+    -> {
+        -> key : key
+        -> value : value
+        -> context : context
+        -> status : status
+    }
+}
+
+explicit : make_d<string, uint32, boolean, string>("attempts", 3, true, "ready")
+
+count <uint32> : 3
+inferred : make_d("attempts", count, true, "ready")
+```
+
+Both results have type `<D<string,uint32,boolean,string>>`. In the first call,
+the explicit `<uint32>` argument gives `3` its expected type. In the second,
+the already typed `count` supplies that information. Each concrete specialization
+keeps normal inline storage, moves, borrows, and cleanup; constructing a generic
+record does not implicitly allocate or box its fields.
+
+The leading binder list declares parameters; it is **not** a result union member.
+Subsequent type annotations form the complete result type. A single binder with
+no separate result retains the shorthand used by `fallback`: `<:T>` declares `T`
+and uses `<T>` as the result. Multiple binders have no implied result type; a
+local function may infer its result from emissions, while an exported function
+must provide an explicit result annotation.
+
+| Function declaration prefix         | Type parameters    | Result contract                                            |
+| ----------------------------------- | ------------------ | ---------------------------------------------------------- |
+| `identity<:T> :`                    | `T`                | Shorthand result `<T>`.                                    |
+| `consume<:T><null> :`               | `T`                | Explicit result `<null>`.                                  |
+| `maybe<:T><T><null> :`              | `T`                | Explicit union result `<T><null>`.                         |
+| `second<:K,:V><V> :`                | `K`, `V`           | Explicit result `<V>`.                                     |
+| `make_d<:K,:V,:Y,:Z><D<K,V,Y,Z>> :` | `K`, `V`, `Y`, `Z` | Explicit constructed result.                               |
+| `local_pair<:K,:V> :`               | `K`, `V`           | Inferred local result; incomplete at an exported boundary. |
+
+For example, a nullable result needs its success type after the binder list too:
+
+```meowy
+-> maybe<:T><T><null> : (value <T>, present <boolean>) 'result {
+    | present | {
+        'result -> value
+        'result.leave()
+    }
+    -> null
+}
+```
+
+`value` moves into the result on the first path; otherwise normal scope cleanup
+releases it. No copying constraint is needed. Function parameters and result
+annotations may refer to any binder in the list, even when the result does not
+mention every parameter. Bind all parameters in one list, rather than writing
+several separate binder lists.
+
+### Inference and specialization
+
+Generic calls specialize for concrete compile-time arguments. Supply the entire
+type-argument list or omit it and infer the entire list from the static types of
+value arguments, including typed callback signatures and nested record fields.
+Result annotations at the call site, capability requirements, and runtime values
+do not choose otherwise unknown arguments. A parameter used only in the result,
+or erased from every parameter type by alias expansion, needs an explicit list.
+
+Inference first gathers information from already typed arguments. Literals are
+checked against a uniquely established expected type; when none is available,
+they follow the [ordinary literal defaults](syntax.md#literals-values-and-comments).
+For example, `make_d("attempts", 3, true, "ready")` infers `V = int32`. Assigning that result
+to a binding requiring `V = uint32` does not silently change the specialization.
+Use an explicit list or an already typed argument, as above.
+
+Repeated occurrences of one binder must resolve consistently. Inference does not
+invent a union, numeric widening, or erased type to reconcile conflicting typed
+arguments. Once the arguments are known, ordinary assignment compatibility
+applies; explicitly supplying a named union permits its members as normal.
+
+Structural matching uses only uniquely determined information. A parameter
+`<T><null>` receiving `<string><null>` does not alone distinguish `T = string`
+from `T = string|null`; both substitutions fit. Defer that ambiguity until other
+arguments determine `T`, or require an explicit list. For example,
+`fallback(null, "Dev")` determines `T = string` from its plain `<T>` alternative,
+then checks that the first argument fits `<string><null>`.
+
+Aliases are expanded structurally during inference. There is no hidden record
+tag from which to recover a type argument that leaves no evidence in the fields.
+Ambiguous or conflicting inference, a wrong generic arity, or a wrong argument
+kind uses `E212`, identifying the binder and contributing arguments. Duplicate
+binders use `E203`; unmet capabilities use `E210`; an incomplete exported result
+uses `E214`. A type cannot depend on runtime input (`E211`).
+
+The body must be valid for every type admitted by its declared constraints. An
+unconstrained parameter cannot be added, indexed, or copied just because one call
+happens to supply an integer. Supply a typed operation as a function parameter
+when generic code needs it; there is no implicit operator-overloading dictionary.
+
+### Per-parameter constraints
 
 Generic values can be moved or borrowed without requiring them to be copyable.
 A body using the same owned generic value twice is rejected unless its declared
@@ -248,6 +412,35 @@ constraint proves copying legal. `memory.Copy` and `tasks.Send` are compiler-kno
 capability values. A second `:` in a generic binder declares its requirement:
 `<:T : memory.Copy>` accepts only copyable types. `&` joins requirements in this
 position: `<:T : memory.Copy & tasks.Send>` requires both capabilities.
+
+In a list, each requirement belongs only to the binder before it. A comma ends
+that binder; the next `:` introduces the next one:
+
+```meowy
+memory : @"memory"
+tasks : @"tasks"
+
+<Envelope<:K : memory.Copy & tasks.Send, :V : tasks.Send>> : <{
+    key <K>
+    value <V>
+}>
+```
+
+`K` must be both copyable and transferable; `V` only needs transferability.
+The constraints apply at every specialization, including when a parameter is
+unused in the alias body. An unconstrained neighboring parameter gains no
+capabilities from them. In the constructor above, all four inputs may be owners
+because each is moved once. A helper copying only the key constrains only `K`:
+
+```meowy
+-> copy_key<:K : memory.Copy, :V, :Y, :Z><K> : (source <&D<K,V,Y,Z>>) {
+    -> source.key
+}
+```
+
+This helper uses the preceding `D` declaration and `memory` import. It borrows
+the record and copies the key without requiring `V`, `Y`, or `Z` to be copyable.
+The original single-parameter form still works:
 
 ```meowy
 memory : @"memory"
@@ -261,6 +454,8 @@ Constraint names follow ordinary lookup in the type namespace. An alias of a
 capability has the same meaning; an unrelated value with the same name cannot
 grant copying or transfer privileges. There is no trailing constraint clause or
 word-based modifier on a declaration.
+
+### Callable environments
 
 Capturing functions have an inferred, concrete environment type. They are not
 function pointers and do not implicitly allocate. A closure borrows captures

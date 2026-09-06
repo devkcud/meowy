@@ -62,6 +62,24 @@ value <collections.Vector<
 >> : nested
 after_generic : 43
 
+<D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;extra<Y>;tail<Z>}>
+pick<:K,:V><V>:(key<K>,value<V>){->value}
+<Bound<:K:memory.Copy&tasks.Send,:V:memory.Copy&tasks.Send>>:<{key<K>;value<V>}>
+packed:make_d<string,uint32,boolean,string>("key",7,true,"tail")
+spaced : make_d < string, uint32, boolean, string > ("key",7,true,"tail")
+table:collections.map<string,uint32>(memory.heap)
+later_nested:make_d<string,collections.Map<string,uint32>,boolean,string>(key,value,true,tail)
+first_nested:make_d<collections.Map<string,uint32>,boolean,string,uint32>(key,true,value,7)
+multi_line:make_d<
+    string,
+    uint32,
+    boolean,
+    string
+>(key,7,true,tail)
+call(x<limit,other>0)
+call(x < limit, other > 0)
+after_multi:47
+
 # Spacing never selects a type test, ascription, or generic call. #
 |value<int32>|debug.print("{value}")
 | value < int32 > | debug.print("{value}")
