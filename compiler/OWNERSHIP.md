@@ -11,8 +11,9 @@ implementation boundary; it does not change language rules.
   temporary. Distinct live locals retain distinct identities in both profiles.
 - Shared references are non-null target-width pointers and copy by value.
   Equality compares addresses; dereference copies the supported copyable referent.
-- Eligible roots are immutable or mutable ordinary local bindings. Parameters, dispatch
-  receivers and named emitted bindings require their own place/identity work first.
+- Eligible roots include ordinary locals, reference-free by-value parameters and
+  dispatch receiver copies. Parameter/self addresses refer to their local storage,
+  not an original caller value. Named emitted bindings remain separate work.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
   unreachable writes. Private tables associate those IDs and block IDs with the
@@ -30,8 +31,8 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans, temporary borrows and
-  reference dispatch blocks are B001. Exclusive reborrows remain B001. Direct function signatures can carry shared
+- Mutable reference-bearing bindings, exclusive loans/reborrows and temporary-owner
+  borrows remain B001. Direct signatures and dispatch blocks can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
@@ -113,7 +114,8 @@ implementation boundary; it does not change language rules.
   sources. Each active parameter reference leaf gets its own symbolic source;
   the parameter's stack copy is not its referent. A completed return must borrow
   from such input sources. Returning any local actual origin or dependency is
-  E303. Ordinary by-value parameter address-taking remains B001.
+  E303. A parameter's own address is a Local source and can only be used while
+  its function storage survives; it never receives the Input-source exemption.
 - `State.bounds` is separate from actual pointer origins. At a call, possible
   actual sources are compatible whole input referents and their concrete named
   descendants, using the result leaf's exact reference type. Each returned reference also inherits every active input
@@ -146,13 +148,34 @@ implementation boundary; it does not change language rules.
   Existing string values are literal-backed static views and do not create local
   referent-storage dependencies merely by passing a string value.
 
+## Parameter and dispatch storage
+
+- Reference-free parameters may be borrowed within the function or its nested
+  blocks. Returning their addresses, directly or through another call/dispatch,
+  is E303. Every definition is checked even when callers infer no normal return.
+- A by-value dispatch receiver is copied into an immutable `self` local before the
+  body runs. Borrowing `self` or its concrete fields observes that copy. Changes
+  to an original mutable owner do not change it; its address cannot leave the block.
+- A shared-reference receiver instead copies the reference value. Returning `self`
+  or a reborrow of its referent retains the original sources and inherited bounds.
+  Reference-bearing record/union receivers use the same component/variant facts
+  as ordinary immutable bindings, without adding a function-style all-input bound.
+- Receiver expressions and function arguments evaluate once in order. Source/native
+  tests distinguish original versus copied addresses, nullable carrier dispatch,
+  earlier argument copies, effectful receivers and enclosing-scope early leaves.
+- Taking the address of a reference-bearing holder is still B001. Shared dispatch
+  does not enable exclusive `self` mutation, captures or emitted-slot addresses.
+
 ## Shared reborrows
 
 - `&*view`, `&view.field` and parenthesized concrete field paths address the
   original shared referent. The HIR reborrow node evaluates its parent exactly
   once; lowering applies typed field-address operations without copying records.
   Temporary reference values from calls/blocks are allowed because their referents
-  retain the original lifetime. Borrowing a temporary owner remains B001.
+  retain the original lifetime. Leading carrier fields may produce that reference,
+  as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
+  at the final field still requests holder storage (`&holder.view`) and is B001.
+  Borrowing a temporary owner or a holder's own scalar field remains B001.
 - Pure address hints resolve types without lowering expressions or changing
   application control flow. Regression coverage includes effectful calls in
   equality and argument blocks that leave an enclosing scope before the call.

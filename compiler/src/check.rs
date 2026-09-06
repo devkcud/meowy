@@ -669,6 +669,7 @@ impl Checker {
         if let Some(value) = receiver {
             let ty = value.ty.clone();
             let local = self.local(ty.clone());
+            self.places.insert(local);
             self.declare(
                 "self",
                 Value::Local {
@@ -973,6 +974,7 @@ impl Checker {
         for param in params {
             let ty = self.ty(&param.ty)?;
             let id = self.local(ty.clone());
+            self.places.insert(id);
             self.declare(
                 &param.name,
                 Value::Local {
@@ -1735,12 +1737,6 @@ impl Checker {
             } => return self.call(callee, args, Some(value), expr.span),
             ExprKind::DispatchBlock { value, block } => {
                 let value = self.expr(value, None)?;
-                if value.ty.has_reference() {
-                    return Err(Diagnostic::unsupported(
-                        "reference dispatch receivers",
-                        expr.span,
-                    ));
-                }
                 let block = self.block(block, expected.cloned(), Some(value))?;
                 let ty = block.ty.clone();
                 (hir::ExprKind::Block(block), ty)
@@ -1894,7 +1890,7 @@ impl Checker {
         };
         let mut names = Vec::new();
         let root = Self::address_root(expr, &mut names);
-        let value = if let ExprKind::Unary { op, value } = &root.kind
+        let mut value = if let ExprKind::Unary { op, value } = &root.kind
             && op == "*"
         {
             self.expr(value, None)?
@@ -1906,8 +1902,36 @@ impl Checker {
         if value.ty == Type::Never {
             return Ok(value);
         }
+        let mut names = names.into_iter().peekable();
+        while !matches!(value.ty, Type::Reference(_)) {
+            let Some(name) = names.next() else {
+                return Err(error);
+            };
+            let Type::Record { fields, .. } = &value.ty else {
+                return Err(error);
+            };
+            let (index, ty) = fields
+                .iter()
+                .enumerate()
+                .find(|(_, (field, _))| *field == name)
+                .map(|(index, (_, ty))| (index, ty.clone()))
+                .ok_or_else(|| {
+                    Self::error("E201", format!("unknown record field `{name}`"), span)
+                })?;
+            value = self.narrow(hir::Expr {
+                kind: hir::ExprKind::Field {
+                    value: Box::new(value),
+                    index,
+                },
+                ty,
+                span: expr.span,
+            });
+            if names.peek().is_none() {
+                return Err(error);
+            }
+        }
         let Type::Reference(target) = &value.ty else {
-            return Err(error);
+            unreachable!()
         };
         if target.has_reference() {
             return Err(Diagnostic::unsupported(
@@ -1960,7 +1984,7 @@ impl Checker {
                 };
                 if !self.places.contains(&id) {
                     return Err(Diagnostic::unsupported(
-                        "borrowing parameter, receiver or emitted storage",
+                        "borrowing emitted storage",
                         expr.span,
                     ));
                 }
@@ -2808,10 +2832,10 @@ mod tests {
             "r:&(1+2)",
             "x:1;r:&x;s:&r",
             "x:{->a:1;r:&a}",
-            "f<int32>:(x<int32>){r:&x;->*r}",
+            "f<int32>:(x<int32>){r:&!x;->*r}",
             "f<int32>:(x<&!int32>){->*x}",
             "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",
-            "x:1;r:&x;r.{v:*self}",
+            "x:1;r:&x;r.{v:&self}",
             "x:1;r:&x;debug:@\"debug\";debug.print(r)",
             "x:1;r:&x;s:&!*r",
             "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",
@@ -2915,5 +2939,31 @@ mod tests {
         );
         rejects("x:'outer {'inner {'outer->1;'inner.restart()}}", "B001");
         accepts("n:=0;x:'loop {n=n+1;|n<2|{'loop->1;'loop.restart()};->2}");
+    }
+    #[test]
+    pub(crate) fn parameter_and_receiver_addresses_are_scope_local() {
+        accepts("read<int32>:(value<int32>){view:{->&value};->*view}");
+        accepts("value:7;copy:value.{view:&self;->*view}");
+        rejects("bad<&int32>:(value<int32>){->&value}", "E303");
+        rejects("bad:(value<int32>){->(&value).{->&*self}}", "E303");
+        rejects("value:7;view:value.{->&self}", "E303");
+        rejects("value:{->n:7};view:value.{->&self.n}", "E303");
+    }
+
+    #[test]
+    pub(crate) fn shared_dispatch_keeps_original_origins_and_bounds() {
+        accepts(
+            "<R>:<{n<int32>}>;<H>:<{view<&R>}>;field<&int32>:(holder<H>){->&holder.view.n};owner<R>:{->n:7};view:field({->view:&owner});read:*view",
+        );
+        accepts("owner:=1;view:(&owner).{->&*self};value:*view;owner=2");
+        accepts("a:=1;b:=2;pair:{->a:&a;->b:&b};view:pair.{->self.a};b=3;value:*view");
+        rejects(
+            "owner:=1;view:(&owner).{->self};owner=2;value:*view",
+            "E302",
+        );
+        rejects(
+            r#"first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:"x";->first(&owner,&short).{->self}}"#,
+            "E303",
+        );
     }
 }
