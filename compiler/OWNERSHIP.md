@@ -205,7 +205,8 @@ implementation boundary; it does not change language rules.
 
 ## Control-flow and last use
 
-- `src/loans.rs` builds a separate graph for the entry body and every function.
+- The `src/loans.rs` entrypoint and `src/loans/` modules build a separate graph
+  for the entry body and every function.
   Its reference value IDs distinguish immutable local components, expression
   temporaries and block result components from physical referent storage IDs.
 - Nodes represent reference definitions and reads, result initialization and

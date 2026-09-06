@@ -1,26 +1,27 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Primitive suffix inference and module organization pass the final gate.
+Updated: 2026-09-06. Parser, ownership and native-suite organization passes the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
 Implementation: `932297a`; native coverage/example: `89b530c`.
-Organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
+Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
+Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: nonconstant and mutable same-owner primitive locals can constrain
-unresolved effectful list suffixes through their exact declared types. Scratch
-bindings carry unknown values, fresh normalized IDs and no live flow/borrow facts.
-Conditional diagnostic recovery retains uncertain candidates for ordinary checking
-without enabling effectful deferral. Grouped short-circuit conditions are covered.
+Completed: parser grammar, borrow-origin analysis, loan graph construction/solving
+and native integration tests are organized into focused modules. Entry files keep
+root interfaces and reexports; native tests remain one target with one shared
+Case/NEXT harness. Function bodies, input strings, includes, budgets and diagnostic
+behavior are preserved. This pass adds no language feature or new test cases.
 
-Backend, checker and list-context code now live in focused submodules, with tests
-alongside their owning responsibilities. Root entrypoints and behavior are retained.
-Both AGENTS files recommend this organization without a hard line-count rule.
-Aggregate/reference/union names, emitted-name and cross-element constraints, mutable
-fields, owned elements, generated cleanup and module/library support remain open.
+Primitive runtime-valued suffix inference and the earlier backend/checker/list
+context boundaries remain intact. Both AGENTS files keep the organization guidance
+advisory. Next implementation work is record-field mutability in HIR/type checking
+before checked field writes; owned initialization, exclusive references, generated
+cleanup, modules and complete release qualification remain pending.
 
 ## Resume here
 
@@ -45,18 +46,21 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Component | Files | Current state |
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
-| Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
+| Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 23 loan, 9 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 23 loan, 9 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 26 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 126 native groups, 4 harness tests and 21 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 126 native groups, 4 harness tests and 21 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic and output
 lowering plus focused tests. `src/list_context/` separates candidate orchestration,
 effectful blocks and isolated probes. Consult each root module for declarations;
-preserve these responsibility boundaries during feature work.
+preserve these responsibility boundaries during feature work. `src/parser/`
+separates statements, expressions, types, strings and tree bounds. `src/borrow/`
+and `src/loans/` separate state, traversal and solving. `tests/native/` groups the
+single native target by behavior while sharing one temp-directory counter.
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -300,33 +304,31 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 140 library and 126 native groups pass. This feature adds 3 list-context
-  and 6 native groups. Clippy `-D warnings` and formatting pass. The optimized
-  compiler builds/runs `examples/dynamic-lists.mwy` in release with exact stdout
+- Rust: unchanged 140 library and 126 native groups pass. No test cases were added
+  or removed. Clippy `-D warnings` and formatting pass. The optimized compiler
+  builds/runs `examples/dynamic-lists.mwy` in release with exact stdout
   `read\n301\n2\n` and empty stderr.
-- Native tests cover returned/mutable primitive values, exact widths, parameters,
-  aggregates, shadowing, source-order reads, loan conflicts, actual P002 operands
-  and grouped Boolean paths that skip E107/E205. Runtime overflow is never replaced
-  by a fictitious constant or width promotion. Explicit aggregate/reference/capture
-  boundaries remain checked.
-- Review passed nine directed checks and identified three grouped-condition false
-  rejections caused by AST/HIR span mismatch. Charged Group normalization fixes all
-  three; focused unit/native checks and reviewer rechecks pass.
-- Backend extraction preserves all 26 groups and all production/test function
-  contents. Checker extraction preserves its 27 groups and interfaces; list-context
-  extraction preserves all 12 groups and probe behavior. Focused before/after proof
-  brackets each refactor, and the full Cargo/combined gates pass afterward.
-- Both AGENTS files now recommend cohesive modules and separately reviewable moves;
-  this is not a hard line-count or CI rule. Remaining large ownership/parser/native
-  test files are explicit follow-up organization work.
+- Native before/after runs both pass 126 tests in debug/release, including 21
+  examples. All 11,479 function tokens and string bytes are preserved apart from
+  relocated include paths; all 22 included files have matching hashes. Cargo
+  metadata confirms one native integration target and one shared harness/counter.
+- Parser before/after proof passes 11 groups, including Unicode, span and depth
+  coverage. All 38 production and 12 test/helper functions are preserved, and all
+  267 string literals are byte-for-byte identical.
+- Origin before/after proof passes 14 groups; all 35 function streams and 103
+  strings are exact. Loan proof passes 23 groups; all 53 functions retain behavior
+  (one optional test-call comma was formatted), with 192 exact string literals.
+- Cargo checks bracket the module moves. A transient missing ownership import and
+  parser warning during parallel extraction were corrected before final checks.
+  No reference fixture, REQUIRED entry, runtime source or dependency was changed.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
   checks 857 local links; schemas/catalog and Vim/Neovim pass.
-- Runtime is unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
-  14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with exact
-  fatal/truncation/lifetime/guard/admission probes and stable layout. ASan/UBSan/LSan
-  and the expired-fiber-local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. No
-  reference fixture or REQUIRED was changed; full release qualification stays open.
+- Runtime debug/release/sanitized profiles pass 6 diagnostic, 14 cleanup, 10 stack,
+  10 context, 25 scheduler and 14 owned groups with fatal/truncation/lifetime/guard/
+  admission probes and stable layout. ASan/UBSan/LSan and the expired-fiber-local
+  negative diagnosis pass.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
+  language/release qualification remains open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -334,14 +336,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Continue organization around the next owning responsibility in `borrow.rs`,
-   `loans.rs`, `parser.rs` or `tests/native.rs`. Preserve method/entrypoint paths,
-   test content and exact diagnostics with focused before/after proofs. Keep
-   mechanical moves in separate commits from feature work where practical.
-2. Implement mutable field shape/type support and exclusive-reference contracts
-   before field/reference write paths. Preserve every checked path phase and
-   parent reservation. Owned replacements need initialization, move and cleanup
-   state before removal, slices or non-Copy list elements can be enabled.
+1. Preserve AST record-field mutability through `hir.rs` and
+   `check/{names,blocks,statements}.rs`. Current AST fields already carry a mutable
+   flag, but HIR record fields and checker capability guards do not implement it.
+   Include mutability in shape compatibility/normalization while preserving physical
+   field layout. Verify construction, expected types and E206 across branches.
+2. Add checked field writes after that metadata path is complete. Require both a
+   mutable field and exclusive owner access; preserve RHS order and place identity.
+   Reuse `borrow/` and `loans/` for overlap/last-use checks. Owned replacements need
+   initialization, move and cleanup state before removal or non-Copy fields/lists.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.

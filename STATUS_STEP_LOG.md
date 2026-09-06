@@ -6,6 +6,62 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Parser and ownership refactor handoff
+
+- State: Completed independent refactors: native suite c83f1f1, parser d599149, borrow analysis f550947 and loan analysis 717f5af. Entry files are now 2, 171, 83 and 49 lines with cohesive modules and tests. Program behavior, public paths, budgets, source literals and the single native target are preserved. All workers are finished; no unfinished source or failing checks remain.
+- Validation: All 14 combined checks pass: 140 library and 126 native Rust tests, 35 Python tests, 857 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed. Focused before/after and token/literal/include audits pass. Optimized dynamic-lists output is exactly read/301/2 with empty stderr.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement record-field mutability metadata across AST/HIR/type checking, verifying shape compatibility, expected construction and E206 before enabling field writes. Then add checked exclusive field access with preserved RHS/loan behavior. Keep owned cleanup, modules and release qualification visible. Finalize the documentation/handoff commit and confirm clean Git state.
+
+### 2026-09-06 — Remaining module refactors combined gate
+
+- State: All parser, ownership, loan and native-suite extractions pass the final combined gate. Native and parser refactors are committed as c83f1f1 and d599149; origin and loan changes are ready for separate commits. Language behavior, test cases, dependencies and reference fixtures are unchanged.
+- Validation: All 14 checks pass: 140 library and 126 native Rust tests, 35 Python tests, 857 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit origin and loan module splits separately, run the optimized compiler example, finalize README/ownership maps and both handoffs, then confirm clean Git state. Continue next with record-field mutability metadata and checked field access.
+
+### 2026-09-06 — Parser and ownership organization complete
+
+- State: All refactor workers are finished. Native entry is two lines; parser.rs is 171, borrow.rs 83 and loans.rs 49. Responsibilities and unchanged tests are grouped under their owning directories; root APIs/reexports and the single native target are preserved. This pass keeps language behavior unchanged.
+- Validation: Before/after proofs pass for native 126, parser 11, origin 14 and loans 23 groups. Function audits preserve all production/test behavior; 267 parser, 103 origin and 192 loan string literals are exact, with only optional Rust test commas reformatted. All focused Clippy/format/whitespace checks pass. The combined gate is next.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all repository/runtime/compiler checks on the final source, then commit origin and loan refactors separately, verify the optimized compiler example, and finalize current handoffs with mutable-field metadata as the next implementation task.
+
+### 2026-09-06 — Parser organization proof
+
+- State: The parser split is complete: parser.rs is 171 lines with focused statement, expression, type, string and depth-bound modules plus tests. Grammar and root APIs are unchanged. The native-suite refactor is committed as c83f1f1; ownership and loan test audits are finishing.
+- Validation: All 11 parser groups pass before and after, including Unicode/span/depth coverage. All 38 production and 12 test/helper functions are preserved, and 267 string literals match byte-for-byte. Per-boundary cargo checks, final Clippy, formatting and whitespace pass after the transient shared import issue was fixed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the independent parser refactor, complete origin/loan before-and-after proof, then run the full combined gate and update handoffs for the next mutable-field implementation step.
+
+### 2026-09-06 — Native integration suite proof
+
+- State: The native-suite split is complete: one native integration target, one shared Case/NEXT/Drop harness and 19 behavior modules. Root entry is two lines, and module sizes range from 79 to 293 lines. Ownership production modules are cargo-check clean; their tests and parser extraction are finishing.
+- Validation: Native tests pass 126/126 both before and after, covering debug/release and 21 examples. All 11,479 function tokens and source strings are preserved apart from verified include-path rewrites; 22 included file hashes match. Cargo metadata, formatting and whitespace pass. The transient ownership import and parser warning were resolved.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the independent native-suite refactor, finish parser/origin/loan preservation proofs, update maps and run the combined gate before finalizing the handoff.
+
+### 2026-09-06 — Native suite organization audit
+
+- State: The native integration suite is extracted into 19 behavior modules behind a two-line native.rs entry and one shared Case/NEXT harness. Source and expected-output strings are preserved; relocated include paths resolve to the same files. Parser and ownership extractions are continuing independently.
+- Validation: Native audit preserves all 126 test function token streams and the shared harness; all 21 examples plus the included conformance fixture have identical file hashes. Formatting passes; post-extraction native execution is next. One parser cargo check encountered a transient missing slot import in the concurrent ownership extraction, being corrected before further proof.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Repeat all 126 native tests, complete parser/origin/loan checks and preservation audits, then run the combined gate and commit independent refactors with updated maps and next implementation notes.
+
+### 2026-09-06 — Module boundaries and next implementation seam
+
+- State: README and ownership documentation now describe parser, borrow, loan and native-suite subdirectories. Workers are preserving existing method bodies and fixture strings across independent moves. The next feature seam is concrete: AST record fields already carry mutability, while HIR record fields and the semantic checker currently discard/reject it; no field writes are being enabled during this refactor.
+- Validation: Native 126 and ownership 14/23 baseline groups pass. Read the reference mutability contract: field writes need both a mutable field and exclusive owner access; mutability is part of record shape. No language fixtures or implementation behavior changed in this step.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete extraction and unchanged before/after proofs, run the combined gate and split commits. After organization, preserve record-field mutability through HIR/type checking before implementing checked field writes and their loan rules.
+
+### 2026-09-06 — Remaining compiler organization
+
+- State: The next handoff step is behavior-preserving organization of borrow analysis, loan checking, parser responsibilities and the native integration suite. Each area has an independent owner and bounded module plan; root owns documentation and both handoffs. Keep every interface, function behavior, source fixture and diagnostic intact, with no new feature mixed into these moves.
+- Validation: Tree starts clean at 81fb4cc. Read current rules/handoffs and safe-refactor workflow. Baseline inventory is 140 library and 126 native tests; workers will establish focused baseline evidence before extraction. No new checks have run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Split each owning responsibility with cargo-check boundaries and unchanged focused tests, compare function/source-literal preservation, update maps, run the full combined gate, then commit by independent responsibility and finalize continuation notes.
+
 ### 2026-09-06 — Organized compiler handoff
 
 - State: Completed source organization in 8c8e90a (backend/rules), 360c8db (checker) and e3a0803 (list contexts), separate from inference feature 932297a and native evidence 89b530c. Entry files are now 587, 184 and 212 lines respectively, with cohesive child modules and tests. Both AGENTS recommendations are advisory. All workers are finished; no unfinished source code or failing checks remain.

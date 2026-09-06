@@ -7,38 +7,34 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Organization: `8c8e90a` separates backend lowering/tests, `360c8db` separates
-  checker responsibilities, and `e3a0803` separates list-context orchestration,
-  effectful blocks, isolated probes and tests. Entry files are now backend.rs 587,
-  check.rs 184 and list_context.rs 212 lines. Existing public interfaces and
-  function behavior are preserved. Both AGENTS files recommend cohesive modules
-  without imposing a hard line-count limit.
-- Compiler: `932297a` admits exact same-owner primitive local types in effectful
-  suffix probes, including mutable and nonconstant values. Scratch values remain
-  unknown; initializers, narrowed types and live guard/borrow IDs are never copied.
-  Ordinary scalar deferral remains constant-only, preserving runtime read order.
-- A conditional scratch failure can retain an uncertain candidate only inside a
-  symbolic short-circuit RHS. Grouped conditions use their actual lowered span;
-  ordinary live checking still decides a sole candidate. Runtime overflow checks,
-  unconditional errors and candidate-dependent structural diagnostics are preserved.
-- Coverage/example: `89b530c` adds six native groups and
-  `compiler/examples/dynamic-lists.mwy`; three unit groups cover unknown types,
-  guarded failures, scopes and explicit inference boundaries.
-- All 14 combined checks pass: 266 Rust tests, 35 Python tests, 857 local
-  links, editors, schemas/catalog, formatting, Clippy, build and conformance.
-  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- Refactor proofs preserve all existing backend/checker/list-context test groups.
-  The optimized compiler runs dynamic-lists with exact output. Runtime
-  debug/release/sanitizer checks pass unchanged; generated cleanup remains pending.
-- No active workers, unfinished code or failing checks remain. Remaining work
-  includes aggregate/emitted-name/cross-element inference, mutable fields,
-  exclusive references, owned elements, modules, cancellation and DWARF.
+- Organization is complete for the remaining large ownership/parser/native-suite
+  modules: native `c83f1f1`, parser `d599149`, borrow `f550947`,
+  loans `717f5af`. Entry files are now 2, 171, 83 and 49 lines respectively,
+  with focused implementation/test files under their owning directories.
+- Native execution remains one Cargo target with one Case/NEXT/Drop harness and
+  all 126 test functions. All 21 example includes plus the conformance fixture
+  resolve to the same file contents. Tests are grouped into 19 behavior modules.
+- Parser grammar, root entrypoints, borrow facts/reexports, origin transfers,
+  loan graph construction/solving, budgets and diagnostics are preserved. Function
+  and literal audits accompany focused before/after tests; no language feature
+  or reference fixture changed in this pass.
+- All 14 combined checks pass: 266 Rust tests, 35 Python tests, 857 local links,
+  editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
+  debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
+  13 unsupported, 0 failed in both profiles.
+- The optimized compiler runs dynamic-lists with exact output. The prior primitive
+  suffix inference remains `932297a`, with coverage/example `89b530c`; earlier
+  backend/checker/list-context organization remains in their focused modules.
+- Both AGENTS files retain advisory organization guidance without a size gate.
+  No active workers, unfinished code or failing checks remain. Next implementation
+  work is mutable field metadata and checked access, followed by broader ownership,
+  generated cleanup, modules/library support, cancellation and release qualification.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Modular backend/checker and runtime-valued suffix inference | Broader constraints, ownership and remaining source organization |
+| Compiler | Modular parser/ownership/backend and runtime-valued suffix inference | Mutable record fields, checked access and broader ownership |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,13 +44,15 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Continue organization where it improves the next change: remaining large
-   `compiler/src/{borrow,loans,parser}.rs` and `compiler/tests/native.rs` are next.
-   Extract ownership/grammar/test responsibilities with matching before/after checks;
-   keep this a recommendation rather than a file-size gate.
-2. Define mutable field shapes and exclusive-reference contracts before permitting
-   field/reference write targets. Keep initialized Copy writes distinct from the
-   move/drop state required by owned elements, slices and removal.
+1. Preserve record-field mutability from `compiler/src/ast.rs` through
+   `compiler/src/hir.rs` and `compiler/src/check/{names,blocks,statements}.rs`.
+   Mutability belongs to the
+   record shape; verify expected types, construction and E206 branch consistency
+   before enabling writes. Keep representation changes in the owning modules.
+2. Add checked field writes only after metadata survives the full type pipeline.
+   Require a mutable field and exclusive owner access; verify RHS order, static
+   overlap and last-use loans. Keep owned moves/cleanup and source-level exclusive
+   references separate until their initialization/lifetime rules are implemented.
 3. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.
