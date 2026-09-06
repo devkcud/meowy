@@ -117,15 +117,23 @@ and their digests even when an alias root lies outside the project directory.
 
 `mod.mwy` is a restricted compile-time block. Its well-known emissions are:
 
-| Name     | Contract                                                       |
-| -------- | -------------------------------------------------------------- |
-| `import` | Package dependency records and the optional `aliases` path map |
-| `export` | Public package facade, including re-exports                    |
-| `build`  | Entry file, profile, optional target, and native link inputs   |
+| Name        | Contract                                                       |
+| ----------- | -------------------------------------------------------------- |
+| `import`    | Package dependency records and the optional `aliases` path map |
+| `export`    | Public package facade, including re-exports                    |
+| `build`     | Entry file, profile, optional target, and native link inputs   |
+| `gatostyle` | Optional layout, code-quality rules, and project style policy  |
 
 Unknown top-level configuration names are diagnostics. Author/version metadata
 can be ordinary exported fields if a package wants to expose it; it does not
 participate in dependency resolution.
+
+`gatostyle` configures tooling, not language semantics. Its presets, independent
+rules, custom selectors, and path overrides are defined in the
+[gatostyle guide](../guide/gatostyle.md). Style settings cannot relax compiler
+checks or change the meaning of an import, type, or expression. Evaluating the
+policy uses only pure local manifest expressions; semantic style analysis is a
+separate operation over the declared module graph.
 
 The manifest can combine literals, immutable bindings, and pure compile-time
 helper functions. It cannot read the network, run shell commands, inspect ambient

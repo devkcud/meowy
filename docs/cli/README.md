@@ -18,6 +18,9 @@ contains the full three-error example used below.
 | Learn the available options         | `meowy help` or `meowy help err reproduce`   | Read help for one command without running it                         |
 | Identify a toolchain                | `meowy --version`                            | Print the version and build identity                                 |
 | Check source while editing          | `meowy check main.mwy`                       | Check the module graph without linking or executing the application  |
+| Check project coding policy         | `meowy style check`                          | Inspect layout, preferred expression forms, and code quality         |
+| Review safe style changes           | `meowy style fix --diff`                     | Preview proven rewrites and layout without changing source           |
+| Apply only source layout            | `meowy fmt`                                  | Use gatostyle's layout settings without semantic rewrites            |
 | Run a program                       | `meowy run main.mwy`                         | Build and execute the selected entry                                 |
 | Produce a native executable         | `meowy build main.mwy --output build/main`   | Build without executing the result                                   |
 | Resolve newly declared dependencies | `meowy deps resolve`                         | Fill missing lock entries while preserving existing locked revisions |
@@ -130,6 +133,59 @@ revision and digest changes and replace the lockfile only after resolution and
 integrity checks succeed. They do not rewrite manifest selectors. Foundational
 modules do not need remote dependency entries. Use `--offline` when a check must
 not contact a source server, for example after preparing a CI dependency cache.
+
+## Coding style and quality with gatostyle
+
+Gatostyle reads the optional `gatostyle` policy in `mod.mwy`. Projects can configure
+layout and rules for call versus dispatch notation, intermediate bindings, type
+annotations, naming, discarded values, allocations, and task capture. Presets are
+starting values; individual rules, custom selectors, and path overrides express
+the project's choices. See the [gatostyle guide](../guide/gatostyle.md) for the
+complete schema and examples, including a zero-spacing layout.
+
+```sh
+meowy style check
+meowy style fix --diff
+meowy style fix
+meowy style explain call_form
+meowy style config --resolved main.mwy
+```
+
+`style check` reports policy findings without changing source; `style` alone means
+`style check`. `style fix --diff` previews eligible safe fixes and layout, while
+`style fix` validates and writes the patch. An automatic semantic edit must
+preserve resolved names, types, evaluation, ownership, cleanup, and task boundaries.
+A preference without such a proof remains a finding for the author.
+
+Use `meowy style check --offline --quiet --color never` in CI. Quality analysis
+uses the selected files' module graphs and existing lock; offline mode requires
+dependencies locally. It never updates the lock or executes the application.
+Missing analysis inputs fail the operation rather than skipping enabled checks.
+
+For layout alone:
+
+```sh
+meowy fmt main.mwy cmd/
+meowy fmt --check
+meowy fmt --diff
+meowy fmt --stdin --stdin-filepath ./main.mwy
+```
+
+`fmt` writes selected files by default. Its `--check`, `--diff`, and `--stdout`
+modes write no source; `--stdout` requires one file. Stdin defaults to source on
+stdout and can instead use `--check` or `--diff`. Layout requires syntax and local
+policy, without resolving dependencies. A successful format is not a type check.
+
+Both workflows accept files or directories and discover project source when no
+paths are supplied. Discovery skips build outputs, configured exclusions, and
+nested projects, without following imports to select files for editing. The guide
+defines [file selection and exits](../guide/gatostyle.md#commands-for-an-editing-loop-and-ci)
+and [buffer analysis](../guide/gatostyle.md#work-with-an-editor-buffer).
+
+These commands do not replace a saved check/build/run session or modify replay
+capsules. Style findings use `G...` codes and `meowy style explain`, independently
+of saved compiler occurrences. A source edit can make an old repair stale; check
+again before applying that saved repair.
 
 ## Saved sessions
 
@@ -515,6 +571,8 @@ standard error. During `run`, application standard output remains standard outpu
 and application standard error remains standard error. Application stdout during
 runtime replay also remains stdout; its streams are captured in the replay result.
 `help` and `--version` print to standard output.
+Style configuration queries emit JSON on stdout; style/fmt diffs and formatted
+source also use stdout, with their findings and summaries on stderr.
 
 Global `--color auto|always|never` controls terminal styling; `auto` uses color
 only on a terminal and honors `NO_COLOR`. `--quiet` suppresses banners, progress,
@@ -529,7 +587,11 @@ Neither option changes the recorded diagnostic or occurrence IDs. Use
 | Source/build failure, rejected repair validation, or replay divergence                  | `1`                                                    |
 | Invalid usage, stale/conflicting edits, integrity failure, or unavailable replay inputs | `2`                                                    |
 | Completed application launched by `run`                                                 | Application's process status                           |
+| Style check finds violations at/above policy threshold; style fix leaves such findings  | `1`                                                    |
+| Fmt check finds layout differences                                                      | `1`                                                    |
+| Invalid style/fmt input, policy, incomplete analysis, failed proof, or failed write     | `2`                                                    |
 
+A style/fmt command otherwise succeeds with `0`, including an empty selection.
 A diff preview returns success when it can present the requested candidates;
 the saved errors do not make the preview fail. Failure to save a capsule is
 reported alongside the original failure and does not replace its exit status.

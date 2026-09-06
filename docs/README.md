@@ -18,6 +18,8 @@ those rules by building small programs, and the design notes explain their inten
    aliases, package dependencies, and the project entry.
 7. Use the [CLI guide](cli/README.md) to check and run programs, then inspect and
    reproduce failures from their saved executable capsules.
+8. Set a [gatostyle policy](guide/gatostyle.md) for layout, code quality, and the
+   expression forms your project prefers.
 
 ## Look something up
 
@@ -33,6 +35,7 @@ those rules by building small programs, and the design notes explain their inten
 | How are native data and functions declared?           | [Modules and FFI](reference/modules-and-ffi.md#native-interfaces) |
 | What APIs do the snippets rely on?                    | [Library contracts](reference/standard-library.md)                |
 | How do I configure mod.mwy and local import aliases?  | [Manifest guide](guide/mod.md)                                    |
+| How do I enforce coding style and code quality?       | [gatostyle](guide/gatostyle.md)                                   |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |
 | What does a diagnostic code mean?                     | [Code catalog](reference/diagnostic-codes.md)                     |
 | How do I check, build, and run a program?             | [Command line](cli/README.md#check-build-and-run)                 |
@@ -61,8 +64,10 @@ Target-dependent properties, such as pointer width and C layout, must be supplie
 by the selected build target. No sample module version or performance measurement
 is implied by a code listing.
 
-The documentation uses four-space indentation and omits semicolons at line ends.
-Formatting never rewrites evaluation order or merges bindings.
+The documentation generally uses four-space indentation and omits semicolons at
+line ends; compact examples demonstrate other legal presentations. Gatostyle's
+layout engine preserves structure, while optional coding-style fixes require
+proof that their rewrites preserve behavior. Spaces never select language meaning.
 
 Shell examples use uppercase placeholders such as `PATH` and `TRIPLE`; help
 output may use `<id>` for a command argument. Those command placeholders are

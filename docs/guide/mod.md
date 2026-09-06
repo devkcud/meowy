@@ -2,8 +2,9 @@
 
 [Documentation index](../README.md) · [Language tour](README.md)
 
-`mod.mwy` describes a project's imports, public exports, and build settings. Put
-it at the project root so source files share one explicit import configuration.
+`mod.mwy` describes a project's imports, public exports, build settings, and
+optional coding-style policy. Put it at the project root so source files share
+one explicit configuration.
 The file uses ordinary meowy blocks and emissions; its well-known field names
 are configuration values, not language keywords.
 
@@ -198,7 +199,7 @@ defines their bounds and failure behavior.
 
 ## Keep configuration predictable
 
-The recognized top-level emissions are `import`, `export`, and `build`.
+The recognized top-level emissions are `import`, `export`, `build`, and `gatostyle`.
 `aliases` is an optional table inside `import`; omitting it means there are no
 local path prefixes. An empty import block is still valid when only foundational
 and relative imports are needed.
@@ -215,3 +216,32 @@ is an import-resolution error (`E501`); a name that shadows a foundational modul
 is `E508`. Diagnostics identify the alias declaration and the import that used
 it. Use `meowy err explain E505` for the rule or `meowy err explain 1` for the
 saved occurrence and its source context.
+
+## Define the project's coding style
+
+Use `gatostyle` for layout, preferred expression forms, and code-quality checks:
+
+```meowy
+-> gatostyle : {
+    -> preset : "structured"
+    -> rules : {
+        -> call_form : {
+            -> level : "warning"
+            -> prefer : "dispatch"
+            -> fix : "safe"
+        }
+    }
+}
+```
+
+This policy prefers first-argument dispatch and permits rewrites when their
+evaluation and ownership behavior is proven equivalent. `meowy style check`
+reports findings; `meowy style fix --diff` previews eligible edits. `meowy fmt`
+uses only the layout settings. The [gatostyle guide](gatostyle.md) defines every
+option, custom project rules, scoped exceptions, and the repair contract.
+
+Omitting the block selects the structured preset. Use `preset : "none"` to
+start with all style checks disabled. The sample excludes
+`./editor/nvim/tests/fixtures` because those fixtures intentionally contain
+invalid source for highlighting tests; exclusions do not affect language checks
+or the editor's regression script.

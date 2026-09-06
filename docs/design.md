@@ -93,9 +93,15 @@ A manifest declares a graph of inputs and exports. Dependency selectors resolve
 to locked immutable content. Compile-time evaluation is pure and bounded; it
 cannot execute arbitrary dependency-provided build scripts.
 
-Formatting is whitespace and presentation. It cannot collapse bindings, reorder
-expressions, insert guessed values, or change when a function executes. The
-language reference does not depend on a formatter-specific configuration surface.
+[Gatostyle](guide/gatostyle.md) separates layout from configurable coding-style
+and quality rules. Projects can prefer different equivalent expression forms,
+including call chains, dispatch, or intermediate bindings. Layout preserves the
+syntax tree; semantic fixes must prove that types, evaluation, ownership, cleanup,
+and task boundaries remain equivalent. An unproven rewrite stays a suggestion.
+
+No style policy changes the language grammar or weakens its checks. Spaces do not
+distinguish a type test from an ascription: matcher context does. Source may use
+zero spaces, with punctuation supplying annotations and statement boundaries.
 
 ## Keep failures executable and explainable
 

@@ -26,6 +26,14 @@ catalog version and explanation that accompanied its original toolchain.
 | `E7xx` | Diagnostic sessions, repairs, and replay | `error[E702]`       |
 | `P0xx` | Runtime panics                           | `panic[P003]`       |
 | `F0xx` | Compiler faults                          | `fatal[F001]`       |
+| `G...` | Gatostyle policy findings                | `warning[G101]`     |
+
+Gatostyle assigns `G001` to layout drift, `G002` to unresolved custom-rule facts,
+and the built-in rule codes in its [policy catalog](../guide/gatostyle.md#choose-how-the-code-is-written).
+Custom rule IDs use `G:project:NAME`. Their severity is configurable; explain them
+with `meowy style explain`, and inspect their patches with `meowy style fix --diff`.
+They do not become occurrences in the last check/build/run session or weaken any
+compiler rule. Invalid gatostyle configuration uses the existing `E505` code.
 
 The prefix is part of the code. An exit status, OS error number, occurrence ID,
 or library error type is not interchangeable with a diagnostic code. Severity,

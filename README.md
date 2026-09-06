@@ -11,6 +11,8 @@ function body.
 The grammar is punctuation-based and has no reserved keywords. `true`, `false`,
 `null`, types, and contextual names such as `self` are well-known values and
 bindings. See [names and syntax](docs/reference/syntax.md#no-keywords).
+Spaces are optional: matcher context distinguishes type tests from ascriptions,
+and punctuation can delimit a complete program without whitespace.
 
 ```meowy
 <Reading> : <{
@@ -60,6 +62,7 @@ Start with the [guide](docs/guide/README.md), or use the
 | [Diagnostics](docs/reference/diagnostics.md)               | Labeled errors, ranked repairs, replay capsules, and failure behavior  |
 | [Diagnostic codes](docs/reference/diagnostic-codes.md)     | Rule catalog, required evidence, and repair guidance                   |
 | [Command line](docs/cli/README.md)                         | Check, build, run, inspect internals, apply fixes, and replay failures |
+| [gatostyle](docs/guide/gatostyle.md)                       | Configurable layout, code quality, expression styles, and safe fixes   |
 
 The [worked programs](docs/programs/README.md) put these rules together. The
 [design notes](docs/design.md) explain the choices and the boundaries of the core.
@@ -67,7 +70,8 @@ The [worked programs](docs/programs/README.md) put these rules together. The
 ## Project files
 
 - `.mwy` files contain meowy source.
-- `mod.mwy` describes imports, local path aliases, exports, and build settings.
+- `mod.mwy` describes imports, local path aliases, exports, build settings, and
+  optional gatostyle policy.
   See the [manifest guide](docs/guide/mod.md) and its
   [sample](docs/guide/mod.sample.mwy).
 - [Vim and Neovim support](editor/nvim/README.md) provides syntax highlighting,

@@ -1,6 +1,6 @@
 # A first tour
 
-[Documentation index](../README.md) · [Configure mod.mwy](mod.md)
+[Documentation index](../README.md) · [Configure mod.mwy](mod.md) · [gatostyle](gatostyle.md)
 
 meowy programs describe values and their transformations. Start with a file named
 `main.mwy`:

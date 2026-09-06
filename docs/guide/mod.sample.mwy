@@ -19,6 +19,12 @@
     -> profile : "debug"
 }
 
+# Style runs skip the editor's deliberately invalid lexical fixtures. #
+-> gatostyle : {
+    -> preset : "structured"
+    -> exclude : ["./editor/nvim/tests/fixtures"]
+}
+
 # Package dependency records belong under import, beside the aliases table.
   A local package uses path; a local source directory goes in import.aliases.
   Remote dependencies are keyed by their local package name.
