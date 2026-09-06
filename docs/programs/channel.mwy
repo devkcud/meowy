@@ -42,7 +42,7 @@ consume <uint32> : (receiver <channel.Receiver<uint32>>) {
         'main.leave()
     }
 
-    deadline : time.after(time.ms(1000))
+    deadline : time.after(time.Second)
     producer : >> produce(endpoints.sender)
     producer.deadline(deadline)
     consumer : >> consume(endpoints.receiver)

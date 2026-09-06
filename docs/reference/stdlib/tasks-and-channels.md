@@ -6,8 +6,6 @@
 
 | API                                                  | Result                   | Contract                                                            |
 | ---------------------------------------------------- | ------------------------ | ------------------------------------------------------------------- |
-| `time.ms(value <uint64>)`                            | `<time.Duration>`        | Constructs a non-negative millisecond duration                      |
-| `time.after(duration)`                               | `<time.Instant>`         | Adds a duration to the monotonic clock; overflow panics             |
 | `job.deadline(instant)`                              | `<null>`                 | Sets or shortens a task's deadline before join                      |
 | `&group.deadline(instant)`                           | `<null>`                 | Sets a group deadline before submission                             |
 | `job.cancel()`, `ticket.cancel()`, `&group.cancel()` | `<null>`                 | Nonblocking, idempotent cancellation request                        |
@@ -53,4 +51,5 @@ overflow panics instead of wrapping. Sender and receiver operations need exclusi
 access to that endpoint; each producer uses its own sender owner.
 
 See [task and channel semantics](../tasks-and-channels.md) for submission, joins,
-capture, endpoint closure, and cancellation.
+capture, endpoint closure, and cancellation. The [time module](time-and-date.md)
+defines duration units, monotonic clock domains, timers, and ticker ownership.

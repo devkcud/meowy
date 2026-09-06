@@ -68,7 +68,8 @@ iterators. A function cannot hide an escaping child behind an ordinary result.
 Cancellation requests cleanup; it does not destroy a running thread. A deadline
 is a monotonic value with explicit units and does not waive a join's lifetime
 obligation. The compact timed forms `>1000>` and `<1000<` are replaced by
-`.deadline(time.after(time.ms(...)))`, keeping timing policy out of punctuation.
+`.deadline(time.after(time.Second.scale(...)))`, keeping timing policy out of
+punctuation.
 
 Channels carry many messages, use explicit capacity for backpressure, and move
 message ownership. Separate sender and receiver endpoints make shutdown precise.

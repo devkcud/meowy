@@ -105,7 +105,7 @@ particular interleaving.
 time : @"time"
 
 &work<int32[4]>
-&work.deadline(time.after(time.ms(250)))
+&work.deadline(time.after(time.Millisecond.scale(250)))
 
 ticket : &work >> square(10)
 ticket.cancel()
@@ -241,3 +241,7 @@ to own and join the workers.
 
 See the [ordered task](../programs/tasks.mwy) and
 [producer/consumer](../programs/channel.mwy) programs for complete flows.
+
+The [standard library task/channel APIs](stdlib/tasks-and-channels.md) list
+result types and endpoint operations. [Time](stdlib/time-and-date.md) defines
+monotonic deadlines, fixed units, and explicit timer/ticker owners.

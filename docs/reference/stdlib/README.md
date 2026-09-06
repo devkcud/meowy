@@ -24,6 +24,9 @@ and constructors can be aliased or shadowed without adding keywords.
 | `@"json"` | Bounded typed decoding and streaming encoding | [JSON](text-and-data.md#json-with-bounded-work-and-explicit-storage) |
 | `@"memory"`, `@"values"`, `@"dynamic"` | Allocators, layout, aggregate ownership, and explicit type erasure | [Storage APIs](memory.md) |
 | `@"collections"`, `@"iter"` | Lists, arrays, vectors, maps, sorting, and pull cursors | [Collections](collections.md) |
+| `@"time"` | Fixed durations, monotonic deadlines, sleeps, timers, and tickers | [Time](time-and-date.md#fixed-durations) |
+| `@"date"` | Civil dates, timestamps, time zones, arithmetic, parsing, and formatting | [Date and time](time-and-date.md#civil-dates-and-times) |
+| `@"calendars"` | Gregorian, Julian, Hebrew, Chinese, Islamic civil, and Buddhist calendars | [Calendars](calendars.md) |
 | `@"tasks"`, `@"channel"` | Owned work, cancellation, and bounded message transfer | [Concurrency APIs](tasks-and-channels.md) |
 | `@"ffi"` | Declared native layouts and foreign symbols | [Native APIs](ffi.md) |
 

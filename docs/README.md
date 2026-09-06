@@ -34,6 +34,8 @@ those rules by building small programs, and the design notes explain their inten
 | Who joins a task? What does cancellation guarantee?   | [Tasks and channels](reference/tasks-and-channels.md)             |
 | How are native data and functions declared?           | [Modules and FFI](reference/modules-and-ffi.md#native-interfaces) |
 | What does the standard library provide?              | [Standard library](reference/stdlib/README.md)                    |
+| How do durations, dates, and zones work?              | [Time and date](reference/stdlib/time-and-date.md)                 |
+| How do I use Chinese or Hebrew leap months?           | [Calendars](reference/stdlib/calendars.md)                         |
 | How do I configure mod.mwy and local import aliases?  | [Manifest guide](guide/mod.md)                                    |
 | How do I enforce coding style and code quality?       | [gatostyle](guide/gatostyle.md)                                   |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |

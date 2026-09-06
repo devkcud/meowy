@@ -6,7 +6,7 @@ square <int32> : (value <int32>) {
 }
 
 &squares<int32[4]>
-&squares.deadline(time.after(time.ms(1000)))
+&squares.deadline(time.after(time.Second))
 
 &squares >> square(2)
 &squares >> square(3)
