@@ -1,4 +1,6 @@
 import argparse
+import hashlib
+import json
 import os
 import re
 import signal
@@ -12,6 +14,7 @@ ROOT = Path(__file__).resolve().parent
 VERSION = "22.1.8"
 CASES = 14
 STACK_CASES = 10
+CONTEXT_CASES = 10
 
 
 def invoke(args, timeout=60, env=None):
@@ -61,16 +64,50 @@ def check_cases(result, count, suite):
         raise RuntimeError(f"{suite} case evidence differs:\n{result.stdout}{result.stderr}")
 
 
+def check_vendor(directory=ROOT / "vendor/boost-context"):
+    manifest = json.loads((directory / "manifest.json").read_text())
+    paths = {
+        "make_x86_64_sysv_elf_gas.S": "src/asm/make_x86_64_sysv_elf_gas.S",
+        "jump_x86_64_sysv_elf_gas.S": "src/asm/jump_x86_64_sysv_elf_gas.S",
+        "fcontext.hpp": "include/boost/context/detail/fcontext.hpp",
+        "LICENSE_1_0.txt": None,
+    }
+    if (manifest.get("repository") != "https://github.com/boostorg/context" or
+            manifest.get("target") != "x86_64-linux-sysv-elf-lp64" or
+            not re.fullmatch(r"boost-\d+\.\d+\.\d+", manifest.get("tag", "")) or
+            not re.fullmatch(r"[0-9a-f]{40}", manifest.get("revision", "")) or
+            set(manifest.get("files", {})) != set(paths)):
+        raise RuntimeError("invalid pinned Boost.Context manifest")
+    for name, item in manifest["files"].items():
+        source = (f"https://raw.githubusercontent.com/boostorg/context/{manifest['revision']}/{paths[name]}"
+                  if paths[name] else "https://www.boost.org/LICENSE_1_0.txt")
+        if item.get("source") != source:
+            raise RuntimeError(f"vendored Boost.Context provenance differs: {name}")
+        actual = hashlib.sha256((directory / name).read_bytes()).hexdigest()
+        if actual != item.get("sha256"):
+            raise RuntimeError(f"vendored Boost.Context checksum differs: {name}")
+    return directory
+
+
+def check_asan_lifetime(result):
+    require(result, -signal.SIGABRT)
+    if (result.stdout or not result.stderr.startswith("asan-context: read returned fiber local\n") or
+            "ERROR: AddressSanitizer: stack-use-after-return" not in result.stderr):
+        raise RuntimeError(f"fiber lifetime sanitizer evidence differs:\n{result.stdout}{result.stderr}")
+
+
 def check(clang, directory, sanitizers=True):
     version = invoke([clang, "--version"])
     require(version)
     if not re.search(rf"\bclang version {re.escape(VERSION)}\b", version.stdout):
         raise RuntimeError(f"runtime prototype requires Clang {VERSION}; got {version.stdout.strip()}")
+    vendor = check_vendor()
+    print("PASS pinned Boost.Context source and license checksums", flush=True)
     profiles = [("debug", ["-O0", "-g"]), ("release", ["-O2", "-DNDEBUG"])]
     if sanitizers:
         profiles.append(("sanitized", ["-O1", "-g", "-fsanitize=address,undefined",
                                         "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"]))
-    env = dict(os.environ, ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1",
+    env = dict(os.environ, ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:abort_on_error=1:detect_stack_use_after_return=1",
                UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1")
     for name, flags in profiles:
         binary = directory / f"cleanup-{name}"
@@ -102,13 +139,33 @@ def check(clang, directory, sanitizers=True):
         check_guard(invoke([str(stack), "--guard-low"], env=guard_env), False)
         check_guard(invoke([str(stack), "--guard-high"], env=guard_env), True)
         print(f"PASS runtime stack allocation: {name}; {STACK_CASES} cases, kernel refusal and 2 guard subprocesses", flush=True)
+        print(f"CHECK runtime contexts: {name}", flush=True)
+        objects = []
+        for source in ("make_x86_64_sysv_elf_gas.S", "jump_x86_64_sysv_elf_gas.S"):
+            obj = directory / f"{name}-{source}.o"
+            require(invoke([clang, "-fcf-protection=none", "-Dmake_fcontext=meowy_make_context_v0",
+                            "-Djump_fcontext=meowy_jump_context_v0", "-c", str(vendor / source), "-o", str(obj)]))
+            objects.append(str(obj))
+        context = directory / f"context-{name}"
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-fcf-protection=none", "-fstack-protector-strong",
+                        "-pthread", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/stack_memory.cpp"),
+                        str(ROOT / "src/context.cpp"), str(ROOT / "tests/context.cpp"),
+                        str(ROOT / "tests/context_registers.S"), *objects, "-o", str(context)]))
+        check_cases(invoke([str(context)], env=env), CONTEXT_CASES, "context")
+        check_fatal(invoke([str(context), "--fatal-context-cleanup"], env=env), True)
+        if name == "sanitized":
+            check_asan_lifetime(invoke([str(context), "--asan-use-after-return"], env=env))
+        print(f"PASS runtime contexts: {name}; {CONTEXT_CASES} cases and fatal resumed cleanup" +
+              ("; returned fiber local is detected by ASan" if name == "sanitized" else ""), flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
-    print("Cleanup and guarded allocation only; context switching, suspension and DWARF unwinding are not qualified.")
+    print("Bounded Linux x86-64 context prototype only; scheduler, automatic cancellation/join and DWARF unwinding remain pending.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build and check bounded native cleanup and guarded stack allocation.")
+    parser = argparse.ArgumentParser(description="Build and check native cleanup, guarded stacks and pinned contexts.")
     parser.add_argument("--clang", default="/usr/bin/clang++", help=f"Clang {VERSION} executable")
     parser.add_argument("--build-dir", type=Path, help="Keep binaries in this directory; default uses temporary storage")
     parser.add_argument("--no-sanitizers", action="store_true", help="Run debug/release only; explicitly omit sanitizer validation")
@@ -121,7 +178,7 @@ def main():
         else:
             with tempfile.TemporaryDirectory(prefix="meowy-runtime-") as temp:
                 check(args.clang, Path(temp), not args.no_sanitizers)
-    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         print(f"FAIL runtime prototype: {error}", file=sys.stderr)
         return 1
     return 0

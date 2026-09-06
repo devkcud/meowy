@@ -1,6 +1,9 @@
 import subprocess
+import json
+import shutil
 import signal
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -71,6 +74,43 @@ class CheckTests(unittest.TestCase):
                 result = subprocess.CompletedProcess(["binary"], code, out, error)
                 with self.assertRaises(RuntimeError):
                     check.check_cases(result, 1, "stack allocation")
+
+    def test_vendored_source_tampering_fails_checksum(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp) / "vendor"
+            shutil.copytree(check.ROOT / "vendor/boost-context", directory)
+            check.check_vendor(directory)
+            with (directory / "jump_x86_64_sysv_elf_gas.S").open("ab") as source:
+                source.write(b"\n")
+            with self.assertRaisesRegex(RuntimeError, "checksum differs"):
+                check.check_vendor(directory)
+
+    def test_vendor_metadata_cannot_disagree_with_source_revision(self):
+        changes = (("target", "other"), ("revision", "f" * 40), ("tag", "unversioned"))
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp) / "vendor"
+            shutil.copytree(check.ROOT / "vendor/boost-context", directory)
+            path = directory / "manifest.json"
+            original = path.read_text()
+            for field, value in changes:
+                with self.subTest(field=field):
+                    manifest = json.loads(original)
+                    manifest[field] = value
+                    path.write_text(json.dumps(manifest))
+                    with self.assertRaises(RuntimeError):
+                        check.check_vendor(directory)
+
+    def test_asan_fiber_probe_requires_use_after_return_evidence(self):
+        for code, error in ((1, ""), (-signal.SIGSEGV, ""),
+                            (-signal.SIGABRT, "asan-context: read returned fiber local\n")):
+            with self.subTest(code=code):
+                result = subprocess.CompletedProcess(["binary"], code, "", error)
+                with self.assertRaises(RuntimeError):
+                    check.check_asan_lifetime(result)
+        result = subprocess.CompletedProcess(["binary"], -signal.SIGABRT, "",
+                                             "asan-context: read returned fiber local\n"
+                                             "ERROR: AddressSanitizer: stack-use-after-return\n")
+        check.check_asan_lifetime(result)
 
 
 if __name__ == "__main__":

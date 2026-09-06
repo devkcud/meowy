@@ -1,7 +1,8 @@
 # Native runtime prototypes
 
-This directory exercises explicit cleanup and guarded native stack allocation
-independently of the compiler. It uses C++20 and Clang 22.1.8 with exceptions and RTTI disabled. The
+This directory exercises explicit cleanup, guarded stack allocation and pinned
+native context switching independently of the compiler. It uses C++20 and
+Clang 22.1.8 with exceptions and RTTI disabled. The
 compiler still links its existing scalar runtime; this prototype adds no Meowy
 syntax or runtime symbols to generated programs.
 
@@ -13,7 +14,9 @@ python3 -B -m unittest discover -s runtime/tests -p 'test_*.py'
 The runner builds debug, optimized release, and ASan/UBSan executables in a
 temporary directory. Each executes 14 cleanup cases and two fatal subprocesses,
 plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
-guard-fault subprocesses.
+guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
+cleanup-after-resume subprocess. The sanitizer profile additionally requires an
+ASan stack-use-after-return report for a deliberately expired fiber local.
 Fatal cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
@@ -23,7 +26,8 @@ address and execution of the fault handler on an alternate signal stack. They
 prove guard protection by direct writes, not recovery from an overflowing task.
 The normal allocation cases run under ASan/UBSan/LSan. Guard probes disable ASan's
 SIGSEGV handler and instrumented faulting access so the kernel signal is inspected
-directly; this does not validate sanitizer context-switch hooks.
+directly. Context tests separately exercise the fiber hooks with instrumented
+callback bodies, live cross-switch stack borrows and the expired-local probe.
 
 Use `--build-dir runtime/build` to retain executables. `--clang PATH` selects a
 compiler executable but still requires version 22.1.8. `--no-sanitizers` explicitly
@@ -32,12 +36,74 @@ environments fail the selected checks. LeakSanitizer requires an environment
 without ptrace-based sandbox supervision; run the normal command with the required
 environment access when that restriction applies.
 
+## Pinned context contract
+
+[include/meowy/context.hpp](include/meowy/context.hpp) wraps the minimal
+[pinned Boost.Context import](vendor/boost-context/README.md). The selected target
+is Linux x86-64 SysV ELF LP64. The wrapper is an experimental private C++ interface,
+not a stable runtime ABI or a scheduler.
+
+- A caller-owned, noncopyable and nonmovable `Context` contains its `StackMemory`
+  owner. `initialize(bytes, body, data)` explicitly allocates the requested guarded
+  stack and prepares an entry without running the body. The current minimum is
+  65,536 usable bytes, also subject to the allocator's page-alignment restriction.
+  The context record and borrowed callback data must remain valid until release.
+- States are `empty`, `ready`, `running`, `suspended` and `completed`. `resume()`
+  starts or continues a ready/suspended context; `yield()` returns to that call.
+  Yield works within ordinary nested body calls. Body return marks completion and
+  explicitly switches back; it never returns into Boost's process-exit trampoline.
+- Only a host execution frame may resume a context. Resuming another context from
+  within a context is rejected. The host may alternate multiple contexts. The
+  first resume selects the pthread, and every later resume/yield must use that
+  worker. Creating a context on another thread before its first resume is allowed.
+- The pinned worker must stay alive until the context is completed and released.
+  All access requires caller synchronization; thread identity checks do not make
+  concurrent calls safe. Thread-local state and signal masks belong to the worker,
+  not an isolated task. Contexts must not change native shadow-stack configuration.
+- `release()` accepts empty, unstarted or completed contexts. Running and suspended
+  contexts are rejected, so their storage cannot be unmapped through this API.
+  Once pinned, release also requires that worker. OS release failures retain the
+  owner for retry. Destruction does not cancel, unwind, resume or release a context.
+- Callback type is `void (Context &, void *) noexcept`. Callback data/results are
+  caller-owned; there is no automatic capture allocation or typed task outcome.
+  Callbacks explicitly run their cleanup before returning. C++ exceptions and
+  destructor-driven continuation unwinding are not Meowy panic or cancellation.
+
+The preserved machine state is the x86-64 calling-convention state: stack pointer,
+continuation, callee-saved integer registers and floating-point control state.
+Caller-saved registers retain ordinary call semantics. Tests check all six integer
+callee-saved registers, FP rounding state, nested locals through 64 yields, host
+alternation and execution within the guarded mapping.
+
+ASan's [fiber interface](https://github.com/llvm/llvm-project/blob/llvmorg-22.1.8/compiler-rt/include/sanitizer/common_interface_defs.h)
+is called immediately around each switch. The wrapper preserves each fake-stack
+handle, discovers the host bounds on initial entry and destroys the fiber's fake
+stack on terminal departure. Only the three transition shims exclude address
+instrumentation so the hook handshake precedes instrumented body execution;
+callback code remains instrumented. The gate enables stack-use-after-return
+detection and requires the deliberate expired-local read to be diagnosed. ASan's
+own fake-stack allocations are instrumentation overhead outside the configured
+native usable-stack budget. TSan and sanitizer signal-handler interactions are
+not qualified.
+
+The prototype rejects active CET shadow stacks through
+[Linux's status interface](https://docs.kernel.org/arch/x86/shstk.html) and builds
+without CET code generation. It does not silently disable an enabled feature.
+Unknown status failures reject rather than switching with an unverified mode.
+
+An explicit cancellation fixture keeps a parent local alive while a borrowing
+context suspends, observes a caller-set cancellation flag, and runs cleanup that
+itself yields before finishing. Release remains rejected until completion. This
+proves that the current cleanup protocol and context switches compose in that
+bounded scenario; there is still no task scheduler, automatic cancellation request,
+join, child admission or task-root panic handler.
+
 ## Guarded stack allocation contract
 
 [include/meowy/stack_memory.hpp](include/meowy/stack_memory.hpp) adds the
 experimental `StackMemory` owner in the same `meowy::prototype::v0` namespace.
-This is a Linux `mmap` system-allocation prerequisite for the planned context
-wrapper. No context is created or executed on the allocated storage.
+This is the Linux `mmap` system-allocation foundation used privately by `Context`.
+Standalone allocation tests do not execute a context on the mapping.
 
 - `plan(bytes, page)` checks positive page-aligned usable bytes, two guard pages
   and a total within `PTRDIFF_MAX`, without allocating. The explicit usable budget
@@ -94,8 +160,9 @@ compiler bridge, public FFI or qualified private Meowy runtime ABI.
   may be armed, once, so reservation order agrees with initialization order.
   A failed construction leaves its reservation unarmed; cleanup ignores it.
 - A release callback is `Panic (*)(void *) noexcept`. A zero code means success;
-  a nonzero code is a panic. Callbacks must finish synchronously. A callback cannot
-  mutate the stack currently cleaning up; those operations return `invalid`.
+  a nonzero code is a panic. A callback may explicitly yield its active context;
+  cleanup continues only when the callback returns. The stack stays busy across
+  that suspension and cannot be mutated; such operations return `invalid`.
   C++ exceptions are not the panic protocol.
 - `mark()` records a boundary. `unwind()` releases armed entries after that mark
   in reverse order and removes all reservations after it. Scope exits are explicit
@@ -118,8 +185,8 @@ compiler bridge, public FFI or qualified private Meowy runtime ABI.
   original cause, operation and second panic to stderr, then aborts. Fatal process
   termination does not promise further cleanup.
 
-These functions are synchronous and do not suspend, schedule or synchronize.
-Mutation requires exclusive caller access. Release callbacks may run resource
+The cleanup stack does not itself schedule or synchronize. A callback controls any
+explicit context suspension. Mutation requires exclusive caller access. Callbacks may run resource
 operations of their own; the stack does not grant allocation or failure recovery
 guarantees for those operations.
 
@@ -155,11 +222,11 @@ the actual stack/unwind implementation plan.
 
 ## Validation boundary and next steps
 
-This is a bounded protocol experiment on the current Linux host. It does not
-qualify task stacks, native stack unwinding or the documented v0.0.1 release.
-Guarded allocation is now independently tested. There is no vendored Boost.Context,
-stack switching, register-preservation test, worker pinning, scheduler, join, timer
-or channel.
+This is a bounded runtime experiment on the current Linux x86-64 host. The pinned
+context wrapper, guarded allocation and explicit cleanup have native and sanitizer
+coverage. It does not qualify a full task runtime, native stack unwinding or the
+documented v0.0.1 release. There is no scheduler, automatic cancellation, join,
+timer or channel.
 There is no LLVM landing pad, Meowy personality function or pinned unwind library.
 Panic codes/messages are borrowed test inputs; source spans, task identity and
 diagnostic attachment are absent. Cancellation is an explicit cleanup edge only.
@@ -168,9 +235,9 @@ Nothing promotes owners or borrows into arbitrary heap storage.
 1. Design the compiler's generated cleanup edges and initialized-slot metadata
    alongside moves and partial initialization. Decide whether the experimental
    ordered reservation restriction should survive that design.
-2. Integrate the guarded allocation owner with the planned revision-pinned context
-   wrapper; qualify context creation, register preservation and sanitizer switching
-   hooks. Keep stack admission/release explicit and verify no live context is unmapped.
+2. Build bounded scheduler admission and worker-owned runnable queues over the
+   context wrapper. Keep context release behind terminal cleanup and structured
+   child joins; preserve the current worker and sanitizer invariants.
 3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.
 4. Exercise a suspended child borrowing a parent local, cancellation while joining,

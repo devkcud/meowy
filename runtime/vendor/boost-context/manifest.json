@@ -1,0 +1,24 @@
+{
+  "repository": "https://github.com/boostorg/context",
+  "tag": "boost-1.90.0",
+  "revision": "6ff80e0575133c6d0b704e03bbb956a0c3b9551a",
+  "target": "x86_64-linux-sysv-elf-lp64",
+  "files": {
+    "make_x86_64_sysv_elf_gas.S": {
+      "source": "https://raw.githubusercontent.com/boostorg/context/6ff80e0575133c6d0b704e03bbb956a0c3b9551a/src/asm/make_x86_64_sysv_elf_gas.S",
+      "sha256": "31c625da72310d90583e1ef51e2ad57d622ab20fdd9e6d7f2fe60dd5fb6fd7ea"
+    },
+    "jump_x86_64_sysv_elf_gas.S": {
+      "source": "https://raw.githubusercontent.com/boostorg/context/6ff80e0575133c6d0b704e03bbb956a0c3b9551a/src/asm/jump_x86_64_sysv_elf_gas.S",
+      "sha256": "560c7fa5b5c4476999e50e54a6b14efaddb7c7f42a8de8165cd1336c71c93ef0"
+    },
+    "fcontext.hpp": {
+      "source": "https://raw.githubusercontent.com/boostorg/context/6ff80e0575133c6d0b704e03bbb956a0c3b9551a/include/boost/context/detail/fcontext.hpp",
+      "sha256": "882577dfbc5229e31a389a5e3f2c86083d867c54b92bc925d890eca260bcb4c7"
+    },
+    "LICENSE_1_0.txt": {
+      "source": "https://www.boost.org/LICENSE_1_0.txt",
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    }
+  }
+}
