@@ -643,7 +643,7 @@ impl<'a> Generator<'a> {
                 }
             }
             ExprKind::Binary { op, left, right } => self.binary(op, left, right),
-            ExprKind::Call { id, args } => {
+            ExprKind::Call { id, args, .. } => {
                 let mut values = Vec::new();
                 for arg in args {
                     let result = self.expression(arg)?;
@@ -1716,6 +1716,7 @@ mod tests {
             expr(
                 ExprKind::Call {
                     id: 0,
+                    site: 0,
                     args: vec![coerce(value, &small)],
                 },
                 wide.clone(),

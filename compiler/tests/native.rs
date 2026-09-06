@@ -1027,7 +1027,7 @@ pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() 
         ("bad:(){owner:1;pair:{->view:&owner};->pair}", "E303"),
         ("owner:1;pair:={->view:&owner}", "B001"),
         ("owner:1;pair:{->view:&owner};view:&pair", "B001"),
-        ("f<null>:(pair<{view<&int32>}>){value:*pair.view}", "B001"),
+        ("f<null>:(pair<{view<&int32>}>){alias:&pair}", "B001"),
         (
             "f<null>:(flag<boolean>){owner:1;pair:={|flag|->view:&owner}}",
             "B001",
@@ -1205,10 +1205,7 @@ pub fn reference_union_escapes_and_remaining_contracts_are_explicit() {
         ),
         ("a:1;r<&int32><null>:=&a", "B001"),
         ("a:1;r<&int32><null>:&a;alias:&r", "B001"),
-        (
-            "f<null>:(r<&int32><null>){|r<&int32>|{value:*r<&int32>}}",
-            "B001",
-        ),
+        ("f<null>:(r<&int32><null>){copy:=r}", "B001"),
         ("a:1;r<&int32><null>:&a;d:@\"debug\";d.print(r)", "B001"),
     ] {
         let result = Case::new(source).command("check", &["--json"]);

@@ -91,6 +91,7 @@ pub(crate) struct Checker {
     pub(crate) constants: BTreeMap<usize, Constant>,
     pub(crate) block: usize,
     pub(crate) owner: usize,
+    pub(crate) calls: usize,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
@@ -152,6 +153,7 @@ impl Checker {
             constants: BTreeMap::new(),
             block: 0,
             owner: 0,
+            calls: 0,
         }
     }
 
@@ -274,12 +276,6 @@ impl Checker {
                     .map(|ty| self.ty(ty))
                     .collect::<Result<Vec<_>>>()?;
                 let result = self.ty(result)?;
-                if result.has_reference() || params.iter().any(Type::has_reference) {
-                    return Err(Diagnostic::unsupported(
-                        "function borrow contracts",
-                        expr.span,
-                    ));
-                }
                 Ok(Spec::Function { params, result })
             }
             TypeKind::Record { primary, fields } => {
@@ -967,12 +963,6 @@ impl Checker {
         body: &ast::Block,
         result: Option<Type>,
     ) -> Result<Type> {
-        if result.as_ref().is_some_and(Type::has_reference) {
-            return Err(Diagnostic::unsupported(
-                "function borrow contracts",
-                body.span,
-            ));
-        }
         let reach = std::mem::replace(&mut self.reach, TRUE);
         let owner = self.owner;
         self.owner = id + 1;
@@ -980,12 +970,6 @@ impl Checker {
         let mut ids = Vec::new();
         for param in params {
             let ty = self.ty(&param.ty)?;
-            if ty.has_reference() {
-                return Err(Diagnostic::unsupported(
-                    "function borrow contracts",
-                    param.span,
-                ));
-            }
             let id = self.local(ty.clone());
             self.declare(
                 &param.name,
@@ -2353,9 +2337,6 @@ impl Checker {
                         span,
                     )
                 })?;
-                if result.has_reference() || params.iter().any(Type::has_reference) {
-                    return Err(Diagnostic::unsupported("function borrow contracts", span));
-                }
                 let mut values = Vec::new();
                 for (arg, ty) in args.into_iter().zip(params) {
                     values.push(self.expr(arg, Some(&ty)).map_err(|error| {
@@ -2366,7 +2347,17 @@ impl Checker {
                         }
                     })?);
                 }
-                (hir::ExprKind::Call { id, args: values }, result)
+                let site = self.calls;
+                self.calls += 1;
+                self.proofs.calls.insert(site, self.reach);
+                (
+                    hir::ExprKind::Call {
+                        id,
+                        site,
+                        args: values,
+                    },
+                    result,
+                )
             }
             Value::Control { .. } => {
                 return Err(Diagnostic::unsupported(
@@ -2728,9 +2719,8 @@ mod tests {
             "x:1;r:&x;s:&r",
             "x:{->a:1;r:&a}",
             "f<int32>:(x<int32>){r:&x;->*r}",
-            "f<int32>:(x<&int32>){->*x}",
-            "f<null>:(x<{value<&int32>}><null>){->null}",
-            "f<null>:(x<&int32><null>){->null}",
+            "f<int32>:(x<&!int32>){->*x}",
+            "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",
             "x:1;r:&x;r.{v:*self}",
             "x:1;r:&x;debug:@\"debug\";debug.print(r)",
             "x:1;r:&x;s:&*r",

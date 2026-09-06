@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::ast::Span;
-use crate::borrow::{Facts, Origin, Path, Proofs, Step};
+use crate::borrow::{Facts, Origin, Path, Proofs, Source, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
-use crate::hir::{Block, BlockId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
+use crate::hir::{Block, BlockId, CallId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Live = BTreeMap<usize, Guard>;
@@ -49,6 +49,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) current: Vec<usize>,
     pub(crate) work: usize,
     pub(crate) origins: usize,
+    pub(crate) missing_calls: Vec<(usize, Span)>,
 }
 
 pub(crate) fn check(
@@ -58,9 +59,9 @@ pub(crate) fn check(
     guards: &mut Flow,
 ) -> std::result::Result<(), Vec<Diagnostic>> {
     let result = (|| {
-        Graph::new(program, facts, proofs, guards).check(&program.body)?;
+        Graph::new(program, facts, proofs, guards).check(&program.body, &[])?;
         for function in &program.functions {
-            Graph::new(program, facts, proofs, guards).check(&function.body)?;
+            Graph::new(program, facts, proofs, guards).check(&function.body, &function.params)?;
         }
         Ok(())
     })();
@@ -93,6 +94,7 @@ impl<'a> Graph<'a> {
             current: vec![0],
             work: 0,
             origins: 0,
+            missing_calls: Vec::new(),
         }
     }
 
@@ -149,10 +151,7 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn value(&mut self, origins: Vec<Origin>) -> Result<usize> {
-        let weight = origins
-            .iter()
-            .map(|origin| 1 + origin.component.len() + origin.place.fields.len())
-            .sum::<usize>();
+        let weight = origins.iter().map(Origin::weight).sum::<usize>();
         if self.values.len() == MAX_VALUES || self.origins + weight > MAX_ORIGINS {
             return Err(Self::budget());
         }
@@ -186,10 +185,7 @@ impl<'a> Graph<'a> {
     pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
         let mut value = Bundle::new();
         for (path, id) in &source {
-            let weight = self.values[*id]
-                .iter()
-                .map(|origin| 1 + origin.component.len() + origin.place.fields.len())
-                .sum::<usize>();
+            let weight = self.values[*id].iter().map(Origin::weight).sum::<usize>();
             self.charge(weight + path.len() + 1)?;
             value.insert(path.clone(), self.value(self.values[*id].clone())?);
         }
@@ -209,7 +205,7 @@ impl<'a> Graph<'a> {
             .facts
             .locals
             .get(&id)
-            .map(|state| state.origins.clone())
+            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
             .unwrap_or_default();
         let value = self.bundle(origins)?;
         self.locals.insert(id, value.clone());
@@ -251,11 +247,11 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
-        let origins = self
+        let origins: Vec<_> = self
             .facts
             .blocks
             .get(&block.id)
-            .map(|state| state.origins.clone())
+            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
             .unwrap_or_default();
         let result = self.bundle(origins.clone())?;
         let value = self.bundle(origins)?;
@@ -379,6 +375,34 @@ impl<'a> Graph<'a> {
         self.project(expr, &[])
     }
 
+    pub(crate) fn call(&mut self, site: CallId, args: &[Expr], span: Span) -> Result<Bundle> {
+        let mut uses = Vec::new();
+        for arg in args {
+            uses.extend(self.expression(arg)?.into_values());
+            if self.current.is_empty() {
+                return Ok(Bundle::new());
+            }
+        }
+        let state = self.facts.calls.get(&site);
+        let origins = state
+            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
+            .unwrap_or_default();
+        let proof = state
+            .map(|state| self.guards.and(state.present, state.proof))
+            .unwrap_or(FALSE);
+        let value = self.bundle(origins)?;
+        let node = self.append(Node {
+            uses,
+            defs: value.values().copied().collect(),
+            ..Node::default()
+        })?;
+        if state.is_none() {
+            self.missing_calls.push((node, span));
+        }
+        self.assume(proof)?;
+        Ok(value)
+    }
+
     pub(crate) fn inspect(&mut self, expr: &Expr) -> Result<()> {
         self.tick()?;
         match &expr.kind {
@@ -481,7 +505,7 @@ impl<'a> Graph<'a> {
             ExprKind::Borrow(place) => {
                 let value = self.value(vec![Origin {
                     component: Vec::new(),
-                    place: place.clone(),
+                    source: Source::Local(place.clone()),
                     guard: TRUE,
                 }])?;
                 self.append(Node {
@@ -545,16 +569,8 @@ impl<'a> Graph<'a> {
                 })?;
                 Bundle::new()
             }
-            ExprKind::Call { args, .. } => {
-                let mut uses = Vec::new();
-                for arg in args {
-                    uses.extend(self.expression(arg)?.into_values());
-                }
-                self.append(Node {
-                    uses,
-                    ..Node::default()
-                })?;
-                Bundle::new()
+            ExprKind::Call { site, args, .. } => {
+                Self::select(self.call(*site, args, expr.span)?, path)
             }
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {
@@ -672,9 +688,36 @@ impl<'a> Graph<'a> {
             && (left.fields.starts_with(&right.fields) || right.fields.starts_with(&left.fields))
     }
 
-    pub(crate) fn check(mut self, block: &Block) -> Result<()> {
+    pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
+        for id in params {
+            let proof = self
+                .facts
+                .locals
+                .get(id)
+                .ok_or_else(|| {
+                    Diagnostic::unsupported(
+                        "missing function input borrow proof",
+                        Span { start: 0, end: 0 },
+                    )
+                })?
+                .proof;
+            let value = self.local(*id)?;
+            self.append(Node {
+                defs: value.into_values().collect(),
+                ..Node::default()
+            })?;
+            self.assume(proof)?;
+        }
         self.block(block)?;
         let reach = self.reach()?;
+        for (node, span) in &self.missing_calls {
+            if reach[*node] != FALSE {
+                return Err(Diagnostic::unsupported(
+                    "missing function result borrow proof",
+                    *span,
+                ));
+            }
+        }
         let live = self.liveness(&reach)?;
         for (id, reachable) in reach.iter().enumerate() {
             let Some((place, span)) = self.nodes[id].write.clone() else {
@@ -687,7 +730,8 @@ impl<'a> Graph<'a> {
                 self.charge(self.values[value].len() + 1)?;
                 let guard = self.guards.and(guard, *reachable);
                 for origin in &self.values[value] {
-                    if Self::overlap(&place, &origin.place)
+                    if let Source::Local(source) = &origin.source
+                        && Self::overlap(&place, source)
                         && self.guards.overlap(guard, origin.guard)
                     {
                         return Err(Diagnostic::new(
@@ -924,6 +968,57 @@ mod tests {
         );
         rejects(
             "a:=1;r<&int32><null>:&a;first:=true;i:=0;'loop {|!first&&r<&int32>|{x:*r<&int32>};|first|a=2;first=false;i=i+1;|i<2|'loop.restart()}",
+            "E302",
+        );
+    }
+
+    #[test]
+    pub(crate) fn returned_function_views_keep_all_input_bounds_until_final_use() {
+        accepts(
+            "first<&int32>:(a<&int32>,b<&string>){->a};a:=1;b:=\"old\";r:first(&a,&b);x:*r;b=\"new\";a=2",
+        );
+        rejects(
+            "first<&int32>:(a<&int32>,b<&string>){->a};a:=1;b:=\"old\";r:first(&a,&b);b=\"new\";x:*r",
+            "E302",
+        );
+        rejects(
+            "identity<&int32>:(a<&int32>){->a};first<&int32>:(a<&int32>,b<&string>){->a};a:=1;b:=\"old\";r:identity(first(&a,&b));b=\"new\";x:*r",
+            "E302",
+        );
+        rejects(
+            "head<&int32>:(r<{left<&int32>;right<&string>}>){->r.left};a:=1;b:=\"old\";r:head({->left:&a;->right:&b});b=\"new\";x:*r",
+            "E302",
+        );
+    }
+
+    #[test]
+    pub(crate) fn scalar_function_results_and_projections_end_argument_loans() {
+        accepts("read<int32>:(a<&int32>){->*a};a:=1;x:read(&a);a=2");
+        accepts(
+            "packet<{view<&int32>;count<int32>}>:(a<&int32>,b<&string>){->view:a;->count:*a};a:=1;b:=\"old\";r:packet(&a,&b);a=2;b=\"new\";x:r.count",
+        );
+        accepts(
+            "packet<{view<&int32>;count<int32>}>:(a<&int32>,b<&string>){->view:a;->count:*a};a:=1;b:=\"old\";x:packet(&a,&b).count;a=2;b=\"new\"",
+        );
+    }
+
+    #[test]
+    pub(crate) fn call_arguments_stay_live_until_consumption_and_stop_at_exit() {
+        rejects(
+            "read<int32>:(a<&int32>,b<int32>){->*a+b};a:=1;x:read(&a,{a=2;->3})",
+            "E302",
+        );
+        accepts("read<int32>:(a<&int32>,b<int32>){->*a+b};a:=1;'out {read(&a,{'out.leave()});a=2}");
+        accepts(
+            "identity<&int32>:(a<&int32>){->a};a:=1;r<&int32><null>:null;|r<&int32>|{view:identity(&a)};a=2",
+        );
+    }
+
+    #[test]
+    pub(crate) fn symbolic_function_inputs_do_not_hide_local_conflicts() {
+        accepts("read<int32>:(a<&int32>){local:=1;r:&local;x:*r;local=2;->*a}");
+        rejects(
+            "read<int32>:(a<&int32>){local:=1;r:&local;local=2;x:*r;->*a}",
             "E302",
         );
     }

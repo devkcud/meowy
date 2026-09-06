@@ -1,7 +1,7 @@
 use crate::ast::Span;
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
-use crate::hir::{Place, Type};
+use crate::hir::{LocalId, Place, Type};
 
 pub(crate) const MAX_PARTS: usize = 4_096;
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
@@ -16,8 +16,24 @@ pub(crate) enum Step {
 #[derive(Clone)]
 pub(crate) struct Origin {
     pub(crate) component: Path,
-    pub(crate) place: Place,
+    pub(crate) source: Source,
     pub(crate) guard: Guard,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) enum Source {
+    Local(Place),
+    Input { id: LocalId, component: Path },
+}
+
+impl Origin {
+    pub(crate) fn weight(&self) -> usize {
+        1 + self.component.len()
+            + match &self.source {
+                Source::Local(place) => place.fields.len(),
+                Source::Input { component, .. } => component.len(),
+            }
+    }
 }
 
 #[derive(Clone)]
@@ -30,6 +46,7 @@ pub(crate) struct Active {
 #[derive(Clone)]
 pub(crate) struct State {
     pub(crate) origins: Vec<Origin>,
+    pub(crate) bounds: Vec<Origin>,
     pub(crate) active: Vec<Active>,
     pub(crate) present: Guard,
     pub(crate) proof: Guard,
@@ -39,6 +56,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             origins: Vec::new(),
+            bounds: Vec::new(),
             active: Vec::new(),
             present: TRUE,
             proof: TRUE,
@@ -55,13 +73,14 @@ impl State {
     }
 
     pub(crate) fn size(&self) -> usize {
-        self.origins.len() + self.active.len()
+        self.origins.len() + self.bounds.len() + self.active.len()
     }
 
     pub(crate) fn weight(&self) -> usize {
         self.origins
             .iter()
-            .map(|origin| 1 + origin.component.len() + origin.place.fields.len())
+            .chain(&self.bounds)
+            .map(Origin::weight)
             .sum::<usize>()
             + self
                 .active
@@ -90,19 +109,20 @@ impl State {
         self.present = flow.and(self.present, guard);
         let absent = flow.not(guard);
         self.proof = flow.or(absent, self.proof);
-        for origin in &mut self.origins {
+        for origin in self.origins.iter_mut().chain(&mut self.bounds) {
             origin.guard = flow.and(origin.guard, guard);
         }
         for active in &mut self.active {
             active.guard = flow.and(active.guard, guard);
         }
         self.origins.retain(|origin| origin.guard != FALSE);
+        self.bounds.retain(|origin| origin.guard != FALSE);
         self.active.retain(|active| active.guard != FALSE);
         self
     }
 
     pub(crate) fn prefix(mut self, prefix: &[Step]) -> Self {
-        for origin in &mut self.origins {
+        for origin in self.origins.iter_mut().chain(&mut self.bounds) {
             origin.component.splice(0..0, prefix.iter().copied());
         }
         for active in &mut self.active {
@@ -127,7 +147,18 @@ impl State {
                 .filter_map(|origin| {
                     origin.component.strip_prefix(path).map(|component| Origin {
                         component: component.to_vec(),
-                        place: origin.place.clone(),
+                        source: origin.source.clone(),
+                        guard: origin.guard,
+                    })
+                })
+                .collect(),
+            bounds: self
+                .bounds
+                .iter()
+                .filter_map(|origin| {
+                    origin.component.strip_prefix(path).map(|component| Origin {
+                        component: component.to_vec(),
+                        source: origin.source.clone(),
                         guard: origin.guard,
                     })
                 })
@@ -159,11 +190,25 @@ impl State {
             if let Some(prior) = self
                 .origins
                 .iter_mut()
-                .find(|prior| prior.component == origin.component && prior.place == origin.place)
+                .find(|prior| prior.component == origin.component && prior.source == origin.source)
             {
                 prior.guard = flow.or(prior.guard, origin.guard);
             } else {
                 self.origins.push(origin);
+            }
+            if self.size() > MAX_PARTS {
+                return Err(Self::budget(span));
+            }
+        }
+        for bound in other.bounds {
+            if let Some(prior) = self
+                .bounds
+                .iter_mut()
+                .find(|prior| prior.component == bound.component && prior.source == bound.source)
+            {
+                prior.guard = flow.or(prior.guard, bound.guard);
+            } else {
+                self.bounds.push(bound);
             }
             if self.size() > MAX_PARTS {
                 return Err(Self::budget(span));

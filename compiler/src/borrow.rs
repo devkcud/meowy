@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::Span;
-pub(crate) use crate::borrow_value::{Origin, Path, State, Step};
+pub(crate) use crate::borrow_value::{Origin, Path, Source, State, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow as Guards, Guard, TRUE};
-use crate::hir::{Block, BlockId, EmitId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
+use crate::hir::{Block, BlockId, CallId, EmitId, Expr, ExprKind, LocalId, Program, Stmt, Type};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Tags = BTreeMap<((LocalId, Vec<String>), Type), Vec<(Type, Guard)>>;
@@ -19,6 +19,7 @@ pub(crate) struct Proofs {
     pub(crate) bindings: BTreeMap<LocalId, Guard>,
     pub(crate) tags: Tags,
     pub(crate) mutable: BTreeSet<LocalId>,
+    pub(crate) calls: BTreeMap<CallId, Guard>,
 }
 
 pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Path, &'a Type)> {
@@ -38,6 +39,7 @@ pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Path, &'
 pub(crate) struct Facts {
     pub(crate) locals: BTreeMap<LocalId, State>,
     pub(crate) blocks: BTreeMap<BlockId, State>,
+    pub(crate) calls: BTreeMap<CallId, State>,
 }
 
 #[derive(Clone)]
@@ -95,6 +97,7 @@ pub(crate) struct Checker<'a> {
     pub(crate) origins: usize,
     pub(crate) assumed: Guard,
     pub(crate) assumed_scopes: Vec<Guard>,
+    pub(crate) inputs: BTreeSet<LocalId>,
 }
 
 pub(crate) fn check(
@@ -116,36 +119,32 @@ pub(crate) fn check(
         origins: 0,
         assumed: TRUE,
         assumed_scopes: Vec::new(),
+        inputs: BTreeSet::new(),
     };
     let result = (|| {
         checker.block(&program.body)?;
         for function in &program.functions {
             checker.locals.clear();
+            checker.assumed = TRUE;
+            checker.inputs = function.params.iter().copied().collect();
             for id in &function.params {
+                let span = Span { start: 0, end: 0 };
+                let ty = &program.locals[*id];
+                let mut state = crate::borrow_contract::input(*id, ty, checker.guards, span)?;
+                checker.link_tags(*id, ty, &mut state, span)?;
+                checker.complete(ty, &state, span)?;
+                checker.reserve_origins(state.weight() + 1, span)?;
+                checker.assumed = checker.guards.and(checker.assumed, state.proof);
+                checker.facts.locals.insert(*id, state.clone());
                 checker.locals.insert(
                     *id,
                     Storage {
                         block: function.body.id,
-                        state: State::unknown(
-                            &program.locals[*id],
-                            checker.guards,
-                            Span { start: 0, end: 0 },
-                        )?,
+                        state,
                     },
                 );
             }
             checker.block(&function.body)?;
-            if function.result.has_reference()
-                || function
-                    .params
-                    .iter()
-                    .any(|id| program.locals[*id].has_reference())
-            {
-                return Err(Diagnostic::unsupported(
-                    "function borrow contracts",
-                    Span { start: 0, end: 0 },
-                ));
-            }
         }
         Ok(())
     })();
@@ -218,10 +217,23 @@ impl Checker<'_> {
         Ok(())
     }
 
-    pub(crate) fn live(&self, place: &Place, span: Span) -> Result<&Storage> {
-        self.locals.get(&place.root).ok_or_else(|| {
-            Diagnostic::new("E303", "borrowed storage has ended before this use", span)
-        })
+    pub(crate) fn live(&self, source: &Source, span: Span) -> Result<Option<&Storage>> {
+        match source {
+            Source::Local(place) => self.locals.get(&place.root).map(Some).ok_or_else(|| {
+                Diagnostic::new("E303", "borrowed storage has ended before this use", span)
+            }),
+            Source::Input { id, component }
+                if self.inputs.contains(id)
+                    && crate::borrow_contract::component_type(
+                        &self.program.locals[*id],
+                        component,
+                    )
+                    .is_some_and(|ty| matches!(ty, Type::Reference(_))) =>
+            {
+                Ok(None)
+            }
+            _ => Err(Self::unsupported(span)),
+        }
     }
 
     pub(crate) fn link_tags(
@@ -368,6 +380,7 @@ impl Checker<'_> {
         if state
             .origins
             .iter()
+            .chain(&state.bounds)
             .any(|origin| !valid.contains(&origin.component))
             || state.active.iter().any(|active| {
                 unions
@@ -432,27 +445,8 @@ impl Checker<'_> {
             .position(|id| *id == target)
             .ok_or_else(|| Self::unsupported(span))?;
         let effective = self.guards.and(state.present, state.proof);
-        let mut origins = Vec::new();
-        for origin in state.origins {
-            if !self.guards.overlap(origin.guard, effective) {
-                continue;
-            }
-            let storage = self.live(&origin.place, span)?;
-            let source = self
-                .blocks
-                .iter()
-                .position(|id| *id == storage.block)
-                .ok_or_else(|| Self::unsupported(span))?;
-            if source >= target_index {
-                return Err(Diagnostic::new(
-                    "E303",
-                    "emitted borrow outlives its local storage",
-                    span,
-                ));
-            }
-            origins.push(origin);
-        }
-        state.origins = origins;
+        state.origins = self.retained(state.origins, effective, target_index, span)?;
+        state.bounds = self.retained(state.bounds, effective, target_index, span)?;
         self.guards
             .spend(state.weight() + prefix.len() * state.size());
         self.results.get_mut(&target).expect("result state").merge(
@@ -460,6 +454,40 @@ impl Checker<'_> {
             self.guards,
             span,
         )
+    }
+
+    pub(crate) fn retained(
+        &mut self,
+        origins: Vec<Origin>,
+        effective: Guard,
+        target: usize,
+        span: Span,
+    ) -> Result<Vec<Origin>> {
+        let mut result = Vec::new();
+        for origin in origins {
+            if !self.guards.spend(origin.weight()) {
+                return Err(State::budget(span));
+            }
+            if !self.guards.overlap(origin.guard, effective) {
+                continue;
+            }
+            if let Some(storage) = self.live(&origin.source, span)? {
+                let source = self
+                    .blocks
+                    .iter()
+                    .position(|id| *id == storage.block)
+                    .ok_or_else(|| Self::unsupported(span))?;
+                if source >= target {
+                    return Err(Diagnostic::new(
+                        "E303",
+                        "emitted borrow outlives its local storage",
+                        span,
+                    ));
+                }
+            }
+            result.push(origin);
+        }
+        Ok(result)
     }
 
     pub(crate) fn block(&mut self, block: &Block) -> Result<Value> {
@@ -622,7 +650,7 @@ impl Checker<'_> {
                 State {
                     origins: vec![Origin {
                         component: Vec::new(),
-                        place: place.clone(),
+                        source: Source::Local(place.clone()),
                         guard: TRUE,
                     }],
                     ..State::default()
@@ -639,9 +667,9 @@ impl Checker<'_> {
                         .ok_or_else(|| Self::unsupported(expr.span))?;
                     let assumptions = self.assumptions();
                     let proof = self.guards.and(state.proof, assumptions);
-                    for origin in &state.origins {
+                    for origin in state.origins.iter().chain(&state.bounds) {
                         if self.guards.overlap(origin.guard, proof) {
-                            self.live(&origin.place, expr.span)?;
+                            self.live(&origin.source, expr.span)?;
                         }
                     }
                     state
@@ -662,9 +690,9 @@ impl Checker<'_> {
                         return Err(Self::unsupported(expr.span));
                     }
                     let proof = self.guards.and(result.state.present, result.state.proof);
-                    for origin in &result.state.origins {
+                    for origin in result.state.origins.iter().chain(&result.state.bounds) {
                         if self.guards.overlap(origin.guard, proof) {
-                            self.live(&origin.place, expr.span)?;
+                            self.live(&origin.source, expr.span)?;
                         }
                     }
                 }
@@ -704,21 +732,33 @@ impl Checker<'_> {
                 }
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }
-            ExprKind::Call { args, .. } => {
+            ExprKind::Call { site, args, .. } => {
+                let mut inputs = Vec::new();
                 for arg in args {
                     if !flow.next {
                         break;
                     }
                     let value = self.expression(arg)?;
-                    if value.flow.next && arg.ty.has_reference() {
-                        return Err(Diagnostic::unsupported(
-                            "function borrow contracts",
-                            arg.span,
-                        ));
-                    }
+                    inputs.push((&arg.ty, value.state));
                     flow.append(value.flow);
                 }
-                State::unknown(&expr.ty, self.guards, expr.span)?
+                let state = if flow.next {
+                    crate::borrow_contract::call(&expr.ty, &inputs, self.guards, expr.span)?
+                } else {
+                    State::absent()
+                };
+                let entered = self
+                    .proofs
+                    .calls
+                    .get(site)
+                    .copied()
+                    .ok_or_else(|| Self::unsupported(expr.span))?;
+                let normal = self.guards.and(state.present, state.proof);
+                let post = self.guards.or(self.guards.not(entered), normal);
+                self.assumed = self.guards.and(self.assumed, post);
+                self.reserve_origins(state.weight() + 1, expr.span)?;
+                self.facts.calls.insert(*site, state.clone());
+                state
             }
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {
@@ -850,7 +890,7 @@ mod tests {
     }
 
     #[test]
-    pub(crate) fn reference_aggregates_mutation_and_function_contracts_remain_explicit() {
+    pub(crate) fn reference_mutation_and_exclusive_contracts_remain_explicit() {
         for source in [
             "a:1;r:={->field:&a}",
             "a:1;flag:=true;r:={|flag|->&a}",
@@ -858,8 +898,7 @@ mod tests {
             "a:=1;r:&!a",
             "r:&(1+2)",
             "a:1;r:{->&a};s:&r",
-            "f<int32>:(r<&int32>){->*r}",
-            "f<&int32>:(){a:1;->&a}",
+            "f<int32>:(r<&!int32>){->*r}",
         ] {
             rejects(source, "B001");
         }
@@ -911,7 +950,7 @@ mod tests {
             "a:1;r:{->view:&a};alias:&r",
             "a:1;r:{->view:&a};alias:&r.view",
             "a:1;r:={->view:&a}",
-            "f<null>:(r<{view<&int32>}>){x:*r.view}",
+            "<R>:<{view<&int32>}>;f<null>:(r<&R>){x:r}",
             "a:1;r:{->&a;->count:3};d:@\"debug\";d.print(r)",
         ] {
             rejects(source, "B001");

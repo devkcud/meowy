@@ -30,8 +30,9 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans, reference-bearing
-  signatures, temporary borrows and reference dispatch are B001.
+- Mutable reference-bearing bindings, exclusive loans, temporary borrows and
+  reference dispatch blocks are B001. Direct function signatures can carry shared
+  references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
   milestone implements moves, owner destruction or panic unwinding.
@@ -60,7 +61,7 @@ implementation boundary; it does not change language rules.
   comparing their scalar primaries; scalar literals retain numeric-primary width.
 - Union wrappers containing references and omitted optional reference fields are
   supported. Borrowing storage rooted in a reference-carrying record or union,
-  mutable carriers and reference-carrying function signatures remain separate
+  mutable carriers and indirect/capturing function contracts remain separate
   work; this milestone copies contained shared references rather than reborrowing
   the carrier or inventing a transitive lifetime contract.
 
@@ -102,13 +103,56 @@ implementation boundary; it does not change language rules.
   union against an explicitly typed null value of that union, or inspect its null
   tag; equality does not introduce a new member conversion.
 
+## Direct function contracts
+
+- Direct, inferred-result, recursive and forward-group function signatures may
+  pass and return shared references and immutable record/union carriers. Every
+  definition is checked independently, including uncalled and mutually recursive
+  definitions. No body choice weakens the public all-input lifetime contract.
+- Actual origins distinguish physical `Local` storage from symbolic `Input`
+  sources. Each active parameter reference leaf gets its own symbolic source;
+  the parameter's stack copy is not its referent. A completed return must borrow
+  from such input sources. Returning any local actual origin or dependency is
+  E303. Ordinary by-value parameter address-taking remains B001.
+- `State.bounds` is separate from actual pointer origins. At a call, possible
+  actual sources are the active input reference leaves with the result leaf's
+  exact reference type. Each returned reference also inherits every active input
+  origin and transitive bound, including ignored inputs of another referent type.
+  These are lifetime/loan dependencies, not claims about pointer identity.
+- Consequently, `first(p, q)` remains bounded by both inputs even if the body
+  returns only `p`. An ignored shorter-lived `q` causes E303 on escape, and a write
+  to its owner before a returned reference's final use causes E302. Bounds survive
+  wrapper calls and copies; scalar-only projections and inactive result variants
+  carry no continuing reference loan. Temporary carrier arguments constrain the
+  contained referents rather than the carrier's temporary storage.
+- Every HIR call has an explicit site ID. `Facts.calls` stores a fresh substituted
+  snapshot per site; it is never cached by function ID. The CFG initializes input
+  components/proofs, evaluates all arguments in order, consumes their temporary
+  references together at the call node and defines the returned components.
+  An early argument exit prevents call consumption. Missing snapshots on a
+  potentially reachable call are B001, not an invented empty result.
+- A completed reference result requires an active compatible input source under
+  the currently supported capability set. There is no static safe-reference
+  construction, reborrowing, allocation or capture path that could supply another
+  source. Calls without such a source have no returning reference path; nullable
+  results can still return null. An entered-call guard, captured after argument
+  evaluation, conditions the normal-return proof so earlier leaves and skipped
+  calls remain reachable. This rule must be extended before enabling static
+  reference sources or reference-producing intrinsic contracts.
+- The CFG applies the call snapshot's presence/proof only on its returning edge;
+  restart still erases iteration relations. Signature-based result activity may
+  be more conservative than a particular body. Reborrows, exclusive access,
+  mutable carriers, captures, indirect calls and owned cleanup remain unsupported.
+  Existing string values are literal-backed static views and do not create local
+  referent-storage dependencies merely by passing a string value.
+
 ## Control-flow and last use
 
 - `src/loans.rs` builds a separate graph for the entry body and every function.
   Its reference value IDs distinguish immutable local components, expression
   temporaries and block result components from physical referent storage IDs.
 - Nodes represent reference definitions and reads, result initialization and
-  transfer, consuming operations, ordinary local assignment and branch targets.
+  transfer, direct calls, consuming operations, local assignment and branch targets.
   Operand evaluation happens before its consuming node. Assignment writes happen
   after the entire right-hand side, so `owner = *view + 1` is valid when that is
   the view's final use. A reference held by an equality operand remains live
@@ -145,16 +189,20 @@ implementation boundary; it does not change language rules.
   budget; sharing one physical owner does not bypass component accounting.
   Wide unknown tag domains and repeated inactive-payload copies also exercise the
   activity/proof limits, even when no reference origin is currently active.
+- Call snapshots count actual origins and all-input bounds separately. The
+  returned-component by input expansion stops at the same per-value limit while
+  it grows, and type comparison walks check each frontier push. Public-source
+  regressions cover a many-input/many-result contract and an oversized referent
+  type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Field writes,
   exclusive references and reborrows, reference reassignment, owner moves,
-  temporary owners, reference-bearing function contracts and cleanup edges remain
+  temporary owners, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
 ## Next analysis stages
 
-1. Extend result-origin support to verified function/call contracts, preserving
-   component and branch identity. Keep unknown
-   origins rejected until complete caller/callee lifetime evidence exists.
+1. Extend origin and all-input bounds to verified reborrows, static reference
+   sources and documented intrinsic contracts before enabling those capabilities.
 2. Extend the existing graph with owned initialization, moves, scope ends,
    verified call effects and cleanup edges. Keep storage IDs distinct from values.
    Named leave/restart edges must preserve their exact target and owner lifetimes.

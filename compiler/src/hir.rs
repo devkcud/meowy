@@ -4,6 +4,7 @@ pub type LocalId = usize;
 pub type FunctionId = usize;
 pub type BlockId = usize;
 pub type EmitId = usize;
+pub type CallId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -170,6 +171,7 @@ pub enum ExprKind {
     },
     Call {
         id: FunctionId,
+        site: CallId,
         args: Vec<Expr>,
     },
     Print {
