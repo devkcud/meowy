@@ -6,6 +6,125 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete reference-record and context handoff
+
+- Completed: component borrow implementation is 0b24669, native coverage/example is 7816524, and pinned runtime/tooling is 3dbed45. Both STATUS snapshots contain current behavior, explicit gaps, evidence and ordered next steps; all prior checkpoints are preserved.
+- Validation: all 14 repository checks passed: 119 Rust groups, 31 Python tests, 841 links, native profiles with exact fatal/guard evidence and ASan/UBSan/LSan. Optimized example output and all 300 component oracle cases passed. Final tracker links and whitespace pass; unchanged upstream fcontext.hpp retains its documented blank-at-EOF exception.
+- Blockers: none for this milestone. Conformance remains 9 passed, 14 unsupported, 0 failed; reference unions/function contracts, exclusive ownership, structured scheduling and DWARF remain unimplemented.
+- Next steps: carry component origins through reference unions and verified function contracts; add ownership read/reborrow/cleanup edges; build bounded scheduling and structured child joins over contexts; continue module/library implementation. Follow each STATUS Next steps section and keep unsupported behavior explicit.
+
+### 2026-09-06 — Refresh component and context handoff
+
+- State: Current snapshots now describe immutable reference records, full-shape equality, pinned runtime contexts and the exact remaining capability boundaries. Completed priorities were replaced by concrete union/function, ownership, scheduling/unwind and module work. Historical checkpoints remain intact.
+- Validation: Implementation 0b24669, native coverage 7816524 and runtime/tooling 3dbed45 have passed the combined gate, optimized example and component oracle. Final tracker link/whitespace checks are next.
+- Blockers: no active workers or incomplete code; full-language and structured-task support remain pending.
+- Next steps: Verify current tracker links and whitespace, commit the handoff, then resume with component origins through reference unions and verified function contracts alongside bounded runtime scheduling.
+
+### 2026-09-06 — Commit pinned native context integration
+
+- State: Compiler implementation and native coverage are committed as 0b24669 and 7816524. Runtime context lifecycle, upstream pin/license, register and sanitizer probes, runtime rules and tool descriptions are now committed. Only current handoff and step logs remain.
+- Validation: All 14 combined checks, optimized borrowed-record execution and 300 component oracle cases pass. Git checks passed with the documented unchanged upstream blank-at-eof exception.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Rewrite current root/compiler STATUS to replace completed priorities, record the three implementation commits and remaining boundaries, check local links and tracker whitespace, then commit the handoff.
+
+### 2026-09-06 — Preserve upstream bytes during runtime staging
+
+- State: Compiler implementation is 0b24669 and native coverage/example is 7816524. Pinned runtime files are staged. Git flags one upstream trailing blank line in the unchanged fcontext.hpp ABI reference; preserve it so source bytes and recorded SHA-256 remain exact.
+- Validation: Staged whitespace checks pass for every other file. The ABI reference passes with only blank-at-eof disabled; runtime checksum validation and all debug/release/sanitizer cases pass. This is a vendored-source formatting exception, not a runtime failure.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit runtime contexts and tooling with the upstream file intact; refresh both STATUS snapshots with final results, known limits and ordered next steps, then commit the handoff.
+
+### 2026-09-06 — Commit borrowed-record native coverage
+
+- State: Reference-record native coverage, borrowed-records.mwy and compiler usage documentation are committed after implementation 0b24669. Coverage protects projections versus full copies, guarded fields, retained results, equality and explicit unsupported contracts.
+- Validation: 39 native groups pass in both profiles. The optimized compiler/example and all 300 guarded component cases pass; staged whitespace checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit pinned runtime context lifecycle, exact upstream provenance and verification integration; then refresh current STATUS files with final commit IDs and precise continuation work.
+
+### 2026-09-06 — Commit component borrow analysis
+
+- State: Compiler component origins, per-leaf liveness, record/scalar equality inference and ownership design are committed. The existing unsupported test now covers mutable reference records so this implementation commit remains coherent.
+- Validation: All 14 combined checks, optimized example, 300-case component oracle and staged whitespace checks passed. Native coverage/example, runtime/tooling and trackers remain to commit.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native reference-record regressions and example next; then commit pinned runtime contexts with provenance/tooling and finish the current handoff.
+
+### 2026-09-06 — Verify optimized borrowed-record execution
+
+- State: The optimized compiler builds borrowed-records.mwy with exact output and passes the independent 300-case component oracle. Final code, native coverage, runtime provenance and documentation review found no remaining blocker.
+- Validation: Release oracle: 204 accepted, 96 expected E302, zero conservative or unexpected results. Exact example output: 11, 44, 33, 44, value, 0, 1, 2, 3 on separate lines. The combined 14-check gate and whitespace checks passed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit component implementation with the existing capability-boundary correction, then native example/coverage, pinned runtime/tooling and final handoffs as separate focused slices.
+
+### 2026-09-06 — Pass the combined compiler and context gate
+
+- State: All 14 repository checks pass with immutable reference records and pinned native contexts integrated into verification. No compiler or runtime code blocker remains.
+- Validation: 80 library plus 39 native Rust groups, 31 Python regressions, 841 local links, schemas/catalog, editors, formatting and Clippy pass. Runtime passes 14 cleanup, 10 stack and 10 context cases per debug/release/sanitized profile with exact fault probes; ASan catches the expired fiber local. Conformance remains 9 passed, 14 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build the optimized compiler, execute borrowed-records with exact stdout, rerun the 300-case component oracle on that completed binary, then review and split commits and finalize both STATUS handoffs.
+
+### 2026-09-06 — Complete component inference and pinned context review
+
+- State: Immutable reference records and record/scalar equality inference are complete. Independent review found no remaining component blocker. Runtime provenance, lifecycle and sanitizer-hook documentation are complete; the combined repository gate is next.
+- Validation: 80 compiler library groups and all-target Clippy pass; 7 independent compiler probes pass in both profiles. Runtime debug/release/sanitizers, 11 Python regressions and 841 local links pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the combined repository gate, optimized compiler example and final guarded component oracle; then inspect and split coherent commits before refreshing the handoff.
+
+### 2026-09-06 — Validate pinned context execution and review record components
+
+- State: Pinned context debug/release/sanitizer runs now pass. Component code review is clean apart from equality-context inference; that fix is switching to the existing partial composition checker rather than syntax heuristics. Compiler README now documents immutable reference fields, copies, projections and explicit remaining boundaries.
+- Validation: Runtime passes 10 context cases plus fatal cleanup after resume per profile; ASan detects the returned-fiber-local negative probe. Existing cleanup/stack checks remain green. Compiler guarded oracle passes 300 cases; final equality/native recheck is pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete semantic equality inference, provenance validation and runtime docs; then run compiler/native checks and the integrated repository gate before focused commits.
+
+### 2026-09-06 — Preserve scalar comparisons while fixing record equality
+
+- State: The equality correction now compares full returned records and catches RHS mutation conflicts, but independent review found it over-constrains scalar block operands to the record shape. Native coverage now checks aggregate-versus-scalar block comparison in both directions after an unrelated reference owner changes.
+- Validation: The remaining compiler blocker is E204 for packet == a scalar-producing block; the language requires primary projection in that case. The 300 component cases and 16 tooling regressions pass. Runtime context profile validation is ongoing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Infer equality operand shape without discarding record fields or imposing them on scalar blocks; retain contextual numeric widths, then rerun native suites and context profiles.
+
+### 2026-09-06 — Expose full-record equality projection defect
+
+- State: Independent review reproduced a real equality defect: a block returning an existing record could be reduced to its scalar primary, producing true for unequal reference fields and hiding a live-loan conflict. Native coverage now tests returned-record equality and both literal/returned-record RHS mutations.
+- Validation: The 300-case component oracle passes. The new equality probes demonstrate the defect in the current build; frontend context correction is pending. Pinned runtime context profile checks are in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Preserve full record shape for equality contexts, verify false/true pointer-field comparisons and E302 across RHS effects, then finish context sanitizer and provenance checks.
+
+### 2026-09-06 — Pass the guarded component oracle and assemble context probes
+
+- State: The completed compiler passes all 300 guarded component/copy oracle cases. Root added native interpolation of a scalar primary with unrelated reference fields. Runtime now has explicit context lifecycle tests, multi-context host alternation, nested yields, register/FP-state probes and suspension during explicit cleanup.
+- Validation: Record oracle: 204 accepted, 96 expected E302, no conservative rejections or unsafe acceptances. Independent review matched 13 of 14 probes; the remaining result is the known record-equality contextual E207. Runtime profile checks and fiber-lifetime negative evidence are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete record equality typing and run all native groups; validate pinned contexts in debug/release/sanitized profiles with exact negative-probe evidence and checksum-verified upstream sources.
+
+### 2026-09-06 — Run borrowed-record integration checks
+
+- State: Component-aware record origins and CFG leaves are integrated. Native checks pass 37 of 38 groups, including projection-only liveness, nested/primary records, guarded slots, named control flow and E303 escapes. One aggregate-equality operand is incorrectly given a scalar expected type and is being corrected.
+- Validation: The failing equality case reports E207 before loan analysis instead of the expected E302. The first oracle invocation raced the compiler build and used an older executable; its results were discarded and the completed build is now being audited. Runtime context lifecycle tests are still being assembled.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix contextual record equality, rerun native and the 300-case oracle on the completed binary, then verify and document the pinned context lifecycle and sanitizer transitions.
+
+### 2026-09-06 — Integrate component identities and pin context sources
+
+- State: Compiler origins now carry record component identities while CFG adaptation is in progress. Native coverage includes safe projection from a local record versus an invalid whole-record escape, and an independent 300-case guarded component/copy oracle is ready. Runtime sources are pinned to Boost.Context revision 6ff80e0575133c6d0b704e03bbb956a0c3b9551a with upstream license and hashes.
+- Validation: The focused native invocation reached an incomplete interface migration: loans.rs still lacked the new Origin.component initializer. This is pending implementation, not a test result. Baseline 106 Rust/native checks passed before edits. Runtime lifecycle and fiber-hook validation has not run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish per-component CFG adaptation, then run native and oracle checks; complete explicit context initialization/resume/yield/release, thread checks and sanitizer handoff tests.
+
+### 2026-09-06 — Specify borrowed record execution and rejection coverage
+
+- State: Root added borrowed-records.mwy and native cases for named/primary/nested components, record copies, scalar-only projections, guarded origins, named restart/leave and component escapes. Compiler implementation and pinned-context prototype are in progress.
+- Validation: Baseline 72 library and 34 native tests pass; conformance is 9 passed, 14 unsupported, 0 failed in both profiles. Review requires whole-record copies to retain all references while direct field projections retain only their selected leaves.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run new accepted/E302/E303 cases once component-aware origins and CFG are integrated; verify context lifetime, worker pinning and sanitizer handoff against pinned upstream primitives.
+
+### 2026-09-06 — Begin borrowed records and pinned context work
+
+- State: Compiler work now targets immutable records carrying shared references, with per-component origins and final-use liveness. The runtime worker is implementing the planned pinned context wrapper on guarded stacks; independent review covers component lifetime/copy hazards. Root owns native examples, coverage and both trackers.
+- Validation: The checkout is clean at 4e5ed15 after initial transient tracker edits disappeared before this task wrote files. Baseline compiler/native and conformance checks are running. Reference-bearing unions, mutable aggregate bindings, function contracts and exclusive loans remain separate compiler work.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement record leaf origins/projection liveness and the private pinned context lifecycle; verify copied versus projected fields, all escaping origins, worker pinning, register preservation and sanitizer switching hooks.
+
 ### 2026-09-06 — Complete loan-liveness and guarded-stack handoff
 
 - Completed: compiler implementation is `94b9160`, native coverage/example is

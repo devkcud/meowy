@@ -1,20 +1,23 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Shared mutable-owner loans and guarded stack allocation pass.
+Updated: 2026-09-06. Immutable reference records and pinned runtime contexts pass.
 Full v0.0.1 remains incomplete. No active workers, incomplete code or failing checks remain.
-Implementation: `94b9160`; native coverage/example: `e557d63`; runtime/tooling: `7a5d286`.
-This file tracks compiler implementation; [../STATUS.md](../STATUS.md) tracks the wider project.
-Historical checkpoints and completed checklists are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
+Implementation: `0b24669`; native coverage/example: `7816524`; runtime/tooling: `3dbed45`.
+This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
+Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: bounded CFG and backwards liveness protect shared loans of mutable
-ordinary locals through aliases, reference operands, result slots and named loops.
-E302 rejects overlapping writes; final-use assignments and disjoint guarded writes
-execute. Short-circuit blocks preserve skipped effects and nonreturning control flow.
-Next: aggregate/function borrow contracts, exclusive access and native context work.
-The independent runtime qualifies guarded allocation, not task switching or DWARF.
-The existing reference remains authoritative. Do not change fixtures to make tests pass.
+Completed: guarded component origins and backwards liveness support immutable
+records carrying shared references in their primary, named and nested components.
+Projection reads only selected reference leaves; whole copies and full-record
+comparisons consume every leaf. Retained component escapes report E303 and live
+owner writes report E302. Record/scalar equality and formatting preserve primary
+projection without silently discarding fields from record comparisons.
+Next: reference unions and function contracts, exclusive access and generated cleanup.
+The independent runtime now qualifies a bounded pinned context prototype; generated
+programs still use the scalar runtime. Scheduling and DWARF remain separate work.
+The language reference is authoritative. Do not change fixtures to make tests pass.
 
 ## Resume here
 
@@ -23,181 +26,161 @@ The existing reference remains authoritative. Do not change fixtures to make tes
 3. Run `cargo test --manifest-path compiler/Cargo.toml` from the repository root.
 4. Run `python3 compiler/tests/conformance.py`; 14 unsupported cases are currently expected.
 5. Consult the validation evidence below before claiming any gate passed.
-6. After every compiler work step, update `Next steps` and add a checkpoint to
-   `STATUS_STEP_LOG.md` before continuing. Include investigations, edits, checks, and decisions.
+6. After each logical step, update `Next steps` and add a newest-first checkpoint
+   to `STATUS_STEP_LOG.md`. Record findings, actual checks, blockers and continuation.
 
-No dependency downloads or remote services are needed by the current Rust design.
-The bootstrap uses installed LLVM/Clang/LLD 22.1.8 and Rust 1.98.1. It does not yet
-provide a bundled sysroot or a qualified distribution. Never claim the documented
-Linux 5.4/glibc 2.31 execution baseline from this workstation build.
+The Rust compiler has no external Rust dependencies. Builds use installed Rust
+1.98.1 and LLVM/Clang/LLD 22.1.8. Native context sources are vendored under
+`../runtime/vendor/boost-context/` with revision, license and checksum metadata.
+There is no bundled sysroot or qualified distribution. This workstation does not
+qualify the documented Linux 5.4/glibc 2.31 baseline.
 
 ## Implementation map
 
 | Component | Files | Current state |
 | --- | --- | --- |
-| Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Builds offline with no external Rust dependencies |
-| Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Implemented for the documented bootstrap subset; malformed-input and depth checks pass |
-| Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, branch narrowing and guarded emissions; 21 checker and 5 guard tests pass |
-| Shared storage and loans | `src/hir.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Local/record places, guarded origins, E303 escapes and backwards E302 loan liveness |
-| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM → ELF pipeline including tagged unions; 14 focused backend tests pass |
-| CLI and diagnostic rendering | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Implemented and exercised through native tests |
-| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 34 native tests, 4 harness tests and 8 runnable examples |
+| Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
+| Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
+| Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, narrowing, guarded composition and full-shape equality; 22 checker and 5 guard tests |
+| Shared storage and loans | `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Guarded component origins, E303 escapes and per-leaf E302 liveness; 11 origin and 12 loan groups |
+| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including records, references and tagged unions; 14 focused backend tests |
+| CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 39 native groups, 4 harness tests and 9 runnable examples |
 
-Agents share this checkout. After a sudden stop, file existence is not proof that
-a component compiles. The interfaces are `parser::parse`, `check::check`,
-`backend::emit_ir`, and `backend::emit_object`. `src/lib.rs` composes the frontend.
-Rust modules use explicit visibility where Rust allows it. Follow the user's
-short-name, immutable-value, and no-comment conventions.
+Agents share this checkout. File existence does not prove a component compiles.
+Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
+`backend::emit_object`; `src/lib.rs` composes the frontend. Follow explicit
+visibility, short names, immutable bindings and the user's no-comment convention.
 
 ## Still outside this compiler
 
-Items here must not be silently accepted with different semantics. `B001` is an
-internal bootstrap capability diagnostic, not an assigned reference error code.
-The supported portion of the language uses the reference's established `E...`
-codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
+Unavailable features must not silently receive different semantics. B001 is an
+internal capability diagnostic, not an assigned reference error or conformance pass.
+The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 | Area | Work remaining | Required evidence |
 | --- | --- | --- |
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
-| Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | All type and callable fixtures plus negative boundary cases |
-| Required evaluation | Type-producing helpers, effect analysis, cycle checks, logical budgets, specialization | E211/E219/E220 cases and determinism/budget tests |
-| Ownership | Exclusive borrows, reference reassignment, returned/temporary views, moves, partial initialization, captures and cleanup | Use-after-move and borrow rejection; exact-once cleanup on every exit |
-| Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation-failure behavior |
-| Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Task/unwind prototype, one-worker progress, cleanup and sanitizer tests |
-| Modules/projects | Relative imports, manifest policy, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds, duplicate/revision identity tests |
-| Native ABI | Clang ABI adapters, explicit native artifacts, record classification | Separate C fixtures, argument/return layout, safety-boundary checks |
-| Standard library | Meowy library sources and documented APIs beyond foundational bootstrap output | API-to-test coverage, all 16 worked projects, pinned Unicode/time/calendar data |
-| Tooling | Test command, LSP, gatostyle/fmt, inspection and repair workflows | Shared diagnostics, negotiated positions, safe rewrites and isolated test cases |
-| Artifacts/replay | Canonical schemas/readers, sessions, capsules, integrity, runtime events/replay | Schema validation, corruption/budget tests, replay after moving original sources |
-| Distribution | Maintained bootstrap recipes/xtask, pinned source inventory, vendoring, bundled tools/sysroot | Offline rebuild, dependency/license inventory, descriptor digests |
-| Target qualification | Baseline host, static/shared closure, LTO modes, DWARF 5 and unwind information | ELF inspection, minimum-host execution, reproducible builds and size measurements |
+| Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
+| Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
+| Ownership | Reference unions/function contracts, exclusive borrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
+| Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
+| Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
+| Native ABI | Clang ABI adapters, explicit native artifacts, record classification | Separate C fixtures, argument/return layout and safety boundaries |
+| Standard library | Meowy sources and APIs beyond foundational bootstrap output | API-to-test coverage, 16 worked projects and pinned data |
+| Tooling | Test command, LSP, gatostyle/fmt, inspection and repair | Shared diagnostics, negotiated positions, safe rewrites and isolated tests |
+| Artifacts/replay | Canonical readers, sessions, capsules, integrity, runtime events/replay | Schema/budget validation and replay after moving sources |
+| Distribution | Bootstrap recipes, source inventory, vendoring, bundled tools/sysroot | Offline rebuild, dependency/license inventory and descriptor digests |
+| Target qualification | Baseline host, static/shared closure, LTO, DWARF 5/unwind information | ELF inspection, minimum-host execution, reproducibility and sizes |
 
-## Known bootstrap limits worth preserving during handoff
+## Known limits to preserve
 
-- Shared borrowing supports immutable and mutable ordinary local roots and concrete
-  record fields. Parameter/receiver/emission places, temporary owners, exclusive
-  loans, reference-carrying aggregates/signatures and reference reassignment are B001. `OWNERSHIP.md` records the remaining stages.
-- Bare-reference block results support guarded alternatives and named exits.
-  Every retained origin must outlive its receiving block. Discarded emissions keep
-  operand effects but do not escape. Reference-carrying aggregates are still B001.
-- Shared-loan liveness preserves guards within an iteration and clears correlations
-  across restart edges. Some safe programs needing cross-iteration relationships
-  can be conservatively rejected with E302. Reads may overlap shared loans.
-- Origin fact storage and CFG origin copies each have a 262,144-entry bound; graph
-  nodes, values, live entries and work are also bounded. Exhaustion is B001.
-- Assigning predicates invalidates prior facts. Audit found 15 safe mutated-predicate
-  combinations conservatively rejected with E303; stronger relation/dataflow
-  tracking is pending. No unsafe acceptance was found in 288 bounded combinations.
-- `../runtime/` proves explicit cleanup and guarded stack allocation. Generated
-  programs still use the scalar runtime. Task stacks, Meowy personality/landing pads, child joins
-  and cross-stack partial-result ordering must be implemented before integration.
-
-- Only direct, noncapturing functions are lowered. A function declaration can be
-  aliased, but first-class function-pointer storage and anonymous/indirect calls remain unavailable.
-- Record fields remain immutable. Nullable primary/field joins and scalar/record
-  union predicates now work. Mutable bindings can replace records; this invalidates
-  field proofs. Proof caches include both place and storage type across variants.
-- Multiple matching numeric widths in an expected union report E207 rather than
-  choosing one. Bind an explicitly typed member first; no width conversion is implicit.
-- Interpolation streams only at print/panic boundaries. It does not construct a
-  heap string or a general-purpose standalone string value.
-- Runtime arithmetic and explicit panic report P002/P006 and exit. Their diagnostics
-  still need source locations and operand evidence, and recoverable unwinding is absent.
-- Integer remainder at signed minimum divided by -1 is zero; signed division at
-  the same boundary panics. Preserve this distinction in both profiles.
-- Float32 literals are parsed directly to float32, avoiding double rounding through float64.
-- Do not infer a whole block's constant from its last emission: earlier paths may
-  leave with another value. A regression covers this previous bug.
-- Shared boolean guards replace the former 4096-path enumeration limit. Node,
-  cache and work budgets in `src/flow.rs` produce B001 when exhausted. Named-block
-  entry conservatively forgets mutable proofs; restart with writes into surviving
-  outer result slots reports B001. Shared-loan loop fixed points exist; ownership and emission-flow fixed points remain pending.
-- The compiler embeds its runtime archive but depends on the installed LLVM shared
-  library and exact native tool paths. It is not relocatable/offline distribution packaging.
-- LLVM IR is verified before and after optimization. The bridge copies explicitly
-  bounded source bytes into an owned LLVM buffer; preserve that FFI boundary.
-- Broad fuzzing, full source/input resource limits, canonical artifact diagnostics,
-  rich related spans, source-level debug information, and failure capsules are pending.
-- A 65,536-parameter stress input timed out after 60 seconds during review; broad
-  frontend scaling is not qualified. Compact correlated-guard exhaustion returns B001.
-- The parser limits recursive descent and caps constructed AST depth at 256 with
-  B001. A 20,000-term expression previously overflowed the checker stack; regression
-  coverage now verifies graceful rejection. Keep the depth guard before recursive passes.
-- Conformance supervision kills the whole compiler/application process group on
-  timeout. A B001 result cannot hide a later compiler fault or count as a strict pass,
-  even when its message is empty. Harness regressions protect these distinctions.
+- Shared borrow roots are ordinary immutable/mutable locals and concrete record
+  fields. Parameter/receiver/emission places, temporary owners, exclusive loans,
+  mutable reference carriers, carrier-address/reborrow operations, reference unions
+  and reference-bearing signatures remain B001. See `OWNERSHIP.md` for staging.
+- Every retained reference component must outlive its receiving block, even when
+  a later consumer ignores it. A direct safe-field projection may leave a local
+  carrier; returning that whole carrier must validate every contained reference.
+  Discarded emissions retain operand effects without escaping on discarded paths.
+- A copy reads all references in the copied value. Direct field/scalar-primary
+  projection reads only selected leaves. Reference formatting still needs explicit
+  dereference. Equality of two records preserves their full shape through blocks;
+  scalar operands retain contextual primary widths and primary projection.
+- Loan liveness preserves guards within an iteration and clears correlations on
+  restart. Predicate assignments invalidate prior facts. Safe programs requiring
+  stronger correlations can be conservatively rejected with E302/E303. Earlier
+  mutated-predicate audit found 15 conservative E303 results in 288 combinations,
+  with no unsafe acceptance; see the step log. Shared reads may overlap loans.
+- Origin alternatives/components per result are capped at 4,096. Persistent facts
+  and CFG origin storage each cap 262,144 entries; graph nodes, values, live entries
+  and work are also bounded. Exhaustion reports B001, including repeated component
+  copies of the same physical owner. Missing proofs never imply safe access.
+- Record fields are immutable. Whole mutable records without references can be
+  replaced, invalidating field proofs. Nullable primary/field joins and scalar/record
+  union predicates work; optional reference fields still require reference unions.
+- Only direct noncapturing functions are lowered. Declaration aliases work;
+  first-class function-pointer storage, captures and indirect calls remain unavailable.
+- Ambiguous numeric widths in an expected union report E207; bind a typed member.
+  No silent width conversion is permitted. Float32 literals round directly to float32.
+- Interpolation streams at print/panic boundaries and does not allocate a string.
+  Arithmetic/panic report P002/P006 and exit; recovery, source spans and operand
+  evidence remain pending. Signed-minimum remainder by -1 is zero; division panics.
+- Do not infer a block constant from its last emission: earlier paths may leave.
+  Named blocks conservatively forget mutable proofs; restart writes into surviving
+  outer result slots are B001. Loan loop fixed points exist; broader ownership and
+  emission-flow fixed points remain pending.
+- Parser descent and AST depth are capped at 256 before recursive passes. A prior
+  65,536-parameter source timed out after 60 seconds. Broad frontend scaling, full
+  input resource bounds, rich related spans and comprehensive fuzzing are unqualified.
+- LLVM IR is verified before/after optimization; the C++ bridge copies bounded
+  source bytes into owned LLVM storage. Compiler binaries embed the scalar runtime
+  archive but require installed LLVM and exact native-tool paths. Generated output
+  is separate from the Rust compiler and LLVM libraries.
+- `../runtime/` has bounded cleanup, guarded mappings and worker-pinned contexts
+  with explicit lifetime and ASan fiber hooks. There is no scheduler, automatic
+  cancellation/join, Meowy personality, landing pads or compiler integration.
+  Suspended contexts cannot release storage; caller synchronization is required.
+- Timeout supervision kills/reaps the entire compiler/application process group.
+  B001 cannot hide a later fault or count as an expected language rejection.
 
 ## Validation evidence
 
-- 2026-09-06: repository was clean before implementation; no prior compiler existed.
-- 2026-09-06: detected Rust 1.98.1, LLVM/Clang/LLD 22.1.8, CMake 4.4.3,
-  Ninja 1.13.2, Python 3.14.7 on the current host.
-- Final `python3 -B tools/verify.py --all` passed all 14 checks outside ptrace
-  supervision. It pins the Cargo target/output path and freshly built compiler.
-- Cargo tests: 72 library and 34 native tests passed, including both output profiles.
-- Repository checks: 16 tooling and 8 runtime Python tests, 836 local links,
-  schema/catalog integrity, Vim and Neovim passed. Native cleanup passed 14 normal
-  cases plus 2 fatal probes in each debug/release/ASan/UBSan/LSan profile. Guarded
-  stack allocation passed 10 cases, real kernel ENOMEM and 2 exact guard faults per
-  profile. Direct guard writes verify protected addresses and alternate signal
-  stacks; they do not qualify sanitizer context-switch hooks or task overflow.
-- Earlier sandbox LeakSanitizer failed due to ptrace. This full gate ran outside
-  ptrace with sanitizers enabled; the normal allocation cases include LSan.
-- Final `python3 -m unittest discover -s compiler/tests -p 'test_*.py'`: 4 harness tests passed.
-- Final `cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings`
-  and `cargo fmt --manifest-path compiler/Cargo.toml --check` both passed.
-- Compiler conformance: 9 passed, 14 unsupported, 0 failed, both profiles.
-  Passed: `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
+- Final `python3 -B tools/verify.py --all`: all 14 selected checks pass outside
+  ptrace supervision. The gate pins the Cargo target/output and freshly built compiler.
+- Rust: 80 library and 39 native groups pass, including both output profiles.
+  All-target Clippy with `-D warnings` and `cargo fmt --check` pass.
+- Python: 16 tooling, 11 runtime and 4 compiler-harness regressions pass. Local
+  documentation validation checks 841 links; schemas/catalog and Vim/Neovim pass.
+- Runtime per debug/release/sanitized profile: 14 cleanup cases plus 2 fatal probes;
+  10 stack cases plus real kernel ENOMEM and 2 exact guard faults; 10 context cases
+  plus fatal cleanup after resume. ASan/UBSan/LSan normal runs pass, and the expired
+  fiber local produces the required ASan stack-use-after-return diagnostic.
+  This proves host prototype behavior, not task-overflow recovery or structured joins.
+- Conformance: 9 passed, 14 unsupported, 0 failed in debug/release. Passed cases:
+  `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
   `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`,
-  `reference_identity`.
-  This is NOT full conformance.
-- Parser tests retain 10,000 deterministic malformed/Unicode inputs and long-chain
-  stress regressions. These are smoke coverage, not comprehensive fuzz qualification.
-- Backend focused validation: bounded FFI inputs, invalid LLVM syntax/SSA, ELF emission,
-  integer boundaries, string/numeric output, short circuiting and `/dev/full` all passed.
-- Checker focused validation: 21 tests passed, including nullable slot inference,
-  complementary predicates, field narrowing, assignment invalidation, record composition
-  and restart boundaries. Eight borrow source-test groups cover all candidate
-  roots, lexical aliases, retained escapes, function isolation and discarded paths. Five guard tests
-  include 16,384 independent variables. Eight loan groups cover aliases, operand
-  lifetimes, guarded writes, loops, scope exits, field overlap and B001 resource bounds.
-- Independent guard audit: all 196 combinations pass on the optimized compiler
-  (114 accepted, 82 E302; no unsafe acceptance or conservative rejection in this
-  matrix). Ten additional review probes also match expected acceptance/E302.
-- The optimized compiler built the borrow-liveness example with exact output
-  `41\n42\n7\n9\n0\n1\n2\n3\n`. Short-circuit native cases also verify
-  skipped effectful blocks, nonreturning operands and named leave in both profiles.
-- The reference catalog validator passed all 23 records; this was metadata validation only.
-- Earlier release compiler builds with the explicit host target ran the borrowed
-  results example with exactly `11\n22\n42\ntrue\n` in release. The earlier
-  references example also passed with `true\nfalse\n42\nmeowy\n`.
-  The prior release compiler also ran `examples/nullable.mwy` with exact stdout
-  `meowy\nnull\nmeowy\nguest\n`. The earlier records example also passed.
-- Earlier `readelf -h/-d/--version-info` inspection of `build/records` found ELF64
-  x86-64 PIE, interpreter `/lib64/ld-linux-x86-64.so.2`, and only `libc.so.6` in
-  DT_NEEDED. It requires GLIBC_2.34; the documented glibc 2.31 target is NOT qualified.
-  No LLVM, Rust, or C++ runtime library appears in that executable's dependency list.
+  `reference_identity`. This is not full conformance.
+- Independent review verified record origins, projections, full copies, pending
+  slots, equality effects and scalar-block contexts. The optimized compiler passes
+  all 300 guarded component oracle cases: 204 accepted, 96 E302, zero conservative
+  or unexpected results. The temporary oracle is supplemental; committed native
+  and source regressions preserve the behavior coverage.
+- The optimized compiler builds `examples/borrowed-records.mwy` in release and its
+  executable prints exactly `11\n44\n33\n44\nvalue\n0\n1\n2\n3\n` with empty stderr.
+- Existing coverage retains 10,000 deterministic malformed/Unicode parser inputs,
+  depth/budget stress cases, bounded backend FFI, integer boundaries, short circuiting,
+  tagged unions, nullable records and `/dev/full`. These are bounded regression tests.
+- Prior ELF inspection found x86-64 PIE with only `libc.so.6` in DT_NEEDED and a
+  GLIBC_2.34 requirement. This was not repeated this milestone; glibc 2.31 and
+  minimum-kernel execution remain unqualified. Earlier validation is in the step log.
+- Git checks preserve one upstream blank-at-EOF in the unchanged vendored
+  `fcontext.hpp`; its checksum matches the pinned import. Project files pass normal
+  whitespace checks. No other source/license formatting exception is required.
 
 ## Next steps
 
-1. Extend `src/loans.rs` with explicit reads, reborrows and cleanup edges before
-   accepting exclusive loans or reference reassignment. Improve predicate assignment
-   and loop precision. Verify E302 read/write conflicts and post-use access; preserve
-   B001 on missing proofs or exhausted budgets.
-2. Extend origin sets to reference-carrying record/union components and function
-   input/result contracts. Verify all-input lifetime bounds and caller substitution
-   with accepted nested returns and E303 rejections; keep unknown origins B001.
-3. Add partial initialization, capture summaries and cleanup lowering; then enable
-   bounded collections/slices and the owner-borrow fixtures. Test exact-once cleanup
-   and temporary-owner rejection. Do not mark unsupported tests as passing rejections.
-4. Add required evaluation, effects, logical budgets and constrained specialization.
-   Then enable the type-helper, compile-effect/budget, and callable fixtures.
-5. Connect `../runtime/` guarded stack allocation to the pinned context wrapper;
-   qualify register preservation and sanitizer hooks, then Meowy DWARF personality
-   and landing pads. Test a suspended borrowing child that is cancelled and joined
-   before parent cleanup. Preserve interleaved partial-result/local cleanup order.
-6. Implement project/module graphs, native adapters and Meowy standard-library
-   layers, then tools/artifacts and distribution qualification from the table above.
-7. Keep the bootstrap gate green; expand the harness's REQUIRED set when a case
-   becomes supported. Only `--strict` with zero unsupported cases passes the catalog's
-   full-language gate, and even that catalog is only part of v0.0.1 qualification.
+1. Extend `src/borrow.rs` component identities and `src/loans.rs` bundles through
+   reference-carrying unions/coercions, preserving active-variant origins. Verify
+   optional reference fields, guarded extraction, E303 escapes and E302 live writes.
+2. Define function input/result borrow contracts in `OWNERSHIP.md`, `src/check.rs`
+   and origin analysis. Apply the documented conservative all-input lifetime bound
+   and substitute caller origins; verify accepted nested returns and rejected escapes
+   before enabling reference-bearing signatures or parameter/receiver borrow roots.
+3. Add explicit reads, reborrows, moves, initialization and cleanup edges before
+   exclusive loans, reference reassignment or owned collections. Improve predicate
+   and loop precision while preserving B001 bounds. Test final-use access, read/write
+   conflicts, temporary-owner rejection and exact-once cleanup on every exit.
+4. Add required evaluation, effects, logical budgets and constrained specialization,
+   then enable the type-helper, compile-effect/budget and callable fixtures.
+5. Build bounded scheduler admission and worker-owned queues over `../runtime/`
+   contexts. Implement structured cancellation/join before storage release, then
+   pinned unwind support, Meowy personality and landing pads. Verify a suspended
+   child borrowing a parent local and cleanup that waits before releasing that local;
+   preserve interleaved partial-result/local cleanup order.
+6. Implement the project/module graph for native adapters and real Meowy library
+   sources, then tools/artifacts and distribution qualification from the table above.
+7. Keep the combined gate green and expand the conformance harness REQUIRED set only
+   when supported. `--strict` with zero unsupported cases is the catalog's language
+   gate; even that catalog covers only part of v0.0.1 qualification.

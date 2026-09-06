@@ -7,28 +7,32 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current handoff
 
-- Compiler: `94b9160` adds guarded CFG loan liveness for shared references to mutable
-  ordinary locals. Live overlapping writes report E302; final-use assignments work.
-  Reference temporaries, aliases, block results and named loops are covered.
-- Native coverage/example: `e557d63`; `compiler/examples/borrow-liveness.mwy` prints
-  `41`, `42`, `7`, `9`, `0`, `1`, `2`, `3` on separate lines in both profiles.
-- Runtime/tooling: `7a5d286` adds bounded Linux stack mappings with two guard pages,
-  explicit release, retained failure ownership and integrated native checks.
-- All 14 combined checks pass: 106 Rust tests, 28 Python tests, 836 local links,
-  schemas/catalog, editors, formatting/Clippy/build and conformance. Runtime passes
-  14 cleanup cases plus 2 fatal probes and 10 stack cases plus kernel ENOMEM and
-  2 exact guard faults per debug/release/sanitized profile. LSan ran outside ptrace.
-- The optimized compiler/example passes. Its independent guard audit passed all
-  196 combinations: 114 accepted and 82 E302, with no unexpected results.
+- Compiler: `0b24669` supports immutable records with primary, named and nested
+  shared-reference components. Projections retain only selected loans; whole
+  copies retain every component. Conflicting writes report E302 and escapes E303.
+  Record equality preserves full fields while scalar comparisons project primaries.
+- Native coverage/example: `7816524`; `compiler/examples/borrowed-records.mwy`
+  exercises copies, nested projections, primary references and loop final uses.
+- Runtime/tooling: `3dbed45` adds private pinned contexts on guarded stacks using
+  checksum-verified Boost.Context sources. Explicit resume/yield/completion,
+  worker pinning, register preservation and ASan fiber hooks are exercised.
+- All 14 combined checks pass: 119 Rust tests, 31 Python tests, 841 local links,
+  schemas/catalog, editors, formatting/Clippy/build and conformance. Each native
+  debug/release/sanitized profile passes 14 cleanup, 10 stack and 10 context cases,
+  with exact fatal/guard probes. ASan detects the expired-fiber-local probe; normal
+  cases pass ASan/UBSan/LSan outside ptrace supervision.
+- The optimized compiler/example passes with exact stdout. Its independent
+  component oracle passes all 300 cases: 204 accepted, 96 E302, no other results.
 - No active workers, incomplete code or failing checks remain. Conformance is
-  9 passed, 14 unsupported, 0 failed. Task switching and DWARF remain unimplemented.
+  9 passed, 14 unsupported, 0 failed. Generated programs still use the scalar
+  runtime; scheduling, automatic cancellation/join and DWARF are not implemented.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Guarded shared loans protect mutable ordinary locals | Aggregate/function borrows, exclusive access, moves and cleanup |
-| Runtime | Scalar runtime plus separate cleanup and guarded stack prototypes | Pinned context switching, DWARF unwinding and generated cleanup |
+| Compiler | Guarded shared loans and immutable reference records | Reference unions/function contracts, exclusive access, moves and cleanup |
+| Runtime | Separate cleanup, guarded allocation and pinned context prototypes | Bounded scheduling, structured joins, DWARF and generated cleanup |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
 | Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
@@ -37,17 +41,22 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend the compiler CFG with read, reborrow and cleanup edges before enabling
-   exclusive loans or reference reassignment. Improve predicate-assignment and
-   loop precision; verify E302 conflicts and accepted final-use access in both profiles.
-2. Add reference-carrying aggregate/function contracts, preserving every origin
-   and the documented conservative all-input lifetime bound at calls and returns.
-3. Connect guarded stack allocation to the planned pinned context wrapper,
-   qualify registers and sanitizer switching hooks, then add DWARF integration.
-   Verify cancellation/join before releasing borrowed storage and preserve
-   cross-stack partial-result cleanup ordering.
+1. Extend compiler component origins to reference unions and verified function/call
+   contracts. Preserve branch identity and the documented all-input lifetime bound;
+   verify accepted projections/returns, E303 escapes and E302 caller writes.
+2. Add explicit read, reborrow and cleanup edges before exclusive loans or reference
+   reassignment. Improve predicate-assignment and loop precision while preserving
+   resource bounds and explicit B001 for missing proofs.
+3. Build bounded scheduler admission and worker-owned queues over `runtime/` contexts.
+   Add structured child cancellation/join before parent storage release, then
+   pinned unwind-library integration, Meowy personality and landing pads. Verify
+   cleanup that suspends while joining and interleaved partial-result cleanup order.
 4. Build the manifest/module graph needed for real Meowy library sources and the
    documented projects. Keep runtime, editor and library progress visible here.
-5. Use `python3 tools/verify.py --all` after integrations. It now includes sanitizer
-   checks and needs an environment where LSan can inspect processes. `--strict`
-   still fails for 14 unsupported catalog cases; neither gate is full release proof.
+5. Use `python3 -B tools/verify.py --all` after integrations. LSan needs an environment
+   where it can inspect processes. `--strict` still fails for 14 unsupported catalog
+   cases; neither the bootstrap gate nor this host qualifies a complete release.
+
+Preserve the unchanged vendored `fcontext.hpp` trailing blank line: its SHA-256
+matches upstream. Git whitespace checks exclude only that upstream blank-at-EOF
+warning; project-owned files require the normal check.
