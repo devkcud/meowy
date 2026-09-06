@@ -31,7 +31,7 @@ implementation boundary; it does not change language rules.
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
 - Mutable reference-bearing bindings, exclusive loans, temporary borrows and
-  reference dispatch blocks are B001. Direct function signatures can carry shared
+  reference dispatch blocks are B001. Exclusive reborrows remain B001. Direct function signatures can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
@@ -62,8 +62,8 @@ implementation boundary; it does not change language rules.
 - Union wrappers containing references and omitted optional reference fields are
   supported. Borrowing storage rooted in a reference-carrying record or union,
   mutable carriers and indirect/capturing function contracts remain separate
-  work; this milestone copies contained shared references rather than reborrowing
-  the carrier or inventing a transitive lifetime contract.
+  work; shared reborrows inspect reference-free referents and do not borrow the
+  storage of a reference-bearing carrier.
 
 ## Active union variants
 
@@ -115,8 +115,8 @@ implementation boundary; it does not change language rules.
   from such input sources. Returning any local actual origin or dependency is
   E303. Ordinary by-value parameter address-taking remains B001.
 - `State.bounds` is separate from actual pointer origins. At a call, possible
-  actual sources are the active input reference leaves with the result leaf's
-  exact reference type. Each returned reference also inherits every active input
+  actual sources are compatible whole input referents and their concrete named
+  descendants, using the result leaf's exact reference type. Each returned reference also inherits every active input
   origin and transitive bound, including ignored inputs of another referent type.
   These are lifetime/loan dependencies, not claims about pointer identity.
 - Consequently, `first(p, q)` remains bounded by both inputs even if the body
@@ -132,19 +132,47 @@ implementation boundary; it does not change language rules.
   An early argument exit prevents call consumption. Missing snapshots on a
   potentially reachable call are B001, not an invented empty result.
 - A completed reference result requires an active compatible input source under
-  the currently supported capability set. There is no static safe-reference
-  construction, reborrowing, allocation or capture path that could supply another
-  source. Calls without such a source have no returning reference path; nullable
+  the currently supported capability set. Shared reborrows preserve those input sources or concrete named descendants.
+  There is no static safe-reference construction, allocation or capture path that
+  could supply another source. Calls without such a source have no returning reference path; nullable
   results can still return null. An entered-call guard, captured after argument
   evaluation, conditions the normal-return proof so earlier leaves and skipped
   calls remain reachable. This rule must be extended before enabling static
-  reference sources or reference-producing intrinsic contracts.
+  reference sources, additional addressable projections or reference-producing intrinsic contracts.
 - The CFG applies the call snapshot's presence/proof only on its returning edge;
   restart still erases iteration relations. Signature-based result activity may
-  be more conservative than a particular body. Reborrows, exclusive access,
+  be more conservative than a particular body. Exclusive reborrows/access,
   mutable carriers, captures, indirect calls and owned cleanup remain unsupported.
   Existing string values are literal-backed static views and do not create local
   referent-storage dependencies merely by passing a string value.
+
+## Shared reborrows
+
+- `&*view`, `&view.field` and parenthesized concrete field paths address the
+  original shared referent. The HIR reborrow node evaluates its parent exactly
+  once; lowering applies typed field-address operations without copying records.
+  Temporary reference values from calls/blocks are allowed because their referents
+  retain the original lifetime. Borrowing a temporary owner remains B001.
+- Pure address hints resolve types without lowering expressions or changing
+  application control flow. Regression coverage includes effectful calls in
+  equality and argument blocks that leave an enclosing scope before the call.
+- Input component paths identify references stored in parameters. A separate
+  referent-field path identifies storage reached through such a reference. Local
+  sources append physical field indices; Input sources append referent indices.
+  Reborrows preserve inherited lifetime bounds unchanged rather than projecting
+  ignored-input dependencies as if they were actual pointers.
+- Each HIR reborrow has a unique site and bounded snapshot. The CFG consumes the
+  parent dependencies at reborrow creation, then defines the projected actual
+  sources plus inherited bounds. Shared parents remain readable; this does not
+  implement exclusive-parent suspension or mutable reference reassignment.
+- Function contracts enumerate compatible whole referents and concrete named
+  descendants. This must precede field-returning function support: an input
+  `&Record` can now supply a field reference with a different target type. Fields
+  inside union payloads, reference-bearing pointees, primary-ascription addresses,
+  static sources and reference-producing intrinsic contracts remain separate work.
+- Type walks, candidate frontiers, projected paths and snapshot expansion consume
+  existing work/storage budgets. Many matching fields multiplied by returned
+  reference components reject with B001 before unbounded contract expansion.
 
 ## Control-flow and last use
 
@@ -195,13 +223,13 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Field writes,
-  exclusive references and reborrows, reference reassignment, owner moves,
+  exclusive references/reborrows, reference reassignment, owner moves,
   temporary owners, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
 ## Next analysis stages
 
-1. Extend origin and all-input bounds to verified reborrows, static reference
+1. Extend origin and all-input bounds to exclusive reborrows, static reference
    sources and documented intrinsic contracts before enabling those capabilities.
 2. Extend the existing graph with owned initialization, moves, scope ends,
    verified call effects and cleanup edges. Keep storage IDs distinct from values.

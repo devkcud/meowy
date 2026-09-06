@@ -92,6 +92,7 @@ pub(crate) struct Checker {
     pub(crate) block: usize,
     pub(crate) owner: usize,
     pub(crate) calls: usize,
+    pub(crate) reborrows: usize,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
@@ -154,6 +155,7 @@ impl Checker {
             block: 0,
             owner: 0,
             calls: 0,
+            reborrows: 0,
         }
     }
 
@@ -1660,12 +1662,7 @@ impl Checker {
                     return self.integer(text, true, expected, expr.span);
                 }
                 if op == "&" {
-                    let (place, ty) = self.address(value)?;
-                    return Ok(hir::Expr {
-                        kind: hir::ExprKind::Borrow(place),
-                        ty: Type::Reference(Box::new(ty)),
-                        span: expr.span,
-                    });
+                    return self.borrowed(value, expr.span);
                 }
                 if op == "*" {
                     let value = self.expr(value, None)?;
@@ -1857,6 +1854,100 @@ impl Checker {
         })
     }
 
+    pub(crate) fn address_root<'a>(expr: &'a ast::Expr, fields: &mut Vec<String>) -> &'a ast::Expr {
+        match &expr.kind {
+            ExprKind::Group(value) => Self::address_root(value, fields),
+            ExprKind::Field { value, name } => {
+                let root = Self::address_root(value, fields);
+                fields.push(name.clone());
+                root
+            }
+            _ => expr,
+        }
+    }
+
+    pub(crate) fn address_hint(&mut self, expr: &ast::Expr) -> Option<Type> {
+        if let Ok((_, ty)) = self.address(expr) {
+            return Some(ty);
+        }
+        match &expr.kind {
+            ExprKind::Group(value) => self.address_hint(value),
+            ExprKind::Unary { op, value } if op == "*" => match self.hint(value)? {
+                Type::Reference(ty) => Some(*ty),
+                _ => None,
+            },
+            ExprKind::Field { .. } => self.hint(expr),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn borrowed(&mut self, expr: &ast::Expr, span: Span) -> Result<hir::Expr> {
+        let error = match self.address(expr) {
+            Ok((place, ty)) => {
+                return Ok(hir::Expr {
+                    kind: hir::ExprKind::Borrow(place),
+                    ty: Type::Reference(Box::new(ty)),
+                    span,
+                });
+            }
+            Err(error) => error,
+        };
+        let mut names = Vec::new();
+        let root = Self::address_root(expr, &mut names);
+        let value = if let ExprKind::Unary { op, value } = &root.kind
+            && op == "*"
+        {
+            self.expr(value, None)?
+        } else if !names.is_empty() {
+            self.expr(root, None)?
+        } else {
+            return Err(error);
+        };
+        if value.ty == Type::Never {
+            return Ok(value);
+        }
+        let Type::Reference(target) = &value.ty else {
+            return Err(error);
+        };
+        if target.has_reference() {
+            return Err(Diagnostic::unsupported(
+                "reborrowing reference-carrying referents",
+                span,
+            ));
+        }
+        let mut ty = target.as_ref();
+        let mut path = Vec::new();
+        for name in names {
+            let Type::Record { fields, .. } = ty else {
+                return Err(Diagnostic::unsupported(
+                    "reborrow projection outside concrete record storage",
+                    span,
+                ));
+            };
+            let (index, (_, field)) = fields
+                .iter()
+                .enumerate()
+                .find(|(_, (field, _))| *field == name)
+                .ok_or_else(|| {
+                    Self::error("E201", format!("unknown record field `{name}`"), span)
+                })?;
+            path.push(index);
+            ty = field;
+        }
+        let ty = Type::Reference(Box::new(ty.clone()));
+        let site = self.reborrows;
+        self.reborrows += 1;
+        Ok(hir::Expr {
+            kind: hir::ExprKind::Reborrow {
+                site,
+                value: Box::new(value),
+                fields: path,
+            },
+            ty,
+            span,
+        })
+    }
+
     pub(crate) fn address(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
         match &expr.kind {
             ExprKind::Group(value) => self.address(value),
@@ -2041,9 +2132,8 @@ impl Checker {
             },
             ExprKind::Group(value) => self.hint(value),
             ExprKind::Unary { op, value } if op == "&" => self
-                .address(value)
-                .ok()
-                .map(|(_, ty)| Type::Reference(Box::new(ty))),
+                .address_hint(value)
+                .map(|ty| Type::Reference(Box::new(ty))),
             ExprKind::Unary { op, value } if op == "*" => match self.hint(value)? {
                 Type::Reference(ty) => Some(*ty),
                 _ => None,
@@ -2723,7 +2813,7 @@ mod tests {
             "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",
             "x:1;r:&x;r.{v:*self}",
             "x:1;r:&x;debug:@\"debug\";debug.print(r)",
-            "x:1;r:&x;s:&*r",
+            "x:1;r:&x;s:&!*r",
             "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",
         ] {
             rejects(source, "B001");

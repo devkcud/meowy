@@ -615,6 +615,32 @@ impl<'a> Generator<'a> {
                 }
                 Ok(ptr)
             }
+            ExprKind::Reborrow { value, fields, .. } => {
+                let Type::Reference(target) = &value.ty else {
+                    return Err("reborrow requires a shared reference".into());
+                };
+                let mut ptr = self.expression(value)?;
+                if self.ended {
+                    return Ok("undef".into());
+                }
+                let mut ty = target.as_ref();
+                for index in fields {
+                    let Type::Record { fields, .. } = ty else {
+                        return Err("reborrow projection requires a concrete record".into());
+                    };
+                    let field = &fields.get(*index).ok_or("missing reborrow field")?.1;
+                    ptr = self.value(format!(
+                        "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
+                        ir_type(ty),
+                        index + 1
+                    ));
+                    ty = field;
+                }
+                if expression.ty != Type::Reference(Box::new(ty.clone())) {
+                    return Err("reborrow result type mismatch".into());
+                }
+                Ok(ptr)
+            }
             ExprKind::Deref(value) => {
                 let Type::Reference(stored) = &value.ty else {
                     return Err("dereference requires a shared reference".into());

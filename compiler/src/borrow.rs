@@ -4,7 +4,9 @@ use crate::ast::Span;
 pub(crate) use crate::borrow_value::{Origin, Path, Source, State, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow as Guards, Guard, TRUE};
-use crate::hir::{Block, BlockId, CallId, EmitId, Expr, ExprKind, LocalId, Program, Stmt, Type};
+use crate::hir::{
+    Block, BlockId, CallId, EmitId, Expr, ExprKind, LocalId, Program, ReborrowId, Stmt, Type,
+};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Tags = BTreeMap<((LocalId, Vec<String>), Type), Vec<(Type, Guard)>>;
@@ -40,6 +42,7 @@ pub(crate) struct Facts {
     pub(crate) locals: BTreeMap<LocalId, State>,
     pub(crate) blocks: BTreeMap<BlockId, State>,
     pub(crate) calls: BTreeMap<CallId, State>,
+    pub(crate) reborrows: BTreeMap<ReborrowId, State>,
 }
 
 #[derive(Clone)]
@@ -222,13 +225,18 @@ impl Checker<'_> {
             Source::Local(place) => self.locals.get(&place.root).map(Some).ok_or_else(|| {
                 Diagnostic::new("E303", "borrowed storage has ended before this use", span)
             }),
-            Source::Input { id, component }
-                if self.inputs.contains(id)
-                    && crate::borrow_contract::component_type(
-                        &self.program.locals[*id],
-                        component,
-                    )
-                    .is_some_and(|ty| matches!(ty, Type::Reference(_))) =>
+            Source::Input {
+                id,
+                component,
+                fields,
+            } if self.inputs.contains(id)
+                && crate::borrow_contract::component_type(&self.program.locals[*id], component)
+                    .is_some_and(|ty| match ty {
+                        Type::Reference(ty) => {
+                            crate::borrow_contract::projected_type(ty, fields).is_some()
+                        }
+                        _ => false,
+                    }) =>
             {
                 Ok(None)
             }
@@ -655,6 +663,35 @@ impl Checker<'_> {
                     }],
                     ..State::default()
                 }
+            }
+            ExprKind::Reborrow {
+                site,
+                value,
+                fields,
+            } => {
+                let result = self.expression(value)?;
+                flow = result.flow;
+                let Type::Reference(ty) = &value.ty else {
+                    return Err(Self::unsupported(expr.span));
+                };
+                let target = crate::borrow_contract::projected_type(ty, fields)
+                    .ok_or_else(|| Self::unsupported(expr.span))?;
+                if ty.has_reference() || expr.ty != Type::Reference(Box::new(target.clone())) {
+                    return Err(Self::unsupported(expr.span));
+                }
+                let mut state = result.state;
+                if !self
+                    .guards
+                    .spend(state.weight() + fields.len().saturating_mul(state.origins.len()))
+                {
+                    return Err(State::budget(expr.span));
+                }
+                for origin in &mut state.origins {
+                    origin.source = origin.source.project(fields);
+                }
+                self.reserve_origins(state.weight() + 1, expr.span)?;
+                self.facts.reborrows.insert(*site, state.clone());
+                state
             }
             ExprKind::Local(id) => {
                 if self.proofs.mutable.contains(id) {

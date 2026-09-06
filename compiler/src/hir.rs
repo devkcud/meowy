@@ -5,6 +5,7 @@ pub type FunctionId = usize;
 pub type BlockId = usize;
 pub type EmitId = usize;
 pub type CallId = usize;
+pub type ReborrowId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -159,6 +160,11 @@ pub enum ExprKind {
     String(String),
     Local(LocalId),
     Borrow(Place),
+    Reborrow {
+        site: ReborrowId,
+        value: Box<Expr>,
+        fields: Vec<usize>,
+    },
     Deref(Box<Expr>),
     Unary {
         op: String,

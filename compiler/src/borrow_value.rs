@@ -23,7 +23,23 @@ pub(crate) struct Origin {
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Source {
     Local(Place),
-    Input { id: LocalId, component: Path },
+    Input {
+        id: LocalId,
+        component: Path,
+        fields: Vec<usize>,
+    },
+}
+
+impl Source {
+    pub(crate) fn project(&self, path: &[usize]) -> Self {
+        let mut source = self.clone();
+        let fields = match &mut source {
+            Self::Local(place) => &mut place.fields,
+            Self::Input { fields, .. } => fields,
+        };
+        fields.extend_from_slice(path);
+        source
+    }
 }
 
 impl Origin {
@@ -31,7 +47,9 @@ impl Origin {
         1 + self.component.len()
             + match &self.source {
                 Source::Local(place) => place.fields.len(),
-                Source::Input { component, .. } => component.len(),
+                Source::Input {
+                    component, fields, ..
+                } => component.len() + fields.len(),
             }
     }
 }

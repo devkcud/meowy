@@ -514,6 +514,24 @@ impl<'a> Graph<'a> {
                 })?;
                 Bundle::from([(Vec::new(), value)])
             }
+            ExprKind::Reborrow { site, value, .. } => {
+                let parent = self.expression(value)?;
+                if self.current.is_empty() {
+                    return Ok(Bundle::new());
+                }
+                let state = self.facts.reborrows.get(site).ok_or_else(|| {
+                    Diagnostic::unsupported("missing shared reborrow proof", expr.span)
+                })?;
+                self.charge(state.weight() + 1)?;
+                let result =
+                    self.bundle(state.origins.iter().chain(&state.bounds).cloned().collect())?;
+                self.append(Node {
+                    uses: parent.into_values().collect(),
+                    defs: result.values().copied().collect(),
+                    ..Node::default()
+                })?;
+                Self::select(result, path)
+            }
             ExprKind::Local(id) if expr.ty.has_reference() => {
                 let local = Self::select(self.local(*id)?, path);
                 self.copy(local)?
