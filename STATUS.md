@@ -7,22 +7,24 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current handoff
 
-- Compiler: `406c817` adds shared reborrows and concrete field references through
-  shared inputs. Parent expressions evaluate once and point into original storage.
-  Function contracts include compatible referent fields and preserve inherited
-  all-input lifetime bounds; conflicts and escapes remain E302/E303.
-- Native coverage/example: `21086be`; `compiler/examples/reborrows.mwy` verifies
-  original field addresses, function-returned views and final-use writes.
-- Runtime/tooling: `979c8e8` adds explicit owned capture/result storage over fixed
-  caller buffers, actual relocation and exactly-once release. Accepted admission
-  failures drop captures; failed joins preserve owned results for retry.
-- All 14 combined checks pass: 163 Rust tests, 33 Python tests, 847 local links,
+- Compiler: `393471c` adds scope-local borrowing of parameter/self copies,
+  shared/reference-carrier dispatch and reference-prefix field reborrows.
+  Copied-storage addresses cannot escape; shared receivers keep original
+  owners and inherited lifetime bounds. Evaluation remains once-only.
+- Native coverage/example: `efe7d6e`; `compiler/examples/scope-borrows.mwy`
+  contrasts local copies with shared receiver identity and final-use access.
+- Runtime/tooling: `d7d1758` adds explicit marked scope closing. It waits for
+  children, releases owned results and reports failures while retaining progress
+  across release retries. Marks use 16 fixed records per task and must close
+  before the parent's C++ locals disappear.
+- All 14 combined checks pass: 172 Rust tests, 34 Python tests, 848 local links,
   schemas/catalog, editors, formatting/Clippy/build and conformance. Each runtime
   debug/release/sanitized profile passes 14 cleanup, 10 stack, 10 context,
-  18 scheduler and 12 owned-value cases with exact fatal/guard/admission probes.
+  22 scheduler and 13 owned-value cases with exact fatal/guard/admission probes.
   ASan/UBSan/LSan pass, including the required expired-fiber-local diagnosis.
-- The optimized compiler/example passes with exact stdout. Its reborrow guard
-  oracle passes all 150 cases: 114 accepted, 36 E302, no unexpected results.
+- The optimized compiler/example passes with exact stdout. Its dispatch matrix
+  passes all 108 cases: 66 accepted, 42 E302, no unexpected results. Nineteen
+  directed checks and ten additional native profile runs also pass.
 - No active workers, incomplete code or failing checks remain. Conformance is
   9 passed, 14 unsupported, 0 failed. Generated programs still use the scalar
   runtime; automatic scope-exit joins, cancellation and DWARF are not implemented.
@@ -31,8 +33,8 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Shared loans, concrete reborrows and direct function contracts | Exclusive access, static/intrinsic sources, moves and generated cleanup |
-| Runtime | Fixed-slot child waits and explicit owned capture/result transfers | Generated payload layouts, scope-exit joins, cancellation and DWARF |
+| Compiler | Scoped local/parameter/receiver borrows and reference-prefix reborrows | Exclusive access, static/intrinsic sources, moves and generated cleanup |
+| Runtime | Explicit marked scope close, child waits and owned transfers | Generated scope-exit code, complete diagnostic propagation, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
 | Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
@@ -47,10 +49,10 @@ The full documented v0.0.1 release remains incomplete.
 2. Add explicit reads, moves, initialized-slot tracking and cleanup edges before
    exclusive loans, reference reassignment or owned collections. Improve predicate
    and loop precision without weakening proof/resource bounds.
-3. Generate payload layouts and explicit move/drop operations for runtime owned
-   values, then scope-exit joins while borrowed locals still live. Add cancellation
-   and pinned unwind support, preserving child completion before parent cleanup
-   and interleaved partial-result order. Do not join after C++ locals expire.
+3. Generate payload layouts, move/drop operations and task scope-close calls while
+   parent locals still live. Consume failure reports according to the language
+   contract, add cancellation and pinned unwind support, and preserve interleaved
+   child/result/local cleanup. Native close currently waits without cancellation.
 4. Build the manifest/module graph needed for real Meowy library sources and the
    documented projects. Keep runtime, editor and library progress visible here.
 5. Use `python3 -B tools/verify.py --all` after integrations. LSan needs an environment

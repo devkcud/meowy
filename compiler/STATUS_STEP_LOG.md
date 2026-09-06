@@ -6,6 +6,132 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete scoped-borrow and task-close handoff
+
+- Completed: compiler 393471c, native coverage efe7d6e and runtime/tooling d7d1758 are committed. Current STATUS files contain supported behavior, precise limits, evidence and ordered next steps; prior checkpoints are preserved.
+- Validation: All 14 repository checks pass: 172 Rust tests, 34 Python regressions, 848 links and every native/sanitizer profile. The optimized example has exact stdout; all 108 release matrix cases pass (66 accepted, 42 E302). Final tracker links and whitespace pass.
+- Blockers: none for this milestone. Conformance remains 9 passed, 14 unsupported, 0 failed. Exclusive/new-source capabilities, generated cleanup, automatic joins/cancellation and DWARF remain pending.
+- Next steps: extend source contracts before new reference capabilities; add read/move/initialization/cleanup edges; generate runtime mark/close calls and handle failure reports while locals live; continue cancellation/unwinding and module/library implementation. Update STATUS and add a checkpoint after each logical step.
+
+### 2026-09-06 — Refresh scoped-borrow and task-close handoff
+
+- State: Current snapshots now identify compiler 393471c, native coverage efe7d6e and runtime/tooling d7d1758. Completed parameter/dispatch/carrier and explicit-close work is separated from remaining generated cleanup, cancellation and new-source capabilities. Prior checkpoints remain intact.
+- Validation: All 14 checks, optimized example and 108 release matrix cases pass. Final tracker link/whitespace checks are next.
+- Blockers: none for this milestone; full-language and automatic cleanup/unwind integration remain pending.
+- Next steps: Verify and commit the handoff, then resume the ordered source-contract, ownership, generated scope-exit and module work in STATUS.
+
+### 2026-09-06 — Commit explicit task scope closing
+
+- State: Runtime opaque scope marks, fixed metadata, waiting child cleanup, owned-result discard and cumulative retry-safe failure reports are committed with tests and tooling. Compiler and coverage commits are 393471c and efe7d6e. Only current STATUS snapshots and step logs remain uncommitted.
+- Validation: All runtime debug/release/sanitizer profiles and the combined repository gate pass; staged whitespace checks pass. No active source edits or known defects remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh root/compiler STATUS with the final commit IDs, exact evidence and remaining generated cleanup/cancellation work; check links/whitespace and commit the handoff.
+
+### 2026-09-06 — Commit scoped-borrow native coverage
+
+- State: Compiler implementation is 393471c and native/example/usage coverage is efe7d6e. They preserve parameter/self local-copy lifetimes, original shared referents, inherited bounds, nullable carriers and once-only reference-prefix evaluation. Runtime scope close and the final handoff remain.
+- Validation: All 104 library and 68 native groups, optimized example and 108 release matrix cases pass. Staged whitespace checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit explicit task scope closing with runtime tests/tooling, then refresh current STATUS snapshots and validate the final documentation handoff.
+
+### 2026-09-06 — Commit scoped parameter and receiver borrowing
+
+- State: Compiler parameter/self storage, reference-bearing dispatch, carrier-prefix reborrows, source regressions and ownership rules are committed. The existing native capability case now covers forbidden holder address-taking. New native/example coverage, runtime scope close and handoff remain.
+- Validation: The complete gate, optimized example, 108-case release matrix and staged whitespace checks passed. No source changes are pending outside the remaining reviewed slices.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit scoped-borrow native coverage and example, then runtime close and the final handoff with exact implementation commit IDs and remaining cleanup/cancellation work.
+
+### 2026-09-06 — Pass the final optimized dispatch matrix
+
+- State: The final optimized compiler passes all 108 implicit dispatch/carrier guard cases on a private snapshot. Implementation, native behavior and runtime review are complete with no remaining blocker. Root is preparing dependency-ordered compiler, coverage, runtime and handoff commits.
+- Validation: Release matrix: 66 accepted, 42 expected E302, no conservative or unexpected results. The optimized example, all 14 repository checks, 172 Rust tests, 34 Python tests and 848 links pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit scoped parameter/receiver borrowing and existing boundary correction, then native/example docs, explicit runtime scope close and final current STATUS snapshots/step logs.
+
+### 2026-09-06 — Verify the optimized scoped-borrow example
+
+- State: The optimized compiler builds and runs scope-borrows.mwy with exact output. Compiler and runtime source review is complete, and all integration checks are green. Root is preparing focused implementation/coverage/runtime commits before the final tracker snapshot.
+- Validation: All 14 checks pass: 172 Rust tests, 34 Python tests, 848 links and runtime profiles. Release example stdout is false, 7, 8, true, 9, 10 on separate lines with empty stderr. Final optimized dispatch matrix will confirm the release snapshot.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the final 108-case release matrix, commit compiler and existing boundary correction, native/example docs, runtime scope close and final handoff in separate slices.
+
+### 2026-09-06 — Pass the complete scoped-borrow and task-close gate
+
+- State: All 14 repository checks pass with parameter/self borrowing, reference-bearing dispatch, carrier-prefix reborrows and explicit task scope closing integrated. Root is building the optimized compiler before final commits; no pending source edits or failing checks remain.
+- Validation: 104 library plus 68 native Rust groups, 34 Python regressions, 848 links, schemas/catalog, editors, formatting/Clippy/build and conformance pass. Runtime all profiles pass 22 scheduler and 13 owned groups plus exact fatal probes. Conformance remains 9 passed, 14 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the optimized scope-borrows example and final dispatch guard matrix, then commit compiler implementation, native coverage, runtime scope close and refreshed STATUS handoff separately.
+
+### 2026-09-06 — Pass dispatch guard matrix and complete scope-close validation
+
+- State: The fresh compiler snapshot passes the implicit carrier-chain dispatch matrix and all directed lifetime checks. Runtime scope closing is fully validated with fixed marks, child waits, owned-result release and retry-safe failure reporting. No implementation blocker remains.
+- Validation: Dispatch matrix: 66 accepts, 42 expected E302 across 108 cases, no conservative or unexpected results. Nineteen directed checks pass. Runtime all profiles pass 22 scheduler and 13 owned groups plus exact fatal probes; 14 runtime Python tests pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 repository checks, build and exercise the optimized scope-borrows example, rerun final snapshot probes as needed, then commit compiler, native coverage, runtime scope-close and handoff slices.
+
+### 2026-09-06 — Qualify runtime scope close and finish compiler carrier contracts
+
+- State: Runtime scope-close work is complete and validated, including nested marks, owned child-result discard, cumulative failure reports and retry-safe reclamation. Root added a direct-function carrier-prefix return regression and documented implicit reference-prefix reborrows. Tools now describe explicit scope-close coverage.
+- Validation: All runtime debug/release/sanitizer profiles pass 22 scheduler and 13 owned groups plus exact fatal probes; 14 runtime Python tests and 848 links pass. The new compiler source regression and tooling regressions are running; prior 104 library and 68 native groups are green.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete independent compiler guard/snapshot review, run the full repository gate, then verify the optimized example and commit compiler, coverage, runtime and handoff slices.
+
+### 2026-09-06 — Pass carrier-prefix reborrows and review retry-safe scope close
+
+- State: All 68 native groups pass after adding reference-prefix traversal. Root reviewed fixed runtime scope records, LIFO marks, child boundaries, post-reclamation failure counts and owned-result discard; no lifecycle defect was found. Scope close keeps failed children and reports progress without double counting.
+- Validation: Compiler native debug/release passes. Runtime debug/release passes 22 scheduler and 13 owned groups plus new unclosed-scope/fatal discard probes; 14 runtime Python tests pass. Sanitizer and final independent compiler checks remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete scoped dispatch guard-matrix and sanitizer validation, document carrier-prefix and close-report limits, then run the full repository gate and optimized example before focused commits.
+
+### 2026-09-06 — Support reborrowing through reference-valued carrier prefixes
+
+- State: Root extended address lowering for chains such as &holder.view.field: leading carrier fields produce a shared reference value once, then existing reborrow logic addresses its referent. Addresses of holder reference slots or scalar fields remain B001. New native coverage includes effectful temporary carriers, nullable references and E302/E303 boundaries.
+- Validation: All 104 library and 67 native groups passed before this addition. Formatting passes; the new carrier-chain group is running. Independent matrix review will retain the original implicit chain syntax.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Pass carrier-prefix identity/evaluation tests, rerun the full native suite and independent guard matrix, then finish runtime scope-close validation and the combined gate.
+
+### 2026-09-06 — Pass library checks and document parameter/self storage regions
+
+- State: All 104 library groups pass. Ownership documentation now distinguishes copied parameter/self storage from shared receiver referents, preserves E303 local-address rejection and describes reference-carrier dispatch without inventing a function contract. Runtime scope records and retry-safe close logic are implemented.
+- Validation: All 67 native groups and 104 library groups pass; all-target Clippy is running. Independent snapshot probes and runtime close-specific lifecycle/sanitizer checks remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish independent compiler verification and runtime scope-close tests, update tool/runtime scope descriptions, then run the full repository gate and optimized example before focused commits.
+
+### 2026-09-06 — Add source regressions and scope-borrow usage documentation
+
+- State: Root added source regressions for parameter/receiver copy escapes and shared-dispatch provenance, and documented the scope-borrows example. The compiler reuses local storage and existing origin/bound analysis without new lifetime shortcuts.
+- Validation: All 67 native groups passed before this source-test addition. Formatting completed; updated library tests are running. Independent snapshot review and runtime scope-close implementation continue.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish library and independent guard/lifetime probes, document exact storage boundaries, then validate runtime scope-close cleanup/retry semantics and run the combined repository gate.
+
+### 2026-09-06 — Pass scoped parameter and dispatch native behavior
+
+- State: All 67 native groups pass. Parameter/self addresses retain local-copy identity and reject escapes; shared/reference-carrier dispatch preserves original owners, nullable activity and inherited bounds. Receiver/argument evaluation remains once-only and left-to-right. Independent diff review found no source blocker.
+- Validation: Native debug/release passes, including the new scope-borrows example and E302/E303 boundaries. A fresh standalone compiler is ready for focused review probes. Runtime scope-close implementation is still in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run independent snapshot probes, add focused source regressions and update borrowing docs; then validate scope nesting, close retries, failure reports and owned child-result cleanup before the combined gate.
+
+### 2026-09-06 — Specify parameter and dispatch lifetime behavior
+
+- State: Root added scope-borrows.mwy and six native groups covering parameter-copy identity, left-to-right arguments, borrowed record fields, copied versus shared self, reference-carrier/nullable dispatch, once-only evaluation, inherited bounds and E303 escapes. Shared dispatch conflicts remain E302.
+- Validation: New native coverage has 67 groups pending execution; baseline 102 library/61 native groups passed. Runtime scope-close design preserves counts across retries and reports unreclaimed children separately, with fixed scope metadata.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run new native/source groups, verify copied parameter/self storage never becomes caller-owned provenance, then validate runtime scope nesting, result destruction, failure accumulation and retry behavior.
+
+### 2026-09-06 — Enable scoped parameter and receiver addresses
+
+- State: The checker now admits reference-free parameter/self storage as local places and allows shared-reference/reference-bearing-value dispatch blocks to use existing provenance analysis. The first library run found only obsolete B001 expectations; those now cover exclusive parameter borrowing and reference-carrier address-taking. Runtime scope marks use fixed records and retry-safe close reports.
+- Validation: Baseline 102 library and 61 native groups passed. The new code compiles; its first library run passed 101 groups with one stale capability-test group failing. New accepted/E303/E302 coverage is next.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify local-copy identity and escape rejection, shared self provenance and inherited bounds, then implement bounded nested scope close with owned-result cleanup, failure reporting and exact fatal probes.
+
+### 2026-09-06 — Begin parameter and dispatch borrowing with explicit task scope close
+
+- State: The checkout is clean at b21496d. Root is extending addressable storage to by-value parameters and dispatch self bindings, and enabling reference-bearing dispatch through existing origin analysis. Runtime work targets explicit scope closing while parent locals still live, with child/result cleanup and retry-safe ownership. Root is the sole tracker writer.
+- Validation: Previous milestone passed all 14 checks. New parameter/dispatch and scope-close behavior is not implemented or validated yet. Exclusive access, automatic destructor/scope-exit joins, cancellation and DWARF remain separate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Confirm copied receiver/parameter lifetimes against the reference, implement scoped addresses and dispatch provenance, define bounded scope marks/close semantics, then add accepted/E303/E302 and child cleanup/retry tests.
+
 ### 2026-09-06 — Complete reborrow and owned-runtime handoff
 
 - Completed: shared reborrows are 406c817, native example/coverage is 21086be, and owned runtime/tooling is 979c8e8. Current STATUS files record exact behavior, capability limits, verification and ordered next steps; all prior checkpoints are preserved.

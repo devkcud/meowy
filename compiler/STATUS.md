@@ -1,24 +1,24 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Shared reborrows and explicit owned runtime values pass.
+Updated: 2026-09-06. Parameter/dispatch borrows and explicit task scope closing pass.
 Full v0.0.1 remains incomplete. No active workers, incomplete code or failing checks remain.
-Implementation: `406c817`; native coverage/example: `21086be`; runtime/tooling: `979c8e8`.
+Implementation: `393471c`; native coverage/example: `efe7d6e`; runtime/tooling: `d7d1758`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: shared reborrows preserve original referent addresses through `&*view`
-and concrete named-field paths, including parenthesized expressions and temporary
-reference values from calls/blocks. Parent evaluation occurs once. Referent paths
-are separate from parameter component paths, and function contracts enumerate
-compatible whole referents and named descendants before accepting field returns.
-Inherited all-input bounds remain intact; E302/E303 still protect live storage.
+Completed: reference-free parameter and dispatch self storage can be borrowed
+within its local scope. Their addresses never gain caller/static lifetime. Shared
+and reference-carrier dispatch retain original sources, active variants and
+inherited bounds. Chains such as `&holder.view.field` evaluate the reference-valued
+prefix once and then reborrow the original referent; holder addresses remain B001.
+E303 rejects copied-storage escapes and E302 protects active shared loans.
 Next: exclusive access, new reference sources, moves and generated cleanup. The
-independent runtime now moves owned captures/results through fixed caller buffers
-with explicit initialization, relocation and release. Compiler-generated payload
-layouts/cleanup, automatic joins, cancellation and DWARF remain pending.
-Generated programs still use the scalar runtime. The reference remains authoritative.
+runtime now explicitly closes marked child scopes while parent locals still live,
+releasing owned results and preserving failure/progress reports across retries.
+Compiler-generated scope exits, cancellation, full diagnostic attachment and DWARF
+remain pending. Generated programs still use the scalar runtime.
 
 ## Resume here
 
@@ -42,11 +42,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/flow.rs` | Reference unions, narrowing and contextual record composition; 24 checker and 5 guard tests |
+| Names, types, flow | `src/check.rs`, `src/flow.rs` | Reference unions, narrowing and contextual record composition; 26 checker and 5 guard tests |
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including records, references and tagged unions; 14 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 61 native groups, 4 harness tests and 12 runnable examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 68 native groups, 4 harness tests and 13 runnable examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -77,11 +77,18 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Known limits to preserve
 
-- Ordinary local storage and concrete fields can be borrowed directly. Shared
-  reborrows inspect reference-free referents, including reference values returned
-  by functions. Temporary owners, parameter/receiver/emission storage addresses,
-  reference-bearing pointees, union-payload/primary-ascription addresses, exclusive
-  borrows and mutable reference carriers remain B001.
+- Ordinary locals, reference-free parameters and copied dispatch self bindings have
+  local addressable storage. Parameter/self addresses may be used in nested scopes
+  but cannot escape their storage region. Shared self instead contains a reference
+  value, so returning/reborrowing it preserves the original Local/Input origins.
+- Reference-bearing record/union dispatch uses ordinary component/variant facts;
+  it does not invent a function-style lifetime contract. Inherited call bounds still
+  survive. Receiver/argument expressions evaluate once and in order.
+- A leading carrier field can produce the reference used by `&holder.view.field`.
+  The reference prefix is copied once, then reborrowed. `&holder.view` and addresses
+  of the carrier's own scalar fields remain B001. Temporary owners, named emitted
+  storage, reference-bearing pointees, union-payload/primary-ascription addresses,
+  exclusive borrows and mutable reference carriers remain unsupported.
 - Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
   field indices while inherited bounds stay unchanged. Lowering evaluates the parent
   once and derives addresses without record copies. Address hints perform no lowering;
@@ -152,10 +159,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   Accepted admission failures drop captures; failed joins retain results untouched.
   Move/drop callbacks cannot suspend; results need independently surviving storage.
   This is a trusted private C++ API, not compiler-checked payload layout/Send/Sync.
-- Runtime body/cleanup callbacks must join before borrowed locals expire, or a private
-  fatal protocol error stops execution. Owned result/capture movement rejects live
-  child obligations. Automatic scope-exit joins/cancellation, generated cleanup,
-  Meowy personality, landing pads and compiler integration remain pending.
+- Runtime body/cleanup callbacks must finish child joins and close every task mark
+  before borrowed locals expire; otherwise a private fatal protocol error stops
+  execution. Task::mark/close uses 16 fixed scope records per slot, selects children
+  admitted since the innermost mark, waits on their worker and discards owned results.
+- Close counts only successfully reclaimed children and preserves progress/first
+  failure across retries. It reports an unreclaimed child separately; callers must
+  handle child failure counts even when close itself returns ok. Only the first
+  diagnostic is retained, with caller-provided backing lifetime. No cancellation,
+  automatic panic propagation, generated scope exits or native unwinding is supplied.
 - Timeout supervision kills/reaps the entire compiler/application process group.
   B001 cannot hide a later fault or count as an expected language rejection.
 
@@ -163,33 +175,32 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 - Final `python3 -B tools/verify.py --all`: all 14 selected checks pass outside
   ptrace supervision. The gate pins Cargo target/output and the freshly built compiler.
-- Rust: 102 library and 61 native groups pass in the required profiles. All-target
+- Rust: 104 library and 68 native groups pass in the required profiles. All-target
   Clippy with `-D warnings` and `cargo fmt --check` pass.
-- Python: 16 tooling, 13 runtime and 4 compiler-harness regressions pass. Local
-  documentation validation checks 847 links; schemas/catalog and Vim/Neovim pass.
+- Python: 16 tooling, 14 runtime and 4 compiler-harness regressions pass. Local
+  documentation validation checks 848 links; schemas/catalog and Vim/Neovim pass.
 - Runtime per debug/release/sanitized profile: 14 cleanup cases plus 2 fatal probes;
   10 stack cases plus kernel ENOMEM and 2 guard faults; 10 context cases plus fatal
-  resumed cleanup; 18 scheduler cases plus admission/fatal/unjoined-child probes;
-  12 owned-value cases plus 2 exact owned-cleanup fatal probes. ASan/UBSan/LSan
-  normal runs pass; the expired fiber-local negative probe is diagnosed as required.
+  resumed cleanup; 22 scheduler cases plus admission/fatal/child/scope probes;
+  13 owned-value cases plus 3 exact fatal cleanup probes. ASan/UBSan/LSan normal
+  runs pass; the expired fiber-local negative probe is diagnosed as required.
 - Conformance: 9 passed, 14 unsupported, 0 failed in debug/release. Passed cases:
   `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
   `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`,
   `reference_identity`. This is not full conformance.
-- The final optimized compiler passes all 150 reborrow guard oracle cases:
-  114 accepted, 36 E302, no unexpected or conservative rejections. It compares
-  direct and function-returned field references under independent write/use guards.
-  Temporary oracle files supplement committed source/native regression coverage.
-- The optimized compiler builds `examples/reborrows.mwy` in release with empty
-  stderr and exact stdout `true\n41\n7\n42\n8\n`.
-- Native tests verify original nested addresses, nullable/guarded parents, inherited
-  call bounds, loops, effectful operands executing once and argument early leaves.
-  Source regressions verify nested symbolic field paths, E303 ignored-input bounds
-  and bounded candidate expansion. Reference fixtures were not changed.
-- Owned runtime tests relocate a real pipe descriptor, preserve results across failed
-  joins, release consumed captures on admission failure, and check result-before-capture
-  panic cleanup. Child-to-parent transfer, callback reentry and movement with live
-  children are covered. Backing-buffer/descriptor contracts remain caller obligations.
+- The final optimized compiler passes all 108 dispatch/carrier guard cases:
+  66 accepted, 42 E302, no conservative or unexpected results. Nineteen directed
+  source checks and ten additional native profile runs passed on the preceding
+  debug snapshot. Temporary oracle/provenance files supplement committed tests.
+- The optimized compiler builds `examples/scope-borrows.mwy` in release with empty
+  stderr and exact stdout `false\n7\n8\ntrue\n9\n10\n`.
+- Native/source tests verify parameter/const-self copy identity, earlier argument
+  copies, original shared receivers, nullable carriers, inherited E302/E303 bounds,
+  effectful reference prefixes and early leaves. Reference fixtures were not changed.
+- Scope-close tests cover exact mark capacity, nesting, stale/foreign marks, older
+  children, cleanup-local borrows, owned-result release, all consumed failure counts
+  and retry progress. Private unclosed-scope errors and fatal P008 result-drop panics
+  require exact evidence. Plain joins retain their owned-result protection.
 - Existing coverage retains 10,000 deterministic malformed/Unicode parser inputs,
   depth/budget stress, bounded backend FFI, arithmetic boundaries, short circuiting,
   tagged unions, nullable records and `/dev/full`. These are bounded regressions.
@@ -211,10 +222,11 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
    parent-loan suspension, temporary-owner lifetime and exact-once cleanup.
 3. Add required evaluation, effects, logical budgets and constrained specialization,
    then enable the type-helper, compile-effect/budget and callable fixtures.
-4. Generate runtime owned payload layouts, move/drop operations and scope-exit joins
-   while parent locals still live. Add cancellation and pinned unwind support,
-   Meowy personality and landing pads. Verify child failures during cleanup,
-   cancellation while joining and interleaved partial-result/local release order.
+4. Generate owned payload layouts, move/drop operations and runtime mark/close calls
+   before parent locals die. Handle close failure reports according to scope-exit
+   rules, then add cancellation, diagnostic attachments and pinned unwind support.
+   Verify panic/cancellation while joining and interleaved result/local cleanup;
+   explicit native close currently waits without cancelling children.
 5. Implement the project/module graph for native adapters and real Meowy library
    sources, then tools/artifacts and distribution qualification from the table above.
 6. Keep the combined gate green and expand the conformance harness REQUIRED set only
