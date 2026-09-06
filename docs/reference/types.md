@@ -8,22 +8,22 @@ ordinary runtime control flow cannot change a type or specialize a function.
 
 ## Primitive and storage types
 
-| Type                     | Meaning                                                  |
-| ------------------------ | -------------------------------------------------------- |
-| `<null>`                 | The single value `null`                                  |
-| `<never>`                | No normally produced value; used for divergence or panic |
-| `<boolean>`              | `true` or `false`                                        |
-| `<int8>` … `<int128>`    | Signed integers of width 8, 16, 32, 64, or 128 bits      |
-| `<uint8>` … `<uint128>`  | Unsigned integers of the same widths                     |
-| `<isize>`, `<usize>`     | Signed and unsigned integers of the target pointer width |
-| `<float32>`, `<float64>` | Binary floating-point values of the stated width         |
-| `<string>`               | Borrowed, immutable UTF-8 byte view                      |
-| `<error>`                | Common descriptor for recoverable error values           |
-| `<T[N]>`                 | Inline list with length at most constant `N`             |
-| `<T[]>`                  | Borrowed immutable slice, with runtime length            |
-| `<&T>`, `<&!T>`       | Shared and exclusive references                          |
-| `<*T>`, `<*!T>`       | Read-only and writable raw pointers                      |
-| `<(T, U) -> R>`          | Non-capturing function pointer                           |
+| Type                     | Meaning                                                    |
+| ------------------------ | ---------------------------------------------------------- |
+| `<null>`                 | The single value `null`                                    |
+| `<never>`                | No normally produced value; used for divergence or panic   |
+| `<boolean>`              | `true` or `false`                                          |
+| `<int8>` … `<int128>`    | Signed integers of width 8, 16, 32, 64, or 128 bits        |
+| `<uint8>` … `<uint128>`  | Unsigned integers of the same widths                       |
+| `<isize>`, `<usize>`     | Signed and unsigned integers of the target pointer width   |
+| `<float32>`, `<float64>` | Binary floating-point values of the stated width           |
+| `<string>`               | Borrowed, immutable UTF-8 byte view                        |
+| `<error>`                | Common descriptor for recoverable error values             |
+| `<T[N]>`                 | Inline list with length at most constant `N`               |
+| `<T[]>`                  | Borrowed immutable slice, with runtime length              |
+| `<&T>`, `<&!T>`          | Shared and exclusive references                            |
+| `<*T>`, `<*!T>`          | Read-only and writable raw pointers                        |
+| `<(T, U) -> R>`          | Non-capturing function pointer                             |
 | `<!(T, U) -> R>`         | Function pointer requiring a caller-proven safety boundary |
 
 `N` is a non-negative compile-time integer. A type alias can name any composite

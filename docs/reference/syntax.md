@@ -49,16 +49,16 @@ actually contains that intrinsic value.
 
 ## Literals, values, and comments
 
-| Form                            | Meaning                           |
-| ------------------------------- | --------------------------------- |
+| Form                            | Meaning                            |
+| ------------------------------- | ---------------------------------- |
 | `null`, `true`, `false`         | Predefined null and boolean values |
-| `42`, `1_024`, `0xff`, `0b1010` | Integer literals                  |
-| `3.5`, `1.0e-3`                 | Floating-point literals           |
-| `"hello"`                       | UTF-8 string literal              |
-| `"value: {expression}"`         | Interpolated string               |
-| `[1, 2, 3]`                     | Bounded list literal              |
-| `{ -> x : 1 }`                  | Block with a named emission       |
-| `# comment #`                   | Delimited comment; may span lines |
+| `42`, `1_024`, `0xff`, `0b1010` | Integer literals                   |
+| `3.5`, `1.0e-3`                 | Floating-point literals            |
+| `"hello"`                       | UTF-8 string literal               |
+| `"value: {expression}"`         | Interpolated string                |
+| `[1, 2, 3]`                     | Bounded list literal               |
+| `{ -> x : 1 }`                  | Block with a named emission        |
+| `# comment #`                   | Delimited comment; may span lines  |
 
 Comments do not nest. `#` inside a string is ordinary text. Strings accept `\n`,
 `\r`, `\t`, `\0`, `\"`, `\\`, `\{`, and `\}` escapes. A raw newline is allowed
@@ -83,39 +83,39 @@ discards its result; it does not implicitly emit that result.
 
 ## Forms at a glance
 
-| Form                        | Meaning                                       |
-| --------------------------- | --------------------------------------------- |
-| `name : value`              | Immutable binding                             |
-| `name := value`             | Mutable binding                               |
-| `name <T> : value`          | Explicit binding type                         |
-| `name = value`              | Reassign a mutable binding                    |
-| `<Name> : <T>`              | Type alias                                    |
-| `-> value`                  | Primary emission                              |
-| `-> name : value`           | Immutable named emission                      |
-| `-> name := value`          | Mutable named emission                        |
-| `(x <T>) { ... }`           | Function value                                |
-| `f <R> : (x <T>) { ... }`   | Function declaration with result type `R`     |
-| `f(value)`                  | Function call                                 |
-| `value.name`                | Field selection                               |
-| `value.(f)`                 | Call `f` with `value` as its first argument   |
-| `value.{ ... }`             | Evaluate block with `self` bound to `value`   |
-| `\| condition \| statement` | Conditional matcher arm                       |
-| `'scope { ... }`            | Named, immediately evaluated block            |
-| `'scope -> value`           | Primary emission into a named enclosing block |
-| `'scope.leave()`            | Finish that named block                       |
-| `'scope.restart()`          | Clean up and restart that named block         |
-| `value <T>`                 | Type predicate in a matcher condition         |
-| `value<>`                   | Compile-time type query                       |
-| `value<T>`                  | Proven type ascription; no conversion         |
-| `@"name"`                   | Module import                                 |
-| `&value`, `&!value`      | Shared or exclusive borrow                    |
-| `*reference`                | Access a safe reference's referent            |
-| `>> expression`, `<< task`  | Start or join a task                          |
-| `&group<T[N]>`              | Declare a bounded task group                  |
-| `&group >> expression`      | Submit a task to a group                      |
-| `!{ ... }` | Block permitting operations with caller-proven safety conditions |
-| `(x <T>) !{ ... }` | Function whose callers must establish those conditions |
-| `<:T : memory.Copy>` | Generic type binder constrained by a capability value |
+| Form                        | Meaning                                                          |
+| --------------------------- | ---------------------------------------------------------------- |
+| `name : value`              | Immutable binding                                                |
+| `name := value`             | Mutable binding                                                  |
+| `name <T> : value`          | Explicit binding type                                            |
+| `name = value`              | Reassign a mutable binding                                       |
+| `<Name> : <T>`              | Type alias                                                       |
+| `-> value`                  | Primary emission                                                 |
+| `-> name : value`           | Immutable named emission                                         |
+| `-> name := value`          | Mutable named emission                                           |
+| `(x <T>) { ... }`           | Function value                                                   |
+| `f <R> : (x <T>) { ... }`   | Function declaration with result type `R`                        |
+| `f(value)`                  | Function call                                                    |
+| `value.name`                | Field selection                                                  |
+| `value.(f)`                 | Call `f` with `value` as its first argument                      |
+| `value.{ ... }`             | Evaluate block with `self` bound to `value`                      |
+| `\| condition \| statement` | Conditional matcher arm                                          |
+| `'scope { ... }`            | Named, immediately evaluated block                               |
+| `'scope -> value`           | Primary emission into a named enclosing block                    |
+| `'scope.leave()`            | Finish that named block                                          |
+| `'scope.restart()`          | Clean up and restart that named block                            |
+| `value <T>`                 | Type predicate in a matcher condition                            |
+| `value<>`                   | Compile-time type query                                          |
+| `value<T>`                  | Proven type ascription; no conversion                            |
+| `@"name"`                   | Module import                                                    |
+| `&value`, `&!value`         | Shared or exclusive borrow                                       |
+| `*reference`                | Access a safe reference's referent                               |
+| `>> expression`, `<< task`  | Start or join a task                                             |
+| `&group<T[N]>`              | Declare a bounded task group                                     |
+| `&group >> expression`      | Submit a task to a group                                         |
+| `!{ ... }`                  | Block permitting operations with caller-proven safety conditions |
+| `(x <T>) !{ ... }`          | Function whose callers must establish those conditions           |
+| `<:T : memory.Copy>`        | Generic type binder constrained by a capability value            |
 
 The escaped pipes in the table stand for literal `|` characters. Type ascription
 and generic specialization attach directly to their subject (`value<T>`,
@@ -131,17 +131,17 @@ Generic arguments name types without an extra pair of angle brackets:
 
 From highest to lowest precedence:
 
-| Level | Operators/forms                                                                      |
-| ----- | ------------------------------------------------------------------------------------ |
-| 1     | Calls, field selection, indexing, dispatch, type query/ascription                    |
+| Level | Operators/forms                                                                    |
+| ----- | ---------------------------------------------------------------------------------- |
+| 1     | Calls, field selection, indexing, dispatch, type query/ascription                  |
 | 2     | Unary `!`, `-`, `~`, dereference `*`, borrow `&`, `&!`, task start `>>`, join `<<` |
-| 3     | `*`, `/`, `%`                                                                        |
-| 4     | `+`, `-`                                                                             |
-| 5     | Integer bitwise `&`, then `^`, then `\|`                                             |
-| 6     | `<`, `<=`, `>`, `>=`, type predicates                                                |
-| 7     | `==`, `!=`                                                                           |
-| 8     | `&&`                                                                                 |
-| 9     | `\|\|`                                                                               |
+| 3     | `*`, `/`, `%`                                                                      |
+| 4     | `+`, `-`                                                                           |
+| 5     | Integer bitwise `&`, then `^`, then `\|`                                           |
+| 6     | `<`, `<=`, `>`, `>=`, type predicates                                              |
+| 7     | `==`, `!=`                                                                         |
+| 8     | `&&`                                                                               |
+| 9     | `\|\|`                                                                             |
 
 Binary arithmetic operators associate left-to-right; comparisons cannot be
 chained. Assignment, emissions, and matchers are statement forms. Parentheses
