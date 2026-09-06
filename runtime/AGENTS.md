@@ -13,6 +13,7 @@
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the
-  sole root tracker writer while delegating; otherwise update root `STATUS.md`.
+  sole root tracker writer while delegating; otherwise update root `STATUS.md`
+  and record the checkpoint in root `STATUS_STEP_LOG.md`.
 - Follow root naming, visibility and comment rules. Add no dependencies without
   a concrete need and an explicit version/revision plan.

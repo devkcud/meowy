@@ -10,8 +10,9 @@ These instructions apply to this directory and all descendants.
 - Inspect the current Git changes before working. Preserve existing work and coordinate edits to shared interfaces.
 - After every compiler work step (investigation, edit, validation, or decision), update `STATUS.md` before starting the next step. Do not defer updates until the end of a task or session.
 - Keep its `Next steps` section current and ordered. Each immediate action must identify the relevant files or rule, the intended result, and how to verify it. Replace completed or superseded actions; preserve unfinished work and blockers.
-- Add a dated checkpoint to its `Step log` recording what changed or was learned, validation performed or still pending, blockers, and explicit next steps. Record failures as well as successes. Keep entries concise and put the newest first.
-- When delegating, assign one writer to `STATUS.md`. Workers must report each completed step and its next actions so the writer can update the handoff without conflicting edits.
+- Keep `STATUS.md` focused on the current handoff, gaps, validation and next steps. Store historical checkpoints and completed milestone checklists in `STATUS_STEP_LOG.md`.
+- Add a dated checkpoint to `STATUS_STEP_LOG.md` recording what changed or was learned, validation performed or still pending, blockers, and explicit next steps. Record failures as well as successes. Keep entries concise and put the newest first; preserve prior history.
+- When delegating, assign one writer to both tracking files. Workers must report each completed step and its next actions so the writer can update the handoff without conflicting edits.
 - Before stopping, leave enough detail for another developer to resume without the conversation. Incomplete files and failing tests must be explicitly identified.
 - Never describe the bootstrap as a complete v0.0.1 release.
 
