@@ -255,8 +255,70 @@ retain borrowed data, or own resources while still satisfying an `<error>` test.
 For generated errors, `P = null` is descriptor-compatible. Every other `P` stays
 inline and requires explicit boxing before storage as `<error>`, even when that
 particular payload is small. This rule has no target-dependent size cutoff.
-Library-defined errors state their compatibility separately; an allocation-free
-library error is not automatically descriptor-compatible.
+Foundational-library errors use this closed compatibility rule, independent of
+target layout. The following types are descriptor-compatible:
+
+- `strings.ParseError` and `cli.InvalidValue`;
+- `time.Stopped`, `iter.Overflow`, `channel.Closed`, and `channel.Empty`;
+- `tasks.Cancelled`, `tasks.Timeout`, `tasks.Panicked`, and `tasks.SpawnFailed`.
+
+Every other foundational-library error is **not descriptor-compatible**, including
+new error types unless a later library contract explicitly adds them to this
+list. In particular, `io.Error`, `collections.Bounds`, `memory.AllocationFailure`,
+date/calendar errors, JSON errors, and generic errors retaining rejected owners
+require `errors.box` before storage as `<error>`. Small size, allocation-free
+construction, and a particular value having no facts do not change that rule.
+The task-runtime descriptors retain their documented runtime-owned evidence;
+erasing one transfers that existing evidence and does not allocate another box.
+
+This list governs implicit descriptor-compatible argument/result conversion as
+well as `errors.erase`. Error predicates and `errors.code`/`errors.message` work
+for every concrete error without erasure. For example, an `io.Error` can be
+matched and inspected directly, but `errors.erase` on it is a static error.
+The generated-error rule above applies to application and dependency errors;
+neither a matching code nor a record shape grants library-error identity.
+
+### Concrete library-error capabilities
+
+Erasure compatibility is independent of copying or task transfer. The following
+concrete error families contain only scalar facts, immutable views, or
+program-lifetime metadata and have `memory.Copy`, `tasks.Send`, and `tasks.Sync`:
+
+| Module                          | Error types                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `strings`                       | `ParseError`, `InvalidUtf8`, `SliceError`, `InvalidSeparator`, `BufferTooSmall`                                                                   |
+| `unicode`                       | `InvalidScalar`                                                                                                                                   |
+| `numbers`, `math`               | `numbers.RangeError`, `math.DomainError`, `math.RangeError`                                                                                       |
+| `random`, `encoding`, `hash`    | `random.InvalidBound`, `random.EntropyError`, `encoding.InvalidData`, `encoding.BufferTooSmall`, `hash.LimitError`                                |
+| `json`                          | `ParseError`, `TypeError`, `NumberError`, `EncodeError`                                                                                           |
+| `collections`, `iter`, `memory` | `collections.Bounds`, `iter.Overflow`, `memory.AllocationFailure`                                                                                 |
+| `time`                          | `RangeError`, `ParseError`, `FormatError`, `Stopped`                                                                                              |
+| `date`                          | `InvalidDate`, `InvalidTime`, `RangeError`, `ClockError`, `UnknownZone`, `InvalidOffset`, `Ambiguous`, `Nonexistent`, `ParseError`, `FormatError` |
+| `calendars`                     | `UnknownCalendar`, `CalendarMismatch`                                                                                                             |
+| System modules                  | `io.Error`, `path.InvalidPath`, `path.Error`, `fs.Error`, `env.Error`, `process.Error`, `net.InvalidAddress`, `net.Error`                         |
+| `cli`                           | `InvalidValue`, `UsageError`, `RenderError`                                                                                                       |
+| `channel`, `tasks`              | `channel.Closed`, `channel.Empty`, `tasks.Cancelled`, `tasks.Timeout`, `tasks.SpawnFailed`                                                        |
+
+An immutable view still retains its source lifetime; in particular UsageError's
+argv borrows cannot be sent as non-static external borrows through a channel.
+The grant does not make those views static. These errors have no ordinary
+equality unless their own chapter explicitly grants it; inspect promised facts.
+
+`collections.Full<T,N>`, `Missing<T,N>`, `PushFailure<T>`, `Duplicate<K,V>`,
+`InsertFailure<K,V>`, `channel.Rejected<T>`, `channel.Full<T>`,
+`dynamic.BoxFailure<T>`, and `errors.BoxFailure<E>` derive each of these three
+capabilities from every retained type argument. Their additional numeric facts
+and allocation-failure causes impose no further restriction. Retained owners
+still move rather than copy whenever their type lacks `memory.Copy`.
+
+`tasks.Panicked` and `process.RunFailure` are move-only and have `tasks.Send` and
+`tasks.Sync`; the first owns immutable runtime evidence, and the second owns its
+captured byte vectors, completed status/termination evidence, and concrete system
+failure facts. They contain no erased application error or non-static external
+borrow. No other opaque error obtains a capability implicitly: generated errors
+follow their payload rule, and new library types must publish their grants.
+
+### Erasure APIs
 
 For the no-payload definition above, the erased boundary needs no allocation:
 

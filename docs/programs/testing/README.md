@@ -3,7 +3,7 @@
 [All programs](../README.md) · [Manifest](mod.mwy) · [Entry](main.mwy) · [Arithmetic](arithmetic.mwy)
 
 A tiny calculator gets a disproportionately useful suite: table cases, a typed
-error, an expected panic, a partial write, and a greeting that actually lets its
+error, an expected panic, partial writes, dynamic JSON, and a greeting that lets its
 consumer go home. All tests import `@"testing"`; no special test keyword or
 magic function name sneaks into the language.
 
@@ -26,20 +26,25 @@ tests/arithmetic_test.mwy::tests::halves_table
 tests/arithmetic_test.mwy::tests::odd_input
 tests/channel_test.mwy::tests::owned_message_and_close
 tests/io_test.mwy::tests::partial_write
+tests/stdlib_test.mwy::tests::custom_cli_parser
+tests/stdlib_test.mwy::tests::custom_writer_failure
+tests/stdlib_test.mwy::tests::dynamic_json_numbers
+tests/stdlib_test.mwy::tests::json_limit_boundaries
 ```
 
 The listing also labels the skipped sweep and its reason. With successful
-allocation, admission, and host operation, the run finishes with **5 passed,
+allocation, admission, and host operation, the run finishes with **9 passed,
 0 failed, 1 skipped, and 0 not started**, returning status 0. The table's four
 rows run inside one case; the expected panic passes without publishing a failure
 occurrence. The skipped case is an explicit placeholder, not claimed coverage.
 Remove the skip only after replacing its deliberately failing body.
 
-| File                                          | What it checks                                                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| [Arithmetic tests](tests/arithmetic_test.mwy) | Four even inputs, the exact odd-input payload and code, an expected `P006`, and the named skip                      |
-| [I/O test](tests/io_test.mwy)                 | A three-byte destination retains `meo` and reports partial progress when asked to write `meow`                      |
-| [Channel test](tests/channel_test.mwy)        | A `strings.Owned` message transfers once, its contents survive, and the receiver observes permanent drained closure |
+| File                                          | What it checks                                                                                                                   |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [Arithmetic tests](tests/arithmetic_test.mwy) | Four even inputs, the exact odd-input payload and code, an expected `P006`, and the named skip                                   |
+| [I/O test](tests/io_test.mwy)                 | A three-byte destination retains `meo` and reports partial progress when asked to write `meow`                                   |
+| [Channel test](tests/channel_test.mwy)        | A `strings.Owned` message transfers once, its contents survive, and the receiver observes permanent drained closure              |
+| [Stdlib cases](tests/stdlib_test.mwy)         | A custom CLI parser, a refusing I/O adapter, exact dynamic JSON numbers, missing versus null members, and inclusive input limits |
 
 `main.mwy` and the suite import the same arithmetic module. `meowy test` does not
 execute the application entry; `meowy check` checks that entry's graph and does
@@ -50,6 +55,14 @@ Each active case gets a fresh process and initializes its own dependency graph.
 The table and error payload use inline storage. The I/O cursor borrows a local
 bounded list; its inner scope ends before assertions borrow the resulting bytes.
 That fixture never touches a host file.
+
+The stdlib cases construct `cli.InvalidValue` through `cli.invalid` and `io.Error`
+through `io.error`; ordinary record literals cannot forge those nominal errors.
+The writer handles an empty span successfully, then rejects nonempty output with
+zero committed bytes and an explicit portable kind. Dynamic JSON keeps a number
+larger than uint64 as source text, rejects its checked uint64 conversion, and
+distinguishes a missing member from JSON null. These cases use caller-owned argv
+and document-owned JSON data; no external files or services are required.
 
 The concurrency case allocates its queue and greeting before submitting work.
 `send(text)` moves the text owner; the parent cannot reuse it. The receiver owns

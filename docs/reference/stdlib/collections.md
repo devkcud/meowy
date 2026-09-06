@@ -55,16 +55,30 @@ a particular push happens to fit without moving the buffer.
 `collections.map<K, V>(allocator, capacity, hash, equal)` constructs a
 `collections.Map<K, V>` or returns `memory.AllocationFailure`. Capacity is an
 initial number of entries, not a permanent limit. The map retains the supplied
-allocator and concrete callables:
+allocator and two non-capturing function pointers. Construction accepts concrete
+non-capturing callable items whose `core.Pure` capability is known:
 
 - `hash` accepts `<&K>` and returns `<uint64>`.
 - `equal` accepts two `<&K>` values and returns `<boolean>`.
 - Equality must be an equivalence relation, and equal keys must hash equally.
   Both functions must be pure and stable while keys remain in the map.
 
+The initial Map API rejects callbacks with runtime capture environments, even
+when those captures are copyable. Imported functions and non-capturing literals
+are valid; construction checks `core.Pure` on the concrete callable item before
+conversion to the stored pointer signature. An already-erased ordinary function
+pointer has no such proof and is rejected, even if its current target happens to
+be pure. The stored pointer need not carry a runtime purity tag or recover proof
+from its spelling. `Map<K, V>` therefore stores only
+these fixed-signature pointers, without hiding an additional environment type or
+allocating a callback box. Runtime-configured lookup policy needs a separate
+application data structure; it is not an implicit extra Map type parameter.
+
 There is no implicit hash/equality dictionary, even for primitive keys. The
 library supplies `collections.hash_string` and `collections.equal_string` for
 borrowed string keys. The string hasher's versioned algorithm is for table lookup;
+both helper items satisfy `core.Pure` and allocate nothing. Their algorithm is
+bundled with the selected distribution, including during required evaluation;
 use `hash` and a byte encoding when a persistent digest is required. A map does
 not extend the lifetime of borrowed key data.
 

@@ -29,7 +29,7 @@ connects these API choices to stack, heap, static storage, and linker behavior.
 | `@"numbers"`, `@"bits"`, `@"math"`     | Checked conversions, numeric utilities, bit operations, and mathematics              | [Numeric utilities](text-and-data.md#numbers-mathematics-and-randomness) |
 | `@"random"`                            | Reproducible generators and explicit cryptographic entropy                           | [Randomness](text-and-data.md#numbers-mathematics-and-randomness)        |
 | `@"encoding"`, `@"hash"`               | Hex, base64, and stable byte digests                                                 | [Binary data](text-and-data.md#binary-encodings-and-digests)             |
-| `@"json"`                              | Bounded typed decoding and streaming encoding                                        | [JSON](text-and-data.md#json-with-bounded-work-and-explicit-storage)     |
+| `@"json"`                              | Bounded typed/dynamic decoding and streaming encoding                                | [JSON](json.md)                                                          |
 | `@"memory"`, `@"values"`, `@"dynamic"` | Allocators, layout, aggregate ownership, and explicit type erasure                   | [Storage APIs](memory.md)                                                |
 | `@"collections"`, `@"iter"`            | Lists, arrays, vectors, maps, sorting, and pull cursors                              | [Collections](collections.md)                                            |
 | `@"time"`                              | Fixed durations, monotonic deadlines, sleeps, timers, and tickers                    | [Time](time-and-date.md#fixed-durations)                                 |

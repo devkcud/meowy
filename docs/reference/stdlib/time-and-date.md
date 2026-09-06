@@ -33,6 +33,18 @@ ordinary layout is target-defined, not a serialization format or a C ABI. A
 or formatted into a calendar date. Neither duration units nor type aliases erase
 these distinctions.
 
+The listed copyable domain types support ordinary `==` and `!=`; their identity
+rules are specified below. Duration equality compares nanoseconds, and Instant
+equality compares the clock-domain identity and tick value, returning false for
+different domains. Ordered Instant operations still require one clock domain.
+Time equality compares its four validated components; Timestamp equality compares
+normalized seconds and nanoseconds. Month, Weekday, and MonthPolicy values also
+support equality, comparing month code/leap marker, weekday number, and selected
+policy respectively. Ordinary ordering/arithmetic operators remain unavailable;
+use the named operations. Timer and Ticker do not support ordinary equality.
+Month, Weekday, and MonthPolicy have `memory.Copy`, `tasks.Send`, and `tasks.Sync`;
+their values contain no external resource or non-static borrow.
+
 ## Fixed durations
 
 These constants all have type `<time.Duration>`:
@@ -90,6 +102,11 @@ point. An invalid checked operation uses `E107` when established statically or
 `P002` when dependent on runtime input. Division by zero, a nonpositive unit, and
 range overflow follow that rule. A checked constructor remains distinct from a
 parser returning an error value for malformed external text.
+
+All fixed-duration constructors, arithmetic, scalar accessors, comparisons and
+`time.parse_duration` above satisfy `core.Pure`. They can run during required
+evaluation with constant inputs and the same checked failures. This does not
+grant purity to clock reads, sleep, timers, tickers or deadline operations.
 
 Duration text has an optional leading sign followed by one or more decimal
 number/unit components, such as `"2h30m"`, `"250ms"`, or `"-1.5s"`. Units are
@@ -256,6 +273,15 @@ a machine-local default. Named-zone lookup makes the bundled rules explicit buil
 inputs. Updating them is an explicit toolchain/library change; future civil-time
 results may change with those rules.
 
+Zone equality compares a defined identity, not merely today's UTC offset. UTC is
+the singleton also returned by `date.fixed_zone(0)`. Other fixed zones compare
+their exact offset seconds. Named-zone identity consists of its canonical IANA
+target name and bundled rule-data version/digest; IANA link names resolve to
+that same target identity. Named zones remain distinct from UTC/fixed zones even
+when all their offsets happen to agree. Thus a named `Etc/UTC` view can denote
+the same instant as a `date.UTC` view without being an equal DateTime. No host
+name canonicalization or case folding participates in lookup.
+
 Build input identity is distinct from binary retention. Importing `date`, using
 `date.UTC` or a fixed offset, or reading `ZoneDatabaseVersion` does not by itself
 require the named-zone database in the executable. A reachable `date.zone(name)`
@@ -277,6 +303,9 @@ DateTime equality includes calendar, zone, and rule-data identity as well as the
 timestamp. Date equality includes the selected calendar; use `same_day` to compare
 days across calendar views. Use `same_instant` for differently zoned views of one event. There
 is no implicit ordering or subtraction between different date/time types.
+Civil equality compares its complete Date and Time, including the Date's calendar
+identity. These are semantic value comparisons, never comparisons of padding or
+descriptor addresses.
 
 ### Resolve local times explicitly
 
@@ -325,6 +354,11 @@ respectively, or `ParseError`, and require exactly their corresponding component
 There is no guessed current year, local zone, midnight, or locale.
 These functions use Gregorian dates. Use the [calendar-aware text API](calendars.md#calendar-aware-text-and-serialization)
 to parse Chinese, Hebrew, or another calendar's fields explicitly.
+
+These four parsing items satisfy `core.Pure`: input text and layout completely
+determine their result under the bundled rules, and they allocate no runtime
+owner. They are suitable for pure CLI validators and required evaluation with
+constant inputs. Writer/buffer formatting has its separately documented effects.
 
 Layouts are ordinary `<string>` values with these directives:
 

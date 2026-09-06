@@ -24,11 +24,39 @@ produce bytes, report EOF, report an error, or wait; zero progress without one o
 those outcomes is invalid. A write of nonempty input likewise makes progress or
 reports an error. Empty spans succeed with zero count without probing for EOF.
 
-`io.Error` carries a portable kind, optional native error code, and static message.
-Kinds include `Closed`, `Permission`, `NotFound`, `Interrupted`, `WouldBlock`,
-`TimedOut`, `BrokenPipe`, `NoProgress`, `InvalidCount`, `LimitExceeded`, and `Other`. A raw OS error
-number is not a meowy diagnostic code. Adapter code reports malformed callable
-results as NoProgress or InvalidCount instead of looping forever.
+`io.Error` is an opaque nominal error with a portable kind, optional native error
+code, and static message. `io.Kind` has exactly the ordinary values `io.Closed`,
+`Permission`, `NotFound`, `Interrupted`, `WouldBlock`, `TimedOut`, `BrokenPipe`,
+`NoProgress`, `InvalidCount`, `LimitExceeded`, and `Other` (all in `io`). Kind values
+are `memory.Copy`, `tasks.Send`, and `tasks.Sync`, and support ordinary equality
+and formatting; their display is their listed name. `io.Error` has those same
+three capabilities, but no ordinary equality; inspect its documented facts.
+
+| API                                                                     | Result            | Contract                                                          |
+| ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------- |
+| `io.error(kind <io.Kind>, native_code <int64><null>, message <string>)` | `io.Error`        | Construct an inline error; message must be nonempty static UTF-8. |
+| `failure.kind()`                                                        | `io.Kind`         | Read the portable classification.                                 |
+| `failure.native_code()`                                                 | `int64` or `null` | Read the original host code when available; zero is not absence.  |
+
+Read the message with `errors.message(&failure)`. `errors.code` returns `io.`
+followed by the kind's lowercase snake-case spelling, such as `io.broken_pipe`.
+The constructor preserves the supplied native code and message without allocating;
+it does not fabricate an OS failure or perform I/O. Use `null` when no native
+operation failed. A raw OS number is not a meowy diagnostic code. The code/kind
+relationship is fixed; callers cannot forge another nominal library error through
+this constructor. These errors follow the [erasure classification](errors.md#choose-inline-storage-or-explicit-erasure).
+
+Both `io.error` and `cli.invalid` validate static message metadata through their
+resolved intrinsic identity, including aliases: empty messages use `E217`, and
+runtime-dependent messages use `E211`. Their other arguments may be runtime
+values. Put changing facts in an application-defined error when they are needed;
+the portable I/O boundary intentionally retains only the fields above.
+Adapter code reports malformed callable results as NoProgress or InvalidCount
+instead of looping forever. Library-generated errors have nonempty static
+messages; only their kinds and documented facts are compatibility contracts.
+The [custom writer source case](../../programs/testing/tests/stdlib_test.mwy)
+constructs an `io.Write` record with `io.error`, handles empty input successfully,
+and checks the portable kind and retained explanation after `io.write_all` fails.
 
 | API                                        | Result                  | Contract                                                                                    |
 | ------------------------------------------ | ----------------------- | ------------------------------------------------------------------------------------------- |
@@ -153,12 +181,14 @@ it does not reconstruct a shell command and split it again. Non-UTF-8 native
 arguments produce a text conversion error. `process.working_directory(allocator)`
 returns `path.Owned` or a corresponding process/allocation error.
 
-| API                                    | Result                                                                 | Contract                                                                                                   |
-| -------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `process.spawn(spec, allocator)`       | `process.Child` or `process.Error` or `memory.AllocationFailure`       | Start an executable with explicitly supplied arguments, directory, environment, and standard-channel modes |
-| `child.wait()`                         | `process.Status` or `process.Error`                                    | Wait and reap once, acknowledging task cancellation during the wait                                        |
-| `child.terminate()`, `.kill()`         | `null` or `process.Error`                                              | Request graceful termination or host-supported forced termination                                          |
-| `process.run(spec, allocator, limits)` | `process.Output` or `process.RunFailure` or `memory.AllocationFailure` | Collect stdout/stderr concurrently with byte limits and a monotonic deadline                               |
+| API                                     | Result                                                                 | Contract                                                                                                   |
+| --------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `process.spawn(spec, allocator)`        | `process.Child` or `process.Error` or `memory.AllocationFailure`       | Start an executable with explicitly supplied arguments, directory, environment, and standard-channel modes |
+| `child.wait()`                          | `process.Status` or `process.Error`                                    | Wait and reap once, acknowledging task cancellation during the wait                                        |
+| `child.take_stdin()`                    | `process.PipeWriter` or `null`                                         | Transfer the parent end of a Pipe stdin, leaving that slot empty.                                          |
+| `child.take_stdout()`, `.take_stderr()` | `process.PipeReader` or `null`                                         | Transfer the selected parent output-pipe end, leaving that slot empty.                                     |
+| `child.terminate()`, `.kill()`          | `null` or `process.Error`                                              | Request graceful termination or host-supported forced termination                                          |
+| `process.run(spec, allocator, limits)`  | `process.Output` or `process.RunFailure` or `memory.AllocationFailure` | Collect stdout/stderr concurrently with byte limits and a monotonic deadline                               |
 
 A spawn spec has `executable <path.Path>`, `arguments <string[]>`,
 `directory <path.Path>`, `environment <&env.Environment>`, and `stdin`, `stdout`,
@@ -167,7 +197,24 @@ Executable paths are explicit; no shell or PATH search is implied. The host copi
 argv/environment during spawn, so the child does not retain their borrowed views.
 The explicit allocator covers argument marshalling and retained child state;
 it must outlive the Child. A failed spawn releases partial state and handles.
-Pipe modes expose owned handles on the Child; move them into tasks to process
+Pipe modes initially retain owned parent handles inside Child. Use the `take_`
+methods to extract them; direct field moves from the opaque Child are forbidden.
+Each method exclusively borrows Child, allocates nothing, and returns `null` if
+the selected mode was not Pipe or its handle was already extracted. Extraction
+does not consume Child, reap the child, or change its other pipe slots. An
+extracted handle has independent ownership and no borrow of Child; its retained
+allocator must still outlive it. Child cleanup cannot close an extracted handle.
+
+`PipeReader.read(buffer)` and `PipeWriter.write(bytes)` use `io.Read` and
+`io.Write`; each requires exclusive access to its handle. Both expose a consuming
+`close()` returning `<null><io.Error>`; a failed close still consumes the handle.
+Dropping an extracted handle closes its parent end without throwing. Closing a
+stdin PipeWriter delivers EOF after previously committed bytes have been read;
+closing an output PipeReader stops collection and may make later child writes
+fail. Extraction and closure never close the child's copies of its descriptors.
+Child, PipeReader, and PipeWriter are move-only, transferable under the
+[allocator/capability rules](../tasks-and-channels.md#capability-rules),
+and are not `tasks.Sync`. Move extracted output readers into tasks to drain both
 streams concurrently. Waiting before draining a full output pipe can block.
 
 A Child owns the reaping obligation. Dropping an unreaped child requests
@@ -175,6 +222,15 @@ termination, closes remaining parent pipe ends, and waits; cleanup can block.
 There is no implicit detached process. `Status` records a nullable `code <int32>`
 and nullable `signal <int32>`, exactly one present for a completed process.
 A nonzero application status is a normal Status, not automatically a spawn error.
+`wait` exclusively borrows Child. After a successful wait it retains the completed
+Status and subsequent waits return that same Status without reaping again.
+`terminate` and `kill` on a reaped Child return `null` without signaling anything;
+they never act on a reused process ID. An unsuccessful wait before host completion
+retains the reaping obligation with Child. If the host instead confirms that the
+child is no longer waitable (for example, foreign code reaped it), Child settles
+with that process error: repeated waits return the same failure, and cleanup or
+termination methods never signal the old process ID. Extracted pipe handles may
+still be drained/closed after the child is reaped.
 
 `process.run` limits contain `stdout_bytes <usize>`, `stderr_bytes <usize>`, and
 `deadline <time.Instant><null>`. It requests termination and reaps the process if

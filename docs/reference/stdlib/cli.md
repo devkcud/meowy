@@ -97,6 +97,10 @@ explicit pure callable from `<string>` to `<T><cli.InvalidValue>`. `validate` ma
 supply a pure callable from `<T>` to `<null><cli.InvalidValue>`. These functions
 cannot perform I/O or create side effects during parsing. Their concrete callable
 environments remain statically known; there is no implicit callback boxing.
+Descriptor construction checks `core.Pure` on the concrete callable item or
+environment type. An ordinary function pointer whose type erased that proof
+cannot serve as a parser/validator. Keep the inferred callable value when passing
+a helper; merely knowing a pointer's signature does not prove its effects.
 
 Without a custom parser, supported `T` values are `string`, `boolean`, fixed-width
 integers, and `time.Duration`. Integer parsing uses decimal text with a sign only
@@ -109,6 +113,50 @@ Option values must be `memory.Copy`; string results may borrow argv. Parsers can
 return views of temporary storage. An `InvalidValue` has a static explanatory
 message; `UsageError` adds the option/argument name, input token, and position.
 This keeps the common parse path allocation-free without losing useful context.
+
+`cli.invalid(message <string>)` returns a `cli.InvalidValue` with code
+`cli.invalid_value`. The message must be nonempty static UTF-8; an empty message
+uses `E217` and runtime-dependent metadata uses `E211`, including through aliases.
+Calling it allocates nothing and has no effects, so a pure custom parser can
+return it. The error is nominal; constructing a record with a message field is
+not a substitute. Read its explanation through `errors.message(&failure)`.
+InvalidValue is `memory.Copy`, `tasks.Send`, and `tasks.Sync`; it supports no
+ordinary equality. Its static metadata remains valid through copies and erasure.
+
+For example, this complete parser is suitable for `parse : positive_byte` in an
+option or argument descriptor:
+
+```meowy
+cli : @"cli"
+strings : @"strings"
+
+positive_byte <uint8><cli.InvalidValue> : (text <string>) 'result {
+    parsed : strings.to_uint8(text)
+    | parsed <strings.ParseError> | {
+        'result -> cli.invalid("Expected a decimal byte")
+        'result.leave()
+    }
+    | parsed == 0 | {
+        'result -> cli.invalid("Expected a value from 1 through 255")
+        'result.leave()
+    }
+    -> parsed
+}
+```
+
+`UsageError` provides shared, allocation-free accessors: `name()` and `token()`
+return `<string><null>`, and `position()` returns `<usize>`. Name is the descriptor's
+result-field name when one is known; token is the original offending argv token.
+A missing required positional or an option value missing at the end of argv has
+token `null` and position `argv.size() + 1`. A standalone `--` rejected where an
+option value was required retains that existing token and its position. An unknown
+option has its token/position but no descriptor name. Failure after a custom parser/validator
+also exposes `invalid()` as `<cli.InvalidValue><null>`, preserving its explanation.
+Otherwise `invalid()` is null. These borrowed views cannot outlive argv or the
+error borrow. `errors.code` is `cli.usage`; `errors.message` is a static category
+explanation. These accessors and `write_error` supply the changing context.
+The [custom parser source case](../../programs/testing/tests/stdlib_test.mwy)
+uses `positive_byte` in a descriptor and checks both accepted and rejected argv.
 
 ## Parsing rules
 

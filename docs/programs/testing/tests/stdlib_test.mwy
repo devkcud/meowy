@@ -1,0 +1,119 @@
+cli : @"cli"
+errors : @"errors"
+io : @"io"
+json : @"json"
+memory : @"memory"
+strings : @"strings"
+testing : @"testing"
+
+positive_byte <uint8><cli.InvalidValue> : (text <string>) 'result {
+    parsed : strings.to_uint8(text)
+    | parsed <strings.ParseError> | {
+        'result -> cli.invalid("Expected a decimal byte")
+        'result.leave()
+    }
+    | parsed == 0 | {
+        'result -> cli.invalid("Expected a value from 1 through 255")
+        'result.leave()
+    }
+    -> parsed
+}
+
+refuse_write <io.Write> : (bytes <uint8[]>) 'result {
+    | bytes.size() == 0 | {
+        'result -> { -> count <usize> : 0; -> error : null }
+        'result.leave()
+    }
+    -> {
+        -> count <usize> : 0
+        -> error : io.error(io.Permission, null, "This fixture refuses output")
+    }
+}
+
+app : cli.command({
+    -> name : "fixture"
+    -> options : [cli.option<uint8>({
+        -> name : "count"
+        -> long : "count"
+        -> required : true
+        -> parse : positive_byte
+    })]
+})
+
+-> tests : testing.suite({
+    -> custom_cli_parser : testing.case(() {
+        argv : ["--count", "0"]
+        rejected : cli.parse(app, argv.slice())
+        | rejected <app.Parsed><cli.Help><cli.Version> | {
+            testing.fail("The custom parser must reject zero")
+        }
+        invalid : rejected.invalid()
+        | invalid <null> | testing.fail("Retain the custom parser's error")
+        testing.text_equal(errors.message(&invalid),
+            "Expected a value from 1 through 255", "Custom explanation")
+
+        valid_argv : ["--count", "2"]
+        accepted : cli.parse(app, valid_argv.slice())
+        | accepted <cli.Help><cli.Version><cli.UsageError> | {
+            testing.fail("The custom parser must accept two")
+        }
+        expected <uint8> : 2
+        testing.equal(&accepted.options.count, &expected, "Typed parsed value")
+    })
+
+    -> custom_writer_failure : testing.case(() {
+        result : io.write_all(refuse_write, "hello".bytes())
+        expected <usize> : 0
+        testing.equal(&result.count, &expected, "No bytes were committed")
+        | result.error <null> | testing.fail("The custom writer must fail")
+        testing.assert(result.error.kind() == io.Permission, "Portable error kind")
+        native_code : result.error.native_code()
+        | native_code <int64> | testing.fail("No OS call was made")
+        testing.text_equal(errors.message(&result.error),
+            "This fixture refuses output", "Static writer explanation")
+    })
+
+    -> dynamic_json_numbers : testing.case(() {
+        wire : "\{\"large\":18446744073709551616,\"empty\":null\}"
+        document : json.decode<json.Value>(wire, memory.heap, json.DefaultLimits)
+        | document <error> | testing.fail("The dynamic number is valid JSON")
+        object : document.root().object()
+        | object <error> | testing.fail("The root is an object")
+        large : object.get("large")
+        | large <null> | testing.fail("The large member must exist")
+        number : large.number()
+        | number <error> | testing.fail("The member is numeric")
+        testing.text_equal(number.text(), "18446744073709551616", "Lossless lexeme")
+        narrowed : number.to_integer<uint64>()
+        | narrowed <uint64> | testing.fail("The value exceeds uint64")
+        testing.text_equal(narrowed.kind(), "out_of_range", "Checked conversion")
+
+        present : object.get("empty")
+        | present <null> | testing.fail("JSON null remains a present member")
+        testing.text_equal(present.kind(), "null", "Explicit JSON null")
+        absent : object.get("absent")
+        | absent <&json.Value> | testing.fail("Absent member is distinct")
+
+        exact : json.decode<uint8>("1e0", memory.heap, json.DefaultLimits)
+        | exact <error> | testing.fail("An exact exponent integer is accepted")
+        expected <uint8> : 1
+        testing.equal(exact.root(), &expected, "Exact numeric schema conversion")
+    })
+
+    -> json_limit_boundaries : testing.case(() {
+        wire : "\{\"x\":0\}"
+        limits : { -> bytes <usize> : 7; -> depth <usize> : 1; -> nodes <usize> : 2 }
+        accepted : json.decode<json.Value>(wire, memory.heap, limits)
+        | accepted <error> | testing.fail("The limits include their exact boundary")
+
+        smaller : { -> bytes <usize> : 7; -> depth <usize> : 1; -> nodes <usize> : 1 }
+        rejected : json.decode<json.Value>(wire, memory.heap, smaller)
+        | rejected <memory.AllocationFailure><json.Document<json.Value>> | {
+            testing.fail("The second value must exceed the node limit")
+        }
+        testing.text_equal(rejected.kind(), "nodes_limit", "Node counting")
+        expected_position <usize> : 6
+        position : rejected.position()
+        testing.equal(&position, &expected_position, "The rejected value's token")
+    })
+})

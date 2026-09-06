@@ -53,6 +53,10 @@ than extrapolated silently.
 `calendars.lookup(id)` returns `<calendars.Calendar><calendars.UnknownCalendar>`.
 `calendar.id()` and `.version()` return static strings. The identifiers select
 specific rule sets, not whatever calendar a machine's locale happens to prefer.
+Calendar values support ordinary equality by stable ID, rule version, and content
+digest; aliases of a built-in calendar have the same identity. This is also the
+calendar identity compared by Date, Civil, and DateTime equality. Descriptor
+addresses and lookup spelling are not part of it.
 The supported positive-year interval for each arithmetic calendar is intersected
 with the common absolute range. No constructor guesses an era from a negative
 number or supplies a hidden Gregorian/Julian cutover date.
@@ -102,6 +106,8 @@ All calendar values, dates, and month codes are immutable, copyable, and require
 no heap allocation. A month list is bounded by thirteen for these built-in rule
 sets. A year whose complete metadata is unavailable reports `RangeError` instead
 of returning a shortened list pretending to describe the whole year.
+Calendar and Month values additionally have `tasks.Send` and `tasks.Sync`;
+their identities retain only program-lifetime rule data.
 
 ## Chinese lunisolar dates
 

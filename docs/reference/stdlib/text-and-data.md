@@ -67,6 +67,10 @@ reading one grapheme cluster never promises one word, glyph, or terminal column.
 | `unicode.casefold_into(text, &!buffer)`                                     | `string` or `strings.BufferTooSmall`        | Full default Unicode case folding, not locale-sensitive lowercasing |
 
 `unicode.NFC`, `NFD`, `NFKC`, and `NFKD` are ordinary normalization-form values.
+Scalar and normalization-form values are `memory.Copy`, `tasks.Send`, and
+`tasks.Sync`; scalar equality compares code points and form equality compares
+the selected form. Both support their diagnostic display (a scalar as `U+`
+followed by uppercase hexadecimal, at least four digits; a form as its name).
 `is_letter` uses general category L, `is_number` category N, and `is_whitespace`
 the White_Space property. Normalization and folding may change byte length;
 they never promise in-place fixed-width character replacement. Their `_into`
@@ -160,35 +164,24 @@ explicit byte encoding.
 ## JSON with bounded work and explicit storage
 
 `json.decode<T>(text, allocator, limits)` returns `<json.Document<T>>`,
-`json.ParseError`, or `memory.AllocationFailure`. The document owns decoded
-storage and exposes `root()` as a borrow. Strings that need unescaping live in
-that storage; decoding never returns a dangling view of temporary scratch space.
-On failure all partial allocations are released and the input remains unchanged.
+`json.ParseError`, or `memory.AllocationFailure`. Typed schemas and dynamic
+`json.Value` trees share the same strict syntax, document ownership, and explicit
+limits. `json.write` streams through an explicit writer and can fail after a
+committed prefix. Dynamic numbers preserve their decimal source exactly;
+converting them to an integer or finite float is an explicit checked operation.
 
-`json.DefaultLimits` sets `bytes` to 1,048,576, `depth` to 64, and `nodes` to
-100,000. Applications can supply another ordinary record with positive `usize`
-limits. Exceeding any limit is a ParseError with the limit and source position.
-An input must be one complete [JSON value](https://www.rfc-editor.org/rfc/rfc8259),
-with valid UTF-8, valid escaped scalar pairs, and no trailing non-whitespace data.
-This profile rejects duplicate object names, nonfinite numbers, and a leading BOM.
-
-Typed decoding supports booleans, null, exact/range-checked integers, finite floats,
-strings, bounded lists, arrays, vectors, and records with a null primary. Missing
-nullable record fields become null; other missing fields and unknown fields are
-errors. Fixed arrays require their exact length, and bounded lists cannot exceed
-capacity. There is no reflection-based construction of arbitrary resource owners,
-foreign pointers, errors, dates, or executable values. Decode their wire fields
-and call their validated constructors explicitly.
-
-`json.Value` is the dynamic JSON tree type when a closed schema is unsuitable;
-it still lives under a Document owner. `json.write(write, value)` streams an
-encodable value and returns `null`, `json.EncodeError`, or `io.Error`. Record
-fields use lexicographic UTF-8 name order; dynamic objects retain their parsed
-member order. Numbers do not silently narrow to float64. Encoding may fail after
-writing a prefix, so use an explicit memory writer first when an all-or-nothing
-message is required.
+The [JSON contract](json.md) defines supported schema types, dynamic accessors,
+numeric conversion/encoding, exact byte/node/depth counting, and borrowed output.
+It includes a dynamic-member example and a source suite covering the extension
+points. No JSON operation silently constructs foreign pointers, errors, dates,
+executable values, or arbitrary resource owners.
 
 ## Numeric conversions and shifts
+
+The numeric conversion/arithmetic and bit-shift items in this section satisfy
+`core.Pure` and allocate nothing. Required evaluation uses the same result and
+failure rules with compile-time operands; runtime calls retain their checked
+behavior. This grant does not cover entropy, I/O, or mutation of caller storage.
 
 | API                                  | Result                    | Contract                                                                      |
 | ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------- |
