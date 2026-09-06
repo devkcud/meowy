@@ -76,7 +76,7 @@ that supplies the named Linux target, its static runtime, and ThinLTO support:
 -> build : {
     -> entry : "./main.mwy"
     -> profile : "release"
-    -> target : "x86_64-unknown-linux-musl"
+    -> target : "x86_64-unknown-linux-gnu"
     -> cpu : "baseline"
     -> optimize : "size"
     -> jobs : 1
@@ -96,8 +96,11 @@ Build with:
 meowy build --output build/duration --report
 ```
 
-The example target is a deliberate choice, not an installed-target promise.
-Unavailable target/runtime/LTO support produces `E507`; select supplied inputs
+The initial distribution supplies this GNU target, baseline CPU and static
+runtime for the duration example. Static DNS/NSS or dynamic-loader dependencies
+have the [profile's explicit limits](../reference/target-profile.md); a static
+native closure must be established before packaging it. Other unavailable
+target/runtime/LTO support produces `E507`; select supplied inputs
 that match the intended machine. For another architecture or ABI, change the
 target accordingly. The report records the expanded CPU requirements, runtime,
 and linker identity. Compare those requirements with the physical CPU or VM's

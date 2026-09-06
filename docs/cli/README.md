@@ -118,6 +118,11 @@ optimization choice, not a way to suppress language rules. A target incompatible
 with the host can be checked and built; `run` and executing `test` reject an
 incompatible host. Use `test --no-run` to build tests for another target.
 
+The initial distribution supports only `x86_64-unknown-linux-gnu` and baseline CPU,
+with explicit static/shared closure requirements. Other triples, including the illustrative AArch64
+test command below, are `E507` until a distribution supplies that profile. See
+[target/runtime requirements](../reference/target-profile.md).
+
 Optimization goals, CPU baseline, build concurrency, debug information, and
 linkage come from `build.optimize`, `build.cpu`, `build.jobs`, `build.debug_info`,
 and `build.link` in `mod.mwy`. Profile-dependent defaults follow the effective
@@ -147,6 +152,15 @@ revision and digest changes and replace the lockfile only after resolution and
 integrity checks succeed. They do not rewrite manifest selectors. Foundational
 modules do not need remote dependency entries. Use `--offline` when a check must
 not contact a source server, for example after preparing a CI dependency cache.
+
+The root lock owns the whole graph; imported locks are ignored, different remote
+revisions may coexist, and dependency native artifacts contribute to the root
+build. A lock pins the complete distribution digest as well as dependency content.
+Only `deps update` without an alias may adopt a different running distribution;
+it displays that identity change alongside revisions. The
+[package graph contract](../reference/packages-and-builds.md) defines selector
+normalization, transitive update limits and build-setting precedence. The lock's
+[schema 1](../reference/artifact-formats.md#lockfiles) is UTF-8 JSON.
 
 ### Explain a build's size and dependencies
 

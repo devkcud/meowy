@@ -161,6 +161,14 @@ Local source aliases require no remote lock entry, and foundational modules need
 no dependency declaration. Captures and reproducible builds still record the
 exact local source files reached through aliases.
 
+The initial resolver accepts canonical Git HTTPS sources and exact commit/tag/
+branch selectors. One root lock selects the entire remote graph, ignoring imported
+locks; different revisions can coexist. The root's build policy applies to all
+imported code, while each dependency contributes its declared native artifacts.
+See [package/build graph rules](../reference/packages-and-builds.md) and the
+[lock schema](../reference/artifact-formats.md#lockfiles). A distribution change
+requires an explicit all-dependency `deps update`, never an ordinary build.
+
 ## Choose the public exports
 
 The manifest's `export` block describes the facade seen by other packages. For
@@ -229,6 +237,11 @@ Worker count, admitted task count, and per-task stack storage are separate
 budgets. A channel's queue capacity or a group's result capacity does not choose
 them. The [runtime configuration reference](../reference/modules-and-ffi.md#build-settings)
 defines their bounds and failure behavior.
+
+The initial supplied target is `x86_64-unknown-linux-gnu`, using CPU `baseline`
+and declared static/shared runtime inputs; other targets are unavailable.
+See the [distribution profile](../reference/target-profile.md). Host embedding
+and host-supplied executors are outside that profile.
 
 ## Configure test suites
 

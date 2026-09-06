@@ -50,6 +50,9 @@
 # } #
 # Run meowy deps resolve after adding remote dependencies; deps update NAME #
 # deliberately advances a selected lock. Ordinary builds do not rewrite it. #
+# The root mod.lock is JSON schema 1; dependency locks never override it. #
+# Different immutable revisions may coexist. See ../reference/packages-and-builds.md. #
+# Only deps update without an alias adopts a different running distribution digest. #
 
 # EXPORT -- the public package facade. #
 # Reference: mod.md, Choose the public exports. No fixed list of export names. #
@@ -73,10 +76,13 @@
 #     -> profile : "debug" #
 #     Example cross target; omitted means the recorded host target, not null. #
 #     The selected toolchain must supply the target and required runtime inputs. #
-#     -> target : "x86_64-unknown-linux-musl" #
+#     -> target : "x86_64-unknown-linux-gnu" #
+#     Initial distribution supports only this target. See #
+#     ../reference/target-profile.md for host and static/shared requirements. #
 #     Default: "baseline". Or a CPU name supported by the selected target. #
 #     "native" and automatic probing of the builder's CPU are not accepted. #
 #     -> cpu : "baseline" #
+#     Initial profile accepts baseline only (x86-64/SSE2). #
 
 #     Default: "none" in debug, "speed" in release. #
 #     Options: "none", "speed", "size", "smallest". #
@@ -95,6 +101,9 @@
 #         This selects runtime linkage, not a monolithic stdlib or output kind. #
 #         Static must satisfy every native input; no fallback to shared inputs. #
 #         -> mode : "platform" #
+#         Initial profile supports platform/shared and verified static closure. #
+#         Static DNS/NSS/dynamic-loader requirements are explicitly unavailable; #
+#         no missing native closure silently changes static to shared. #
 #         Default: true. false retains emitted sections for investigation; #
 #         it does not force every unused generic or stdlib item to be generated. #
 #         -> dead_strip : true #
@@ -114,8 +123,8 @@
 
 #     Optional: no standalone executor is created when this record is omitted. #
 #     All four values below are an EXAMPLE budget, not inferred defaults. #
-#     Standalone code using tasks must explicitly supply an executor; an embedded #
-#     host may instead provide one through its runtime boundary. #
+#     Standalone code using tasks must explicitly supply an executor. The initial #
+#     profile does not expose host embedding or a host-supplied executor ABI. #
 #     -> executor : { #
 #         Positive worker count; blocked foreign calls can occupy workers. #
 #         -> workers : 2 #
@@ -132,6 +141,8 @@
 # CLI --target overrides target for one invocation. No setting disables the #
 # ownership, bounds, arithmetic, or cleanup rules. Unused stdlib code follows #
 # reachability, so there is no separate list of stdlib packages to link. #
+# The root build policy governs imported code; dependencies add their own native #
+# artifacts and import maps, never a second executor or target. #
 
 # TEST -- discovery and isolated case execution. #
 # Reference: ../reference/stdlib/testing.md. #

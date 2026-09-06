@@ -338,11 +338,16 @@ These fields extend the [build block](modules-and-ffi.md#build-settings). They
 change optimization and deployment policy, not source meaning. Here is a compact
 release-oriented example for a supplied Linux target:
 
+The [initial distribution](target-profile.md) supplies
+`x86_64-unknown-linux-gnu`, CPU `baseline`, and static/shared runtime inputs.
+Static output must satisfy that profile's native closure requirements; DNS/NSS
+and dynamic-loader requirements have explicit static-link limitations.
+
 ```meowy
 -> build : {
     -> entry : "./main.mwy"
     -> profile : "release"
-    -> target : "x86_64-unknown-linux-musl"
+    -> target : "x86_64-unknown-linux-gnu"
     -> cpu : "baseline"
     -> optimize : "size"
     -> jobs : 1

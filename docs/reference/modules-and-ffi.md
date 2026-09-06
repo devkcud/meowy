@@ -41,7 +41,9 @@ project's manifest.
 names cannot be shadowed by either kind of import alias. Import operands must be
 string literals; runtime strings cannot load executable modules.
 
-Canonical module identity includes its resolved package revision and file path.
+Canonical module identity includes its resolved package identity and file path.
+The [package graph contract](packages-and-builds.md) defines local identities,
+remote revisions/subpackages, coexistence, and resolution authority.
 Each module initializes once per program, after its imported modules, with sibling
 imports initialized in source order. Repeated imports share the resulting module
 value. Import cycles are rejected, including cycles through re-exports, so a
@@ -112,6 +114,9 @@ keywords.
 
 Aliases belong to their declaring project. Imported packages resolve their own
 imports with their own manifests and do not inherit the caller's alias map.
+An alias cannot enter another manifest-backed package; declare a `path` dependency
+to select that package and its configuration. External alias files otherwise use
+the declaring project's context, as specified by the package graph contract.
 The manifest's `export` facade may use its project's path aliases too. The import
 configuration is established before resolving facade imports; changing the order
 of top-level manifest fields does not change that configuration.
@@ -168,6 +173,9 @@ environment variables, spawn tasks, or perform application I/O during evaluation
 Imports in an `export` facade describe the module graph; they do not execute
 application initialization during manifest evaluation.
 
+The [compile-time contract](compile-time.md) defines eligible expressions,
+evaluation limits and diagnostics; purity does not mean unbounded evaluation.
+
 There is no flag that makes a manifest arbitrarily executable. Build inputs must
 be declared so dependency resolution and code generation do not depend on hidden
 machine state.
@@ -204,7 +212,9 @@ subpaths of its package source.
 
 `mod.lock` records each remote source's canonical identity, exact revision,
 content digest, transitive dependencies, and selected foundational-library
-version. The target and compiler identity are separate recorded build inputs.
+distribution identity. The root lock alone owns transitive resolution; dependency
+locks do not override it. Different revisions may coexist. The target and actual
+compiler executable identity are separate recorded build inputs.
 Moving a tag or branch never silently changes an already locked build. A locked
 build fails when source content differs from its digest, a required lock entry is
 missing, or a manifest selector conflicts with the lock. Resolution is an explicit
@@ -217,13 +227,20 @@ paths cannot silently select an unrelated system library with the same filename.
 Local path dependencies are suitable for development; reproducible distribution
 must include their exact contents and digest.
 
+[Package identity and build graphs](packages-and-builds.md) defines the initial
+Git HTTPS source grammar, canonical IDs, whole-tree digest, diamond resolution,
+update behavior and distribution compatibility. [Artifact formats](artifact-formats.md#lockfiles)
+provides lock schema 1 and a validated example.
+
 ## Build settings
 
 `build.entry` is a relative source path. `build.profile` is `"debug"` or
 `"release"`; both profiles preserve overflow checks, bounds checks, ownership,
 and task cleanup. `build.target` identifies the architecture, operating system,
 and ABI when cross-compiling. Omitting it selects the host target, recorded as a
-build input. `build.native` lists exact native artifact paths relative to the
+build input. The [initial distribution profile](target-profile.md) supports only
+`x86_64-unknown-linux-gnu`; other targets are `E507`. `build.native` lists exact
+native artifact paths relative to the
 manifest, such as `["./native/libcodec.a"]`; omitting it adds no native artifacts.
 These are selected link inputs, not library names for an ambient search path.
 
@@ -235,6 +252,12 @@ defaults, compatibility checks, and failure behavior are defined in
 [Memory and binary optimization](optimization.md). CPU selection is explicit;
 it never probes the build host to choose instructions. Build jobs do not set
 runtime executor workers or task capacity.
+
+The root's effective build policy applies to all imported code. Dependency
+manifests contribute their own imports/exports and exact native artifacts; their
+entry, target, profile, link and executor choices do not override the consumer.
+The [propagation table](packages-and-builds.md#build-settings-across-packages)
+defines validation, native-path ownership and transitive requirements.
 
 `meowy test` uses these build inputs to produce a case harness. It neither
 requires nor executes `build.entry`; imported code under test belongs in helper
@@ -269,9 +292,10 @@ selects `"system"` storage for standalone task stacks and scheduler state.
 Invalid sizes are configuration errors. Failure to initialize the executor fails
 startup; later task admission failure produces `tasks.SpawnFailed`.
 
-An embedded host can instead supply an executor and allocator through its runtime
-boundary. No standalone executor is selected implicitly by a task operator.
-Code that cannot prove an executor is present must not start tasks. Runtime waits
+The initial distribution has no host-embedding executor ABI. No standalone
+executor is selected implicitly by a task operator. Task requirements propagate
+through library calls to the selected entry/test root; a reachable task start
+without an executor is `E404`. Runtime waits
 suspend the waiting task so other runnable tasks can use the workers; a blocking
 foreign call can occupy a worker until it returns.
 
@@ -307,8 +331,8 @@ than assuming a C integer always has a particular width. `usize` is used only
 where the foreign contract really specifies a pointer-sized unsigned value.
 
 Foreign symbols are declared with `ffi.extern<Signature>(convention, symbol)`.
-The result is a function pointer with a `!` safety requirement; calling it requires
-a `!{ ... }` block.
+The result is an unsafe meowy function pointer to a compiler-generated ABI bridge;
+it is not the native symbol's address. Calling it requires a `!{ ... }` block.
 For example, a native library can expose a pointer-and-length entry point:
 
 ```meowy
@@ -327,9 +351,11 @@ Do not pass a borrowed `<string>` as a C string. Construct a checked NUL-termina
 buffer with explicit storage and keep it alive for the required duration. Do not
 pass an ordinary bounded list as a C array: its length metadata is not an element.
 
-Unwinding across a foreign frame is forbidden. Callbacks catch task panics at a
-meowy boundary and translate them into the foreign protocol. Variadic functions
-require a fixed-signature wrapper. Reinterpreting native bytes as a record is
+Unwinding across a foreign frame is forbidden. The initial profile supports C
+calls through generated bridges, without C callbacks, native exported functions,
+or host embedding. Variadic functions require a fixed-signature native wrapper.
+The [native ABI contract](native-abi.md) specifies every admissible signature type,
+C scalar alias, void-return mapping and bridge requirement. Reinterpreting native bytes as a record is
 unsafe; decoding fields from a byte slice is the portable alternative shown in
 the [packet program](../programs/packet/codec/header.mwy).
 
