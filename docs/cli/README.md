@@ -24,6 +24,8 @@ contains the full three-error example used below.
 | Review safe style changes                | `meowy style fix --diff`                     | Preview proven rewrites and layout without changing source           |
 | Apply only source layout                 | `meowy fmt`                                  | Use gatostyle's layout settings without semantic rewrites            |
 | Run a program                            | `meowy run main.mwy`                         | Build and execute the selected entry                                 |
+| Exercise the project's test suites       | `meowy test`                                 | Check suites, then run each selected case in its own process         |
+| See which cases would run                | `meowy test --list`                          | Check static suite descriptors and list case IDs without execution   |
 | Produce a native executable              | `meowy build main.mwy --output build/main`   | Build without executing the result                                   |
 | Explain executable size and dependencies | `meowy build --report`                       | Save section sizes, retention evidence, and runtime requirements     |
 | Resolve newly declared dependencies      | `meowy deps resolve`                         | Fill missing lock entries while preserving existing locked revisions |
@@ -100,20 +102,20 @@ A task-using standalone program still needs an explicit executor configuration;
 
 ### Profiles, targets, and dependencies
 
-| Option                                   | Applies to                                             | Effect                                                                            |
-| ---------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `--profile debug` or `--profile release` | `check`, `build`, `run`                                | Override `build.profile` for this invocation                                      |
-| `--target TRIPLE`                        | `check`, `build`, `run`                                | Override `build.target` and record the chosen architecture, OS, and ABI           |
-| `--output PATH`                          | `build`, `err export`                                  | Select the output file                                                            |
-| `--report`                               | `build`                                                | Write a build report and link map beside the executable                           |
-| `--offline`                              | `check`, `build`, `run`, `deps resolve`, `deps update` | Require all dependency content and resolution metadata locally                    |
-| `--record-replay`                        | `run`                                                  | Record supported runtime inputs and scheduling decisions for deterministic replay |
+| Option                                   | Applies to                                                     | Effect                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `--profile debug` or `--profile release` | `check`, `build`, `run`, `test`                                | Override `build.profile` for this invocation                                      |
+| `--target TRIPLE`                        | `check`, `build`, `run`, `test`                                | Override `build.target` and record the chosen architecture, OS, and ABI           |
+| `--output PATH`                          | `build`, `err export`                                          | Select the output file                                                            |
+| `--report`                               | `build`                                                        | Write a build report and link map beside the executable                           |
+| `--offline`                              | `check`, `build`, `run`, `test`, `deps resolve`, `deps update` | Require all dependency content and resolution metadata locally                    |
+| `--record-replay`                        | `run`                                                          | Record supported runtime inputs and scheduling decisions for deterministic replay |
 
 Defaults are the manifest's values, then `debug` and the host target. Both profiles
 preserve checked arithmetic, bounds, ownership, and cleanup. `release` is an
 optimization choice, not a way to suppress language rules. A target incompatible
-with the host can be checked and built; `run` rejects execution on an incompatible
-host. Build the executable and run it on a compatible target machine instead.
+with the host can be checked and built; `run` and executing `test` reject an
+incompatible host. Use `test --no-run` to build tests for another target.
 
 Optimization goals, CPU baseline, build concurrency, debug information, and
 linkage come from `build.optimize`, `build.cpu`, `build.jobs`, `build.debug_info`,
@@ -122,7 +124,7 @@ profile; explicitly set fields are preserved. Target compatibility includes the
 expanded CPU requirements and native runtime dependencies, not just the target
 triple. See [build policy](../reference/optimization.md#select-build-policy-in-modmwy).
 
-Ordinary checking, building, and running use the existing `mod.lock`. They may
+Ordinary checking, building, running, and testing use the existing `mod.lock`. They may
 fetch content identified by that lock, but never advance a revision or rewrite the
 lockfile. A missing required entry or conflicting entry is a diagnostic. A
 standalone file using only foundational and relative imports needs no remote
@@ -168,6 +170,72 @@ A requested report write failure makes the build unsuccessful with status `1`
 and identifies any completed artifacts. A failed build's partial report names the
 failed phase and never claims a successful build. Protected output paths remain
 usage errors. A previous report stays tied to its original binary digest.
+
+## Test a project
+
+Declare suites with [`@"testing"`](../reference/stdlib/testing.md), then run:
+
+```sh
+meowy test
+meowy test --list
+meowy test tests/arithmetic_test.mwy --filter halves_table
+meowy test --profile release --offline
+meowy test --no-run --target aarch64-unknown-linux-gnu
+```
+
+`meowy test [PATH...]` finds the nearest `mod.mwy` from the first explicit path,
+or from the working directory when paths are omitted. Every selected path must
+belong to that same project; a manifest is required, but `build.entry` is not.
+The application entry is never implicitly added or executed. Put shared behavior
+in importable modules and let the application and tests call those modules.
+
+The manifest's `test.paths` selects directories or exact `_test.mwy` files;
+the default is `./tests`. Directory discovery finds `_test.mwy` files recursively,
+excluding `.git`, `build`, nested projects, and symlink directory traversal.
+CLI paths narrow this configured selection; they cannot add another root.
+Canonical paths must remain inside those roots and belong to the same manifest,
+including after resolving a symlinked file; explicit paths cannot enter a nested
+project or escape through a symlink.
+Discovery checks the selected files and their dependency graphs, then collects
+public suite descriptors without running module initializers or callbacks.
+All discovered graphs are checked before applying name filters: a filter cannot
+hide a type error in the discovery set. Ordinary `meowy check` still checks the
+application graph; use `test --list` or `test --no-run` for suites.
+
+| Option          | Effect                                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| `--filter TEXT` | Select canonical case IDs containing this exact substring; repeated filters are combined with OR.        |
+| `--list`        | Check and list IDs with skip reasons on stdout; do not build, execute, or publish a test session.        |
+| `--no-run`      | Check and build the test harness without executing it; publish a session recording zero case executions. |
+| `--show-output` | Show captured output from passing cases too; failed case output is shown by default.                     |
+
+`--list` and `--no-run` are mutually exclusive; neither accepts `--show-output`.
+`test` accepts the build-selection flags above and terminal options, but not
+`--entry`, `--output`, `--report`, or application arguments after `--`.
+Execution policy comes from [`test` in `mod.mwy`](../guide/mod.md#configure-test-suites),
+including process concurrency, timeout, output limit, seed, and fail-fast behavior.
+There are no environment or command-line overrides for those policy fields.
+
+A canonical case ID names its canonical project-relative file, exported suite, and case:
+`tests/arithmetic_test.mwy::tests::halves_table`. Alias spellings do not create duplicate
+module identities. IDs use the escaping and sorting rules
+in the [testing reference](../reference/stdlib/testing.md). The runner reports
+final results in ID order, even when processes finish in another order.
+
+Each active case runs in a fresh process, initializing only its own module graph.
+Its callback, child joins, and cleanup must complete before it passes. Process
+isolation resets program memory; files and external services can still be shared.
+The watchdog covers launch through cleanup, and may terminate a stuck process.
+That is a test timeout, not `tasks.Timeout` or proof of a deadlock, and forced
+termination cannot promise cleanup or complete replay evidence.
+
+The runner captures bounded stdout and stderr per case instead of interleaving
+live output. It prints labeled captured streams, case results, and its summary to
+stderr. Counts distinguish passed, failed, skipped, and not-started cases.
+Fail-fast stops new launches after an observed failure and waits for started
+cases; it does not count the remaining work as passed. Zero selected cases fails
+with `E509` unless `test.allow_empty` is true. A nonempty selection consisting
+entirely of skipped cases succeeds and reports the skipped count.
 
 ## Coding style and quality with gatostyle
 
@@ -217,7 +285,7 @@ nested projects, without following imports to select files for editing. The guid
 defines [file selection and exits](../guide/gatostyle.md#commands-for-an-editing-loop-and-ci)
 and [buffer analysis](../guide/gatostyle.md#work-with-an-editor-buffer).
 
-These commands do not replace a saved check/build/run session or modify replay
+These commands do not replace a saved check/build/run/test session or modify replay
 capsules. Style findings use `G...` codes and `meowy style explain`, independently
 of saved compiler occurrences. A source edit can make an old repair stale; check
 again before applying that saved repair.
@@ -230,9 +298,9 @@ failures go to stderr. The server checks synchronized buffers, including unsaved
 modules and manifests, without executing the application or publishing ordinary
 CLI sessions.
 
-All project settings belong in `mod.mwy` under `lsp`; build inputs still come
-from `build` and `import`, and coding policy comes from `gatostyle`. Inspect the
-saved configuration and prerequisites with:
+Editor settings belong in `mod.mwy` under `lsp`; build inputs still come
+from `build` and `import`, suite roots come from `test`, and coding policy comes
+from `gatostyle`. Inspect the saved configuration and prerequisites with:
 
 ```sh
 meowy lsp config --resolved main.mwy
@@ -265,6 +333,24 @@ from masquerading as current ones. A session contains numbered occurrences,
 patch candidates, the original command, and replay capsules for failures that
 were captured successfully. Capture failures are visible in the summary.
 
+`test`, including `test --no-run`, publishes one completed session in a separate
+project test namespace. Successful sessions replace that namespace's latest
+selection too. Case processes never publish separate last-run pointers, and
+`test --list` changes neither namespace. Use `--test` with error commands:
+
+```sh
+meowy err summary --test
+meowy err inspect 1 --test --verbose
+meowy err reproduce 1 --test
+meowy err export 1 --test --output failing-case.replay
+```
+
+A case failure records its full case ID, seed, phase, and execution policy.
+Its capsule replays that case under the preserved supervision, or the failing
+checking/build phase if execution never began. An expected, matched panic is a
+passing case and creates no failure occurrence. Case ordinals and diagnostic
+occurrence numbers are separate; commands above select an occurrence.
+
 Background language-server diagnostics have no saved occurrence numbers and do
 not change this selection. An explicit
 [editor capture](../reference/lsp.md#inspect-facts-and-capture-a-failure) stores a
@@ -273,12 +359,17 @@ Select it with the returned `--session` and `--entry`; it may contain source tha
 has never been saved to disk.
 
 `meowy err` is shorthand for `meowy err summary`. Error commands discover the
-project from the working directory. Without a selector they use that project's
-most recently completed session and print its entry and session ID. With
+project from the working directory. Without `--test` they use that project's
+most recently completed entry session and print its entry and session ID. With
 `--entry PATH`, they use the same project discovery as an explicit `run` entry and
 restrict selection to that entry. A standalone session can therefore be found
 from its root directory or by providing its entry path. Use the exported capsule
 when carrying the failure elsewhere.
+
+`--test` selects the discovered project's test namespace and is mutually
+exclusive with `--entry`. It can combine with `--session ID` or `--previous`,
+following their existing exclusivity rules. A normal entry failure and a test
+failure therefore remain independently selectable after either command runs.
 
 `--previous` explicitly means the last completed session for that selection. It
 is the same default used by `err`; it does not start another build or step back
@@ -290,8 +381,9 @@ meowy err explain 1 --session proj-1788649910
 meowy err fix 1.2 --session proj-1788649910 --diff
 ```
 
-`--session ID` selects a session in the discovered project and can combine with
-`--entry` to disambiguate it. IDs ambiguous across entries require that selector.
+`--session ID` selects a session in the discovered namespace and can combine with
+`--entry` to disambiguate entry sessions. IDs ambiguous across entries require
+that selector; selecting a test session requires `--test`.
 It cannot combine with `--previous`. A command resolves its session once, before
 work begins, so a concurrently completed build cannot change its selection.
 
@@ -628,8 +720,9 @@ meowy err cleanup --diff
 meowy err cleanup --session proj-1788649910
 ```
 
-Without `--session`, cleanup targets completed sessions for the current project;
-`--entry` restricts it to an entry. `--diff` lists sessions, capsule counts, and
+Without `--session`, cleanup targets completed entry sessions for the current
+project; `--entry` restricts it to an entry, while `--test` selects test sessions.
+`--diff` lists sessions, capsule counts, and
 bytes that would be freed. Actual deletion asks for confirmation; `--yes` provides
 explicit confirmation for automation. Active capture, replay, and export sessions
 are excluded. Shared payloads are collected only when no retained capsule uses
@@ -644,6 +737,8 @@ Human diagnostics, banners, progress, summaries, and replay explanations go to
 standard error. During `run`, application standard output remains standard output,
 and application standard error remains standard error. Application stdout during
 runtime replay also remains stdout; its streams are captured in the replay result.
+Tests and case replays use labeled captured streams on stderr; `test --list`
+prints its case listing on stdout.
 `help` and `--version` print to standard output.
 Style configuration queries emit JSON on stdout; style/fmt diffs and formatted
 source also use stdout, with their findings and summaries on stderr.
@@ -664,6 +759,8 @@ The `lsp config` and `lsp doctor` inspection commands accept them for human outp
 | Source/build failure, rejected repair validation, or replay divergence                  | `1`                                                    |
 | Invalid usage, stale/conflicting edits, integrity failure, or unavailable replay inputs | `2`                                                    |
 | Completed application launched by `run`                                                 | Application's process status                           |
+| Passing test run, successful test listing, or successful `test --no-run`                | `0`                                                    |
+| Test manifest/source/build failure, failed case, or disallowed empty selection          | `1`                                                    |
 | Style check finds violations at/above policy threshold; style fix leaves such findings  | `1`                                                    |
 | Fmt check finds layout differences                                                      | `1`                                                    |
 | Invalid style/fmt input, policy, incomplete analysis, failed proof, or failed write     | `2`                                                    |
@@ -677,7 +774,9 @@ source diagnostics do not terminate that connection.
 A diff preview returns success when it can present the requested candidates;
 the saved errors do not make the preview fail. Failure to save a capsule is
 reported alongside the original failure and does not replace its exit status.
-On POSIX hosts, signal termination follows the shell convention `128 + signal`.
+On POSIX hosts, signal termination of a program launched by `run` follows the
+shell convention `128 + signal`. A failed test case instead contributes to the
+runner's status `1`, with its actual child status or signal recorded separately.
 Command output distinguishes a tool failure from a returned application status;
 numeric codes alone cannot tell those apart for `run`.
 

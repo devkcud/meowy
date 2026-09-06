@@ -2,8 +2,8 @@
 
 [Documentation index](../README.md) · [Language tour](README.md)
 
-`mod.mwy` describes a project's imports, public exports, build settings,
-coding-style policy, and language-server configuration. Put it at the project
+`mod.mwy` describes a project's imports, public exports, build settings, test
+suites, coding-style policy, and language-server configuration. Put it at the project
 root so source files share one explicit configuration.
 The file uses ordinary meowy blocks and emissions; its well-known field names
 are configuration values, not language keywords.
@@ -222,10 +222,61 @@ budgets. A channel's queue capacity or a group's result capacity does not choose
 them. The [runtime configuration reference](../reference/modules-and-ffi.md#build-settings)
 defines their bounds and failure behavior.
 
+## Configure test suites
+
+The `test` block owns test discovery and execution policy:
+
+```meowy
+-> test : {
+    -> version : 1
+    -> paths : ["./tests"]
+    -> processes : 1
+    -> timeout_ms : 30_000
+    -> output_bytes : 1_048_576
+    -> fail_fast : false
+    -> allow_empty : false
+    -> seed : 0
+}
+```
+
+These are schema 1 defaults. An explicit block requires `version : 1`; omitting
+the entire block selects the defaults. `paths` names project-relative directories
+or exact `_test.mwy` files, without globs or import aliases. Directory discovery
+is recursive but stops at nested manifests and excludes `.git`, `build`, and
+symlink directory traversal. Canonical paths, including symlinked files, must
+remain inside the selected roots and belong to this manifest; explicit selection
+cannot enter a nested project or escape through a symlink. A missing implicit
+`./tests` means no discovered cases; a missing explicitly declared path is `E501`.
+
+`meowy test` checks discovered modules and runs their exported `testing.Suite`
+values. Listing suites is static: no application initializer runs to find cases.
+The application `build.entry` is not executed or imported by the runner, so a
+library can test its helpers without defining an application entry.
+
+`processes` bounds concurrently running case processes; `build.jobs` bounds
+compiler work; `build.executor` configures tasks inside each case. These budgets
+are independent. Synchronous tests need no executor, and running several cases
+does not silently install one. Each case gets a fresh process and ordinary owner
+cleanup; shared files and services still require deliberate coordination.
+
+`timeout_ms` bounds launch, initialization, callback execution, joins, and cleanup;
+`null` explicitly disables the watchdog. A timeout can terminate a process without
+cleanup. `output_bytes` caps combined captured stdout and stderr; exceeding it
+fails the case and preserves a marked partial transcript. `fail_fast` stops new
+launches after a failure, and `allow_empty` permits an otherwise failing empty
+selection. The recorded base `seed` gives each case a stable seed for explicit
+pseudorandom generators; it does not replace system entropy or ambient clocks.
+
+All runner policy belongs here, without environment or CLI overrides. Use CLI
+paths and name filters to select cases for one invocation. The
+[testing reference](../reference/stdlib/testing.md) defines the complete schema,
+case IDs, assertion APIs, expected panics, and replay behavior; the
+[test command guide](../cli/README.md#test-a-project) explains listing and execution.
+
 ## Keep configuration predictable
 
-The recognized top-level emissions are `import`, `export`, `build`, `gatostyle`,
-and `lsp`.
+The recognized top-level emissions are `import`, `export`, `build`, `test`,
+`gatostyle`, and `lsp`.
 `aliases` is an optional table inside `import`; omitting it means there are no
 local path prefixes. An empty import block is still valid when only foundational
 and relative imports are needed.
@@ -260,6 +311,7 @@ it is separate from the configuration schema version.
 
 `lsp` controls editor analysis and available features. `build` selects the entry,
 target, profile, native inputs, and executor used for semantic analysis;
+`test` adds declared suite graphs to project checking without executing them;
 `gatostyle` supplies all formatting and coding-style policy. Editor settings
 cannot override those project choices. The [language-server reference](../reference/lsp.md)
 defines every setting and default, startup and version requirements, analysis

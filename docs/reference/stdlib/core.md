@@ -39,5 +39,10 @@ with a documented display, and aggregates whose fields are formattable. An aggre
 value. Runtime string interpolation at this call streams directly to output.
 Production I/O that needs recoverable write errors uses a supplied writer.
 
+[`testing`](testing.md) provides assertions using `P005`, borrowed equality and
+byte/text checks, and suite descriptors for `meowy test`. Assertions are ordinary
+calls and may also be used outside a suite; they do not establish caller-side
+type narrowing. `testing.fail` has result `<never>` for explicit failure branches.
+
 See [text and data](text-and-data.md) for owned strings, Unicode, numeric parsing,
 and `fmt` writer functions with recoverable output errors.

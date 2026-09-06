@@ -168,6 +168,10 @@ cannot promise final section sizes or retention decisions. Use
 for that evidence. `build.jobs` controls builds, not editor analysis scheduling.
 
 `import` and `mod.lock` remain the resolver inputs.
+The manifest's [`test` policy](stdlib/testing.md#configure-a-run-in-modmwy)
+supplies suite discovery roots and harness input identity. The server validates
+its schema and descriptors; process limits, seeds, output capture, and watchdogs
+remain runner settings. They neither start test processes nor change LSP scheduling.
 `gatostyle` remains the only source of layout, rule severities, preferred forms,
 exceptions, and proof requirements. There is no competing target, indentation,
 import map, or list of disabled compiler errors inside `lsp`.
@@ -239,14 +243,29 @@ returns to disk contents; it does not write the buffer.
 | Check project                                                     | Run the configured checking scope immediately, including in `"manual"` mode.                                                                                                                                     |
 | Manifest, lock, required source, or declared target input changes | Invalidate dependent contexts, requests, proofs, and caches; reload configuration immediately and reschedule according to the trigger.                                                                           |
 
-In `"project"` scope, check the declared entry and public export graphs, plus
-explicitly open source modules. Publish diagnostics throughout those graphs.
+In `"project"` scope, check the declared entry, public export graphs, configured
+test suite graphs, and explicitly open source modules. Publish diagnostics
+throughout those graphs. Discover test files under `test.paths` with the
+[runner's path rules](stdlib/testing.md#discovery-identity-and-selection), including
+canonical identity and nested-project boundaries. An absent default `./tests`
+directory adds no graph and does not emit `E509` in the editor. Missing explicit
+test paths still produce their configuration/resolution diagnostics.
 In `"open"` scope, check the graphs needed by open sources, publishing primary
 diagnostics only for open files and the manifest. Dependency failures still
 appear at their importing edge, with related locations. A closed source may be
 indexed for navigation without having been checked. Neither scope treats each
 helper as a program entry or checks unreachable files merely because they exist.
-A library with no `build.entry` is checked through its exports and open modules.
+A library with no `build.entry` is checked through its exports, discovered test
+suites, and open modules. Test roots use the existing `module` coverage mode;
+they are not executable application entries. Index exclusions do not remove
+required suite graphs from project checking.
+
+Checking tests validates static Suite/Case descriptors and their callback bodies,
+including skipped cases. It never invokes callbacks, evaluates runtime assertions,
+initializes fixtures, links harnesses, or runs watchdogs. A literal false assertion
+is an intentional runtime `P005` path, not a static failing-test result in an
+editor. No run-test command or test-result transport is added to extension 1;
+use `meowy test` to execute the suite.
 
 The server uses a bounded background work queue and prioritizes requests for
 open documents. Required dependency content must already be present and match
@@ -504,6 +523,12 @@ under disk discovery. Its contents and sources may still have unsaved changes.
 Loose files must acquire such a manifest to enable capture. Export-only libraries and helper graphs
 outside the entry's check need a concrete entry before capture; the command must
 not fabricate an executable entry or a CLI selector for them.
+
+A diagnostic confined to a test graph likewise cannot use this entry-capture
+extension. Save the files and use `meowy test --no-run` to preserve a failing
+test check/build session, then select it with `meowy err ... --test`. Shared
+helpers that also belong to the selected application entry remain subject to
+the ordinary entry-capture rules above.
 
 Gatostyle findings, toolchain/configuration blocks, missing dependencies,
 truncated analysis, and untitled sources are not capture candidates. The command

@@ -25,6 +25,7 @@ catalog version and explanation that accompanied its original toolchain.
 | `E6xx` | Native boundaries and linking            | `error[E601]`       |
 | `E7xx` | Diagnostic sessions, repairs, and replay | `error[E702]`       |
 | `P0xx` | Runtime panics                           | `panic[P003]`       |
+| `T0xx` | Test-runner expectations and supervision | `failure[T002]`     |
 | `F0xx` | Compiler faults                          | `fatal[F001]`       |
 | `G...` | Gatostyle policy findings                | `warning[G101]`     |
 
@@ -121,6 +122,7 @@ See [types](types.md) and [values and blocks](values-and-blocks.md).
 | `E215` | Matcher condition is not boolean                  | Show the condition type; use an explicit comparison or type predicate rather than implicit truthiness                               |
 | `E216` | Literal is not representable in its expected type | Show the literal and target range; choose the intended width or a representable value                                               |
 | `E217` | Invalid custom error definition                   | Mark the offending `errors.define` descriptor field or code and show the required static metadata contract                          |
+| `E218` | Invalid testing descriptor or callback            | Mark invalid Suite/Case shape, callback result/captures, panic expectation, skip reason, or runtime-dependent metadata              |
 
 `E207` covers initialization as well as later assignment. Changing `"twenty"` to
 `20` is not a type conversion defined by the language. `E208` concerns a value
@@ -183,16 +185,17 @@ investigation, not proof of a static source error in every scheduling context.
 See [modules and configuration](modules-and-ffi.md) and
 [CLI dependency commands](../cli/README.md#profiles-targets-and-dependencies).
 
-| Code   | Diagnostic and trigger                                        | Evidence and repair direction                                                                                                       |
-| ------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `E501` | Module cannot be resolved                                     | Show the literal import, importing file, and resolution base; correct the path or declared alias                                    |
-| `E502` | Import cycle                                                  | Show the ordered import/re-export edges closing the cycle; separate the shared dependency                                           |
-| `E503` | Required lock entry is missing or conflicts with the manifest | Show the alias, selector, and lock entry; resolve or explicitly update dependencies                                                 |
-| `E504` | Dependency content digest mismatch                            | Show the expected and observed digest and canonical source identity; recover verified content instead of silently relocking         |
-| `E505` | Invalid manifest configuration                                | Mark the unknown field, incompatible selectors, invalid size, or forbidden compile-time effect and its configuration path           |
-| `E506` | Entry module contract is invalid                              | Show an entry imported as a module or an unsupported primary result; keep the entry distinct and handle top-level errors explicitly |
-| `E507` | Requested target or toolchain input is unavailable            | Show the requested target/input and available host context; provide the declared input or select a compatible target                |
-| `E508` | Import alias conflicts with a foundational module             | Mark the alias and foundational identity; rename the package or local path alias                                                    |
+| Code   | Diagnostic and trigger                                        | Evidence and repair direction                                                                                                           |
+| ------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `E501` | Module cannot be resolved                                     | Show the literal import, importing file, and resolution base; correct the path or declared alias                                        |
+| `E502` | Import cycle                                                  | Show the ordered import/re-export edges closing the cycle; separate the shared dependency                                               |
+| `E503` | Required lock entry is missing or conflicts with the manifest | Show the alias, selector, and lock entry; resolve or explicitly update dependencies                                                     |
+| `E504` | Dependency content digest mismatch                            | Show the expected and observed digest and canonical source identity; recover verified content instead of silently relocking             |
+| `E505` | Invalid manifest configuration                                | Mark the unknown field, incompatible selectors, invalid size, or forbidden compile-time effect and its configuration path               |
+| `E506` | Entry module contract is invalid                              | Show an entry imported as a module or an unsupported primary result; keep the entry distinct and handle top-level errors explicitly     |
+| `E507` | Requested target or toolchain input is unavailable            | Show the requested target/input and available host context; provide the declared input or select a compatible target                    |
+| `E508` | Import alias conflicts with a foundational module             | Mark the alias and foundational identity; rename the package or local path alias                                                        |
+| `E509` | No test cases selected when an empty run is forbidden         | Show configured roots, explicit path selectors, name filters, and discovery count; select real cases or deliberately allow an empty run |
 
 A lock mismatch is not permission to move a branch or tag. Diagnostics retain
 the source identity, revision, and digest involved in the failure. A missing
@@ -252,6 +255,31 @@ replace that error or its command exit status. Tool errors without source spans
 point to their session, capsule member, or edit range. Authentication and command
 usage failures are CLI results, not invented language-rule violations.
 
+## Test-runner failures
+
+See [testing](stdlib/testing.md) and [test sessions](diagnostics.md#test-cases-and-assertions).
+These codes describe the runner's expected outcome or supervision, not a new
+application error union. Unexpected recoverable panics retain their original
+`P...` code; a failed equality assertion is still `P005`.
+
+| Code   | Failure                                           | Required evidence                                                                                                                                            |
+| ------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `T001` | Expected panic was not observed                   | Case ID, expected code/message, and normal callback completion; a handled error or child panic outcome does not satisfy the expectation.                     |
+| `T002` | Case watchdog expired                             | Configured budget, elapsed observation, last known phase, termination/reaping result, and capture limitations. Do not infer a deadlock or completed cleanup. |
+| `T003` | Case process ended without a valid harness result | Case ID, native status/signal, last known phase, and available streams; exit zero alone is not a pass.                                                       |
+| `T004` | Case output limit exceeded                        | Combined byte limit, per-stream observed counts, retained prefix, truncation state, and termination outcome.                                                 |
+
+If an observed assertion is followed by blocked cleanup and watchdog expiry,
+the terminal case result is `T002` with the assertion retained as related evidence.
+Count one failed case. A mismatched expected panic instead keeps its actual
+panic code with an expectation note. `P008`, module initialization/teardown
+failures, and supervisor failures never become a matching expected panic.
+
+Invalid descriptors use `E218`; invalid test manifest fields use `E505`.
+Unavailable selected target/runtime inputs use `E507`, and disallowed empty
+selection uses `E509`. Selection failures may have no executable/case artifact;
+their diagnostics must describe what was selected and which phases ran.
+
 ## Runtime panics and compiler faults
 
 See [panic behavior](diagnostics.md#panics). A known invalid operation can be
@@ -274,6 +302,11 @@ record. The same bounds and arithmetic rules apply in debug and release builds.
 `E101` and `P001`, `E103` and `P003`, and `E408` and `P004` describe static and
 dynamic violations of the same underlying bounds rules. `E107` maps to `P002` and
 `E108` to `P007` when the operands are known only at runtime.
+
+The [`testing` assertions](stdlib/testing.md#assertions-borrow-their-evidence)
+use `P005`, including exact actual/expected comparison evidence where available.
+A deliberately false assertion stays an executable panic path even when constant;
+it does not make an otherwise invalid bounds/arithmetic operation executable.
 
 A child panic keeps its panic code inside `tasks.Panicked` after cleanup. Merely
 receiving that outcome does not print an error or terminate the parent. An

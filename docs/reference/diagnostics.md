@@ -60,14 +60,53 @@ Dynamic bounds violations, checked arithmetic violations, failed assertions, and
 into `tasks.Panicked` after cleanup. An uncaught root panic terminates the program.
 Panics are not an alternative control flow for handling expected invalid input.
 
-The compiler diagnoses a provable violation statically; the corresponding runtime
-check still exists when the violation depends on runtime input. Optimization may
+The compiler diagnoses provable arithmetic, bounds, and other static-rule
+violations before execution; the corresponding runtime check still exists when
+the violation depends on runtime input. Explicit `testing.assert(false, message)`
+and `testing.fail(message)` instead remain deliberate runtime `P005` paths, as
+`debug.panic` remains an explicit runtime panic. They cannot make a statically
+invalid argument expression legal. Optimization may
 remove a proven redundant check, but release builds cannot silently introduce
 unchecked arithmetic or indexing.
 
 Unsafe memory violations have no recovery guarantee. A panic while already
 releasing resources is fatal. Cancellation is cooperative task unwinding with a
 typed outcome, not a panic caused by arbitrary thread interruption.
+
+## Test cases and assertions
+
+The [`testing` module](stdlib/testing.md) defines borrowed assertions and ordinary
+Suite/Case values. A case succeeds after its callback, required joins, and cleanup
+complete. Failed assertions use `P005` with the assertion site, message, and
+available comparison evidence. A library error merely returned or printed remains
+a value; expected domain failures must be matched and checked explicitly.
+
+A declared expected panic can pass only when the callback boundary observes the
+specified recoverable panic and teardown succeeds. An initialization failure,
+fatal cleanup panic, signal, output limit, or supervisor timeout cannot satisfy
+that expectation. Test-runner failures use the separate
+[`T...` family](diagnostic-codes.md#test-runner-failures); they are neither
+application error values nor a claim that the source is ill-typed.
+
+Normal `meowy test` and `test --no-run` publish one aggregate project test session;
+`test --list` publishes none. Test sessions use a separate namespace selected by
+`meowy err ... --test`, mutually exclusive with `--entry`. Child cases do not
+advance any last-run pointer. A passing or skipped case has no failure occurrence,
+including a correctly matched expected panic. Case ordinals and numbered failure
+occurrences are distinct and labeled explicitly.
+
+Preserve the canonical case ID, selected roots/filters, base and derived seeds,
+manifest policy, supervision phase, and case harness inputs. Replay a selected
+case under the saved supervision; an earlier check/build failure replays that
+earlier phase. Test-case replay captures and labels its streams on stderr, while
+ordinary application replay retains its stdout behavior.
+
+The watchdog uses a separate process boundary and reports `T002`, not
+`tasks.Timeout`. It cannot guarantee cleanup, descendant termination, or a closed
+replay recording after a hard termination. A partial assertion trace preceding a
+stuck unwind remains related evidence rather than proof that unwinding finished.
+See [case supervision](stdlib/testing.md#case-lifecycle-and-watchdogs) for the
+completion and capture rules.
 
 ## Diagnostic presentation
 
@@ -390,21 +429,24 @@ contain several errors, with replay focused on the selected one.
 The cache root is `$XDG_CACHE_HOME/meowy` when that variable names an absolute
 directory, otherwise `$HOME/.cache/meowy`. Under `projects/`, a digest of the
 canonical project root separates checkouts. An entry-path digest separates runs
-of different programs. A session ID, such as `proj-1788649910`, is unique within
-that entry, with a collision suffix when necessary. The manifest retains original
-paths for diagnostics; path text is not used as a collision-prone directory key.
+of different programs; a disjoint `tests` namespace stores aggregate test sessions
+without colliding with a real entry path. A session ID, such as `proj-1788649910`,
+is unique within that namespace/entry, with a collision suffix when necessary.
+The manifest retains original paths for diagnostics; path text is not used as a
+collision-prone directory key.
 
-| Preserved input                                                                                                | Purpose                                                       |
-| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Source graph, manifest, and lockfile when present                                                              | Replay the original input, even after local edits             |
-| Compiler version, build identity, executable, required libraries, and invocation                               | Replay with the toolchain that produced the failure           |
-| Target, profile, CPU features, effective optimization/link settings, runtime/sysroot, and native input digests | Preserve the selected representation and build inputs         |
-| Failure phase, code, spans, related notes, and fix candidates                                                  | Identify the occurrence independently of terminal formatting  |
-| Declared environment inputs and captured standard streams                                                      | Record the relevant inputs and observed output                |
-| Backend IR, objects, linker commands, and executable, when produced                                            | Investigate lowering, linking, or runtime failures            |
-| Debug companions, build report, and link map, when produced                                                    | Explain retained code/data and interpret the exact executable |
-| Runtime arguments and replayable input, when available                                                         | Revisit a failure that actually reached execution             |
-| Replay runner, per-file digests, and artifact schema version                                                   | Verify and unpack the executable's contents                   |
+| Preserved input                                                                                                | Purpose                                                        |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Source graph, manifest, and lockfile when present                                                              | Replay the original input, even after local edits              |
+| Compiler version, build identity, executable, required libraries, and invocation                               | Replay with the toolchain that produced the failure            |
+| Target, profile, CPU features, effective optimization/link settings, runtime/sysroot, and native input digests | Preserve the selected representation and build inputs          |
+| Failure phase, code, spans, related notes, and fix candidates                                                  | Identify the occurrence independently of terminal formatting   |
+| Declared environment inputs and captured standard streams                                                      | Record the relevant inputs and observed output                 |
+| Backend IR, objects, linker commands, and executable, when produced                                            | Investigate lowering, linking, or runtime failures             |
+| Debug companions, build report, and link map, when produced                                                    | Explain retained code/data and interpret the exact executable  |
+| Runtime arguments and replayable input, when available                                                         | Revisit a failure that actually reached execution              |
+| Test case identity, selectors, seeds, process policy, and supervision phase, for test sessions                 | Replay the selected case with its original harness and budgets |
+| Replay runner, per-file digests, and artifact schema version                                                   | Verify and unpack the executable's contents                    |
 
 Artifacts list backend IR, object files, linker commands, application binaries,
 and statistics only when those phases produced them. A type-checking rejection

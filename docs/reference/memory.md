@@ -156,6 +156,11 @@ stored string initializer, interpolation must be constant-evaluable or use an
 explicit text builder and allocator. String concatenation follows the same rule;
 `+` cannot silently allocate a runtime string.
 
+The message arguments of [`testing` assertions](stdlib/testing.md#assertions-borrow-their-evidence)
+are also formatting boundaries. They evaluate message expressions once and can
+stream failing-test context into bounded diagnostic storage without an owned
+intermediate string; this does not change the rules for stored strings.
+
 For example, `"{prefix}-{id}"` is a constant when both inputs are constant values.
 For runtime output, use a writer or builder. Plain string literal views live for
 the whole program.

@@ -126,13 +126,14 @@ and their digests even when an alias root lies outside the project directory.
 
 `mod.mwy` is a restricted compile-time block. Its well-known emissions are:
 
-| Name        | Contract                                                       |
-| ----------- | -------------------------------------------------------------- |
-| `import`    | Package dependency records and the optional `aliases` path map |
-| `export`    | Public package facade, including re-exports                    |
-| `build`     | Entry, target, optimization, linkage, and runtime settings     |
-| `gatostyle` | Optional layout, code-quality rules, and project style policy  |
-| `lsp`       | Optional editor analysis, feature, and compatibility settings  |
+| Name        | Contract                                                          |
+| ----------- | ----------------------------------------------------------------- |
+| `import`    | Package dependency records and the optional `aliases` path map    |
+| `export`    | Public package facade, including re-exports                       |
+| `build`     | Entry, target, optimization, linkage, and runtime settings        |
+| `test`      | Optional suite discovery, process limits, output, and seed policy |
+| `gatostyle` | Optional layout, code-quality rules, and project style policy     |
+| `lsp`       | Optional editor analysis, feature, and compatibility settings     |
 
 Unknown top-level configuration names are diagnostics. Author/version metadata
 can be ordinary exported fields if a package wants to expose it; it does not
@@ -153,6 +154,14 @@ schema's defaults. Its optional `toolchain` field pins an exact meowy distributi
 version. `build` remains the source of semantic build inputs, and `gatostyle`
 remains the source of formatting and style policy.
 
+`test` configures [`@"testing"` suites](stdlib/testing.md) and their CLI runner.
+A present block requires `version : 1`; an absent block selects schema 1 defaults,
+including discovery under `./tests`. `test.paths` contains project-relative
+directories or exact `_test.mwy` files, never import aliases or globs. These roots
+must stay inside the declaring project and do not discover nested projects.
+The runner checks suite descriptors as compile-time values without executing
+module initialization. Test policy does not change normal entry selection.
+
 The manifest can combine literals, immutable bindings, and pure compile-time
 helper functions. It cannot read the network, run shell commands, inspect ambient
 environment variables, spawn tasks, or perform application I/O during evaluation.
@@ -164,7 +173,7 @@ be declared so dependency resolution and code generation do not depend on hidden
 machine state.
 
 The [manifest guide](../guide/mod.md) walks through local aliases, package imports,
-exports, runtime settings, and editor policy. Its [sample manifest](../guide/mod.sample.mwy)
+exports, runtime settings, test suites, and editor policy. Its [sample manifest](../guide/mod.sample.mwy)
 can be installed as `mod.mwy` in a project with the documented
 [packet project's layout](../programs/packet/README.md); that worked project
 already has its own manifest. The
@@ -222,6 +231,15 @@ defaults, compatibility checks, and failure behavior are defined in
 [Memory and binary optimization](optimization.md). CPU selection is explicit;
 it never probes the build host to choose instructions. Build jobs do not set
 runtime executor workers or task capacity.
+
+`meowy test` uses these build inputs to produce a case harness. It neither
+requires nor executes `build.entry`; imported code under test belongs in helper
+modules, keeping the entry separate. Each case process initializes its own
+module graph once and releases those module owners before passing. Other cases
+receive fresh module state. `test.processes` limits case processes independently
+of compiler jobs and the executor configured inside each case; concurrent cases
+do not supply an implicit task executor. See the
+[test command](../cli/README.md#test-a-project) for discovery and selection.
 
 The entry file executes after module initialization. It must not also be imported
 as a module. Its primary result is `<null>` for success or `<int32>` for the

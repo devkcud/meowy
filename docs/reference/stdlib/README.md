@@ -16,31 +16,32 @@ connects these API choices to stack, heap, static storage, and linker behavior.
 
 ## Modules
 
-| Import                                 | Use it for                                                                 | Contract                                                                 |
-| -------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `@"core"`                              | Predefined values and fundamental type values                              | [Core](core.md#predefined-values)                                        |
-| `@"debug"`                             | Diagnostic printing and panics                                             | [Diagnostic output](core.md#output-and-text)                             |
-| `@"errors"`                            | Custom failure types, codes, messages, typed payloads, and explicit boxing | [Errors and custom failures](errors.md)                                  |
-| `@"bytes"`                             | Initialized byte storage, views, copying, and searching                    | [Bytes](text-and-data.md#bytes-and-utf-8-strings)                        |
-| `@"strings"`                           | Borrowed text, parsing, and explicitly owned text                          | [Text](text-and-data.md)                                                 |
-| `@"unicode"`                           | Scalars, grapheme boundaries, normalization, and case folding              | [Unicode](text-and-data.md#unicode-operations)                           |
-| `@"fmt"`                               | Streaming formatted output through a supplied writer                       | [Formatting](text-and-data.md#owned-strings-and-formatting)              |
-| `@"numbers"`, `@"bits"`, `@"math"`     | Checked conversions, numeric utilities, bit operations, and mathematics    | [Numeric utilities](text-and-data.md#numbers-mathematics-and-randomness) |
-| `@"random"`                            | Reproducible generators and explicit cryptographic entropy                 | [Randomness](text-and-data.md#numbers-mathematics-and-randomness)        |
-| `@"encoding"`, `@"hash"`               | Hex, base64, and stable byte digests                                       | [Binary data](text-and-data.md#binary-encodings-and-digests)             |
-| `@"json"`                              | Bounded typed decoding and streaming encoding                              | [JSON](text-and-data.md#json-with-bounded-work-and-explicit-storage)     |
-| `@"memory"`, `@"values"`, `@"dynamic"` | Allocators, layout, aggregate ownership, and explicit type erasure         | [Storage APIs](memory.md)                                                |
-| `@"collections"`, `@"iter"`            | Lists, arrays, vectors, maps, sorting, and pull cursors                    | [Collections](collections.md)                                            |
-| `@"time"`                              | Fixed durations, monotonic deadlines, sleeps, timers, and tickers          | [Time](time-and-date.md#fixed-durations)                                 |
-| `@"date"`                              | Civil dates, timestamps, time zones, arithmetic, parsing, and formatting   | [Date and time](time-and-date.md#civil-dates-and-times)                  |
-| `@"calendars"`                         | Gregorian, Julian, Hebrew, Chinese, Islamic civil, and Buddhist calendars  | [Calendars](calendars.md)                                                |
-| `@"tasks"`, `@"channel"`               | Owned work, cancellation, and bounded message transfer                     | [Concurrency APIs](tasks-and-channels.md)                                |
-| `@"io"`                                | Readers, writers, buffers, streams, and partial progress                   | [I/O](io-and-system.md#readers-and-writers)                              |
-| `@"path"`, `@"fs"`                     | Lexical paths, files, metadata, and directory traversal                    | [Paths and files](io-and-system.md#paths-are-data)                       |
-| `@"env"`, `@"process"`                 | Explicit environment snapshots, argv, and child processes                  | [Processes](io-and-system.md#environment-and-processes)                  |
-| `@"net"`                               | Numeric addresses, DNS, TCP, and UDP                                       | [Networking](io-and-system.md#network-services)                          |
-| `@"cli"`                               | Typed application options, subcommands, help, and usage errors             | [CLI applications](cli.md)                                               |
-| `@"ffi"`                               | Declared native layouts and foreign symbols                                | [Native APIs](ffi.md)                                                    |
+| Import                                 | Use it for                                                                           | Contract                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `@"core"`                              | Predefined values and fundamental type values                                        | [Core](core.md#predefined-values)                                        |
+| `@"debug"`                             | Diagnostic printing and panics                                                       | [Diagnostic output](core.md#output-and-text)                             |
+| `@"errors"`                            | Custom failure types, codes, messages, typed payloads, and explicit boxing           | [Errors and custom failures](errors.md)                                  |
+| `@"testing"`                           | Assertions, suite values, expected panics, skipped cases, and reproducible test runs | [Testing](testing.md)                                                    |
+| `@"bytes"`                             | Initialized byte storage, views, copying, and searching                              | [Bytes](text-and-data.md#bytes-and-utf-8-strings)                        |
+| `@"strings"`                           | Borrowed text, parsing, and explicitly owned text                                    | [Text](text-and-data.md)                                                 |
+| `@"unicode"`                           | Scalars, grapheme boundaries, normalization, and case folding                        | [Unicode](text-and-data.md#unicode-operations)                           |
+| `@"fmt"`                               | Streaming formatted output through a supplied writer                                 | [Formatting](text-and-data.md#owned-strings-and-formatting)              |
+| `@"numbers"`, `@"bits"`, `@"math"`     | Checked conversions, numeric utilities, bit operations, and mathematics              | [Numeric utilities](text-and-data.md#numbers-mathematics-and-randomness) |
+| `@"random"`                            | Reproducible generators and explicit cryptographic entropy                           | [Randomness](text-and-data.md#numbers-mathematics-and-randomness)        |
+| `@"encoding"`, `@"hash"`               | Hex, base64, and stable byte digests                                                 | [Binary data](text-and-data.md#binary-encodings-and-digests)             |
+| `@"json"`                              | Bounded typed decoding and streaming encoding                                        | [JSON](text-and-data.md#json-with-bounded-work-and-explicit-storage)     |
+| `@"memory"`, `@"values"`, `@"dynamic"` | Allocators, layout, aggregate ownership, and explicit type erasure                   | [Storage APIs](memory.md)                                                |
+| `@"collections"`, `@"iter"`            | Lists, arrays, vectors, maps, sorting, and pull cursors                              | [Collections](collections.md)                                            |
+| `@"time"`                              | Fixed durations, monotonic deadlines, sleeps, timers, and tickers                    | [Time](time-and-date.md#fixed-durations)                                 |
+| `@"date"`                              | Civil dates, timestamps, time zones, arithmetic, parsing, and formatting             | [Date and time](time-and-date.md#civil-dates-and-times)                  |
+| `@"calendars"`                         | Gregorian, Julian, Hebrew, Chinese, Islamic civil, and Buddhist calendars            | [Calendars](calendars.md)                                                |
+| `@"tasks"`, `@"channel"`               | Owned work, cancellation, and bounded message transfer                               | [Concurrency APIs](tasks-and-channels.md)                                |
+| `@"io"`                                | Readers, writers, buffers, streams, and partial progress                             | [I/O](io-and-system.md#readers-and-writers)                              |
+| `@"path"`, `@"fs"`                     | Lexical paths, files, metadata, and directory traversal                              | [Paths and files](io-and-system.md#paths-are-data)                       |
+| `@"env"`, `@"process"`                 | Explicit environment snapshots, argv, and child processes                            | [Processes](io-and-system.md#environment-and-processes)                  |
+| `@"net"`                               | Numeric addresses, DNS, TCP, and UDP                                                 | [Networking](io-and-system.md#network-services)                          |
+| `@"cli"`                               | Typed application options, subcommands, help, and usage errors                       | [CLI applications](cli.md)                                               |
+| `@"ffi"`                               | Declared native layouts and foreign symbols                                          | [Native APIs](ffi.md)                                                    |
 
 All library API chapters live in this directory. The surrounding reference defines
 language rules such as [ownership](../memory.md), [collection representation](../collections.md),
