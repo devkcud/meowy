@@ -6,6 +6,216 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete reference-union and scheduler handoff
+
+- Completed: compiler implementation is 75785b7, native example/coverage is 4ef3268, and runtime/tooling is d3e41aa. Both current STATUS files record exact behavior, remaining gaps, validation and ordered continuation work; prior checkpoints remain preserved.
+- Validation: all 14 repository checks passed, including 136 Rust tests, 32 Python regressions, 844 links and every runtime debug/release/sanitized profile. The optimized example has exact stdout; all 588 release oracle cases pass (356 accepted, 232 E302). Final tracker links and whitespace pass.
+- Blockers: none for this milestone. Conformance remains 9 passed, 14 unsupported, 0 failed. Function borrow contracts, exclusive ownership, generated cleanup, structured child joins/cancellation and DWARF remain pending.
+- Next steps: implement verified all-input function borrow contracts and caller-origin substitution; extend ownership read/reborrow/cleanup edges; add structured child admission and waiting joins to the scheduler; continue the module/library foundation. Keep STATUS current and add a checkpoint after each logical step.
+
+### 2026-09-06 — Refresh reference-union and scheduling handoff
+
+- State: Current snapshots now describe compiler 75785b7, native coverage 4ef3268 and runtime/tooling d3e41aa. Completed union/scheduler priorities were replaced by function contracts, ownership cleanup, structured child lifetimes and modules. Historical checkpoints remain intact.
+- Validation: All 14 combined checks, optimized optional-borrows output and all 588 release oracle cases passed. Final tracker link/whitespace verification is next.
+- Blockers: no active workers, incomplete code or failing checks; full-language and structured-task support remain pending.
+- Next steps: Verify the final tracker links/whitespace, commit this handoff, then resume the ordered function-contract, ownership and runtime work in STATUS.
+
+### 2026-09-06 — Commit optional-borrow native coverage
+
+- State: Native union/reference coverage, optional-borrows.mwy and compiler usage docs are committed after implementation 75785b7 and runtime d3e41aa. Coverage includes absence, retagging, nested same-name tags, mutable snapshots, restart, strict equality, literal widths and discarded constructor fields.
+- Validation: All 46 native groups pass in both profiles; optimized example and 588 release oracle cases pass. Staged whitespace checks pass. Only current STATUS and step-log handoff updates remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Rewrite the current root/compiler snapshots with final commits, precise remaining boundaries and ordered next steps; validate links/whitespace and commit the final handoff.
+
+### 2026-09-06 — Commit reference-union compiler implementation
+
+- State: Compiler reference unions, scoped active-variant proofs, contextual record constructors, strict equality regressions and weighted analysis bounds are committed as 75785b7. The two prior unsupported tests now cover mutable carriers, keeping the implementation slice coherent. Runtime/tooling is d3e41aa.
+- Validation: All 14 combined checks, optimized example, 588-case release oracle and staged whitespace checks pass. Native example/coverage and final tracker snapshots remain to commit.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the new native union/constructor regressions and optional-borrows example, then refresh both STATUS snapshots with exact commit IDs, validation and ordered function-contract/ownership/runtime next steps.
+
+### 2026-09-06 — Verify optimized optional borrows and final union oracle
+
+- State: The optimized compiler executes optional-borrows.mwy with exact output and passes all 588 independent union cases on a private binary snapshot. Final review finds no remaining blocker. Runtime/tooling is committed as d3e41aa; compiler, native coverage and trackers are ready for focused commits.
+- Validation: Release oracle: 356 accepted, 232 expected E302, zero conservative or unexpected results. Exact example stdout: 7, 8, missing, 8, 42, text on separate lines, with empty stderr. All 14 combined checks, 844 links and whitespace pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the compiler implementation with the two existing capability-boundary corrections, then native examples/coverage and the current root/compiler handoffs; finish with Git integrity and a clean worktree.
+
+### 2026-09-06 — Pass the complete union and scheduler repository gate
+
+- State: All 14 repository checks pass with reference unions, optional fields, contextual record constructors and bounded scheduling integrated. Strict union equality remains unchanged. No active source edits or failing checks remain; root is building the optimized compiler before final commit slices.
+- Validation: 90 library plus 46 native Rust groups, 32 Python regressions, 844 local links, schemas/catalog, editors, formatting/Clippy/build and conformance pass. Runtime debug/release/ASan/UBSan/LSan include all 11 scheduler cases and exact fault probes. Conformance is 9 passed, 14 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optional-borrows with the optimized compiler and exact stdout, rerun the 588-case oracle on that completed binary, then commit compiler implementation, native coverage and current STATUS/step-log handoffs separately.
+
+### 2026-09-06 — Complete strict union semantics and start final integration
+
+- State: Reference union implementation, constructor context, scoped loan proofs and weighted bounds are complete. Same-normalized-type equality is preserved; the root test now uses a correctly typed null union. All workers have finished code edits; root is starting the combined gate.
+- Validation: 90 library groups, all 15 loan groups, the corrected equality source regression, formatting and all-target Clippy pass. The 588-case oracle and directed review pass on the earlier stable snapshot. Runtime d3e41aa passes all profiles; final integrated native/runtime verification is next.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 repository checks, build the optimized compiler and optional-borrows example, rerun the 588-case oracle on its stable binary, review final diffs, then commit compiler implementation, native coverage and current handoffs separately.
+
+### 2026-09-06 — Preserve the documented union equality type rule
+
+- State: Reference review confirms that union equality requires the same normalized union type. The new absent.view == null assertion was a test mistake, so root now compares with a typed empty nullable-reference union. The compiler owner is removing the tentative member-to-union equality coercion; mismatched operand types must retain E222.
+- Validation: Constructor widths, defaults and discarded fields already execute correctly in both profiles. The tentative equality extension passed tests but conflicts with the reference and is not accepted. All 90 library groups and Clippy had passed before this correction; affected checks will be rerun.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Restore strict normalized union equality, pass the corrected native constructor test and explicit E222 regressions, then run the full combined gate and optimized example/oracle before compiler and handoff commits.
+
+### 2026-09-06 — Expose nullable-union equality compatibility failure
+
+- State: The record-union literal context correction passes the original native failure. Expanded constructor execution now exposes E222 for comparing a nullable reference field directly with null; compatible union/member equality needs checking before final validation.
+- Validation: The new native test remains intact and fails at absent.view == null. Root is isolating width/default/discarded-field execution with a temporary predicate substitution so that later constructor defects are visible. Core borrow oracle and directed probes remain passing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix union/member equality according to the reference while preserving full-record/scalar projection behavior, pass the unchanged native constructor group, then complete source/budget regressions, formatting/Clippy and the combined gate.
+
+### 2026-09-06 — Fix union-record constructor context and check native widths
+
+- State: The previously failing reference-union retagging native group now passes. The frontend keeps union member context while selecting a compatible completed record shape. Root added execution coverage for int64 and uint8 fields/primaries, nullable reference defaults and named fields discarded on restart.
+- Validation: The targeted retagging group passes in debug/release. The new constructor execution group is running; 588 oracle and 10 directed semantic checks remain passing on the pre-context-fix snapshot. No known borrow-analysis blocker remains.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Pass the constructor execution group and all core/source tests, finish OWNERSHIP and formatting/Clippy, then run the complete repository gate and optimized compiler/example/oracle before focused commits.
+
+### 2026-09-06 — Pass directed union lifetime and restart review
+
+- State: The stable compiler snapshot passes all 10 directed semantic probes beyond the 588-case oracle: cross-iteration retained loans, fresh optional rebindings, inactive/active escapes, retagging, discarded results and tag-only inspection. Native frontend record-union literal context remains the only known blocker.
+- Validation: Oracle remains 356 accepted and 232 expected E302 with no conservative or unexpected results. Directed checks all pass; accepted directed programs are being exercised natively in both profiles. Literal context correction must preserve unique numeric widths and reject ambiguous choices.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish frontend record-union context and source/budget regressions, rerun all native groups, then perform formatting/Clippy, the integrated repository gate and optimized example/oracle before focused compiler commits.
+
+### 2026-09-06 — Pass all 588 optional-reference guard cases
+
+- State: The independent oracle passes all 588 nullable-reference combinations on a private snapshot of the freshly built compiler. Scoped activity handles absence, payload copies, retagging, nested field access and tag-only inspection without conservative rejections in this matrix. Loan unit integration also passes.
+- Validation: Oracle: 356 accepted, 232 expected E302, zero conservative or unexpected results. All 15 loan groups pass. Native 44/45 pass; the remaining frontend record-union literal context failure is still being fixed. Directed restart/retag review continues.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the frontend union-record context correction and preserve literal widths, rerun native/library checks, complete directed review and proof-budget tests, then run final formatting/Clippy and combined verification.
+
+### 2026-09-06 — Pass optional-reference native behavior and isolate record-union context failure
+
+- State: The integrated compiler passes 44 of 45 native groups, including optional reference activity, nested discriminants, stale mutable snapshots, restart behavior, E302/E303 boundaries and the new example. One record-union literal is incorrectly receiving scalar context in the frontend and is being corrected.
+- Validation: Failure: reference_union_retagging_keeps_member_and_field_origins reports E207 scalar result cannot contain field view in the branch record literal. This is a frontend contextual typing failure, not a borrow rejection. A fresh standalone compiler build is being prepared for the independent oracle.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix expected-union record literal context without losing numeric widths or record shape, rerun that native group, execute the 588-case oracle and directed probes, then complete final source/budget tests and repository gate.
+
+### 2026-09-06 — Compile union value and loan analysis together
+
+- State: The union value/origin pass and loan CFG now compile together. Variant identities, null/default activity, nested tag relations, mutable-read invalidation, scoped assumptions and demand-preserving coercions are integrated. Root is running all native groups while workers finish focused source regressions.
+- Validation: cargo check --lib passes. Compiler execution and oracle validation are now starting; no result is claimed yet. Runtime d3e41aa remains fully validated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any native/source failures, inspect budget and restart boundaries, build a fresh standalone compiler for the 588-case oracle, then run final formatting/Clippy and the combined repository gate.
+
+### 2026-09-06 — Review integrated union value semantics
+
+- State: Early semantic review finds member-type retagging, outer-conditioned nested tags and fresh mutable-read activity in place. Scoped proof accumulation replaces repeated live-local scans. Loan graph helpers are still being implemented separately, so no complete compiler behavior claim is made.
+- Validation: Isolated resource rejection probes pass; runtime d3e41aa is independently validated. New accepted/rejected native and 588 oracle cases are ready but have not yet run on the integrated compiler.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish and compile loan assume/convert/inspect helpers, run targeted native and source regressions, then audit the fresh executable and perform the full combined gate before compiler commits.
+
+### 2026-09-06 — Preserve construction loans under tag-only inspection
+
+- State: Root added a focused E302 case where a discriminant test consumes a freshly constructed nullable reference block that writes its owner after emission. Inspecting only a tag may skip reading an existing payload, but must preserve construction effects and retained result-slot liveness.
+- Validation: Compiler value and graph integration are in progress in separate files. Isolated proof-budget probes and all committed runtime checks pass; new compiler execution remains pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete tag-only inspection without bypassing block construction, compile the integrated passes, then run native library/output/budget tests and the independent semantic oracle.
+
+### 2026-09-06 — Parallelize union value and loan-graph integration
+
+- State: Compiler interfaces are now stable enough for split ownership: borrow_design owns borrow_value.rs, borrow.rs, check.rs, flow.rs and OWNERSHIP; unwind_runtime owns loans.rs integration; storage_review audits semantics. Root owns native/example/docs/tracking and commits. Runtime remains committed as d3e41aa.
+- Validation: Isolated resource probes reject wide fanout, deep path copies and growing merges within explicit budgets; the proof-work counter saturates. Review also identified repeated live-local assumption scans for charging or scoped caching. The complete compiler does not yet compile because loan helpers are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish assume/convert/discriminant-inspection helpers and value proof linking, run compiler library/native checks, then execute the 588-case union oracle and directed restart/mutable-snapshot probes before final integration.
+
+### 2026-09-06 — Reject stale mutable-union snapshots in copied predicates
+
+- State: Semantic review found that copying a mutated ordinary union or record must not reuse its initializer activity snapshot. That could falsely prove an optional borrow absent and hide E302. Root added rejection cases for both shapes; the compiler owner will use fresh unknown activity for mutable storage reads.
+- Validation: The new value/borrow interfaces are being integrated and are not yet build-qualified. Runtime is committed and validated. Existing native fixtures remain unchanged except coherent unsupported-boundary updates.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish mutable-read invalidation and scoped tag assumptions, compile the analysis interfaces, then execute targeted E302/E303/native cases and the 588-case oracle before the combined gate.
+
+### 2026-09-06 — Preserve loop resets and bound union fact construction
+
+- State: Runtime/tooling is committed as d3e41aa. Root added native loop cases for an outer nullable loan used on a later iteration and newly constructed optional loans across a toggled predicate. Independent resource review found a frontier-limit overshoot in the new union value helper; the compiler owner is fixing it during integration.
+- Validation: Runtime profiles and tool checks pass. New compiler code is incomplete; native union and oracle checks remain pending. Current STATUS distinguishes the previous completed milestone from active work so an interrupted handoff is unambiguous.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Bound variant/path fanout before allocation, complete scoped tag/origin integration, then run compiler native and budget regressions, the 588-case oracle and combined repository verification.
+
+### 2026-09-06 — Commit bounded scheduler and verification integration
+
+- State: The independently validated scheduler and tooling are committed, including fixed admission, round-robin selection, bounded pumping, cleanup-before-settlement and explicit join retry. Compiler union value/variant analysis is now being implemented; root owns new native coverage and current handoffs.
+- Validation: All runtime profiles pass with 11 scheduler cases and exact kernel/fatal probes; 12 runtime and 16 tooling Python tests pass. All 844 local links and staged whitespace checks pass. Compiler native union tests and full combined gate are still pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete scoped union origins/tag assumptions and coercion mapping, execute all 45 native groups and 588 oracle cases on a fresh compiler, then run the full repository gate and split compiler/coverage/handoff commits.
+
+### 2026-09-06 — Pass scheduler sanitizer and ownership review
+
+- State: Bounded scheduler admission, pumping, cleanup and explicit join pass all runtime profiles. Runtime rules and docs now state callback/ticket/storage lifetime, worker affinity, transition-only pump bounds and remaining structured-task limitations. Root review found no outstanding lifecycle defect.
+- Validation: 11 scheduler cases plus real admission refusal and exact fatal cleanup pass in debug/release/ASan/UBSan/LSan; existing cleanup/stack/context checks and ASan expired-local evidence remain green. Compiler union implementation is still pending, so the combined gate has not run for this milestone.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize runtime Python/link/whitespace checks and commit that coherent slice; continue union origin/tag integration and scoped loop facts, then run native compiler cases, oracle and the full combined gate.
+
+### 2026-09-06 — Cover nested discriminants without contradictory assumptions
+
+- State: Independent review identified that same-named optional fields in different outer record variants can share a frontend tag domain. Their construction relations must be conditioned on the outer variant; unconditional relations could hide a live-loan conflict. Root added accepted and E302 native coverage for this exact shape.
+- Validation: The 588-case oracle is prepared but not yet executed. Native compiler coverage now has 45 groups awaiting the union implementation. Scheduler debug/release and Python checks remain passing; sanitizer validation is progressing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Condition nested tag relations on active outer variants, preserve those conditions through retagging and restart, then run all native groups and the independent oracle; finish scheduler sanitizer and documentation checks.
+
+### 2026-09-06 — Pass bounded scheduler debug and release checks
+
+- State: The fixed-slot scheduler passes debug/release with round-robin selection, explicit settlement/join and cleanup that can suspend. Root review found no lifecycle defect; documentation will make borrowed callback storage, nonreentrant controls and transition-budget limits explicit.
+- Validation: 11 scheduler cases, real kernel ENOMEM admission/joined failure and exact fatal task-cleanup evidence pass in both profiles; all prior runtime suites pass. Twelve runtime Python regressions and 16 tooling tests pass. Sanitizers and compiler union implementation remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run scheduler ASan/UBSan/LSan, finish runtime docs, implement scoped union activity facts and retagging, then run new native compiler cases and the 588-case oracle before final integration.
+
+### 2026-09-06 — Integrate bounded scheduler verification scope
+
+- State: Scheduler core and 11 native cases now cover fixed-slot admission, bounded pumping, round-robin selection, settlement, cleanup suspension, stale/foreign tickets and explicit join retry. Tool descriptions include bounded scheduling while keeping structured child cancellation/join and DWARF separate.
+- Validation: 16 tooling regressions pass. Runtime scheduler compilation/profile checks are next; compiler union implementation remains in progress. The independent union oracle is ready with 588 cases and has not run against an unfinished build.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run runtime debug/release/sanitizers with strict failed-admission and cleanup evidence, complete compiler variant facts, then execute 44 native groups and the 588-case union oracle on a freshly completed compiler build.
+
+### 2026-09-06 — Keep variant assumptions local to binding lifetimes
+
+- State: Compiler design now attaches constructor/tag relations at immutable binding edges, so restarts discard iteration-specific assumptions. Root corrected the discarded optional-field output case to use a type predicate in matcher position; an expression ascription is not a boolean test.
+- Validation: Reference and parser inspection confirm suffix context determines predicate versus ascription. Existing source cases remain unchanged; new native tests still await union implementation. Round-robin selector is complete and runtime construction is progressing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement scoped variant assumptions and coercion paths, then check all new native cases; verify scheduler bounded pumping, stale tickets, retained allocation failures and cleanup-before-join.
+
+### 2026-09-06 — Implement round-robin task selection
+
+- State: Root filled runtime/src/task_policy.cpp after allowing time for the optional contribution. It scans the fixed span from the current cursor, wraps safely, skips nonrunnable slots and returns the span size when empty. The temporary placeholder and purpose comment were removed.
+- Validation: Selection code is ready for native lifecycle and bounded-pump tests. No scheduler execution claim is made yet; runtime implementation and compiler union analysis are still in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish scheduler admission, cleanup and explicit join, then verify selection/worker/stale-ticket boundaries; complete compiler union activity and run accepted/rejected native cases plus the independent oracle.
+
+### 2026-09-06 — Connect union activity to discriminant proofs
+
+- State: Compiler design now links immutable union activity to later discriminant tests, including null defaults and variant retagging by member identity. Payload-free type tests will not read borrow payloads. README and native examples describe the intended supported boundary; implementation and validation are still pending.
+- Validation: Independent review identified the required correlation between emission guards and later type-test guards; global assumptions must not leak across restart or mutable-predicate invalidation. Baseline compiler tests remain green.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement bounded variant facts and scoped invariants, verify optional projections and loop resets, finish scheduler lifecycle and task-selection policy, then run native and oracle checks before claiming the feature supported.
+
+### 2026-09-06 — Prepare bounded scheduler policy and refine discarded-slot coverage
+
+- State: The runtime now has a fixed-slot scheduler interface and an optional 5–10-line selection-policy contribution at runtime/src/task_policy.cpp:5. Its placeholder returns no runnable work until filled. Independent review corrected the discarded-only field test to use an explicit optional-field annotation, matching reference inference rules.
+- Validation: Baseline compiler tests pass; new union cases await implementation. Scheduler native execution has not started because admission/lifecycle code and the selection helper are incomplete. The language leaves task order unspecified; round-robin is the proposed implementation policy.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Allow time for the optional selection contribution while completing union origins and scheduler lifecycle; fill the default policy if declined/no response, then run native suites and the independent 500-case union oracle.
+
+### 2026-09-06 — Specify nullable borrow execution and rejection coverage
+
+- State: Root added optional-borrows.mwy and native cases for absent references, optional nested fields, reference and record union retagging, variant-specific owner writes, discarded result resets, live copies/equality and E303 escapes. Compiler and runtime implementations are in progress.
+- Validation: Baseline 80 library and 39 native groups pass. New cases are specifications awaiting active-variant analysis; scheduler scope and the optional selection-policy helper are still being prepared.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete union guard/origin propagation and review retagging by member identity; prepare scheduler admission/pump lifecycle, then execute the new native coverage and fill the bounded selection helper.
+
+### 2026-09-06 — Begin reference unions and bounded scheduling
+
+- State: The checkout is clean at 4273496. Compiler work targets immutable reference-containing unions, optional fields, coercions and guarded extraction; runtime work targets bounded worker-owned scheduling over pinned contexts. Root owns native coverage and both trackers; independent review covers variant/lifetime hazards.
+- Validation: The previous milestone passed all 14 repository checks. New compiler/runtime behavior is not yet implemented or validated. Function contracts, exclusive loans, full structured child trees and DWARF remain separate work.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement active-variant component origins and scheduler admission/lifecycle; prepare optional task-selection policy contribution, add native accepted/E302/E303 cases, and verify both profiles and sanitizer transitions.
+
 ### 2026-09-06 — Complete reference-record and context handoff
 
 - Completed: component borrow implementation is 0b24669, native coverage/example is 7816524, and pinned runtime/tooling is 3dbed45. Both STATUS snapshots contain current behavior, explicit gaps, evidence and ordered next steps; all prior checkpoints are preserved.
