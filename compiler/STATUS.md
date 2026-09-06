@@ -1,34 +1,33 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Contextual list candidates and unary union typing pass the final gate.
-Full v0.0.1 remains incomplete; no unfinished implementation or active workers remain.
-Inference: `1817ea4`; unary fix: `c6bf80a`; native coverage/example: `50283a5`.
-Runtime diagnostic design: `541747f`; existing native batch behavior: `4feecf8`.
+Updated: 2026-09-06. Owning runtime snapshots and generated failure evidence pass.
+Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
+Runtime: `d92f94c`; compiler implementation: `eb65cbd`; coverage/docs: `e01e25f`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: list literals can select one compatible expected list alternative using
-capacity, scalar range, typed elements and fresh list/record shapes. Pure contextual
-literals may be deferred; effectful typed values are checked once in source order.
-Proved ambiguity or no fit reports E207; all capacities being too small is E103.
-Unary operators now preserve the operand type before expected-union injection.
+Completed: generated P002 reports retain the operator, original once-evaluated
+operands, signed width/range, failure cause and source byte span. P006 appends its
+call site after message completion; nested panic/leave paths do not finish the
+outer diagnostic. Nonreturning calls execute arguments and the call before ending
+the continuation, so no impossible result reaches formatting or an enclosing call.
 
-Context-dependent effects/nested constraints that still need an unavailable proof
-remain B001 and need annotations. Element places/mutation, aliases, slices,
-reference/owned elements and general required evaluation remain unavailable.
-The runtime owning-diagnostic lifecycle is documented, not implemented. Generated
-programs still use the scalar runtime; generated scope exits, owning messages,
-cancellation, automatic propagation and DWARF remain pending.
-The unrelated untracked `examples/meow.mwy` is untouched and excluded from this work.
+The separate C++ runtime now owns bounded panic messages across callback/capture
+cleanup, task-slot reuse, close batches and retries. Views still require a retained
+owning snapshot. Generated programs continue to use the scalar runtime; generated
+cleanup/task integration, cancellation, richer diagnostic objects and DWARF remain
+pending. Existing contextual list and element-ownership limits are unchanged.
 
 ## Resume here
 
 1. Read this file, `README.md`, `AGENTS.md`, and `../COMPILER.md`.
 2. Inspect `git status --short` and recent commits; preserve existing work.
-3. Run `cargo test --manifest-path compiler/Cargo.toml` from the repository root.
-4. Run `python3 compiler/tests/conformance.py`; 13 unsupported cases are currently expected.
+3. Run `python3 -B tools/verify.py --compiler` from the root; it pins the build target
+   and actual compiler path for all compiler checks.
+4. Direct conformance uses `python3 -B compiler/tests/conformance.py --compiler
+   compiler/target/x86_64-unknown-linux-gnu/debug/meowy`; 13 unsupported cases remain.
 5. Consult the validation evidence below before claiming any gate passed.
 6. After each logical step, update `Next steps` and add a newest-first checkpoint
    to `STATUS_STEP_LOG.md`. Record findings, actual checks, blockers and continuation.
@@ -49,7 +48,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 17 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 83 native groups, 4 harness tests and 15 covered examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 88 native groups, 4 harness tests and 15 covered examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -171,9 +170,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   first-class function-pointer storage, captures and indirect calls remain unavailable.
 - Ambiguous numeric widths in an expected union report E207; bind a typed member.
   No silent width conversion is permitted. Float32 literals round directly to float32.
-- Interpolation streams at print/panic boundaries and does not allocate a string.
-  Arithmetic/panic report P002/P006 and exit; recovery, source spans and operand
-  evidence remain pending. Signed-minimum remainder by -1 is zero; division panics.
+- Interpolation streams at print/panic boundaries without allocating a string.
+  P002 retains operator, original operands, signed width/range, overflow versus
+  zero-divisor cause and the full expression byte span. Signed-minimum remainder
+  by -1 is zero; division panics. Integer diagnostics never re-evaluate operands.
+- P006 appends its call-site bytes only after all message parts finish. Nested
+  failure/leave paths keep already-streamed effects without appending an outer site
+  or terminator. Calls with result Never lower arguments and the call, then emit
+  unreachable and end the builder continuation. These text failures exit status 1;
+  recovery, source identities, structured evidence and replay remain pending.
 - Do not infer a block constant from its last emission: earlier paths may leave.
   Named blocks conservatively forget mutable proofs; restart writes into surviving
   outer result slots are B001. Loan loop fixed points exist; broader ownership and
@@ -202,69 +207,73 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   with per-call `reported` separate from cumulative counts. `report_full` retains
   the pending failed child and mark; release failure writes no detail for that
   child. Process every returned prefix before reusing the buffer. Summary-only
-  close retains the first diagnostic. Diagnostic text must outlive all waits,
-  retries and batch processing; no owned text, cancellation, automatic propagation,
-  generated scope exits or native unwinding is supplied.
+  close retains the first diagnostic. Panic values own 256 inline message bytes,
+  captured while source text is live; they preserve code, original length and a
+  truncation flag. Valid UTF-8 truncation keeps complete codepoints and fatal P008
+  prints an explicit original-length marker. Copies survive source destruction.
+- A message() view borrows that particular Panic/outcome value, so retaining a view
+  from a temporary join/close result is invalid. Operation names remain separately
+  borrowed/static. On this host Panic is 280 bytes, TaskSlot 6,264 and ScopeClose
+  720; the 17 task-slot snapshots add 4,352 bytes. These private layouts are not a
+  portable ABI or total stack budget. Generated scope exits, cancellation,
+  automatic propagation and native unwinding remain unimplemented.
 - Timeout supervision kills/reaps the entire compiler/application process group.
   B001 cannot hide a later fault or count as an expected language rejection.
 
 ## Validation evidence
 
-- Final `python3 -B tools/verify.py --all`: all 14 checks pass on the hardened source,
-  with explicit Cargo target/output and the actual compiler binary. Runtime sanitizer
-  execution ran outside sandbox/ptrace supervision; metadata checks remain distinct
-  from compiler execution and release qualification.
-- Rust: 114 library and 83 native groups pass. New coverage includes 3 candidate
-  groups, 1 unary checker group and 6 native groups. Clippy `-D warnings` and
-  formatting pass. The optimized compiler builds/runs `examples/list-unions.mwy`
-  in release with empty stderr and exact stdout `20\nmeowy\n300\n2\n`.
-- Python: 16 tooling, 14 runtime and 4 compiler-harness tests pass. Documentation
-  checks 851 local links; schemas/catalog and Vim/Neovim pass.
-- Runtime per debug/release/sanitized profile: 14 cleanup groups plus 2 fatal probes;
-  10 stack groups plus kernel ENOMEM and 2 guard faults; 10 context groups plus fatal
-  resumed cleanup; 25 scheduler groups plus admission/fatal/child/scope probes;
-  13 owned groups plus 3 exact fatal cleanup probes. ASan/UBSan/LSan and the
-  expired-fiber-local negative diagnosis pass. Runtime behavior did not change.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in debug/release.
-  `mixed_list` is required; unsupported core.Type, slices, callables and FFI remain
-  visible. Reference fixtures and conformance requirements were unchanged.
-- The semantic audit passed 1,080 scalar/capacity comparisons and 16 record/nested/
-  narrowing comparisons after the unary fix. It found no remaining mismatch.
-  Final declared-type/shape work charging was added afterward and passed focused
-  stress plus the complete gate. Temporary audit snapshots supplement committed tests.
-- Candidate tests cover unique and ambiguous capacities/types/ranges, later typed
-  elements, nested literals, fresh record defaults, typed record-primary copies,
-  original E201/E107/E216 errors, effects, early exits, bounded work and annotations
-  for explicitly unavailable contexts. Unary tests preserve widths and failure codes.
-- Existing suites retain bounded parser/Unicode, origin/loan, native layout,
-  arithmetic, safe output and process-supervision regressions. The runtime ownership
-  investigation was read-only; constructor-time copying, storage limits and P008
-  snapshot independence still need implementation and native evidence.
+- Final `python3 -B tools/verify.py --all`: all 14 checks pass on the finished source.
+  Cargo target/output and compiler identity are explicit. Runtime sanitizers ran
+  outside sandbox/ptrace supervision; source execution remains distinct from
+  metadata validation and release qualification.
+- Rust: 114 library and 88 native groups pass. Five new native groups cover typed
+  arithmetic evidence, operand effects, streamed panic sites, interruption and
+  direct Never continuations. The existing backend width/range group now requires
+  exact output for signed/unsigned 8/16/32/64-bit arithmetic. Clippy and formatting pass.
+- The optimized compiler passed four additional release probes with exact P002/P006
+  output, unsigned 64-bit operands and a nonreturning interpolation call. It builds
+  the final embedded scalar runtime; no scheduler linkage is implied by this check.
+- Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. The runtime
+  validator rejects missing/truncated/corrupted P008 evidence and wrong exits.
+  Documentation checks 851 local links; schemas/catalog and Vim/Neovim pass.
+- Runtime per debug/release/sanitized profile: 6 diagnostic groups plus exact fatal
+  truncation; 14 cleanup groups plus 2 fatal probes; 10 stack groups plus kernel
+  ENOMEM and 2 guard faults; 10 context groups plus fatal resumed cleanup;
+  25 scheduler groups plus admission/fatal/child/scope probes; 14 owned groups plus
+  4 exact fatal cleanup/lifetime probes. ASan/UBSan/LSan and the expired-fiber-local
+  negative diagnosis pass. Layout measurements match across all three profiles.
+- Message tests cover empty/NUL content, ASCII and UTF-8 cut boundaries, copies,
+  moves, overlapping replacement sources, callback/capture destruction, task-slot
+  reuse, close report buffers, failed release/report-full retries and P008 retaining
+  both causes after their original text is destroyed. No heap allocation was added.
+- The interrupted-message test exposed an existing F001 from formatting a Never
+  call result. The fixed continuation is covered directly and inside interpolation.
+  Arguments/earlier parts still run once; later calls/parts/sites do not run.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Reference
+  fixtures and requirements were unchanged. Earlier list-candidate audits and
+  resource-hardening evidence remain in the step log and committed tests.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
-  It was not repeated; glibc 2.31, minimum-kernel execution, bundled distribution
-  and full v0.0.1 remain unqualified. Prior evidence remains in the step log.
-- Git whitespace passes. `examples/meow.mwy` is unrelated untracked work and was
-  left untouched. Preserve the checksum-matching vendored fcontext.hpp EOF exception.
+  It was not repeated. Baseline kernel/glibc, bundled distribution, complete panic
+  artifacts and v0.0.1 remain unqualified. Git whitespace passes.
+- Preserve the unchanged vendored fcontext.hpp EOF exception and its checksum.
 
 ## Next steps
 
-1. Extend `src/list_context.rs` for remaining compound/context-dependent elements
-   and nested constraints. Keep once-only checking and actual/expected/source work
-   charging; verify unique candidates, genuine ambiguity, flow changes and escapes.
-2. Implement constructor-time owning panic text following `../runtime/README.md`.
-   Choose explicit storage/overflow policy and measure fixed slot/report growth;
-   test overwrite, copy independence, slot reuse, retries and both P008 causes.
-3. Add initialized element places, moves and cleanup edges before indexed mutation,
-   exclusive loans/reborrows, reference reassignment or owned collections. Preserve
-   reset/resource bounds and test suspended parent loans and exact-once cleanup.
-4. Extend borrow contracts for static/intrinsic sources and verified projections;
-   preserve all-input lifetime bounds and update no-return assumptions first.
-5. Add general required evaluation, effects, budgets and specialization; enable
-   type-helper and compile-effect/budget fixtures only after real compiler support.
-6. Generate payload layouts, move/drop and runtime mark/close calls while parents
-   live. Drain every failure batch and preserve diagnostic lifetimes and retries;
-   then add cancellation and pinned unwind support with interleaved cleanup tests.
-7. Build the project/module graph for adapters and Meowy libraries, then tooling,
-   artifacts and distribution qualification. Keep both trackers and step logs current.
-8. Keep the combined gate green and require conformance cases only when supported.
-   `--strict` needs zero unsupported cases and still covers only part of v0.0.1.
+1. Extend `src/list_context.rs` for remaining context-dependent compounds and nested
+   constraints; preserve single evaluation, charged work and truthful ambiguity.
+2. Add initialized element places, moves and cleanup before indexed mutation,
+   exclusive loans/reborrows, reference reassignment or owned collections. Keep
+   reset/resource bounds and test suspended loans and exact-once cleanup.
+3. Define generated payload and diagnostic layouts and connect scope-exit code to
+   runtime mark/close while parent storage lives. Retain owning outcomes, drain
+   every failure batch and preserve child/result/local cleanup order; then implement
+   cancellation and pinned unwinding with failure-during-cleanup evidence.
+4. Add diagnostic source identities, related spans and structured events/artifacts.
+   Keep prototype truncation visible and do not claim full replay from text output.
+5. Extend static/intrinsic borrow sources and verified projections only after
+   updating all-input lifetime bounds and no-return assumptions.
+6. Implement required evaluation/effects/budgets/specialization and the project/module
+   graph, enabling conformance fixtures only with actual execution/rejection support.
+   Continue into Meowy libraries, tooling and distribution qualification.
+7. Keep the combined gate green and both handoffs/logs current. Strict conformance
+   needs zero unsupported cases and still covers only part of v0.0.1 qualification.

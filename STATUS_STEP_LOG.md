@@ -6,6 +6,62 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Finalize owning-diagnostic restart handoff
+
+- State: Runtime d92f94c, compiler eb65cbd and coverage/docs e01e25f are committed. Both STATUS snapshots now describe owning messages, generated operand/site evidence, fixed nonreturning continuations, measured storage costs and ordered remaining work. Historical checkpoints stay in these logs; no implementation worker remains active.
+- Validation: Final source passes all 14 checks: 202 Rust tests, 35 Python tests, 851 local links, editors, schemas/catalog and runtime sanitizer/fatal probes. Four optimized-compiler release failure/effect probes match exact output. Conformance remains 10 passed, 13 unsupported, 0 failed. Final documentation links and Git whitespace pass.
+- Blockers: no unfinished implementation or failing checks. Generated cleanup/task integration, remaining contextual inference and complete release diagnostics are still unimplemented; full v0.0.1 remains unqualified.
+- Next steps: Extend contextual constraints and element ownership, define generated payload/diagnostic layouts and scope cleanup while parents remain alive, then add richer source/event identities, cancellation and unwinding. Follow the ordered STATUS steps and retain owning outcomes rather than views into temporaries.
+
+### 2026-09-06 — Commit and verify owning diagnostics end to end
+
+- State: Runtime snapshots are d92f94c; generated evidence/nonreturning lowering is eb65cbd; native coverage/docs are e01e25f. All source work is committed. The original unrelated meow.mwy was absent at the start of this turn and remains absent; no user files were changed.
+- Validation: Final combined gate passed all 14 checks with 202 Rust tests, 35 Python tests and 851 local links. The optimized compiler passed four release probes with exact P002/P006 output, unsigned64 operands and nonreturning-message effects. Runtime sanitizer profiles and layout checks pass; conformance remains 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current STATUS snapshots and explicit ownership/diagnostic limits, preserve step history, validate final links/whitespace and commit tracking. Continue with remaining contextual inference, element ownership, generated cleanup/task integration and richer diagnostic identities.
+
+### 2026-09-06 — Pass the combined owning-diagnostic gate
+
+- State: Owning runtime snapshots, enriched generated P002/P006 evidence and nonreturning-call continuations are complete. Runtime behavior is committed as d92f94c; compiler code and regression/documentation changes are ready for focused commits. No source workers or incomplete implementation files remain.
+- Validation: All 14 repository checks passed: 114 library plus 88 native groups, 35 Python tests, 851 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/ASan/UBSan/LSan passes six diagnostic groups, 14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups, with exact fatal/lifetime probes. Conformance is 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify P002/P006/never-call evidence using the optimized compiler, commit backend changes separately from native coverage/docs, replace active-work notes with the current snapshot and next steps, then commit tracking and confirm the working tree.
+
+### 2026-09-06 — Finish generated diagnostic evidence and nonreturning continuations
+
+- State: Runtime snapshots are committed as d92f94c. Compiler P002 now carries original operands, operator, signed width/range, cause and byte span; P006 appends its site only after message completion. Calls returning never execute their arguments and call before terminating the continuation, preventing impossible-result formatting. All source workers are finished.
+- Validation: Compiler library 114, prior 87 native groups and the new direct never-call group passed focused validation; final native total is 88. Clippy, formatting and whitespace pass. Runtime full debug/release/sanitized gate and 15 Python regressions passed. Final combined gate is now running.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 repository checks on the finished source, verify optimized compiler failure evidence, split compiler implementation from native regression/documentation coverage, and update the current handoff with owned-storage and remaining cleanup/contextual next steps.
+
+### 2026-09-06 — Commit owning runtime snapshots and diagnose a nonreturning call
+
+- State: Owning runtime panic messages are committed as d92f94c. Compiler operand/span diagnostics passed focused checks, but an interrupted interpolation found an existing F001 when a never-returning function result was formatted. The backend call continuation is being corrected; source checker semantics remain unchanged.
+- Validation: Runtime debug/release/sanitized profiles, exact truncation/lifetime P008 probes, layout comparison and 15 Python regressions pass. Compiler width/range matrix and five native panic groups pass; full compiler/combined gates remain pending until the nonreturning-call regression is fixed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify nonreturning calls preserve earlier argument/message effects and stop formatting, finish the compiler suite and combined gate, then commit compiler implementation/coverage and the final handoff.
+
+### 2026-09-06 — Validate owning runtime messages across all profiles
+
+- State: Owning Panic messages now survive local/capture destruction, outcome copies, report-full/release retries and task-slot reuse. Truncated messages preserve code/original length and report an explicit P008 suffix. Root and reviewer found no runtime blocker; documentation must keep message() view lifetime distinct from owned snapshot lifetime.
+- Validation: Full native runtime gate passed debug/release/ASan/UBSan/LSan: six diagnostic groups and exact truncation, 14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with four owned fatal probes. The required expired-fiber-local negative probe passed. Layout was identical in all profiles. Compiler P002/P006 focused validation is still in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish runtime docs and commit that behavior, complete generated arithmetic/panic evidence tests, run the final combined gate and optimized compiler checks, then commit compiler changes/coverage and the current handoff with next steps.
+
+### 2026-09-06 — Add owning-message boundary and harness checks
+
+- State: Owning Panic stores 256 inline bytes with original length and visible UTF-8-safe truncation. Root added six primitive diagnostic groups, exact fatal-truncation validation and per-profile layout comparison to the runtime harness. Task/owned lifetime integration and generated P002/P006 evidence remain in progress.
+- Validation: Baseline 114 library plus 83 native groups passed. New diagnostic debug executable passes six groups; measured Panic 280, TaskOutcome 312, TaskSlot 6264, TaskInfo 392, Joined 344, ChildFailure 336 and ScopeClose 720 bytes. All 15 runtime Python regressions pass. Full runtime profiles and new compiler diagnostics are not yet validated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish callback/capture lifetime and retry integration tests, run exact P008 probes and sanitizers, finish generated operand/span evidence, then run the combined gate and split implementation from coverage/tracking commits.
+
+### 2026-09-06 — Begin owning runtime diagnostics and generated failure evidence
+
+- State: The checkout starts clean at f33dd51; the previously untracked meow.mwy is no longer present and is not being recreated. Runtime work now implements constructor-time owning Panic messages with bounded storage and visible truncation. Compiler work enriches generated P002/P006 evidence. Root owns a new diagnostic-value suite, harness integration and both trackers.
+- Validation: Previous milestone passed all 14 checks with 197 Rust tests. Baseline compiler regressions are running; no new diagnostic behavior is validated yet. Collection contextual limits and generated cleanup/cancellation remain separate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize the owning Panic API and truncation marker, add primitive/copy/UTF-8 and task lifetime tests, measure storage growth, enrich arithmetic/panic source evidence, then run runtime sanitizer and combined gates before focused commits.
+
 ### 2026-09-06 — Finalize the contextual-list handoff
 
 - State: Unary fix c6bf80a, inference 1817ea4, native coverage/example 50283a5 and runtime diagnostic design 541747f are committed. Both STATUS files now describe current behavior, explicit contextual limits, validation and ordered next steps. Historical checkpoints remain here. All implementation workers have finished; unrelated examples/meow.mwy is preserved outside the commits.
