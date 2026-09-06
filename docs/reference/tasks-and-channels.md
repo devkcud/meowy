@@ -239,8 +239,8 @@ iterating a group never changes its scheduling policy. Completion-order streamin
 can be expressed with a channel carrying tagged results while the group continues
 to own and join the workers.
 
-See the [ordered task](../programs/tasks.mwy) and
-[producer/consumer](../programs/channel.mwy) programs for complete flows.
+See the [ordered task](../programs/tasks/main.mwy) and
+[producer/consumer](../programs/channel/main.mwy) programs for complete flows.
 
 The [standard library task/channel APIs](stdlib/tasks-and-channels.md) list
 result types and endpoint operations. [Time](stdlib/time-and-date.md) defines

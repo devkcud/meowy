@@ -282,7 +282,7 @@ Unwinding across a foreign frame is forbidden. Callbacks catch task panics at a
 meowy boundary and translate them into the foreign protocol. Variadic functions
 require a fixed-signature wrapper. Reinterpreting native bytes as a record is
 unsafe; decoding fields from a byte slice is the portable alternative shown in
-the [packet program](../programs/packet.mwy).
+the [packet program](../programs/packet/codec/header.mwy).
 
 ## Larger integrations
 

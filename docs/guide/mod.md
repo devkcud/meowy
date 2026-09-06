@@ -10,19 +10,31 @@ are configuration values, not language keywords.
 
 ## Start with the sample
 
-The [sample manifest](mod.sample.mwy) configures the worked packet program and
-exports its decoder. From this repository's root, copy the template into place:
+The [sample manifest](mod.sample.mwy) describes the worked packet project's
+entry, decoder export, and `wire` path alias. That [project](../programs/packet/README.md)
+already has its own `mod.mwy`; from the repository root:
 
 ```sh
-cp docs/guide/mod.sample.mwy mod.mwy
+cd docs/programs/packet
 meowy check
 meowy run
 ```
 
-The template lives beside this guide, but its paths are written for the installed
-root `mod.mwy`. Its `programs` alias points to `./docs/programs`, and its build
-entry is `./docs/programs/main.mwy`. The `.sample.mwy` filename is not discovered
-as a project manifest automatically.
+Its local layout is:
+
+```text
+packet/
+  mod.mwy
+  main.mwy
+  codec/
+    header.mwy
+```
+
+For a fresh project with that layout, copy the sample into its root as `mod.mwy`.
+The template's `wire` alias points to `./codec`, its entry is `./main.mwy`, and
+its export imports `@"wire/header.mwy"`. Paths are relative to the installed
+manifest, wherever the project is copied. The `.sample.mwy` filename itself is
+not discovered as a project manifest automatically.
 
 For another project, use that project's source paths. A small command-line
 project might have this layout:
@@ -241,7 +253,6 @@ uses only the layout settings. The [gatostyle guide](gatostyle.md) defines every
 option, custom project rules, scoped exceptions, and the repair contract.
 
 Omitting the block selects the structured preset. Use `preset : "none"` to
-start with all style checks disabled. The sample excludes
-`./editor/nvim/tests/fixtures` because those fixtures intentionally contain
-invalid source for highlighting tests; exclusions do not affect language checks
-or the editor's regression script.
+start with all style checks disabled. The sample explicitly chooses structured.
+Each [worked project](../programs/README.md) owns its own policy; checking one
+project does not select sibling projects or the editor's lexical fixtures.

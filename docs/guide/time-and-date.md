@@ -1,6 +1,6 @@
 # Time, calendars, and a small CLI
 
-[Documentation index](../README.md) · [Standard library](../reference/stdlib/README.md) · [Complete calendar CLI](../programs/calendar-cli.mwy)
+[Documentation index](../README.md) · [Standard library](../reference/stdlib/README.md) · [Complete calendar CLI](../programs/calendar-cli/main.mwy)
 
 Use `time` for elapsed intervals and deadlines. Use `date` when a person means a
 particular date, local hour, month, or year. A calendar selects date labels; a time
@@ -135,12 +135,12 @@ partially replacing its contents. Gregorian RFC3339 output instead uses
 
 ## Turn it into a command-line application
 
-[calendar-cli.mwy](../programs/calendar-cli.mwy) describes its options with `cli`,
+[Calendar CLI](../programs/calendar-cli/README.md) describes its options with `cli`,
 reads argv through `process`, converts the date, and writes through `io` and `fmt`.
 The parser produces typed fields and help/error values for explicit handling:
 
 ```console
-$ meowy run docs/programs/calendar-cli.mwy -- --calendar chinese 2026-02-17
+$ meowy run docs/programs/calendar-cli/main.mwy -- --calendar chinese 2026-02-17
 ```
 
 The application's output is:

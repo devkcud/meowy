@@ -1,0 +1,14 @@
+-> build : {
+    -> entry : "./main.mwy"
+    -> profile : "debug"
+    -> executor : {
+        -> workers : 2
+        -> max_tasks : 4
+        -> stack_bytes : 65_536
+        -> allocator : "system"
+    }
+}
+
+-> gatostyle : {
+    -> preset : "structured"
+}

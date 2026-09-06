@@ -1,0 +1,8 @@
+-> build : {
+    -> entry : "./main.mwy"
+    -> profile : "debug"
+}
+
+-> gatostyle : {
+    -> preset : "structured"
+}

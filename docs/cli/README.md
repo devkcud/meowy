@@ -43,9 +43,9 @@ are shell arguments; they do not introduce reserved words into meowy source.
 Start with a file when trying a small program:
 
 ```sh
-meowy check docs/programs/age.mwy
-meowy run docs/programs/age.mwy
-meowy build docs/programs/main.mwy --profile release --output build/packet
+meowy check docs/programs/age/main.mwy
+meowy run docs/programs/age/main.mwy
+meowy build docs/programs/packet/main.mwy --profile release --output build/packet
 ```
 
 `check` resolves imports, evaluates compile-time declarations, and validates types,

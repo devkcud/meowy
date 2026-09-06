@@ -88,7 +88,7 @@ a saved executable records which effects it can reproduce.
 ## Start with a complete program
 
 Follow the [time and calendar guide](../../guide/time-and-date.md) to distinguish
-elapsed time from civil arithmetic. The [calendar CLI](../../programs/calendar-cli.mwy)
+elapsed time from civil arithmetic. The [calendar CLI](../../programs/calendar-cli/main.mwy)
 combines typed options, explicit argv storage, calendar conversion, and writer
 errors. The other [worked programs](../../programs/README.md) show numeric parsing,
 binary decoding, task results, and channel ownership.

@@ -1,0 +1,32 @@
+cli : @"cli"
+
+-> app : cli.command({
+    -> name : "moon"
+    -> summary : "Show a Gregorian date in another calendar."
+    -> version : "0.1.0"
+    -> options : [
+        cli.option<string>({
+            -> name : "calendar"
+            -> long : "calendar"
+            -> short : "c"
+            -> help : "Calendar used for the result."
+            -> default : "gregorian"
+            -> choices : [
+                "gregorian", "julian", "hebrew", "chinese",
+                "islamic-civil", "buddhist"
+            ]
+        }),
+        cli.flag({
+            -> name : "verbose"
+            -> long : "verbose"
+            -> short : "v"
+            -> help : "Include the selected rule-data version."
+        })
+    ]
+    -> arguments : [
+        cli.argument<string>({
+            -> name : "day"
+            -> help : "Gregorian date in YYYY-MM-DD form."
+        })
+    ]
+})

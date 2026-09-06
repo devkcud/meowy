@@ -111,7 +111,8 @@ vim -Nu NONE -i NONE -n -es -S editor/nvim/tests/run.vim
 
 The [regression script](tests/run.vim) checks actual syntax groups against a
 [focused fixture](tests/fixtures/syntax.mwy), file detection, buffer settings,
-reloading, option cleanup, and loading each documented program and the sample
+reloading, option cleanup, and recursively loading each worked project's sources,
+helper modules, and manifests, plus the guide's sample
 [manifest](../../docs/guide/mod.sample.mwy). It exits unsuccessfully on failed
 assertions or editor errors.
 

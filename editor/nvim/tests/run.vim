@@ -213,7 +213,11 @@ call assert_equal('', &l:filetype)
 filetype plugin on
 
 " Exercise the actual documented source, not just the focused lexer fixture.
-for s:file in glob(s:root . '/docs/programs/*.mwy', 0, 1) + [s:root . '/docs/guide/mod.sample.mwy']
+let s:program_sources = glob(s:root . '/docs/programs/**/*.mwy', 0, 1)
+call assert_false(empty(s:program_sources), 'Worked project sources were discovered')
+call assert_false(empty(glob(s:root . '/docs/programs/*/mod.mwy', 0, 1)),
+      \ 'Worked project manifests were discovered')
+for s:file in s:program_sources + [s:root . '/docs/guide/mod.sample.mwy']
   call assert_true(filereadable(s:file), 'Documented source exists: ' . s:file)
   execute 'edit ' . fnameescape(s:file)
   call assert_equal('meowy', &l:filetype, s:file)

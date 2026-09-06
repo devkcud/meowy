@@ -1,0 +1,33 @@
+channel : @"channel"
+
+-> produce <null> : (sender <channel.Sender<uint32>>) 'work {
+    output := sender
+    value <uint32> := 1
+
+    'loop {
+        | value > 4 | 'loop.leave()
+
+        sent : output.send(value)
+        | sent <channel.Rejected<uint32>> | 'work.leave()
+
+        value = value + 1
+        'loop.restart()
+    }
+
+    output.close()
+}
+
+-> consume <uint32> : (receiver <channel.Receiver<uint32>>) {
+    input := receiver
+    total <uint32> := 0
+
+    'loop {
+        item : input.receive()
+        | item <channel.Closed> | 'loop.leave()
+
+        total = total + item.value
+        'loop.restart()
+    }
+
+    -> total
+}

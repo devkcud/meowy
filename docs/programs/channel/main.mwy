@@ -1,0 +1,45 @@
+channel : @"channel"
+debug : @"debug"
+memory : @"memory"
+time : @"time"
+
+workers : @"./workers.mwy"
+
+status <int32> := 0
+
+'main {
+    endpoints : channel.bounded<uint32>(memory.heap, 2)
+    | endpoints <memory.AllocationFailure> | {
+        debug.print("Cannot allocate the channel")
+        status = 1
+        'main.leave()
+    }
+
+    deadline : time.after(time.Second)
+    producer : >> workers.produce(endpoints.sender)
+    producer.deadline(deadline)
+    consumer : >> workers.consume(endpoints.receiver)
+    consumer.deadline(deadline)
+
+    produced : << producer
+    consumed : << consumer
+
+    | produced <error> | {
+        debug.print("Producer: {produced}")
+        status = 1
+    }
+    | consumed <error> | {
+        debug.print("Consumer: {consumed}")
+        status = 1
+        'main.leave()
+    }
+
+    | status != 0 | {
+        debug.print("Partial sum: {consumed}")
+        'main.leave()
+    }
+
+    debug.print("Sum: {consumed}")
+}
+
+-> status

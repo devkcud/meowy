@@ -1,0 +1,18 @@
+-> import : {
+    -> aliases : {
+        -> wire : "./codec"
+    }
+}
+
+-> export : {
+    -> packet : @"wire/header.mwy"
+}
+
+-> build : {
+    -> entry : "./main.mwy"
+    -> profile : "debug"
+}
+
+-> gatostyle : {
+    -> preset : "structured"
+}

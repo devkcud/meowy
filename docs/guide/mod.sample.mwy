@@ -1,34 +1,30 @@
-# Copy this template to mod.mwy at the repository root.
-  Paths below are relative to that installed mod.mwy, not this guide directory.
+# Copy this template to mod.mwy in a project containing main.mwy and codec/header.mwy.
+  Paths are relative to that project root, not to this guide directory.
+  The worked packet project already includes this configuration.
 #
 
-# Local source prefixes and package dependencies share the import configuration. #
-# Foundational modules such as debug, strings, and tasks need no dependency entry. #
 -> import : {
     -> aliases : {
-        -> programs : "./docs/programs"
+        -> wire : "./codec"
     }
 }
 
 -> export : {
-    -> packet : @"programs/packet.mwy"
+    -> packet : @"wire/header.mwy"
 }
 
 -> build : {
-    -> entry : "./docs/programs/main.mwy"
+    -> entry : "./main.mwy"
     -> profile : "debug"
 }
 
-# Style runs skip the editor's deliberately invalid lexical fixtures. #
 -> gatostyle : {
     -> preset : "structured"
-    -> exclude : ["./editor/nvim/tests/fixtures"]
 }
 
 # Package dependency records belong under import, beside the aliases table.
   A local package uses path; a local source directory goes in import.aliases.
-  Remote dependencies are keyed by their local package name.
-  Each remote record contains fetch and exactly one of hash, tag, or ref.
+  Remote dependencies contain fetch and exactly one of hash, tag, or ref.
   hash is a full commit identifier; tag and ref resolve through mod.lock.
-  See docs/guide/mod.md for setup and docs/reference/modules-and-ffi.md for rules.
+  See mod.md beside this template for the full configuration guide.
 #

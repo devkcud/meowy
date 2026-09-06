@@ -222,7 +222,7 @@ explicit empty string, then choose argv, configuration, or a built-in value in
 that order. A `flag` with default false deliberately does not preserve an
 absent/false distinction; use `option<boolean>` when that distinction matters.
 
-The [complete calendar CLI](../../programs/calendar-cli.mwy) shows these choices
+The [complete calendar CLI](../../programs/calendar-cli/main.mwy) shows these choices
 together, with an explanation in the [guide](../../guide/time-and-date.md).
 
 This separation also makes tests straightforward: pass a literal argument slice,

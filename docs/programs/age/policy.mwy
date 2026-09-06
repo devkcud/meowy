@@ -1,12 +1,11 @@
-debug : @"debug"
 strings : @"strings"
 
-<Options> : <{
+-> <Options> : <{
     minimum <uint8>
     maximum <uint8>
 }>
 
-describe <string> : (text <string>, options <Options>) 'result {
+-> describe <string> : (text <string>, options <Options>) 'result {
     age : strings.to_uint8(text)
 
     | age <error> | {
@@ -26,13 +25,3 @@ describe <string> : (text <string>, options <Options>) 'result {
 
     -> "Welcome"
 }
-
-options <Options> : {
-    -> minimum : 18
-    -> maximum : 100
-}
-
-debug.print(describe("24", options))
-debug.print(describe("17", options))
-debug.print(describe("101", options))
-debug.print(describe("twenty", options))

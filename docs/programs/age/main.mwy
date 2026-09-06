@@ -1,0 +1,12 @@
+debug : @"debug"
+policy : @"./policy.mwy"
+
+options <policy.Options> : {
+    -> minimum : 18
+    -> maximum : 100
+}
+
+debug.print(policy.describe("24", options))
+debug.print(policy.describe("17", options))
+debug.print(policy.describe("101", options))
+debug.print(policy.describe("twenty", options))

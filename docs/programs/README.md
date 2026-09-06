@@ -1,125 +1,71 @@
-# Worked programs
+# Worked projects
 
-[Documentation index](../README.md)
+[Documentation index](../README.md) · [Standard library](../reference/stdlib/README.md)
 
-These small programs share the reference's syntax and library contracts. Their
-expected behavior is explained below, including failure paths and storage costs.
-All imports resolve to a foundational module or a companion file in this directory.
+Each directory is a self-contained meowy project with its own `mod.mwy`, entry,
+source files, and README. There is no shared manifest to copy or edit before
+switching examples. Foundational imports need no package installation, and local
+helper modules stay inside their project.
 
-The [sample manifest](../guide/mod.sample.mwy), copied to the repository root as
-`mod.mwy`, selects `main.mwy` as the entry and exports the packet module through
-its `programs` path alias. The [manifest guide](../guide/mod.md) explains the setup.
-To select another listing, set `build.entry` to that file's path.
-The task and channel programs additionally require an
-[executor configuration](../reference/modules-and-ffi.md#build-settings).
-The [CLI guide](../cli/README.md#check-build-and-run) covers entry selection and
-the check, build, and run commands.
+## Pick a project
 
-## Validate an age
+| Project | What it combines | Inputs and effects |
+| --- | --- | --- |
+| [Age validation](age/README.md) | Typed policy module, decimal parsing, union narrowing, named exits | Four fixed inputs; diagnostic output |
+| [Packet decoder](packet/README.md) | Import aliases, package exports, borrowed wire bytes, explicit widening/shifts | Valid and truncated inline headers |
+| [Ordered tasks](tasks/README.md) | Bounded groups, module callables, ordered outcomes, deadlines | Explicit executor; three child tasks |
+| [Bounded channel](channel/README.md) | Endpoint moves, backpressure, closure, partial-result handling | Explicit queue allocation and executor |
+| [Calendar CLI](calendar-cli/README.md) | Typed options, generated help, calendar conversion, writer errors | Argv; six calendar profiles |
 
-[age.mwy](age.mwy) parses text once, keeps the parsed byte separate from the input,
-and validates both bounds. Its output is:
+Start with age and packet for parsing, types, and module boundaries. Tasks
+and channel expose concurrency and ownership. Calendar CLI combines typed
+arguments with calendar conversion and explicit writer results.
 
-```text
-Welcome
-Below the minimum age
-Above the maximum age
-Enter a whole number from 0 to 255
+## Run one project
+
+From the repository root:
+
+```sh
+cd docs/programs/calendar-cli
+meowy check
+meowy run -- --calendar chinese 2026-02-17
+meowy run -- --help
 ```
 
-| Input                                | Result                            |
-| ------------------------------------ | --------------------------------- |
-| `"18"` or `"100"`                    | Accepted; endpoints are inclusive |
-| `"17"`                               | Below the minimum                 |
-| `"101"`                              | Above the maximum                 |
-| `"256"`, `"-1"`, `"twenty"`, or `""` | Parse error                       |
+Or select an entry from the repository root:
 
-The options contract requires `minimum <= maximum`; the supplied options satisfy
-it. All returned text is static borrowed storage. Each rejection emits to the
-function's labeled body and leaves it, so no path emits twice. See
-[union narrowing](../reference/types.md#unions-and-narrowing).
-
-## Decode a binary header
-
-[packet.mwy](packet.mwy) exports a decoder; [main.mwy](main.mwy) supplies bytes and
-formats its result. The custom wire format is four bytes:
-
-| Byte offset | meowy position | Meaning                   |
-| ----------- | -------------- | ------------------------- |
-| 0           | 1              | Version                   |
-| 1           | 2              | Flags                     |
-| 2           | 3              | High byte of payload size |
-| 3           | 4              | Low byte of payload size  |
-
-The size is big-endian. The input `[1, 0, 1, 44]` produces version `1`, flags `0`,
-and payload size `300`. Fewer than four bytes produce `Truncated` with the
-required and actual lengths. Extra bytes are permitted; this routine reads the
-header only, without validating the availability of the announced payload.
-
-The decoder uses a borrowed slice, explicit widening, and a shift. It allocates
-no dynamic storage and does not depend on native record padding, alignment, or
-host endianness. It returns a closed structural union, demonstrating that a
-domain alternative need not be an exception or an erased error object.
-
-## Collect ordered work
-
-[tasks.mwy](tasks.mwy) submits three squares into a group with capacity four. If
-all tasks complete before cancellation, its output is:
-
-```text
-Result 1: 4
-Result 2: 9
-Result 3: 16
+```sh
+meowy run docs/programs/calendar-cli/main.mwy -- -c chinese 2026-02-17
 ```
 
-Positions follow submission order. A deadline, panic, or executor admission
-failure occupies the corresponding position with its typed error. Group capacity
-is separate from worker count and stack storage. The group is joined once before
-results are examined.
+The CLI finds the nearest `mod.mwy` from that entry. It loads that project's
+aliases, profile, and executor settings. The application's working directory
+remains the shell's working directory: a file argument such as `sample.txt` is
+resolved there.
 
-The result list is read by reference because task diagnostics can own trace
-storage. This avoids copying a non-copyable error payload. All outcomes and their
-resources remain owned by the result list until its scope ends.
+Each README provides commands, expected behavior, failure cases, and storage
+costs. Task outcomes can depend on admission, deadlines, and scheduling.
 
-## Send bounded messages
+## Build, inspect, and experiment
 
-[channel.mwy](channel.mwy) sends `1`, `2`, `3`, and `4` through a queue that holds
-two messages. A producer and consumer run concurrently; the parent joins both.
-On normal completion it prints `Sum: 10`.
+Inside any project:
 
-The parent moves each endpoint into exactly one child and keeps no sender clone.
-Producer completion closes the last sender, the consumer drains the queue, and
-then `Closed` ends its loop. The parent can join the producer first because a
-separately running consumer drains the queue. Both use a common deadline.
-
-If a child cannot start, its captures are released: dropping the sender closes
-the send side, and dropping the receiver wakes a blocked producer with rejection.
-The parent observes both join outcomes. A partial sum can be printed alongside a
-producer error; applications requiring all-or-nothing results must reject that
-partial sum explicitly.
-
-The only application allocation is the explicit bounded queue. Task scheduling
-has its separately configured runtime storage cost. No message allocates queue
-storage, and neither child borrows stack data from a scope that could disappear.
-
-## Convert calendars from the command line
-
-[calendar-cli.mwy](calendar-cli.mwy) accepts a Gregorian date plus a `--calendar`
-option (short form `-c`). `cli.command` defines typed fields, accepted calendar
-names, help text, and a version using ordinary records. `cli.parse` returns the
-parsed fields or a help/version/usage result; the program handles each explicitly.
-
-```console
-$ meowy run docs/programs/calendar-cli.mwy -- -c chinese 2026-02-17
+```sh
+meowy build --profile release
+meowy style check
 ```
 
-The application prints `chinese:2026-M01-01`. `-v` includes the calendar data
-version. Help and valid conversions give status 0; bad options, dates, and
-unsupported ranges give status 2. Argv acquisition or output failure gives status
-1. See the [guide](../guide/time-and-date.md) for the conversion's source and the
-[CLI contract](../reference/stdlib/cli.md) for option parsing and help behavior.
+Build output goes under that project's `build/` directory. Task projects include
+explicit executor budgets in their own manifests; changing a group's capacity
+does not change the worker count or task admission limit. Packet also exposes its
+decoder through its manifest's `export` facade, with the entry kept separate.
 
-The argv owner uses `memory.heap` explicitly and outlives all parsed string views.
-Command metadata, parsing, and date conversion require no heap allocation. Output
-streams through supplied writer callables; the program checks their failures and
-emits a single process status at the entry boundary.
+To capture scheduling and supported external inputs while exploring a failure,
+use `meowy run --record-replay`, then the [diagnostic workflow](../cli/README.md#reproduce-a-failure).
+A successfully handled application error and a captured runtime panic have
+different meanings; the project README states which result to expect.
+
+Keep experiments in the chosen project. Copying one directory carries its manifest,
+helpers, and fixtures with it; another worked project is never a hidden dependency.
+The [manifest guide](../guide/mod.md) explains how to change entry paths, local
+aliases, public exports, and coding-style policy for a project of your own.

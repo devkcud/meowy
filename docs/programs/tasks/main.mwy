@@ -1,16 +1,16 @@
 debug : @"debug"
 time : @"time"
 
-square <int32> : (value <int32>) {
-    -> value * value
-}
+work : @"./work.mwy"
+
+status <int32> := 0
 
 &squares<int32[4]>
 &squares.deadline(time.after(time.Second))
 
-&squares >> square(2)
-&squares >> square(3)
-&squares >> square(4)
+&squares >> work.square(2)
+&squares >> work.square(3)
+&squares >> work.square(4)
 
 results : << &squares
 index <usize> := 1
@@ -20,6 +20,7 @@ index <usize> := 1
 
     result : &results[index]
     | *result <error> | {
+        status = 1
         debug.print("Result {index}: {*result}")
         index = index + 1
         'loop.restart()
@@ -29,3 +30,5 @@ index <usize> := 1
     index = index + 1
     'loop.restart()
 }
+
+-> status

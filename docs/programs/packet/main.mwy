@@ -1,0 +1,19 @@
+debug : @"debug"
+packet : @"wire/header.mwy"
+
+show <null> : (data <uint8[]>) 'result {
+    header : packet.read_header(data)
+    | header <packet.Truncated> | {
+        debug.print("Truncated header: need {header.expected} bytes; got {header.actual}")
+        'result.leave()
+    }
+
+    debug.print("Version: {header.version}")
+    debug.print("Flags: {header.flags}")
+    debug.print("Payload size: {header.payload_size}")
+}
+
+complete <uint8[4]> : [1, 0, 1, 44]
+short <uint8[2]> : [1, 0]
+show(complete.slice())
+show(short.slice())
