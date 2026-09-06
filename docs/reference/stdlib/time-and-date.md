@@ -122,11 +122,13 @@ into a caller-owned `<uint8[N]>` list and returns a borrowed `<string>` or
 | `time.clock_info()`         | Record                 | `resolution <Duration>` and `includes_suspend <boolean>`               |
 
 The monotonic clock is nondecreasing and unaffected by setting the civil clock.
-Its epoch has no public calendar meaning. A host providing `time` must initialize
-a monotonic source before program entry. Its resolution and whether it advances
-during machine suspend are target/runtime properties exposed by `clock_info` and
-recorded in diagnostics. Nanosecond representation does not promise nanosecond
-hardware resolution.
+Its epoch has no public calendar meaning. A program with reachable clock, wait,
+or timer operations must initialize its monotonic source before any module
+initializer uses it and before program entry. Using only duration values and
+arithmetic does not initialize a clock or start an executor. The clock's
+resolution and whether it advances during machine suspend are target/runtime
+properties exposed by `clock_info` and recorded in diagnostics. Nanosecond
+representation does not promise nanosecond hardware resolution.
 
 An `Instant` is valid only in its originating runtime clock domain, including
 that runtime's child tasks. There is no portable byte constructor, Unix conversion,
@@ -250,9 +252,19 @@ always nonnegative and less than one second: half a second before the epoch is
 civil-clock rules. `date.ZoneDatabaseVersion` identifies the bundled release;
 build records also retain its content digest. Lookup performs no network or
 ambient filesystem access, allocates no heap storage, and never consults `TZ` or
-a machine-local default. Importing named-zone support brings its immutable data
-into the program's build inputs. Updating it is an explicit toolchain/library
-change; future civil-time results may change with those rules.
+a machine-local default. Named-zone lookup makes the bundled rules explicit build
+inputs. Updating them is an explicit toolchain/library change; future civil-time
+results may change with those rules.
+
+Build input identity is distinct from binary retention. Importing `date`, using
+`date.UTC` or a fixed offset, or reading `ZoneDatabaseVersion` does not by itself
+require the named-zone database in the executable. A reachable `date.zone(name)`
+with an unconstrained runtime name retains lookup support for every bundled name;
+optimization cannot silently make a supported name become `UnknownZone`. A
+constant lookup or a runtime name proven to come from a finite set may retain
+less data only with equivalent behavior for every reachable use.
+[Memory and binary optimization](../optimization.md)
+explains how these dependencies connect to the linker and to static storage.
 
 A fixed offset does not express daylight-saving transitions. An RFC timestamp's
 numeric offset cannot recover an IANA zone name. Persist a `Timestamp` for an

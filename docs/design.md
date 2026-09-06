@@ -58,6 +58,11 @@ One-based indexing remains part of the language. Binary offsets are translated
 explicitly, and raw pointers do not reuse list indexing as unchecked arithmetic.
 Large value copies are possible and visible; references avoid them when needed.
 
+Imports expose values; reachable uses determine the required machine code, data,
+and runtime services. Optimization preserves initialization, failures, ownership,
+and cleanup. [Memory and binary optimization](reference/optimization.md) connects
+those rules to storage lifetimes, linking, and deployment budgets.
+
 ## Give work an owner
 
 `>>` starts a task and `<<` joins it. A task has one result owner and a lexical

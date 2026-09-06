@@ -7,6 +7,10 @@ code must not read uninitialized storage, use a released allocation, violate
 reference exclusivity, or race on ordinary memory. There is no tracing garbage
 collector or automatic heap promotion of escaping locals.
 
+[Memory and binary optimization](optimization.md) follows these owners through
+frames, heap allocations, static storage, and channel queues. It covers peak
+memory budgets, constrained hosts, and the code/data retained in an executable.
+
 ## Storage and layout
 
 Scalars, records, closed unions, and bounded lists live inline in their owner.

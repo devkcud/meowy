@@ -157,8 +157,17 @@ Duplicate configuration fields and wrong value types are `E505`, even inside
 false` is also `E505`; a gatostyle path policy that disables layout simply makes
 that path ineligible for formatting.
 
-`build.entry`, `build.profile`, `build.target`, `build.native`, and `build.executor`
-remain the analysis inputs. `import` and `mod.lock` remain the resolver inputs.
+`build.entry`, `build.profile`, `build.target`, `build.native`, `build.executor`,
+and the [optimization settings](optimization.md#select-build-policy-in-modmwy)
+remain manifest inputs. The server validates `optimize`, `cpu`, `jobs`,
+`debug_info`, and `link` against the selected toolchain and current manifest
+snapshot. Expanded CPU requirements and effective build policy contribute to
+input identity. Editor checking does not invoke the linker or run LTO, and it
+cannot promise final section sizes or retention decisions. Use
+[`meowy build --report`](../cli/README.md#explain-a-builds-size-and-dependencies)
+for that evidence. `build.jobs` controls builds, not editor analysis scheduling.
+
+`import` and `mod.lock` remain the resolver inputs.
 `gatostyle` remains the only source of layout, rule severities, preferred forms,
 exceptions, and proof requirements. There is no competing target, indentation,
 import map, or list of disabled compiler errors inside `lsp`.

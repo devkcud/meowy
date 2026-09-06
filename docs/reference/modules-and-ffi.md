@@ -54,6 +54,14 @@ export constructors instead of a globally mutable resource. If initialization
 panics, already initialized modules are released in reverse order and startup
 fails before the entry file executes.
 
+Importing a module does not require every function or data item in that module
+to survive in the executable. The compiler and linker retain reachable values
+and their dependencies while preserving observable module initialization,
+failures, and cleanup. A source export or manifest facade provides visibility to
+other meowy modules; it is not automatically a native ABI export that must be
+retained for an external caller. [Memory and binary optimization](optimization.md)
+defines reachability, native boundaries, and the effects of runtime lookup.
+
 ## Local path aliases
 
 `import.aliases` is an optional record of names mapped to local source directories:
@@ -122,7 +130,7 @@ and their digests even when an alias root lies outside the project directory.
 | ----------- | -------------------------------------------------------------- |
 | `import`    | Package dependency records and the optional `aliases` path map |
 | `export`    | Public package facade, including re-exports                    |
-| `build`     | Entry file, profile, optional target, and native link inputs   |
+| `build`     | Entry, target, optimization, linkage, and runtime settings     |
 | `gatostyle` | Optional layout, code-quality rules, and project style policy  |
 | `lsp`       | Optional editor analysis, feature, and compatibility settings  |
 
@@ -205,6 +213,15 @@ must include their exact contents and digest.
 and task cleanup. `build.target` identifies the architecture, operating system,
 and ABI when cross-compiling. Omitting it selects the host target, recorded as a
 build input. `build.native` lists explicitly selected native link artifacts.
+
+`build.optimize`, `build.cpu`, `build.jobs`, `build.debug_info`, and the
+`build.link` record configure optimization goals, target CPU requirements,
+build concurrency, debug information, and native linkage. `build.link` contains
+`mode`, `dead_strip`, `lto`, and `icf`. Their accepted values, profile-dependent
+defaults, compatibility checks, and failure behavior are defined in
+[Memory and binary optimization](optimization.md). CPU selection is explicit;
+it never probes the build host to choose instructions. Build jobs do not set
+runtime executor workers or task capacity.
 
 The entry file executes after module initialization. It must not also be imported
 as a module. Its primary result is `<null>` for success or `<int32>` for the

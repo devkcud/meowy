@@ -7,6 +7,16 @@
 `calendars.Chinese` identify the same rules. A calendar is an ordinary immutable
 value, with a stable identifier, rule version, and supported range.
 
+Importing either facade does not require every calendar's code and data in the
+executable. Direct use of `calendars.Chinese` retains its required rules and
+common helpers; other calendars follow their own reachable uses. By contrast,
+`calendars.lookup(id)` with an unconstrained runtime ID must keep support for every
+advertised calendar. Constant IDs and runtime IDs proven to come from a finite set
+may be narrowed only with equivalent behavior for every reachable use. Rule
+versions and digests remain recorded build inputs even when some code or data
+can be removed. See
+[Memory and binary optimization](../optimization.md) for the retention rules.
+
 A calendar answers which year, month, and day label a civil day. A time zone
 answers how a local clock reading relates to a timestamp. Choosing Chinese month
 names does not choose Beijing time, and choosing Hebrew dates does not make a

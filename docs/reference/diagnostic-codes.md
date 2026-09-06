@@ -204,6 +204,12 @@ suffix, and both declaration and import sites. An invalid `import.aliases` value
 or a name shared by a package and a path alias uses `E505`. `E508` applies to both
 package aliases and local path aliases that conflict with foundational names.
 
+[Optimization settings](optimization.md#select-build-policy-in-modmwy) use `E505`
+for invalid values or incoherent combinations, and `E507` for unavailable target,
+CPU, runtime, or LTO support. Include the manifest field, effective profile,
+requested capability, and relevant toolchain identity. Optimization does not
+change source-error severities or justify suppressing a runtime check without proof.
+
 ## Native boundaries and linking
 
 See [native interfaces](modules-and-ffi.md#native-interfaces) and

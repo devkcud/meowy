@@ -394,16 +394,17 @@ of different programs. A session ID, such as `proj-1788649910`, is unique within
 that entry, with a collision suffix when necessary. The manifest retains original
 paths for diagnostics; path text is not used as a collision-prone directory key.
 
-| Preserved input                                                                  | Purpose                                                      |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Source graph, manifest, and lockfile when present                                | Replay the original input, even after local edits            |
-| Compiler version, build identity, executable, required libraries, and invocation | Replay with the toolchain that produced the failure          |
-| Target, profile, CPU features, and native input digests                          | Preserve the selected representation and build inputs        |
-| Failure phase, code, spans, related notes, and fix candidates                    | Identify the occurrence independently of terminal formatting |
-| Declared environment inputs and captured standard streams                        | Record the relevant inputs and observed output               |
-| Backend IR, objects, linker commands, and executable, when produced              | Investigate lowering, linking, or runtime failures           |
-| Runtime arguments and replayable input, when available                           | Revisit a failure that actually reached execution            |
-| Replay runner, per-file digests, and artifact schema version                     | Verify and unpack the executable's contents                  |
+| Preserved input                                                                                                | Purpose                                                       |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Source graph, manifest, and lockfile when present                                                              | Replay the original input, even after local edits             |
+| Compiler version, build identity, executable, required libraries, and invocation                               | Replay with the toolchain that produced the failure           |
+| Target, profile, CPU features, effective optimization/link settings, runtime/sysroot, and native input digests | Preserve the selected representation and build inputs         |
+| Failure phase, code, spans, related notes, and fix candidates                                                  | Identify the occurrence independently of terminal formatting  |
+| Declared environment inputs and captured standard streams                                                      | Record the relevant inputs and observed output                |
+| Backend IR, objects, linker commands, and executable, when produced                                            | Investigate lowering, linking, or runtime failures            |
+| Debug companions, build report, and link map, when produced                                                    | Explain retained code/data and interpret the exact executable |
+| Runtime arguments and replayable input, when available                                                         | Revisit a failure that actually reached execution             |
+| Replay runner, per-file digests, and artifact schema version                                                   | Verify and unpack the executable's contents                   |
 
 Artifacts list backend IR, object files, linker commands, application binaries,
 and statistics only when those phases produced them. A type-checking rejection
@@ -411,6 +412,13 @@ has its replay executable and compiler payload, but no application executable
 or linker run. Missing inputs, interrupted capture, a capture-budget limit, or a
 cache write failure must be reported as incomplete. The original diagnostic
 still prints even when a complete capsule cannot be saved.
+
+Separate debug information must match the captured executable's identity.
+Optimization can remove locals and fold code; evidence marks unavailable values
+instead of reconstructing an invented source state. The
+[optimization reference](optimization.md#debug-information-and-reproducibility)
+defines required runtime metadata and the distinction between an ordinary build's
+storage and a failure capsule's compiler, replay tools, and evidence.
 
 ### What happened under the hood
 

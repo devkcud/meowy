@@ -181,17 +181,30 @@ to `@"..."` operands; they do not rewrite `build.entry`, dependency `path`, or
 native artifact paths. For the small project above, use `"./main.mwy"` even though
 its imports use `help/...`.
 
-| Build field | When to set it                                                       |
-| ----------- | -------------------------------------------------------------------- |
-| `entry`     | Select the file executed by `meowy run` or compiled by `meowy build` |
-| `profile`   | Choose `"debug"` while developing or `"release"` for optimized code  |
-| `target`    | Select a different architecture, operating system, and ABI           |
-| `native`    | Declare exact native link artifacts required by foreign calls        |
-| `executor`  | Supply runtime storage and workers when the entry starts tasks       |
+| Build field  | When to set it                                                         |
+| ------------ | ---------------------------------------------------------------------- |
+| `entry`      | Select the file executed by `meowy run` or compiled by `meowy build`   |
+| `profile`    | Choose `"debug"` while developing or `"release"` for optimized code    |
+| `target`     | Select a different architecture, operating system, and ABI             |
+| `optimize`   | Choose the tradeoff between build effort, runtime speed, and code size |
+| `cpu`        | Set a baseline or named target CPU requirement for deployed machines   |
+| `jobs`       | Bound build concurrency on a machine with limited memory               |
+| `debug_info` | Keep debug information embedded, separate it, or omit it               |
+| `link`       | Configure native linkage, dead stripping, LTO, and safe code folding   |
+| `native`     | Declare exact native link artifacts required by foreign calls          |
+| `executor`   | Supply runtime storage and workers when the entry starts tasks         |
 
 Both profiles preserve overflow checks, bounds checks, ownership, and cleanup.
 The CLI can override the entry, profile, or target for one invocation without
 rewriting the manifest. See [entry selection](../cli/README.md#projects-and-entry-selection).
+
+Keep these deployment choices in `mod.mwy` so the same inputs select the same
+CPU requirements and optimization policy. The
+[Memory and binary optimization reference](../reference/optimization.md) defines
+every accepted value and default, then connects these settings to heap and static
+storage, binary reachability, containers, and older machines. `jobs` limits build
+work; it does not change the runtime executor below. An import such as `@"time"`
+selects a module's API without asking to retain the entire standard library.
 
 For a task-using entry, add an executor inside `build`:
 

@@ -8,6 +8,12 @@ time, data, and operating-system services. Import a foundational module with
 an entry in `mod.mwy`. They are ordinary values, so functions, types, constants,
 and constructors can be aliased or shadowed without adding keywords.
 
+An import makes the module's API available; it does not request the whole standard
+library in the executable. Reachable operations retain their helpers, data,
+cleanup, and runtime services. Runtime lookup may require a complete data set,
+while a direct operation can need much less. [Memory and binary optimization](../optimization.md)
+connects these API choices to stack, heap, static storage, and linker behavior.
+
 ## Modules
 
 | Import                                 | Use it for                                                                 | Contract                                                                 |
