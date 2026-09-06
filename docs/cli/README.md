@@ -83,7 +83,7 @@ With an explicit entry, the CLI resolves the path relative to the current workin
 directory and searches its directory and ancestors for the nearest `mod.mwy`.
 Without an entry, it searches from the working directory and uses `build.entry`.
 Manifest paths remain relative to the manifest. An explicit entry overrides only
-`build.entry`; dependency aliases, native inputs, and executor settings still come
+`build.entry`; import aliases, native inputs, and executor settings still come
 from that project. Without a manifest, an explicit file is a standalone program
 whose root is its directory. Omitting both is a usage error.
 
@@ -111,8 +111,10 @@ Ordinary checking, building, and running use the existing `mod.lock`. They may
 fetch content identified by that lock, but never advance a revision or rewrite the
 lockfile. A missing required entry or conflicting entry is a diagnostic. A
 standalone file using only foundational and relative imports needs no remote
-lockfile; its foundational libraries come from the selected toolchain. Resolve
-or update remote dependencies deliberately:
+lockfile; its foundational libraries come from the selected toolchain.
+Project-local prefixes in `import.aliases` also require no remote lock entries;
+dependency commands operate on the package records beside that table. Resolve or
+update remote dependencies deliberately:
 
 ```sh
 meowy deps resolve

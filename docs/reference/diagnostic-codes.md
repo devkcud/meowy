@@ -172,12 +172,17 @@ See [modules and configuration](modules-and-ffi.md) and
 | `E505` | Invalid manifest configuration                                | Mark the unknown field, incompatible selectors, invalid size, or forbidden compile-time effect and its configuration path           |
 | `E506` | Entry module contract is invalid                              | Show an entry imported as a module or an unsupported primary result; keep the entry distinct and handle top-level errors explicitly |
 | `E507` | Requested target or toolchain input is unavailable            | Show the requested target/input and available host context; provide the declared input or select a compatible target                |
-| `E508` | Dependency alias conflicts with a foundational module         | Mark the alias and foundational identity; rename the dependency alias                                                               |
+| `E508` | Import alias conflicts with a foundational module             | Mark the alias and foundational identity; rename the package or local path alias                                                    |
 
 A lock mismatch is not permission to move a branch or tag. Diagnostics retain
 the source identity, revision, and digest involved in the failure. A missing
 dependency can make a capture incomplete; the tool must not claim a closed
 capsule while required content is absent.
+
+For local path imports, `E501` includes the prefix, mapped directory, resolved
+suffix, and both declaration and import sites. An invalid `import.aliases` value
+or a name shared by a package and a path alias uses `E505`. `E508` applies to both
+package aliases and local path aliases that conflict with foundational names.
 
 ## Native boundaries and linking
 
