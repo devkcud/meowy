@@ -1,19 +1,21 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Immutable shared references and repository verification pass.
+Updated: 2026-09-06. Guarded reference results and native cleanup integration pass.
 Full v0.0.1 remains incomplete. This milestone is complete; no workers or failing checks remain.
 This file tracks compiler implementation; `../STATUS.md` tracks the wider project.
 Baseline commits: `54080b1` (compiler), `c82354f` (tests/examples), `f2feea2` (docs).
 Union commits: `8209163` (compiler/guard behavior), `177169e` (native coverage/example),
 `f749708` (handoff). Reference commits: `71a7baf` (compiler), `064e305` (coverage).
 Repository work: `122b022` (schema examples), `6f6a0c1` (verification tooling).
+Guarded results: `5e7ad41`. Native cleanup prototype: `e0987be`. Runtime gate: `1ba3c65`.
 
 ## Current objective
 
-Completed: immutable shared-reference places, identity, copyable dereference and
-bounded lexical origin checks. `reference_identity` is required and passes in both
-profiles. Next: guarded result-origin analysis and CFG last-use liveness before
-mutable/exclusive borrowing, returned views, captures or owned collections.
+Completed: guarded bare-reference block results preserve every origin and exclude
+proven discarded emissions. Native and release examples pass. The independent
+`../runtime/` cleanup prototype and combined repository gate also pass. Next:
+CFG loan liveness, aggregate/function borrow contracts and native context/unwind
+qualification before mutable/exclusive loans, owners or generated cleanup.
 The existing reference remains authoritative. Do not change fixtures to make tests pass.
 
 ## Resume here
@@ -32,6 +34,139 @@ provide a bundled sysroot or a qualified distribution. Never claim the documente
 Linux 5.4/glibc 2.31 execution baseline from this workstation build.
 
 ## Step log
+
+### 2026-09-06 — Complete guarded borrowing and runtime handoff
+
+- Completed: compiler behavior/coverage is `5e7ad41`, runtime prototype is
+  `e0987be`, and repository integration is `1ba3c65`. Refreshed supported behavior,
+  validation, remaining work and continuation order; this is the final docs split.
+- Validation: all 14 combined checks passed with sanitizers enabled outside ptrace;
+  93 Rust and 25 Python tests pass, plus native cleanup and release example checks.
+  Conformance remains 9 passed, 14 unsupported, 0 failed in both profiles.
+  Final documentation links and diff whitespace checks passed.
+- Blockers: no active workers, incomplete code or failing milestone check. Predicate
+  reassignment remains conservative; full loan dataflow and stack unwinding remain
+  future work rather than implied capabilities of this milestone.
+- Next steps: implement CFG loan liveness and aggregate/function origin contracts;
+  qualify runtime context/unwind interaction, then progress module/library loading.
+
+### 2026-09-06 — Commit the independent native cleanup prototype
+
+- Completed: `e0987be` adds runtime API, implementation, behavior/fatal tests,
+  pinned-tool runner, documentation and working rules outside the compiler.
+- Validation: 14 normal cases and 2 fatal subprocesses pass in debug, release
+  and ASan/UBSan/LSan; 5 Python regressions and staged whitespace checks pass.
+- Boundary: compiler linkage, task contexts and DWARF unwinding remain pending;
+  payload lifetimes and cross-stack cleanup ordering are explicit caller contracts.
+- Next steps: commit repository runtime verification, then complete tracker maps,
+  validation evidence and the concrete CFG/context/library continuation plan.
+
+### 2026-09-06 — Commit guarded reference results
+
+- Completed: `5e7ad41` commits emission proof IDs, guarded origin propagation,
+  source/native regressions and the borrowed-results example together. The changed
+  ancestor-result expectation is included with its behavior change.
+- Validation: staged whitespace checks passed; full compiler/runtime gate and
+  release example already passed on these source changes.
+- Next steps: commit the independent native cleanup prototype, then its repository
+  verification integration and the final remaining-work handoff.
+
+### 2026-09-06 — Verify the optimized compiler and prepare split commits
+
+- Completed: the release compiler built and ran `examples/borrow-results.mwy`
+  under the release output profile, printing `11`, `22`, `42`, `true` exactly.
+- Validation: all changed code and new runtime files have been reviewed; final
+  whitespace checks pass. No worker or unresolved implementation defect remains.
+- Next steps: commit compiler behavior with its source tests/example, runtime
+  prototype with its tests/rules, tooling integration, and final handoff separately.
+
+### 2026-09-06 — Pass the full compiler and cleanup integration gate
+
+- Completed: `python3 -B tools/verify.py --all` passed all 14 checks outside ptrace
+  supervision, with sanitizer checks enabled and unchanged source.
+- Validation: 64 library + 29 native Rust tests; 16 tooling + 5 runtime + 4 compiler
+  Python tests; 14 cleanup cases and 2 fatal probes in each debug/release/sanitized
+  profile. Formatting, Clippy, build, 829 links, schemas and both editors pass.
+- Conformance: 9 passed, 14 explicitly unsupported, 0 failed in debug/release.
+  These results do not qualify task stacks, DWARF unwinding or full v0.0.1.
+- Next steps: release-smoke the borrowed-results example, inspect all changes,
+  commit compiler/runtime/tooling independently and finalize the continuation plan.
+
+### 2026-09-06 — Audit borrow proofs and rerun sanitizer gate with required access
+
+- Validation: 10 targeted borrow probes matched expected outcomes; accepted cases
+  executed in debug/release. Another 288 predicate combinations found no unsafe
+  acceptance. Stable proofs matched exhaustive lifetime safety; reassigned
+  predicates conservatively rejected 15 safe combinations after facts were lost.
+- Environment failure: combined verification passed repository/editor/runtime
+  runner checks and native debug/release, then LeakSanitizer failed under sandbox
+  ptrace. The unchanged full command is rerunning outside that supervision.
+- Next steps: finish the combined gate, retain the predicate-mutation proof limit
+  in the handoff, run the release example and prepare focused commits.
+
+### 2026-09-06 — Pass focused native checks and finish prototype review
+
+- Completed: guarded references pass native selection/alias, discarded-result and
+  corrected local-escape tests. Added the borrowed-results example and refreshed
+  compiler/storage documentation. Tooling now checks runtime docs and `--runtime`.
+- Validation: 16 tooling tests pass. Independent runtime review found no concrete
+  defect; 14 cleanup cases plus 2 exact fatal probes pass in each debug/release/
+  ASan/UBSan/LSan profile. Five runtime runner tests pass.
+- Boundary: runtime transfer moves only cleanup obligations. Partial emissions
+  need deferred transfer or cross-stack order metadata before compiler integration.
+- Next steps: finish borrow proof edge review, run the complete combined gate,
+  release-smoke the example, then split compiler/runtime/tooling/handoff commits.
+
+### 2026-09-06 — Validate guarded origins and integrate runtime verification
+
+- Completed: the new origin pass preserves all alternative roots and passes its
+  eight focused source-test groups. Complementary reference results execute in
+  both profiles. Added explicit `--runtime` and expanded `--all` verification.
+- Failure: a native rejection fixture emitted into an inner block, accidentally
+  producing a nullable outer result and E222. Corrected its named emission target
+  so it exercises the intended retained local escape.
+- Runtime validation: 13 cleanup cases and 2 fatal probes pass in debug/release
+  and ASan/UBSan; 5 runner tests pass. LeakSanitizer required outside-sandbox
+  execution because ptrace blocks its inspection. Independent review is active.
+- Next steps: rerun the corrected native cases, verify tooling/runtime integration,
+  review origin soundness and run the combined gate after remaining edits settle.
+
+### 2026-09-06 — Connect emission proofs and add source regressions
+
+- Completed: each HIR emission now receives a unique proof ID, including generated
+  record components and unreachable writes. Block completions retain the original
+  guard arena. Backend lowering ignores proof IDs; code generation is unchanged.
+- Coverage: added native programs for complementary reference selections, aliases,
+  named leave, restart-discarded locals, panic effects and retained local escapes.
+- Validation: integration waits for the new guarded-origin pass. Tests have not
+  yet run against the changed API; runtime behavior tests are also being built.
+- Next steps: finish origin propagation, run focused compiler/native checks and
+  integrate the runtime verification entrypoint once its checks pass.
+
+### 2026-09-06 — Choose guarded result identities and cleanup boundaries
+
+- Decision: give each HIR emission a unique ID; keep write/completion guards in
+  private proof tables and pass the existing guard arena to borrow checking.
+  Preserve every possible origin, filter discarded paths, and validate lifetimes
+  only for completed bare-reference results. Aggregates/signatures remain B001.
+- Runtime: caller-owned cleanup entries, checked scope/token generations and
+  explicit reverse cleanup are implemented; behavior/sanitizer checks are pending.
+  No C++ exception, task-stack or scheduler behavior is being claimed.
+- Ownership: root owns HIR/frontend/native integration; borrow worker owns borrow.rs;
+  runtime worker owns runtime/. No new behavior has passed its full gate yet.
+- Next steps: connect proof identities, propagate guarded origins, add source
+  regressions and verify runtime cleanup edges before integration.
+
+### 2026-09-06 — Resume guarded borrows and native cleanup work
+
+- Completed: confirmed a clean tree and read working rules, current handoffs,
+  ownership boundaries and compiler architecture. Prior milestone checks are the
+  baseline; new behavior is not yet verified.
+- Active work: root owns compiler integration and both STATUS files; a reviewer
+  is tracing guarded borrow-result dataflow. A separate worker owns `runtime/`
+  cleanup/unwind prototyping outside the compiler.
+- Next steps: settle the guard metadata and result-origin design, implement safe
+  immutable block-result transfers, and validate an explicit native cleanup ABI.
 
 ### 2026-09-06 — Complete reference and repository handoff
 
@@ -399,10 +534,10 @@ Linux 5.4/glibc 2.31 execution baseline from this workstation build.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Builds offline with no external Rust dependencies |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Implemented for the documented bootstrap subset; malformed-input and depth checks pass |
 | Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, branch narrowing and guarded emissions; 21 checker and 5 guard tests pass |
-| Shared storage/borrow origins | `src/hir.rs`, `src/borrow.rs`, `OWNERSHIP.md` | Immutable local/record places, aliases and bounded escape checks; 8 origin tests pass |
+| Shared storage/borrow origins | `src/hir.rs`, `src/borrow.rs`, `OWNERSHIP.md` | Immutable local/record places, guarded block results and all-root escape checks; 8 source-test groups pass |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM → ELF pipeline including tagged unions; 14 focused backend tests pass |
 | CLI and diagnostic rendering | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Implemented and exercised through native tests |
-| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 26 native tests, 4 harness tests and 6 runnable examples |
+| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 29 native tests, 4 harness tests and 7 runnable examples |
 
 Agents share this checkout. After a sudden stop, file existence is not proof that
 a component compiles. The interfaces are `parser::parse`, `check::check`,
@@ -447,6 +582,15 @@ short-name, immutable-value, and no-comment conventions.
 - [x] Pass reference identity and native source checks in debug/release.
 - [x] Pass the combined repository gate and release compiler example.
 
+## Completed guarded-result and cleanup-protocol milestone
+
+- [x] Reuse frontend guard proofs with unique emission IDs and block completions.
+- [x] Propagate all possible bare-reference origins through blocks and aliases.
+- [x] Verify complementary selection, named exits and discarded local emissions.
+- [x] Prototype explicit native cleanup outside the compiler with bounded storage.
+- [x] Verify initialized-only/reverse cleanup, transfer and fatal P008 evidence.
+- [x] Include native debug/release/sanitizer checks in repository verification.
+
 ## Still outside this compiler
 
 Items here must not be silently accepted with different semantics. `B001` is an
@@ -476,9 +620,15 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
   record fields. Parameter/receiver/emission places, mutable roots, temporary
   owners, exclusive loans, reference-carrying aggregates/signatures and reference
   reassignment are B001. `OWNERSHIP.md` records the remaining stages.
-- E303 is currently proved only for a direct final local-reference emission into
-  its own completing block outside conditional branches. Other reference emissions
-  remain B001, including discarded/guarded transfers; emission is not return.
+- Bare-reference block results support guarded alternatives and named exits.
+  Every retained origin must outlive its receiving block. Discarded emissions keep
+  operand effects but do not escape. Reference-carrying aggregates are still B001.
+- Assigning predicates invalidates prior facts. Audit found 15 safe mutated-predicate
+  combinations conservatively rejected with E303; stronger relation/dataflow
+  tracking is pending. No unsafe acceptance was found in 288 bounded combinations.
+- `../runtime/` proves an explicit cleanup protocol only. Generated programs still
+  use the scalar runtime. Task stacks, Meowy personality/landing pads, child joins
+  and cross-stack partial-result ordering must be implemented before integration.
 
 - Only direct, noncapturing functions are lowered. A function declaration can be
   aliased, but first-class function-pointer storage and anonymous/indirect calls remain unavailable.
@@ -520,9 +670,14 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 - 2026-09-06: repository was clean before implementation; no prior compiler existed.
 - 2026-09-06: detected Rust 1.98.1, LLVM/Clang/LLD 22.1.8, CMake 4.4.3,
   Ninja 1.13.2, Python 3.14.7 on the current host.
-- Final combined `python3 -B tools/verify.py --all` passed all 12 checks. It pins
-  the Cargo target/output path and runs the exact freshly built compiler.
-- Cargo tests: 64 library tests and 26 native integration tests passed. Native tests execute both output profiles.
+- Final combined `python3 -B tools/verify.py --all` passed all 14 checks outside
+  ptrace supervision. It pins the Cargo target/output path and freshly built compiler.
+- Cargo tests: 64 library and 29 native tests passed, including both output profiles.
+- Repository checks: 16 tooling and 5 runtime Python tests, 829 local links,
+  schema/catalog integrity, Vim and Neovim passed. Native cleanup passed 14 normal
+  cases plus 2 fatal probes in each debug/release/ASan/UBSan/LSan profile.
+- Sandbox LeakSanitizer failed due to ptrace; the unchanged full gate passed with
+  the required outside-sandbox execution. No sanitizer check was disabled.
 - Final `python3 -m unittest discover -s compiler/tests -p 'test_*.py'`: 4 harness tests passed.
 - Final `cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings`
   and `cargo fmt --manifest-path compiler/Cargo.toml --check` both passed.
@@ -537,12 +692,13 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
   integer boundaries, string/numeric output, short circuiting and `/dev/full` all passed.
 - Checker focused validation: 21 tests passed, including nullable slot inference,
   complementary predicates, field narrowing, assignment invalidation, record composition
-  and restart boundaries. Eight borrow-origin tests cover lexical aliases, final
-  escapes, function isolation and discarded/guarded emissions. Five guard tests
+  and restart boundaries. Eight borrow source-test groups cover all candidate
+  roots, lexical aliases, retained escapes, function isolation and discarded paths. Five guard tests
   include 16,384 independent variables.
 - The reference catalog validator passed all 23 records; this was metadata validation only.
-- Release compiler build with the explicit host target succeeded. Its references
-  example prints exactly `true\nfalse\n42\nmeowy\n` under the release profile.
+- Release compiler build with the explicit host target succeeded. Its borrowed
+  results example prints exactly `11\n22\n42\ntrue\n` in release. The earlier
+  references example also passed with `true\nfalse\n42\nmeowy\n`.
   The prior release compiler also ran `examples/nullable.mwy` with exact stdout
   `meowy\nnull\nmeowy\nguest\n`. The earlier records example also passed.
 - Actual `readelf -h/-d/--version-info` inspection of `build/records` found ELF64
@@ -552,20 +708,22 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Replace bounded result checks in `src/borrow.rs` with guarded result-origin
-   propagation through block slots and named control flow. Reuse `src/flow.rs`
-   facts; verify valid ancestor/guarded/discarded transfers and definite E303 escapes.
-2. Introduce CFG backwards last-use liveness with loop fixed points. Resolve
-   mutable/exclusive loans and reference reassignment only after proving conflicting
-   storage access and returned-view lifetimes. Add accepted branch/restart cases
-   and exact E301/E302/E303/E304/E305 rejections.
+1. Add an explicit storage/control-flow graph for `src/borrow.rs` with backwards
+   last-use liveness and loop fixed points. Preserve current guards and improve
+   predicate assignment relations. Test valid post-use mutation and exact E302
+   conflicts before accepting mutable/exclusive roots or reference reassignment.
+2. Extend origin sets to reference-carrying record/union components and function
+   input/result contracts. Verify all-input lifetime bounds and caller substitution
+   with accepted nested returns and E303 rejections; keep unknown origins B001.
 3. Add partial initialization, capture summaries and cleanup lowering; then enable
    bounded collections/slices and the owner-borrow fixtures. Test exact-once cleanup
    and temporary-owner rejection. Do not mark unsupported tests as passing rejections.
 4. Add required evaluation, effects, logical budgets and constrained specialization.
    Then enable the type-helper, compile-effect/budget, and callable fixtures.
-5. Prototype task stack/unwind/cleanup alongside ownership, as `../COMPILER.md`
-   requires, before committing to a scheduler/runtime ABI.
+5. Extend `../runtime/` beyond explicit cleanup: qualify the pinned context wrapper
+   with bounded stacks/guard pages and sanitizer hooks, then Meowy DWARF personality
+   and landing pads. Test a suspended borrowing child that is cancelled and joined
+   before parent cleanup. Preserve interleaved partial-result/local cleanup order.
 6. Implement project/module graphs, native adapters and Meowy standard-library
    layers, then tools/artifacts and distribution qualification from the table above.
 7. Keep the bootstrap gate green; expand the harness's REQUIRED set when a case
