@@ -584,6 +584,30 @@ impl Checker<'_> {
                     }
                     result.flow
                 }
+                Stmt::SetElement {
+                    id,
+                    index,
+                    value,
+                    span,
+                } => {
+                    if !self.locals.contains_key(id)
+                        || !self.proofs.mutable.contains(id)
+                        || !matches!(self.program.locals.get(*id), Some(Type::List { element, .. }) if !element.has_reference())
+                    {
+                        return Err(Self::unsupported(*span));
+                    }
+                    let mut result = self.expression(index)?.flow;
+                    if result.next {
+                        let value = self.expression(value)?;
+                        if value.flow.next
+                            && (!value.state.origins.is_empty() || !value.state.bounds.is_empty())
+                        {
+                            return Err(Self::unsupported(*span));
+                        }
+                        result.append(value.flow);
+                    }
+                    result
+                }
                 Stmt::Emit {
                     id,
                     target,

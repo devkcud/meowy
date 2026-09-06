@@ -324,6 +324,47 @@ impl<'a> Graph<'a> {
                         ..Node::default()
                     })?;
                 }
+                Stmt::SetElement {
+                    id,
+                    index,
+                    value,
+                    span,
+                } => {
+                    let place = Place {
+                        root: *id,
+                        fields: Vec::new(),
+                    };
+                    let reservation = self.value(vec![Origin {
+                        component: Vec::new(),
+                        source: Source::local(&place),
+                        guard: TRUE,
+                    }])?;
+                    self.append(Node {
+                        defs: vec![reservation],
+                        ..Node::default()
+                    })?;
+                    let index = self.expression(index)?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    self.append(Node {
+                        uses: std::iter::once(reservation)
+                            .chain(index.into_values())
+                            .collect(),
+                        ..Node::default()
+                    })?;
+                    let value = self.expression(value)?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    self.append(Node {
+                        uses: std::iter::once(reservation)
+                            .chain(value.into_values())
+                            .collect(),
+                        write: Some((place, *span)),
+                        ..Node::default()
+                    })?;
+                }
                 Stmt::Emit {
                     target,
                     field,
@@ -823,6 +864,36 @@ impl<'a> Graph<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    pub(crate) fn element_store_reservations_end_at_each_actual_access() {
+        for source in [
+            "a:=[1,2];r:&a[1];a[2]=*r+1",
+            "a:=[1,2];r:&a;a[2]=r[1]+1",
+            "a:=[1,2];a[2]={r:&a[1];->*r+1}",
+            "a:=[1,2];b:=[3,4];a[{b[1]=5;->1}]={b[2]=6;->7}",
+            "d:@\"debug\";a:=[1,2];a[{a=[3,4];d.panic(\"stop\")}]=5",
+            "d:@\"debug\";a:=[1,2];a[1]={a=[3,4];d.panic(\"stop\")}",
+            "a:=[1,2];'out{a[1]={a=[3,4];'out.leave()}}",
+            "a:=[1,2];'out{a[{a=[3,4];'out.leave()}]=5}",
+            "a:=[1,2];|false|a[1]={a=[3,4];->5}",
+            "a:=[1,2];i:=0;'loop{r:&a[1];a[2]=*r+1;i=i+1;|i<2|'loop.restart()}",
+        ] {
+            accepts(source);
+        }
+        for source in [
+            "a:=[1,2];r:&a[1];a[2]=3;v:*r",
+            "a:=[1,2];r:&a;a[2]=3;v:r[1]",
+            "a:=[1,2];a[{a=[3,4];->1}]=5",
+            "a:=[1,2];a[1]={a=[3,4];->5}",
+            "a:=[1,2];a[{a[2]=3;->1}]=5",
+            "a:=[1,2];a[1]={a[2]=3;->5}",
+            "d:@\"debug\";a:=[1,2];a[{a=[3,4];->1}]=d.panic(\"stop\")",
+            "first<&int32>:(a<&int32[2]>,b<&int32[2]>){->&a[1]};a:=[1,2];b:=[3,4];r:first(&a,&b);b[2]=5;v:*r",
+        ] {
+            rejects(source, "E302");
+        }
+    }
+
     #[test]
     pub(crate) fn missing_reborrow_snapshots_require_proven_unreachability() {
         for source in [

@@ -531,6 +531,60 @@ impl Checker {
         }
     }
 
+    pub(crate) fn set_element(
+        &mut self,
+        list: &ast::Expr,
+        index: &ast::Expr,
+        value: &ast::Expr,
+        span: Span,
+    ) -> Result<hir::Stmt> {
+        let mut list = list;
+        while let ExprKind::Group(value) = &list.kind {
+            list = value;
+        }
+        let ExprKind::Name(name) = &list.kind else {
+            return Err(Diagnostic::unsupported(
+                "element assignment outside direct local lists",
+                span,
+            ));
+        };
+        let Value::Local {
+            id,
+            ty: Type::List { element, capacity },
+            mutable,
+            ..
+        } = self.value(name, list.span)?
+        else {
+            return Err(Diagnostic::unsupported(
+                "element assignment outside direct local lists",
+                span,
+            ));
+        };
+        if !mutable {
+            return Err(Self::error(
+                "E305",
+                format!("binding `{name}` is immutable"),
+                list.span,
+            ));
+        }
+        if !self.places.contains(&id) || element.has_reference() {
+            return Err(Diagnostic::unsupported(
+                "element assignment requires addressable reference-free storage",
+                span,
+            ));
+        }
+        crate::borrow_contract::type_weight(&element, &mut self.flow, span)?;
+        let index = self.list_position(index, None, capacity)?;
+        let value = self.expr(value, Some(&element))?;
+        self.forget(id);
+        Ok(hir::Stmt::SetElement {
+            id,
+            index,
+            value,
+            span,
+        })
+    }
+
     pub(crate) fn list_method(
         &mut self,
         value: &ast::Expr,
@@ -603,6 +657,37 @@ impl Checker {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    pub(crate) fn element_assignment_checks_storage_index_and_context_in_order() {
+        for source in [
+            "a:=[1,2];a[1]=3",
+            "a<uint8[2]>:=[1,2];(a)[1]=255",
+            "a:=[[1,2],[3,4]];a[1]=[5,6]",
+            "a:=[{->n:1},{->n:2}];a[1]={->n:3}",
+            "<Item>:<int32><string>;a<Item[2]>:=[1,2];a[1]=\"x\"",
+            "<Item>:<int32><string>;a<Item[2]>:=[1,2];copy:a[1];a[1]=\"x\";|copy<int32>|{number<int32>:copy}",
+            "d:@\"debug\";a:=[1,2];a[{d.panic(\"stop\")}]=1/0",
+        ] {
+            let result = crate::compile(source);
+            assert!(result.is_ok(), "{source}: {result:?}");
+        }
+        for (source, code) in [
+            ("a:[1,2];a[1]=3", "E305"),
+            ("a:=[1,2];a[0]=3", "E101"),
+            ("a:=[1,2];a[3]=3", "E101"),
+            ("d:@\"debug\";a:=[1,2];a[3]=d.panic(\"stop\")", "E101"),
+            ("a:=[1,2];a[true]=3", "E222"),
+            ("a:=[1,2];a[1]=\"x\"", "E207"),
+            ("a<uint8[2]>:=[1,2];a[1]=256", "E216"),
+            ("a:=[1,2];p:&a;p[1]=3", "B001"),
+            ("a:=[[1,2],[3,4]];a[1][1]=3", "B001"),
+            ("a:={->items:[1,2]};a.items[1]=3", "B001"),
+            ("[1,2][1]=3", "B001"),
+        ] {
+            rejects(source, code);
+        }
+    }
+
     #[test]
     pub(crate) fn element_places_share_position_checks_and_reject_temporary_owners() {
         for source in [

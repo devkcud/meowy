@@ -343,8 +343,32 @@ implementation boundary; it does not change language rules.
 - Physical element pointers retain actual index identity. Abstract element paths
   conservatively overlap all indices within a list, preserving enclosing record
   fields and nested list prefixes without enumerating capacity. They retain every
-  direct-function all-input dependency. Element writes, exclusive borrows, slices,
-  aliases, removal, owned elements and list formatting remain B001.
+  direct-function all-input dependency.
+- `values[index] = rhs` replaces one initialized element of a direct mutable
+  reference-free Copy list local. Parentheses around that local are allowed;
+  nested indices, field/reference targets and temporary owners remain B001.
+  Immutable list bindings report E305. This adds no source exclusive-reference
+  value or `&!` semantics; the final store requires exclusive collection access.
+- `SetElement` retains the target local ID and original target span. Lowering
+  captures storage and initialized length, evaluates the index once, checks bounds
+  before any RHS effect, then evaluates the contextually typed RHS once and writes
+  only the selected element. Length, capacity and other elements are unchanged.
+  Static positions use ordinary E101; P001 reports the target span, excluding RHS.
+- The CFG defines an internal storage reservation before the index, reads it at
+  the bounds/address phase, then consumes it at the final store. Completing index
+  or RHS owner replacements/nested writes conflict (E302), while shared reads and
+  final-use RHS borrows can finish before the store. All element indices overlap
+  for exclusive-access checks; an external shared loan live after the store is
+  rejected. The reservation is not a user reference and never escapes.
+- A nonreturning index skips bounds/RHS/store; a nonreturning RHS skips the store.
+  The reservation has no use after the corresponding last executed phase, so
+  owner replacement before an immediate panic/leave is allowed when no other loan
+  survives. Returning index effects still require valid parent storage even when
+  RHS later diverges. Only target-root refinement facts are forgotten after RHS
+  checking; immutable copied elements keep their own type/variant facts. Nodes,
+  reservation values and conflict work use the existing bounded CFG budgets.
+- Exclusive references, slices, aliases, removal, reference-bearing/owned elements
+  and list formatting remain B001.
 
 ## Next analysis stages
 
@@ -364,8 +388,9 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Extend checked shared element places with exclusive access, slice/alias metadata
-   and non-Copy element state before expanding mutation or collection library APIs.
+7. Extend initialized assignment targets to nested checked paths, preserving each
+   bounds phase, storage reservation and exact evaluation order. Add exclusive
+   references, slice/alias metadata and non-Copy element state separately.
 
 ## Verification
 

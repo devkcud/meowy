@@ -2336,7 +2336,6 @@ pub fn list_borrow_conflicts_and_unavailable_operations_stay_explicit() {
         ("values<uint8[65537]>:[]", "B001"),
         ("values:[\"name\":1]", "B001"),
         ("owner:1;values:[&owner]", "B001"),
-        ("values:=[1];values[1]=2", "B001"),
         ("values:[1];slice:values.slice()", "B001"),
         ("values:[1];removed:values.remove(1)", "B001"),
     ] {
@@ -2821,7 +2820,6 @@ pub fn element_borrows_enforce_bounds_lifetimes_and_remaining_boundaries() {
         ("view:&[1,2][1]", "B001"),
         ("make<int32[2]>:(){->[1]};view:&make()[1]", "B001"),
         ("values:=[1];view:&!values[1]", "B001"),
-        ("values:=[1];values[1]=2", "B001"),
         ("owner:1;values:[&owner];view:&values[1]", "B001"),
         ("values:[{->1;->name:2}];view:&values[1]<int32>", "B001"),
     ] {

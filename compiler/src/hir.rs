@@ -164,6 +164,12 @@ pub enum Stmt {
         id: LocalId,
         value: Expr,
     },
+    SetElement {
+        id: LocalId,
+        index: Expr,
+        value: Expr,
+        span: Span,
+    },
     Emit {
         id: EmitId,
         target: BlockId,

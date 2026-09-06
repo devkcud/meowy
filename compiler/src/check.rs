@@ -1117,6 +1117,13 @@ impl Checker {
                 Ok(Vec::new())
             }
             StmtKind::Assign { target, value } => {
+                let mut form = target;
+                while let ExprKind::Group(value) = &form.kind {
+                    form = value;
+                }
+                if let ExprKind::Index { value: list, index } = &form.kind {
+                    return Ok(vec![self.set_element(list, index, value, target.span)?]);
+                }
                 let ExprKind::Name(name) = &target.kind else {
                     return Err(Diagnostic::unsupported(
                         "assignment through fields or references",
