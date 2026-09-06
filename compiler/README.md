@@ -31,6 +31,7 @@ compiler/target/debug/meowy run compiler/examples/scope-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/bounded-lists.mwy
 compiler/target/debug/meowy run compiler/examples/list-unions.mwy
 compiler/target/debug/meowy run compiler/examples/compound-lists.mwy
+compiler/target/debug/meowy run compiler/examples/element-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -62,6 +63,9 @@ The [list unions example](examples/list-unions.mwy) chooses list alternatives by
 element type, literal range and capacity while preserving concrete element widths.
 The [compound lists example](examples/compound-lists.mwy) selects element widths
 using checked intermediate values, grouped negation and short-circuit expressions.
+The [element borrows example](examples/element-borrows.mwy) takes checked references
+into original list storage, returns an element through a function and replaces the
+owner after the references' final uses.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -118,6 +122,13 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 - Scope-local references to by-value parameters and dispatch `self` bindings.
   Their addresses cannot escape their storage scopes. Shared-reference and
   reference-carrier dispatch retain original origins and all-input bounds.
+- Shared borrows of initialized bounded-list elements, such as `&values[index]`,
+  including nested list/record paths and direct-function results. The parent
+  reference stays live through returning index evaluation, so conflicting owner
+  writes report E302. E101/P001 check one-based initialized bounds before producing
+  an element address. Copied parameter/self elements cannot escape their scope.
+  Lifetime analysis conservatively treats all indices in a list as overlapping;
+  runtime reference equality still uses the actual element addresses.
 - Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
   literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
   replacement and equality of initialized elements. Elements can be scalars,
@@ -154,7 +165,7 @@ exits with status 1. These are bootstrap text diagnostics, not the
 release panic artifact format or a recovery/unwind implementation.
 
 Unavailable constructs report **B001**, including slices, named list positions,
-reference/owned list elements, element mutation/borrowing, other collection APIs, exclusive borrows,
+reference/owned list elements, element mutation, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, and mutable record fields. String interpolation outside an
 output call requires the future formatting/storage implementation and is rejected.
