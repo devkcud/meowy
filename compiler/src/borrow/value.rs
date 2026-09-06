@@ -1,6 +1,6 @@
 use super::{
-    Checker, Expr, ExprKind, FALSE, Flow, Origin, Projection, Result, Source, State, Step, TRUE,
-    Type, Value,
+    Checker, Expr, ExprKind, FALSE, Flow, Origin, Projection, Result, State, Step, TRUE, Type,
+    Value,
 };
 
 impl Checker<'_> {
@@ -31,7 +31,7 @@ impl Checker<'_> {
                 State {
                     origins: vec![Origin {
                         component: Vec::new(),
-                        source: Source::local(place),
+                        source: self.proofs.source(place),
                         guard: TRUE,
                     }],
                     ..State::default()

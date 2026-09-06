@@ -1,6 +1,6 @@
 use super::{Checker, Result};
 use crate::ast::Span;
-use crate::borrow::Alias;
+use crate::borrow::{Alias, Backing};
 use crate::diagnostic::Diagnostic;
 use crate::flow::FALSE;
 use crate::hir::{self, Type};
@@ -38,6 +38,8 @@ impl Checker {
                 emission,
                 root,
                 span,
+                backing: None,
+                borrowed: None,
             },
         );
         self.proofs.mutable.insert(id);
@@ -55,7 +57,7 @@ impl Checker {
                 Span::default(),
             ));
         }
-        for (id, alias) in &self.proofs.aliases {
+        for (id, alias) in &mut self.proofs.aliases {
             if alias.target != target {
                 continue;
             }
@@ -73,10 +75,20 @@ impl Checker {
                 ));
             }
             if let Type::Record { fields, .. } = ty
-                && fields.iter().any(|field| {
+                && let Some(field) = fields.iter().find(|field| {
                     field.name == alias.field && field.mutable && field.ty.accepts(local)
                 })
             {
+                alias.backing = Some(Backing::Result);
+                if let Some(span) = alias.borrowed
+                    && field.ty != *local
+                    && !field.ty.members().contains(local)
+                {
+                    return Err(Diagnostic::unsupported(
+                        "borrowed result alias needs identical storage or an exact concrete union member",
+                        span,
+                    ));
+                }
                 continue;
             }
             let emitted = self
@@ -93,6 +105,7 @@ impl Checker {
                     alias.span,
                 ));
             }
+            alias.backing = Some(Backing::Discarded);
         }
         Ok(())
     }

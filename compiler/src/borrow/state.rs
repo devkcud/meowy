@@ -2,6 +2,14 @@ use super::{
     BTreeMap, BTreeSet, BlockId, CallId, EmitId, Guard, Guards, LocalId, Program, ReborrowId, Span,
     State, Tags, Type,
 };
+use crate::borrow_value::{Projection, Source};
+use crate::hir::Place;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Backing {
+    Result,
+    Discarded,
+}
 
 #[derive(Clone)]
 pub(crate) struct Alias {
@@ -10,6 +18,8 @@ pub(crate) struct Alias {
     pub(crate) emission: EmitId,
     pub(crate) root: LocalId,
     pub(crate) span: Span,
+    pub(crate) backing: Option<Backing>,
+    pub(crate) borrowed: Option<Span>,
 }
 
 #[derive(Default)]
@@ -22,6 +32,26 @@ pub(crate) struct Proofs {
     pub(crate) mutable: BTreeSet<LocalId>,
     pub(crate) calls: BTreeMap<CallId, Guard>,
     pub(crate) aliases: BTreeMap<LocalId, Alias>,
+}
+
+impl Proofs {
+    pub(crate) fn source(&self, place: &Place) -> Source {
+        if let Some(alias) = self.aliases.get(&place.root) {
+            Source::Slot {
+                target: alias.target,
+                root: alias.root,
+                view: place.root,
+                fields: place
+                    .fields
+                    .iter()
+                    .copied()
+                    .map(Projection::Field)
+                    .collect(),
+            }
+        } else {
+            Source::local(place)
+        }
+    }
 }
 
 #[derive(Default)]

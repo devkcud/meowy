@@ -1,7 +1,7 @@
 use crate::ast::Span;
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
-use crate::hir::{LocalId, Place, Type};
+use crate::hir::{BlockId, LocalId, Place, Type};
 
 pub(crate) const MAX_PARTS: usize = 4_096;
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
@@ -32,6 +32,12 @@ pub(crate) enum Source {
         id: LocalId,
         fields: Vec<Projection>,
     },
+    Slot {
+        target: BlockId,
+        root: LocalId,
+        view: LocalId,
+        fields: Vec<Projection>,
+    },
     Input {
         id: LocalId,
         component: Path,
@@ -55,7 +61,9 @@ impl Source {
     pub(crate) fn project(&self, path: &[Projection]) -> Self {
         let mut source = self.clone();
         let fields = match &mut source {
-            Self::Local { fields, .. } | Self::Input { fields, .. } => fields,
+            Self::Local { fields, .. } | Self::Slot { fields, .. } | Self::Input { fields, .. } => {
+                fields
+            }
         };
         fields.extend_from_slice(path);
         source
@@ -67,6 +75,7 @@ impl Origin {
         1 + self.component.len()
             + match &self.source {
                 Source::Local { fields, .. } => fields.len(),
+                Source::Slot { fields, .. } => 3 + fields.len(),
                 Source::Input {
                     component, fields, ..
                 } => component.len() + fields.len(),

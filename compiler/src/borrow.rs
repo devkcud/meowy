@@ -19,7 +19,7 @@ pub(crate) const MAX_ORIGINS: usize = 4_096;
 pub(crate) const MAX_FACT_ORIGINS: usize = 262_144;
 
 pub(crate) use emissions::slot;
-pub(crate) use state::{Alias, Checker, Exit, Facts, Flow, Proofs, Storage, Value};
+pub(crate) use state::{Alias, Backing, Checker, Exit, Facts, Flow, Proofs, Storage, Value};
 
 pub(crate) fn check(
     program: &Program,

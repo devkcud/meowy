@@ -27,9 +27,6 @@ pub(crate) fn alias_discard_paths_preserve_lexical_storage_and_boundaries() {
         accepts(source);
     }
     for (source, code) in [
-        ("r:{->n:=1;p:&n}", "B001"),
-        ("r:{->row:={->n:=1};p:&row.n}", "B001"),
-        ("r:{->items:=[1,2];p:&items[1]}", "B001"),
         ("r:{->n:=1;n=\"x\"}", "E207"),
         ("r:{->n:=1;->n:=2}", "E205"),
         ("a:1;r:{->view:=&a}", "B001"),

@@ -90,10 +90,12 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn overlap(place: &Place, source: &Source) -> bool {
-        let Source::Local { id, fields } = source else {
-            return false;
+        let (id, fields) = match source {
+            Source::Local { id, fields } => (*id, fields),
+            Source::Slot { root, fields, .. } => (*root, fields),
+            _ => return false,
         };
-        place.root == *id
+        place.root == id
             && place.fields.iter().zip(fields).all(|(index, field)| {
                 matches!(field, Projection::Element) || *field == Projection::Field(*index)
             })

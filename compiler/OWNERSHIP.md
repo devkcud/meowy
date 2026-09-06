@@ -13,7 +13,7 @@ implementation boundary; it does not change language rules.
   Equality compares addresses; dereference copies the supported copyable referent.
 - Eligible roots include ordinary locals, reference-free by-value parameters and
   dispatch receiver copies. Parameter/self addresses refer to their local storage,
-  not an original caller value. Borrowing emitted storage remains separate work.
+  not an original caller value. Mutable emitted storage uses the slot model below.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
   unreachable writes. Private tables associate those IDs and block IDs with the
@@ -110,8 +110,9 @@ implementation boundary; it does not change language rules.
   pass and return shared references and immutable record/union carriers. Every
   definition is checked independently, including uncalled and mutually recursive
   definitions. No body choice weakens the public all-input lifetime contract.
-- Actual origins distinguish physical `Local` storage from symbolic `Input`
-  sources. Each active parameter reference leaf gets its own symbolic source;
+- Actual origins distinguish physical `Local` storage, target-owned emitted `Slot`
+  cells and symbolic `Input` sources. Each active parameter reference leaf gets its
+  own symbolic source;
   the parameter's stack copy is not its referent. A completed return must borrow
   from such input sources. Returning any local actual origin or dependency is
   E303. A parameter's own address is a Local source and can only be used while
@@ -165,7 +166,7 @@ implementation boundary; it does not change language rules.
   tests distinguish original versus copied addresses, nullable carrier dispatch,
   earlier argument copies, effectful receivers and enclosing-scope early leaves.
 - Taking the address of a reference-bearing holder is still B001. Shared dispatch
-  does not enable exclusive `self` mutation, captures or emitted-slot addresses.
+  does not enable exclusive `self` mutation, captures or immutable emitted-slot addresses.
 
 ## Shared reborrows
 
@@ -252,10 +253,33 @@ implementation boundary; it does not change language rules.
   A retained unsupported destination is B001. Named outer emissions resolve the
   target frame rather than the alias's local declaration scope. Restarting the target
   block reinitializes its cells; inner restarts preserve initialized outer slots.
-  Aliases cannot outlive their lexical/target scope.
-- Aliases stay outside ordinary addressable places, so `&name`, field/element
-  borrowing through a name, exclusive references and reference-bearing mutable
-  fields remain B001. Writability does not manufacture a borrowable lifetime.
+  Alias names remain lexically scoped; their shared views follow target ownership below.
+- Mutable aliases stay separate from ordinary addressable places. The address
+  resolver explicitly supports `&name` and concrete field/list borrows when the
+  final cell has the lexical type or contains it as one exact union member. A
+  lexical union that is only a proper subset of the stored union has incompatible
+  tags/layout and remains B001; no copied borrow view or silent widening is made.
+  Type hints do not register a borrow; actual uses receive final backing validation.
+- `Source::Slot` carries the owning target block, canonical slot root, original
+  alias view ID and typed field/element projections. Lifetime lookup uses the
+  target's active region rather than the alias declaration's local Storage entry;
+  type lookup retains the original view even after that declaration scope closes.
+  An inner block can return a slot view to code still inside its target. Publishing
+  a view in that target's own result, or beyond it, is E303: completed records
+  cannot contain references into their own movable result storage.
+- Resolved alias metadata distinguishes compatible Result backing from Discarded
+  transient backing. The latter's initialized entry cell is explicitly retained
+  under the target's partial-result lifetime, including after an inner alias scope
+  ends. Current Copy-only storage needs no cleanup relocation; same-slot E205 and
+  the inner-restart-after-outer-emission boundary prevent reuse within a target
+  iteration. Target restart ends the iteration's references; inner-loop future
+  uses still keep their parent slot loans live through writes.
+- Both origin analysis and the CFG use one slot-source constructor. Canonical
+  roots match alias assignment/reservation identities, preserving E302 and disjoint
+  fields even when aliases arise in different guarded scopes. Slot/view metadata,
+  projections and lifetime/type lookups consume existing weighted work/storage
+  limits. Immutable emitted names, exclusive references and reference-bearing
+  mutable fields remain B001 until their distinct storage/ownership rules are ready.
 - Alias IDs enter mutable proofs and have no initializer constant/length cache.
   Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
@@ -503,9 +527,10 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Prove any finer disjointness within indexed containers before narrowing their
-   whole-region conflicts. Extend emitted-storage borrowing, exclusive references,
-   slice/alias metadata and non-Copy state with explicit lifetime contracts.
+7. Add immutable reference-free emitted names as actual read-only slot aliases
+   before enabling their borrows, preserving immutable tag/origin facts and the
+   same representation/lifetime checks. Prove finer indexed disjointness and add
+   exclusive references, slice/alias metadata and non-Copy state separately.
 
 ## Verification
 

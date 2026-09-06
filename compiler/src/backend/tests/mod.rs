@@ -2,6 +2,7 @@ mod aggregates;
 mod aliases;
 mod assignments;
 mod bridge;
+mod emitted_borrows;
 mod fields;
 mod lists;
 mod mixed_assignments;

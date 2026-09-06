@@ -2,6 +2,7 @@ mod aggregates;
 mod boundaries;
 mod control;
 mod origins;
+mod slots;
 
 pub(crate) fn accepts(source: &str) {
     let result = crate::compile(source);

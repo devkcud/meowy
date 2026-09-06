@@ -1,4 +1,4 @@
-use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Source, Stmt, TRUE, Type};
+use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Stmt, TRUE, Type};
 use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
@@ -130,7 +130,10 @@ impl<'a> Graph<'a> {
                     let reservation = if first.is_some() {
                         let value = self.value(vec![Origin {
                             component: Vec::new(),
-                            source: Source::local(&place),
+                            source: self.proofs.source(&Place {
+                                root: *id,
+                                fields: place.fields.clone(),
+                            }),
                             guard: TRUE,
                         }])?;
                         self.append(Node {

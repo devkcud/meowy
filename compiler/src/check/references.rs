@@ -51,6 +51,9 @@ impl Checker {
         }
         let error = match self.address(expr) {
             Ok((place, ty)) => {
+                if let Some(alias) = self.proofs.aliases.get_mut(&place.root) {
+                    alias.borrowed.get_or_insert(span);
+                }
                 return Ok(hir::Expr {
                     kind: hir::ExprKind::Borrow(place),
                     ty: Type::Reference(Box::new(ty)),
@@ -155,7 +158,7 @@ impl Checker {
                         expr.span,
                     ));
                 };
-                if !self.places.contains(&id) {
+                if !self.places.contains(&id) && !self.proofs.aliases.contains_key(&id) {
                     return Err(Diagnostic::unsupported(
                         "borrowing emitted storage",
                         expr.span,

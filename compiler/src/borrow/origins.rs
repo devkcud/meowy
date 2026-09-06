@@ -62,11 +62,69 @@ impl Checker<'_> {
         Ok(())
     }
 
-    pub(crate) fn live(&self, source: &Source, span: Span) -> Result<Option<&Storage>> {
+    pub(crate) fn live(
+        &mut self,
+        source: &Source,
+        span: Span,
+    ) -> Result<Option<crate::hir::BlockId>> {
+        let work = match source {
+            Source::Local { fields, .. } => {
+                fields.len() + self.locals.len().checked_ilog2().unwrap_or(0) as usize + 1
+            }
+            Source::Slot { fields, .. } => {
+                fields.len() + self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize + 3
+            }
+            Source::Input {
+                component, fields, ..
+            } => {
+                component.len()
+                    + fields.len()
+                    + self.inputs.len().checked_ilog2().unwrap_or(0) as usize
+                    + 1
+            }
+        };
+        if !self.guards.spend(work) {
+            return Err(State::budget(span));
+        }
         match source {
-            Source::Local { id, .. } => self.locals.get(id).map(Some).ok_or_else(|| {
-                Diagnostic::new("E303", "borrowed storage has ended before this use", span)
-            }),
+            Source::Local { id, .. } => self
+                .locals
+                .get(id)
+                .map(|storage| Some(storage.block))
+                .ok_or_else(|| {
+                    Diagnostic::new("E303", "borrowed storage has ended before this use", span)
+                }),
+            Source::Slot {
+                target,
+                root,
+                view,
+                fields,
+            } => {
+                let alias = self
+                    .proofs
+                    .aliases
+                    .get(view)
+                    .filter(|alias| {
+                        alias.target == *target && alias.root == *root && alias.backing.is_some()
+                    })
+                    .ok_or_else(|| Self::unsupported(span))?;
+                let local = self
+                    .program
+                    .locals
+                    .get(*view)
+                    .ok_or_else(|| Self::unsupported(span))?;
+                if crate::borrow_contract::projected_type(local, fields).is_none() {
+                    return Err(Self::unsupported(span));
+                }
+                if !self.types.contains_key(&alias.target) {
+                    return Err(Diagnostic::new(
+                        "E303",
+                        "borrowed result slot has ended before this use",
+                        span,
+                    ));
+                }
+                Ok(Some(alias.target))
+            }
             Source::Input {
                 id,
                 component,

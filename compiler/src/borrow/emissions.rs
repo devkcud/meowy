@@ -95,11 +95,11 @@ impl Checker<'_> {
             if !self.guards.overlap(origin.guard, effective) {
                 continue;
             }
-            if let Some(storage) = self.live(&origin.source, span)? {
+            if let Some(owner) = self.live(&origin.source, span)? {
                 let source = self
                     .blocks
                     .iter()
-                    .position(|id| *id == storage.block)
+                    .position(|id| *id == owner)
                     .ok_or_else(|| Self::unsupported(span))?;
                 if source >= target {
                     return Err(Diagnostic::new(

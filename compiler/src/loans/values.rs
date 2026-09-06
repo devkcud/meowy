@@ -1,6 +1,6 @@
 use super::{
     BTreeMap, Bundle, CallId, Diagnostic, Expr, ExprKind, FALSE, Graph, LocalId, MAX_ORIGINS,
-    MAX_VALUES, Node, Origin, Path, Result, Source, Span, Step, TRUE, Type,
+    MAX_VALUES, Node, Origin, Path, Result, Span, Step, TRUE, Type,
 };
 
 impl<'a> Graph<'a> {
@@ -200,7 +200,7 @@ impl<'a> Graph<'a> {
             ExprKind::Borrow(place) => {
                 let value = self.value(vec![Origin {
                     component: Vec::new(),
-                    source: Source::local(place),
+                    source: self.proofs.source(place),
                     guard: TRUE,
                 }])?;
                 self.append(Node {
