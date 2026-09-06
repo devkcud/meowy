@@ -1,0 +1,14 @@
+debug:@"debug"
+
+values<int32[3]>:=[10,20]
+original:values
+view:&values[2]
+values[2]=*view+1
+debug.print(original[1])
+debug.print(values[2])
+debug.print(values.size())
+
+values[1]={->7}
+values[2]=values[1]+2
+debug.print(values[1])
+debug.print(values[2])

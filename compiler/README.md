@@ -32,6 +32,7 @@ compiler/target/debug/meowy run compiler/examples/bounded-lists.mwy
 compiler/target/debug/meowy run compiler/examples/list-unions.mwy
 compiler/target/debug/meowy run compiler/examples/compound-lists.mwy
 compiler/target/debug/meowy run compiler/examples/element-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/element-writes.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -66,6 +67,8 @@ using checked intermediate values, grouped negation and short-circuit expression
 The [element borrows example](examples/element-borrows.mwy) takes checked references
 into original list storage, returns an element through a function and replaces the
 owner after the references' final uses.
+The [element writes example](examples/element-writes.mwy) replaces initialized
+elements after the final use of a shared view, preserving the list's length and copies.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -129,6 +132,12 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   an element address. Copied parameter/self elements cannot escape their scope.
   Lifetime analysis conservatively treats all indices in a list as overlapping;
   runtime reference equality still uses the actual element addresses.
+- Checked element assignment to direct mutable local lists: `values[index] = value`.
+  It checks the one-based initialized position before evaluating the replacement,
+  then updates only that element. Returning index/RHS evaluation keeps parent
+  storage reserved against writes; shared reads may finish before the final store.
+  Nested index targets and writes through fields, references or temporary owners
+  remain unavailable.
 - Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
   literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
   replacement and equality of initialized elements. Elements can be scalars,
@@ -165,7 +174,7 @@ exits with status 1. These are bootstrap text diagnostics, not the
 release panic artifact format or a recovery/unwind implementation.
 
 Unavailable constructs report **B001**, including slices, named list positions,
-reference/owned list elements, element mutation, other collection APIs, exclusive borrows,
+reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, and mutable record fields. String interpolation outside an
 output call requires the future formatting/storage implementation and is rejected.
@@ -207,6 +216,14 @@ Borrow liveness follows branches and named loop edges. An assignment evaluates i
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
 record overlaps references to any of its fields.
+Element assignment captures the local list's initialized length, evaluates its
+index once and checks bounds, then evaluates the RHS once before storing. A bounds
+failure skips the RHS. An index or RHS that leaves, restarts or panics skips the
+remaining assignment. `values[2] = *view + 1` is valid when the RHS is the final use
+of `view`; any later shared use conflicts, even when it selects a different index.
+Replacing the owner or another element during a returning index/RHS reports E302,
+because the pending write still depends on that list storage. Other owners remain
+independent. Copy reads keep their existing aggregate snapshot semantics.
 Copying a record counts as a use of all its references, even if a later operation
 selects only one field. Direct projection, scalar comparison and scalar-primary
 formatting do not keep unrelated component loans alive.
