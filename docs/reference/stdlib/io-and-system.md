@@ -106,6 +106,7 @@ borrowing the replaced contents. Input must not alias mutable output.
 `fs.ReadOnly`, `ReadWrite`, `CreateNew`, and `ReplaceContents` are immutable mode
 values. ReadOnly and ReadWrite require an existing file. CreateNew uses exclusive
 creation and fails if the path exists; ReplaceContents creates or truncates.
+Both creation modes open the resulting file for writing.
 There is no append behavior hidden in an ordinary write mode.
 
 File owners are move-only. Normal cleanup releases a handle without throwing;
@@ -224,3 +225,7 @@ ones explicitly. Replaying a saved executable does not automatically make a live
 network peer or mutable filesystem deterministic. The
 [replay contract](../diagnostics.md#replay-fidelity) governs which recorded results
 replace live effects and when a replay must report missing evidence.
+
+See the self-contained [file hash](../../programs/file-hash/README.md) and
+[file copy](../../programs/file-copy/README.md) projects for initialized buffers,
+partial progress, explicit acquisition, and checked sync/close results.

@@ -23,11 +23,13 @@ helper modules stay inside their project.
 | [Ticker](ticker/README.md) | Owned timed events, monotonic readings, missed-tick coalescing | Explicit timer allocation; finite waits |
 | [Calendar CLI](calendar-cli/README.md) | Typed options, generated help, calendar conversion, writer errors | Argv; six calendar profiles |
 | [Duration CLI](duration-cli/README.md) | Nested typed subcommands, inherited options, checked duration arithmetic | Argv; no implicit command dispatch |
+| [File hash](file-hash/README.md) | CLI, bounded streaming reads, SHA-256, hex output | Reads a named file; includes a fixture |
+| [File copy](file-copy/README.md) | CLI, explicit paths, partial I/O progress, sync and close | Creates a new destination; refuses overwrite |
 
 Start with age, composition, and packet for the language model. Text lab, word
 count, and JSON report show progressively more ownership and storage choices.
-Tasks, channel, and ticker make execution boundaries visible. Calendar and
-duration CLIs demonstrate typed options and nested command dispatch.
+Tasks, channel, and ticker make execution boundaries visible. The CLI projects
+combine several modules into applications with explicit process statuses.
 
 ## Run one project
 
@@ -49,7 +51,7 @@ meowy run docs/programs/calendar-cli/main.mwy -- -c chinese 2026-02-17
 The CLI finds the nearest `mod.mwy` from that entry. It loads that project's
 aliases, profile, and executor settings. The application's working directory
 remains the shell's working directory: a file argument such as `sample.txt` is
-resolved there.
+resolved there. Follow the file examples' `cd` instructions to use their fixtures.
 
 Each README provides complete commands, expected output or timing-dependent
 behavior, failure cases, and storage costs. Timing observations and random counts

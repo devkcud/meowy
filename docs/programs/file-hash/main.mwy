@@ -1,0 +1,131 @@
+bytes : @"bytes"
+cli : @"cli"
+encoding : @"encoding"
+fmt : @"fmt"
+fs : @"fs"
+hash : @"hash"
+io : @"io"
+memory : @"memory"
+path : @"path"
+process : @"process"
+strings : @"strings"
+
+app : cli.command({
+    -> name : "filehash"
+    -> summary : "Stream a file through SHA-256 with bounded working storage."
+    -> version : "0.1.0"
+    -> arguments : [
+        cli.argument<string>({
+            -> name : "file"
+            -> help : "Path of the file to hash."
+        })
+    ]
+})
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    arguments : process.arguments(memory.heap)
+    | arguments <error> | {
+        written : fmt.write_line(errors.write, arguments)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    parsed : cli.parse(app, arguments.slice())
+    | parsed <cli.Help> | {
+        written : cli.write_help(parsed, output.write, 80)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.Version> | {
+        written : cli.write_version(parsed, output.write)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.UsageError> | {
+        written : cli.write_error(parsed, errors.write)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    source : path.parse(parsed.arguments.file)
+    | source <error> | {
+        written : fmt.write_line(errors.write, source)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    opened : fs.open(source, fs.ReadOnly)
+    | opened <error> | {
+        written : fmt.write_line(errors.write, opened)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+    file := opened
+
+    digest : 'read {
+        scratch := bytes.filled<4096>(0)
+        state := hash.sha256_state()
+
+        'loop {
+            received : file.read(scratch.slice_mut())
+            chunk : bytes.slice(scratch.slice(), 1, received.count)
+            | chunk <error> | { 'read -> chunk; 'read.leave() }
+
+            # A final read can carry bytes together with EOF or an error. #
+            updated : state.update(chunk)
+            | updated <error> | { 'read -> updated; 'read.leave() }
+            | received.error <io.Error> | {
+                'read -> received.error
+                'read.leave()
+            }
+            | received.end | 'loop.leave()
+            'loop.restart()
+        }
+
+        -> state.finish()
+    }
+
+    # Close before reporting the read outcome; failure still consumes file. #
+    closed : file.close()
+    | closed <error> | {
+        written : fmt.write_line(errors.write, closed)
+        | written <error> | status = 1
+        status = 1
+    }
+    | digest <error> | {
+        written : fmt.write_line(errors.write, digest)
+        | written <error> | status = 1
+        status = 1
+        'main.leave()
+    }
+    | status != 0 | 'main.leave()
+
+    encoded <uint8[64]> := []
+    hex : encoding.hex_encode_into(digest.slice(), &!encoded)
+    | hex <error> | {
+        written : fmt.write_line(errors.write, hex)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+    text : strings.from_utf8(hex)
+    | text <error> | {
+        written : fmt.write_line(errors.write, text)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    written : fmt.write_line(output.write, text)
+    | written <error> | status = 1
+}
+
+-> status

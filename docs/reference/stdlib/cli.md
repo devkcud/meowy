@@ -235,4 +235,5 @@ Completion frontends can inspect the same immutable descriptor; they must never
 execute command handlers just to discover an option's name.
 
 The [duration project](../../programs/duration-cli/README.md) demonstrates nested
-command types and inherited options.
+command types and inherited options. [File hash](../../programs/file-hash/README.md)
+and [file copy](../../programs/file-copy/README.md) combine parsing with owned I/O.

@@ -64,8 +64,11 @@ Start with the [guide](docs/guide/README.md), or use the
 | [Command line](docs/cli/README.md)                         | Check, build, run, inspect internals, apply fixes, and replay failures |
 | [gatostyle](docs/guide/gatostyle.md)                       | Configurable layout, code quality, expression styles, and safe fixes   |
 
-The [worked programs](docs/programs/README.md) put these rules together. The
-[design notes](docs/design.md) explain the choices and the boundaries of the core.
+The [worked projects](docs/programs/README.md) put these rules together in 14
+self-contained directories, each with its own manifest and run instructions.
+They cover composition, Unicode, JSON, maps, randomness, tasks, channels, timers,
+calendars, nested CLIs, and streaming file tools. The [design notes](docs/design.md)
+explain the choices and the boundaries of the core.
 The [time and calendar guide](docs/guide/time-and-date.md) builds toward a small
 CLI that converts dates between six calendar systems, including Chinese.
 

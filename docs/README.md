@@ -50,10 +50,11 @@ those rules by building small programs, and the design notes explain their inten
 
 ## Read complete programs
 
-The [worked programs](programs/README.md) cover validation, allocation-free packet
-decoding, ordered task results, a bounded producer/consumer channel, and a
-calendar conversion CLI. They are part of the documentation, with explanations
-of their data and failure paths.
+The [worked projects](programs/README.md) each include a local manifest, entry,
+helper files, and instructions. Start with validation, composition, and binary
+headers; continue with Unicode, JSON, maps, randomness, concurrency, timers, and
+complete CLI applications. File tools include small fixtures and explicit
+instructions for their I/O effects.
 
 [Design notes](design.md) record the language's main decisions.
 The [manifest guide](guide/mod.md) explains project configuration alongside its

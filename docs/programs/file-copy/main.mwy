@@ -1,0 +1,130 @@
+bytes : @"bytes"
+cli : @"cli"
+fmt : @"fmt"
+fs : @"fs"
+io : @"io"
+memory : @"memory"
+path : @"path"
+process : @"process"
+
+app : cli.command({
+    -> name : "filecopy"
+    -> summary : "Copy a file into a new destination with bounded scratch."
+    -> version : "0.1.0"
+    -> arguments : [
+        cli.argument<string>({
+            -> name : "source"
+            -> help : "Existing file to read."
+        }),
+        cli.argument<string>({
+            -> name : "destination"
+            -> help : "New file to create; an existing path is rejected."
+        })
+    ]
+})
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    arguments : process.arguments(memory.heap)
+    | arguments <error> | {
+        written : fmt.write_line(errors.write, arguments)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    parsed : cli.parse(app, arguments.slice())
+    | parsed <cli.Help> | {
+        written : cli.write_help(parsed, output.write, 80)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.Version> | {
+        written : cli.write_version(parsed, output.write)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.UsageError> | {
+        written : cli.write_error(parsed, errors.write)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    source_path : path.parse(parsed.arguments.source)
+    | source_path <error> | {
+        written : fmt.write_line(errors.write, source_path)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+    destination_path : path.parse(parsed.arguments.destination)
+    | destination_path <error> | {
+        written : fmt.write_line(errors.write, destination_path)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    source_opened : fs.open(source_path, fs.ReadOnly)
+    | source_opened <error> | {
+        written : fmt.write_line(errors.write, source_opened)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+    source := source_opened
+    destination_opened : fs.open(destination_path, fs.CreateNew)
+    | destination_opened <error> | {
+        closed : source.close()
+        written : fmt.write_line(errors.write, destination_opened)
+        | written <error> | status = 1
+        | closed <error> | {
+            close_written : fmt.write_line(errors.write, closed)
+            | close_written <error> | status = 1
+        }
+        status = 1
+        'main.leave()
+    }
+    destination := destination_opened
+
+    scratch := bytes.filled<4096>(0)
+    copied : io.copy(source.read, destination.write, scratch.slice_mut())
+    synced : destination.sync()
+    destination_closed : destination.close()
+    source_closed : source.close()
+
+    # All file operations have finished before fallible reporting begins. #
+    | copied.error <io.Error> | {
+        written : fmt.write_line(errors.write, copied.error)
+        | written <error> | status = 1
+        progress : fmt.write_line(errors.write,
+            "Read: {copied.read} bytes; written: {copied.written} bytes")
+        | progress <error> | status = 1
+        status = 1
+    }
+    | synced <error> | {
+        written : fmt.write_line(errors.write, synced)
+        | written <error> | status = 1
+        status = 1
+    }
+    | destination_closed <error> | {
+        written : fmt.write_line(errors.write, destination_closed)
+        | written <error> | status = 1
+        status = 1
+    }
+    | source_closed <error> | {
+        written : fmt.write_line(errors.write, source_closed)
+        | written <error> | status = 1
+        status = 1
+    }
+    | status != 0 | 'main.leave()
+
+    written : fmt.write_line(output.write, "Copied: {copied.written} bytes")
+    | written <error> | status = 1
+}
+
+-> status
