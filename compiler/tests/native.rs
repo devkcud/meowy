@@ -2307,7 +2307,12 @@ d.print("done")
         let result = case.command("run", &["--profile", profile]);
         assert_eq!(result.status.code(), Some(1));
         assert_eq!(result.stdout, b"element\n");
-        assert_eq!(result.stderr, b"panic[P006]: stop\n");
+        let start = source.find("d.panic(\"stop\")").unwrap();
+        let end = start + "d.panic(\"stop\")".len();
+        assert_eq!(
+            result.stderr,
+            format!("panic[P006]: stop at bytes {start}..{end}\n").as_bytes()
+        );
     }
 }
 

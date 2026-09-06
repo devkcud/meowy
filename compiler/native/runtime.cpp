@@ -88,6 +88,63 @@ static void site(const std::uint64_t start, const std::uint64_t end) {
     meowy_uint_v1(2, end);
 }
 
+extern "C" [[noreturn]] void meowy_panic_site_v1(const std::uint64_t start,
+                                                const std::uint64_t end) {
+    site(start, end);
+    meowy_panic_v1();
+}
+
+static void operand(const std::uint64_t value, const int is_signed) {
+    if (is_signed != 0) {
+        meowy_int_v1(2, static_cast<std::int64_t>(value));
+    } else {
+        meowy_uint_v1(2, value);
+    }
+}
+
+extern "C" [[noreturn]] void meowy_arithmetic_fail_v2(const int op,
+                                                     const int bits,
+                                                     const int is_signed,
+                                                     const std::uint64_t left,
+                                                     const std::uint64_t right,
+                                                     const std::uint64_t start,
+                                                     const std::uint64_t end) {
+    if (bits < 1 || bits > 64) {
+        meowy_arithmetic_fail_v1();
+    }
+    constexpr char prefix[] = "panic[P002]: ";
+    meowy_write_v1(2, prefix, sizeof(prefix) - 1);
+    meowy_write_v1(2, is_signed != 0 ? "int" : "uint", is_signed != 0 ? 3 : 4);
+    meowy_uint_v1(2, static_cast<std::uint64_t>(bits));
+    meowy_write_v1(2, " ", 1);
+    if (op == 0) {
+        meowy_write_v1(2, "unary -", 7);
+    } else {
+        const char symbol = static_cast<char>(op);
+        meowy_write_v1(2, &symbol, 1);
+    }
+    const bool zero = (op == '/' || op == '%') && right == 0;
+    meowy_write_v1(2, zero ? " zero divisor" : " overflow", zero ? 13 : 9);
+    meowy_write_v1(2, op == 0 ? " (value " : " (left ", op == 0 ? 8 : 7);
+    operand(left, is_signed);
+    if (op != 0) {
+        meowy_write_v1(2, ", right ", 8);
+        operand(right, is_signed);
+    }
+    meowy_write_v1(2, "; range ", 8);
+    if (is_signed != 0) {
+        const std::uint64_t limit = std::uint64_t{1} << (bits - 1);
+        meowy_int_v1(2, -static_cast<std::int64_t>(limit - 1) - 1);
+        meowy_write_v1(2, "..", 2);
+        meowy_uint_v1(2, limit - 1);
+    } else {
+        meowy_write_v1(2, "0..", 3);
+        meowy_uint_v1(2, UINT64_MAX >> (64 - bits));
+    }
+    meowy_write_v1(2, ")", 1);
+    meowy_panic_site_v1(start, end);
+}
+
 extern "C" [[noreturn]] void meowy_index_fail_v1(const std::uint64_t index,
                                                 const std::uint64_t length,
                                                 const int signed_index,

@@ -166,7 +166,8 @@ impl<'a> Generator<'a> {
             "declare zeroext i1 @meowy_string_equal_v1(ptr, i64, ptr, i64)",
             "declare i32 @meowy_string_compare_v1(ptr, i64, ptr, i64)",
             "declare void @meowy_panic_v1() noreturn",
-            "declare void @meowy_arithmetic_fail_v1() noreturn",
+            "declare void @meowy_panic_site_v1(i64, i64) noreturn",
+            "declare void @meowy_arithmetic_fail_v2(i32, i32, i32, i64, i64, i64, i64) noreturn",
             "declare void @meowy_index_fail_v1(i64, i64, i32, i64, i64) noreturn",
             "declare void @meowy_list_full_v1(i64, i64, i64, i64) noreturn",
         ];
@@ -688,14 +689,14 @@ impl<'a> Generator<'a> {
                     ("+", _) => Ok(result),
                     ("!", Type::Bool) => Ok(self.value(format!("xor i1 {result}, true"))),
                     ("~", Type::Int { .. }) => Ok(self.value(format!("xor {ty} {result}, -1"))),
-                    ("-", Type::Int { bits, signed }) => {
-                        Ok(self.checked("sub", *bits, *signed, "0", &result))
+                    ("-", Type::Int { .. }) => {
+                        Ok(self.checked("-", &expression.ty, &result, None, expression.span))
                     }
                     ("-", Type::Float { .. }) => Ok(self.value(format!("fneg {ty} {result}"))),
                     _ => Err(format!("unsupported checked unary operator {op}")),
                 }
             }
-            ExprKind::Binary { op, left, right } => self.binary(op, left, right),
+            ExprKind::Binary { op, left, right } => self.binary(op, left, right, expression.span),
             ExprKind::Call { id, args, .. } => {
                 let mut values = Vec::new();
                 for arg in args {
@@ -705,7 +706,12 @@ impl<'a> Generator<'a> {
                     }
                     values.push(format!("{} {result}", ir_type(&arg.ty)));
                 }
-                Ok(self.value(format!("call {ty} @meowy_fn_{id}({})", values.join(", "))))
+                let value = self.value(format!("call {ty} @meowy_fn_{id}({})", values.join(", ")));
+                if expression.ty == Type::Never {
+                    self.line("unreachable".into());
+                    self.ended = true;
+                }
+                Ok(value)
             }
             ExprKind::Print { parts, newline } => {
                 self.print(parts, 1)?;
@@ -720,7 +726,10 @@ impl<'a> Generator<'a> {
                 self.print_value(&Type::String, &prefix, 2)?;
                 self.print(parts, 2)?;
                 if !self.ended {
-                    self.line("call void @meowy_panic_v1()".into());
+                    self.line(format!(
+                        "call void @meowy_panic_site_v1(i64 {}, i64 {})",
+                        expression.span.start, expression.span.end
+                    ));
                     self.line("unreachable".into());
                     self.ended = true;
                 }
@@ -897,35 +906,76 @@ impl<'a> Generator<'a> {
     pub(crate) fn checked(
         &mut self,
         op: &str,
-        bits: u32,
-        signed: bool,
+        ty: &Type,
         left: &str,
-        right: &str,
+        right: Option<&str>,
+        span: Span,
     ) -> String {
-        let prefix = if signed { "s" } else { "u" };
-        let name = format!("llvm.{prefix}{op}.with.overflow.i{bits}");
+        let Type::Int { bits, signed } = ty else {
+            unreachable!()
+        };
+        let prefix = if *signed { "s" } else { "u" };
+        let operation = match op {
+            "+" => "add",
+            "-" => "sub",
+            "*" => "mul",
+            _ => unreachable!(),
+        };
+        let name = format!("llvm.{prefix}{operation}.with.overflow.i{bits}");
         self.declarations.insert(format!(
             "declare {{ i{bits}, i1 }} @{name}(i{bits}, i{bits})"
         ));
+        let (first, second) = right.map(|right| (left, right)).unwrap_or(("0", left));
         let pair = self.value(format!(
-            "call {{ i{bits}, i1 }} @{name}(i{bits} {left}, i{bits} {right})"
+            "call {{ i{bits}, i1 }} @{name}(i{bits} {first}, i{bits} {second})"
         ));
         let overflow = self.value(format!("extractvalue {{ i{bits}, i1 }} {pair}, 1"));
-        self.guard(&overflow);
+        self.arithmetic_guard(&overflow, op, ty, (left, right), span);
         self.value(format!("extractvalue {{ i{bits}, i1 }} {pair}, 0"))
     }
 
-    pub(crate) fn guard(&mut self, failure: &str) {
+    pub(crate) fn arithmetic_guard(
+        &mut self,
+        failure: &str,
+        op: &str,
+        ty: &Type,
+        operands: (&str, Option<&str>),
+        span: Span,
+    ) {
+        let Type::Int { bits, signed } = ty else {
+            unreachable!()
+        };
         let fail = self.name("fail");
         let next = self.name("ok");
         self.branch(failure, &fail, &next);
         self.label(&fail);
-        self.line("call void @meowy_arithmetic_fail_v1()".into());
+        let extend = if *signed { "sext" } else { "zext" };
+        let mut left = operands.0.to_owned();
+        let mut right = operands.1.unwrap_or("0").to_owned();
+        if *bits < 64 {
+            left = self.value(format!("{extend} i{bits} {left} to i64"));
+            right = self.value(format!("{extend} i{bits} {right} to i64"));
+        }
+        let operation = if operands.1.is_none() {
+            0
+        } else {
+            i32::from(op.as_bytes()[0])
+        };
+        self.line(format!(
+            "call void @meowy_arithmetic_fail_v2(i32 {operation}, i32 {bits}, i32 {}, i64 {left}, i64 {right}, i64 {}, i64 {})",
+            i32::from(*signed), span.start, span.end
+        ));
         self.line("unreachable".into());
         self.label(&next);
     }
 
-    pub(crate) fn binary(&mut self, op: &str, left: &Expr, right: &Expr) -> Result<String, String> {
+    pub(crate) fn binary(
+        &mut self,
+        op: &str,
+        left: &Expr,
+        right: &Expr,
+        span: Span,
+    ) -> Result<String, String> {
         let first = self.expression(left)?;
         if self.ended {
             return Ok("undef".into());
@@ -966,9 +1016,9 @@ impl<'a> Generator<'a> {
             Type::Int { bits, signed } => {
                 let mut divisor = second.clone();
                 let operation = match op {
-                    "+" => return Ok(self.checked("add", *bits, *signed, &first, &second)),
-                    "-" => return Ok(self.checked("sub", *bits, *signed, &first, &second)),
-                    "*" => return Ok(self.checked("mul", *bits, *signed, &first, &second)),
+                    "+" | "-" | "*" => {
+                        return Ok(self.checked(op, &left.ty, &first, Some(&second), span));
+                    }
                     "/" | "%" => {
                         let zero = self.value(format!("icmp eq {ty} {second}, 0"));
                         let failure = if *signed {
@@ -986,7 +1036,13 @@ impl<'a> Generator<'a> {
                         } else {
                             zero
                         };
-                        self.guard(&failure);
+                        self.arithmetic_guard(
+                            &failure,
+                            op,
+                            &left.ty,
+                            (&first, Some(&second)),
+                            span,
+                        );
                         match (op, signed) {
                             ("/", true) => "sdiv",
                             ("/", false) => "udiv",
@@ -1589,19 +1645,26 @@ mod tests {
                 for signed in [false, true] {
                     let ty = Type::Int { bits, signed };
                     let maximum = (1i128 << (bits - u32::from(signed))) - 1;
-                    let value = binary(
-                        "+",
-                        integer(maximum, bits, signed),
-                        integer(1, bits, signed),
-                        ty,
-                    );
-                    let output = native(vec![value], release, false);
-                    assert_eq!(
-                        output.status.code(),
-                        Some(1),
-                        "bits={bits}, signed={signed}, release={release}"
-                    );
-                    assert!(output.stderr.starts_with(b"panic[P002]: integer overflow"));
+                    let minimum = if signed { -(1i128 << (bits - 1)) } else { 0 };
+                    let name = if signed { "int" } else { "uint" };
+                    for (op, left, right) in
+                        [("+", maximum, 1), ("-", minimum, 1), ("*", maximum, 2)]
+                    {
+                        let mut value = binary(
+                            op,
+                            integer(left, bits, signed),
+                            integer(right, bits, signed),
+                            ty.clone(),
+                        );
+                        value.span = Span { start: 11, end: 17 };
+                        let output = native(vec![value], release, false);
+                        assert_eq!(
+                            output.status.code(),
+                            Some(1),
+                            "bits={bits}, signed={signed}, release={release}, op={op}"
+                        );
+                        assert_eq!(output.stderr, format!("panic[P002]: {name}{bits} {op} overflow (left {left}, right {right}; range {minimum}..{maximum}) at bytes 11..17\n").as_bytes());
+                    }
                 }
             }
             let ty = Type::Int {
@@ -1618,12 +1681,15 @@ mod tests {
                 let output = native(vec![value], release, false);
                 if op == "/" {
                     assert_eq!(output.status.code(), Some(1));
+                    assert_eq!(output.stderr, b"panic[P002]: int64 / overflow (left -9223372036854775808, right -1; range -9223372036854775808..9223372036854775807) at bytes 0..0\n");
                 } else {
                     assert!(output.status.success());
                     assert_eq!(output.stdout, b"0\n");
                 }
                 let value = binary(op, integer(8, 64, true), integer(0, 64, true), ty.clone());
-                assert_eq!(native(vec![value], release, false).status.code(), Some(1));
+                let output = native(vec![value], release, false);
+                assert_eq!(output.status.code(), Some(1));
+                assert_eq!(output.stderr, format!("panic[P002]: int64 {op} zero divisor (left 8, right 0; range -9223372036854775808..9223372036854775807) at bytes 0..0\n").as_bytes());
             }
             let minimum = expr(
                 ExprKind::Unary {
@@ -1632,7 +1698,9 @@ mod tests {
                 },
                 ty,
             );
-            assert_eq!(native(vec![minimum], release, false).status.code(), Some(1));
+            let output = native(vec![minimum], release, false);
+            assert_eq!(output.status.code(), Some(1));
+            assert_eq!(output.stderr, b"panic[P002]: int64 unary - overflow (value -9223372036854775808; range -9223372036854775808..9223372036854775807) at bytes 0..0\n");
         }
     }
 
