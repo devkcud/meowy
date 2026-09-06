@@ -2,6 +2,7 @@ use super::{
     BTreeSet, Block, Checker, Exit, ExprKind, FALSE, Flow, Result, Span, State, Stmt, TRUE, Type,
     Value, slot,
 };
+use crate::hir::WriteStep;
 
 impl Checker<'_> {
     pub(crate) fn block(&mut self, block: &Block) -> Result<Value> {
@@ -94,77 +95,57 @@ impl Checker<'_> {
                     }
                     result.flow
                 }
-                Stmt::SetField { place, value, span } => {
-                    if !self.locals.contains_key(&place.root)
-                        || !self.proofs.mutable.contains(&place.root)
-                    {
-                        return Err(Self::unsupported(*span));
-                    }
-                    let mut ty = &self.program.locals[place.root];
-                    if ty.has_reference() || place.fields.is_empty() {
-                        return Err(Self::unsupported(*span));
-                    }
-                    for index in &place.fields {
-                        if !self.guards.spend(1) {
-                            return Err(State::budget(*span));
-                        }
-                        let Type::Record { fields, .. } = ty else {
-                            return Err(Self::unsupported(*span));
-                        };
-                        let field = fields
-                            .get(*index)
-                            .filter(|field| field.mutable)
-                            .ok_or_else(|| Self::unsupported(*span))?;
-                        ty = &field.ty;
-                    }
-                    let result = self.expression(value)?;
-                    if result.flow.next
-                        && (!result.state.origins.is_empty()
-                            || !result.state.bounds.is_empty()
-                            || value.ty != *ty)
-                    {
-                        return Err(Self::unsupported(*span));
-                    }
-                    result.flow
-                }
-                Stmt::SetElement {
+                Stmt::SetPath {
                     id,
                     path,
                     value,
                     span,
                 } => {
-                    if !self.locals.contains_key(id)
-                        || !self.proofs.mutable.contains(id)
-                        || !matches!(self.program.locals.get(*id), Some(Type::List { element, .. }) if !element.has_reference())
-                    {
+                    if !self.locals.contains_key(id) || !self.proofs.mutable.contains(id) {
+                        return Err(Self::unsupported(*span));
+                    }
+                    let mut ty = &self.program.locals[*id];
+                    if ty.has_reference() || path.is_empty() {
                         return Err(Self::unsupported(*span));
                     }
                     let mut result = Flow::new();
-                    let mut ty = &self.program.locals[*id];
-                    if path.is_empty() {
-                        return Err(Self::unsupported(*span));
-                    }
                     for step in path {
                         if !result.next {
                             break;
                         }
                         if !self.guards.spend(1) {
-                            return Err(State::budget(step.span));
+                            return Err(State::budget(*span));
                         }
-                        let Type::List { element, .. } = ty else {
-                            return Err(Self::unsupported(step.span));
-                        };
-                        ty = element;
-                        result.append(self.expression(&step.index)?.flow);
+                        match step {
+                            WriteStep::Field(index) => {
+                                let Type::Record { fields, .. } = ty else {
+                                    return Err(Self::unsupported(*span));
+                                };
+                                let field = fields
+                                    .get(*index)
+                                    .filter(|field| field.mutable)
+                                    .ok_or_else(|| Self::unsupported(*span))?;
+                                ty = &field.ty;
+                            }
+                            WriteStep::Index(step) => {
+                                let Type::List { element, .. } = ty else {
+                                    return Err(Self::unsupported(step.span));
+                                };
+                                ty = element;
+                                result.append(self.expression(&step.index)?.flow);
+                            }
+                        }
                     }
                     if result.next {
-                        let value = self.expression(value)?;
-                        if value.flow.next
-                            && (!value.state.origins.is_empty() || !value.state.bounds.is_empty())
+                        let next = self.expression(value)?;
+                        if next.flow.next
+                            && (!next.state.origins.is_empty()
+                                || !next.state.bounds.is_empty()
+                                || value.ty != *ty)
                         {
                             return Err(Self::unsupported(*span));
                         }
-                        result.append(value.flow);
+                        result.append(next.flow);
                     }
                     result
                 }

@@ -205,8 +205,9 @@ pub(crate) fn field_assignments_preserve_copies_neighbors_and_last_use_reads() {
                             id: 1,
                             value: current.clone(),
                         },
-                        Stmt::SetField {
-                            place,
+                        Stmt::SetPath {
+                            id: place.root,
+                            path: place.fields.into_iter().map(WriteStep::Field).collect(),
                             value,
                             span: Span { start: 10, end: 20 },
                         },
@@ -335,11 +336,9 @@ pub(crate) fn nested_field_writes_preserve_layout_and_skip_stores_on_leave_or_pa
                 ExprKind::Block(Block {
                     id: 1,
                     ty: ty.clone(),
-                    stmts: vec![Stmt::SetField {
-                        place: Place {
-                            root: 0,
-                            fields: vec![0, 0],
-                        },
+                    stmts: vec![Stmt::SetPath {
+                        id: 0,
+                        path: vec![WriteStep::Field(0), WriteStep::Field(0)],
                         value,
                         span: Span { start: 10, end: 20 },
                     }],

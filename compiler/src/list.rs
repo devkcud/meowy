@@ -532,105 +532,6 @@ impl Checker {
         }
     }
 
-    pub(crate) fn set_element(
-        &mut self,
-        target: &ast::Expr,
-        value: &ast::Expr,
-    ) -> Result<hir::Stmt> {
-        let span = target.span;
-        let mut list = target;
-        let mut indices = Vec::new();
-        loop {
-            if !self.flow.spend(1) {
-                return Err(Diagnostic::unsupported(
-                    "element assignment path budget exhausted",
-                    span,
-                ));
-            }
-            match &list.kind {
-                ExprKind::Group(value) => list = value,
-                ExprKind::Index { value, index } => {
-                    if indices.len() == MAX_WRITE_PATH {
-                        return Err(Diagnostic::unsupported(
-                            "element assignment path budget exhausted",
-                            span,
-                        ));
-                    }
-                    indices.push((index.as_ref(), list.span));
-                    list = value;
-                }
-                _ => break,
-            }
-        }
-        let ExprKind::Name(name) = &list.kind else {
-            return Err(Diagnostic::unsupported(
-                "element assignment outside direct local lists",
-                span,
-            ));
-        };
-        let Value::Local {
-            id, ty, mutable, ..
-        } = self.value(name, list.span)?
-        else {
-            return Err(Diagnostic::unsupported(
-                "element assignment outside direct local lists",
-                span,
-            ));
-        };
-        if !matches!(ty, Type::List { .. }) {
-            return Err(Diagnostic::unsupported(
-                "element assignment outside direct local lists",
-                span,
-            ));
-        }
-        if !mutable {
-            return Err(Self::error(
-                "E305",
-                format!("binding `{name}` is immutable"),
-                list.span,
-            ));
-        }
-        if !self.places.contains(&id) || ty.has_reference() {
-            return Err(Diagnostic::unsupported(
-                "element assignment requires addressable reference-free storage",
-                span,
-            ));
-        }
-        crate::borrow_contract::type_weight(&ty, &mut self.flow, span)?;
-        let mut ty = ty;
-        let mut path = Vec::new();
-        for (index, span) in indices.into_iter().rev() {
-            if !self.flow.spend(1) {
-                return Err(Diagnostic::unsupported(
-                    "element assignment path budget exhausted",
-                    span,
-                ));
-            }
-            let Type::List { element, capacity } = ty else {
-                return Err(Diagnostic::unsupported(
-                    "nested element assignment requires concrete lists",
-                    span,
-                ));
-            };
-            path.push(hir::IndexStep {
-                index: self.list_position(index, None, capacity)?,
-                span,
-            });
-            ty = *element;
-        }
-        if let Some(last) = path.last_mut() {
-            last.span = span;
-        }
-        let value = self.expr(value, Some(&ty))?;
-        self.forget(id);
-        Ok(hir::Stmt::SetElement {
-            id,
-            path,
-            value,
-            span,
-        })
-    }
-
     pub(crate) fn list_method(
         &mut self,
         value: &ast::Expr,
@@ -726,7 +627,7 @@ mod tests {
             ("a:=[1,2];a[1]=\"x\"", "E207"),
             ("a<uint8[2]>:=[1,2];a[1]=256", "E216"),
             ("a:=[1,2];p:&a;p[1]=3", "B001"),
-            ("a:={->items:[1,2]};a.items[1]=3", "B001"),
+            ("a:={->items:[1,2]};a.items[1]=3", "E305"),
             ("[1,2][1]=3", "B001"),
         ] {
             rejects(source, code);
@@ -749,19 +650,24 @@ mod tests {
             ("a:=[[1,2],[3,4]];a[0][1]=5", "E101"),
             ("a<uint8[2][2]>:=[[1,2],[3,4]];a[1][2]=256", "E216"),
             ("a:=[[1,2],[3,4]];a[1][2]=\"x\"", "E207"),
-            ("a:=[{->items:[1,2]}];a[1].items[2]=5", "B001"),
+            ("a:=[{->items:[1,2]}];a[1].items[2]=5", "E305"),
             ("a:=[[1,2],[3,4]];r:&a;r[1][2]=5", "B001"),
         ] {
             rejects(source, code);
         }
         let source = "a:=[[1,2],[3,4]];a[1][2]=5";
         let program = crate::compile(source).unwrap();
-        let Some(crate::hir::Stmt::SetElement { path, .. }) = program.body.stmts.last() else {
+        let Some(crate::hir::Stmt::SetPath { path, .. }) = program.body.stmts.last() else {
             panic!("expected initialized assignment");
         };
         let prefixes = path
             .iter()
-            .map(|step| &source[step.span.start..step.span.end])
+            .map(|step| {
+                let crate::hir::WriteStep::Index(step) = step else {
+                    panic!("index step")
+                };
+                &source[step.span.start..step.span.end]
+            })
             .collect::<Vec<_>>();
         assert_eq!(prefixes, ["a[1]", "a[1][2]"]);
         for depth in [32, 64] {

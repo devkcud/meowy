@@ -4,26 +4,30 @@ use crate::diagnostic::Diagnostic;
 use crate::hir::{self, Type};
 
 impl Checker {
-    pub(crate) fn set_field(&mut self, target: &ast::Expr, value: &ast::Expr) -> Result<hir::Stmt> {
+    pub(crate) fn write_path(
+        &mut self,
+        target: &ast::Expr,
+        value: &ast::Expr,
+    ) -> Result<hir::Stmt> {
         let mut root = target;
-        let mut fields = Vec::new();
+        let mut steps = Vec::new();
         loop {
             if !self.flow.spend(1) {
                 return Err(Diagnostic::unsupported(
-                    "field assignment path budget exhausted",
+                    "assignment path budget exhausted",
                     target.span,
                 ));
             }
             match &root.kind {
                 ExprKind::Group(value) => root = value,
-                ExprKind::Field { value, name } => {
-                    if fields.len() == 256 {
+                ExprKind::Field { value, .. } | ExprKind::Index { value, .. } => {
+                    if steps.len() == crate::list::MAX_WRITE_PATH {
                         return Err(Diagnostic::unsupported(
-                            "field assignment path budget exhausted",
+                            "assignment path budget exhausted",
                             target.span,
                         ));
                     }
-                    fields.push(name);
+                    steps.push(root);
                     root = value;
                 }
                 _ => break,
@@ -31,7 +35,7 @@ impl Checker {
         }
         let ExprKind::Name(name) = &root.kind else {
             return Err(Diagnostic::unsupported(
-                "field assignment outside ordinary local storage",
+                "assignment path outside ordinary local storage",
                 target.span,
             ));
         };
@@ -40,13 +44,16 @@ impl Checker {
         } = self.value(name, root.span)?
         else {
             return Err(Diagnostic::unsupported(
-                "field assignment outside ordinary local storage",
+                "assignment path outside ordinary local storage",
                 target.span,
             ));
         };
-        if !self.places.contains(&id) || !matches!(ty, Type::Record { .. }) || ty.has_reference() {
+        if !self.places.contains(&id)
+            || !matches!(ty, Type::Record { .. } | Type::List { .. })
+            || ty.has_reference()
+        {
             return Err(Diagnostic::unsupported(
-                "field assignment requires ordinary reference-free record storage",
+                "assignment path requires ordinary reference-free storage",
                 target.span,
             ));
         }
@@ -61,48 +68,73 @@ impl Checker {
         let mut ty = ty;
         let mut path = Vec::new();
         let mut names = Vec::new();
-        for name in fields.into_iter().rev() {
-            let Type::Record { fields, .. } = ty else {
+        let mut indexed = false;
+        for step in steps.into_iter().rev() {
+            if !self.flow.spend(1) {
                 return Err(Diagnostic::unsupported(
-                    "field assignment requires concrete record paths",
-                    target.span,
-                ));
-            };
-            if !self.flow.spend(fields.len().saturating_mul(name.len() + 1)) {
-                return Err(Diagnostic::unsupported(
-                    "field assignment lookup budget exhausted",
-                    target.span,
+                    "assignment path budget exhausted",
+                    step.span,
                 ));
             }
-            let (index, field) = fields
-                .into_iter()
-                .enumerate()
-                .find(|(_, field)| &field.name == name)
-                .ok_or_else(|| {
-                    Self::error(
-                        "E201",
-                        format!("unknown record field `{name}`"),
-                        target.span,
-                    )
-                })?;
-            if !field.mutable {
-                return Err(Self::error(
-                    "E305",
-                    format!("field `{name}` is immutable"),
-                    target.span,
-                ));
+            match &step.kind {
+                ExprKind::Field { name, .. } => {
+                    let Type::Record { fields, .. } = ty else {
+                        return Err(Diagnostic::unsupported(
+                            "field assignment requires concrete record paths",
+                            step.span,
+                        ));
+                    };
+                    if !self.flow.spend(fields.len().saturating_mul(name.len() + 1)) {
+                        return Err(Diagnostic::unsupported(
+                            "field assignment lookup budget exhausted",
+                            step.span,
+                        ));
+                    }
+                    let (index, field) = fields
+                        .into_iter()
+                        .enumerate()
+                        .find(|(_, field)| &field.name == name)
+                        .ok_or_else(|| {
+                            Self::error("E201", format!("unknown record field `{name}`"), step.span)
+                        })?;
+                    if !field.mutable {
+                        return Err(Self::error(
+                            "E305",
+                            format!("field `{name}` is immutable"),
+                            step.span,
+                        ));
+                    }
+                    path.push(hir::WriteStep::Field(index));
+                    if !indexed {
+                        names.push(field.name);
+                    }
+                    ty = field.ty;
+                }
+                ExprKind::Index { index, .. } => {
+                    let Type::List { element, capacity } = ty else {
+                        return Err(Diagnostic::unsupported(
+                            "index assignment requires concrete lists",
+                            step.span,
+                        ));
+                    };
+                    indexed = true;
+                    path.push(hir::WriteStep::Index(hir::IndexStep {
+                        index: self.list_position(index, None, capacity)?,
+                        span: step.span,
+                    }));
+                    ty = *element;
+                }
+                _ => unreachable!(),
             }
-            path.push(index);
-            names.push(field.name);
-            ty = field.ty;
+        }
+        if let Some(hir::WriteStep::Index(last)) = path.last_mut() {
+            last.span = target.span;
         }
         let value = self.expr(value, Some(&ty))?;
         self.forget_field(id, &names, target.span)?;
-        Ok(hir::Stmt::SetField {
-            place: hir::Place {
-                root: id,
-                fields: path,
-            },
+        Ok(hir::Stmt::SetPath {
+            id,
+            path,
             value,
             span: target.span,
         })

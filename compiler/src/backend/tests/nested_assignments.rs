@@ -117,19 +117,19 @@ pub(crate) fn nested_element_assignments_keep_selected_rows_and_payload_layouts(
             );
             let mut path = Vec::new();
             if *deep {
-                path.push(IndexStep {
+                path.push(WriteStep::Index(IndexStep {
                     index: integer(1, 64, false),
                     span: Span { start: 10, end: 15 },
-                });
+                }));
             }
-            path.push(IndexStep {
+            path.push(WriteStep::Index(IndexStep {
                 index: outer,
                 span: Span { start: 10, end: 20 },
-            });
-            path.push(IndexStep {
+            }));
+            path.push(WriteStep::Index(IndexStep {
                 index: inner,
                 span: Span { start: 10, end: 30 },
-            });
+            }));
             let program = Program {
                 body: Block {
                     id: 0,
@@ -151,7 +151,7 @@ pub(crate) fn nested_element_assignments_keep_selected_rows_and_payload_layouts(
                             id: 3,
                             value: integer(3, 32, true),
                         },
-                        Stmt::SetElement {
+                        Stmt::SetPath {
                             id: 0,
                             path,
                             value,
@@ -309,17 +309,17 @@ pub(crate) fn nested_assignment_bounds_use_each_header_and_prefix_before_later_e
                             id: 0,
                             value: initial.clone(),
                         },
-                        Stmt::SetElement {
+                        Stmt::SetPath {
                             id: 0,
                             path: vec![
-                                IndexStep {
+                                WriteStep::Index(IndexStep {
                                     index: effect(1, "outer", outer.clone()),
                                     span: Span { start: 10, end: 20 },
-                                },
-                                IndexStep {
+                                }),
+                                WriteStep::Index(IndexStep {
                                     index: effect(2, "inner", inner.clone()),
                                     span: Span { start: 10, end: 30 },
-                                },
+                                }),
                             ],
                             value: effect(3, "rhs", expr(ExprKind::Bool(true), Type::Bool)),
                             span: Span { start: 9, end: 31 },
@@ -395,17 +395,17 @@ pub(crate) fn nested_assignment_leaves_skip_remaining_indices_rhs_and_stores() {
                 ExprKind::Block(Block {
                     id: 1,
                     ty: Type::Null,
-                    stmts: vec![Stmt::SetElement {
+                    stmts: vec![Stmt::SetPath {
                         id: 0,
                         path: vec![
-                            IndexStep {
+                            WriteStep::Index(IndexStep {
                                 index: phase(0, 2, "outer", integer(2, 32, true)),
                                 span: Span { start: 10, end: 20 },
-                            },
-                            IndexStep {
+                            }),
+                            WriteStep::Index(IndexStep {
                                 index: phase(1, 3, "inner", integer(2, 32, true)),
                                 span: Span { start: 10, end: 30 },
-                            },
+                            }),
                         ],
                         value: phase(2, 4, "rhs", expr(ExprKind::Bool(true), Type::Bool)),
                         span: Span { start: 10, end: 30 },

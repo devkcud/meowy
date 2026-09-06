@@ -3,13 +3,14 @@ mod assignments;
 mod bridge;
 mod fields;
 mod lists;
+mod mixed_assignments;
 mod nested_assignments;
 mod references;
 mod scalars;
 
 use super::*;
 use crate::ast::Span;
-use crate::hir::{Field, IndexStep, Place};
+use crate::hir::{Field, IndexStep, Place, WriteStep};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 

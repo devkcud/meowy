@@ -1,6 +1,29 @@
 use super::{accepts, rejects};
 
 #[test]
+pub(crate) fn mixed_writes_keep_first_list_regions_and_returning_phase_uses() {
+    for source in [
+        "r:={->items:=[1,2];->other:=3};p:&r.other;r.items[1]=4;v:*p",
+        "r:={->items:=[1,2];->other:=3};r.items[{r.other=4;->1}]=5",
+        "r:={->left:=[1,2];->right:=[3,4]};p:&r.left[1];r.right[1]=5;v:*p",
+        "r:={->items:=[1,2]};p:&r.items[1];r.items[2]=*p+1",
+        "d:@\"debug\";r:={->rows:=[{->items:=[1,2]}]};r.rows[1].items[{r.rows=[{->items:=[3,4]}];d.panic(\"stop\")}]=5",
+        "r:={->rows:=[{->n:=1}]};'out{r.rows[1].n={r.rows=[{->n:=2}];'out.leave()}}",
+    ] {
+        accepts(source);
+    }
+    for source in [
+        "r:={->items:=[1,2]};p:&r.items[1];r.items[2]=3;v:*p",
+        "r:=[{->left:=1;->right:=2}];p:&r[1].left;r[1].right=3;v:*p",
+        "r:={->items:=[1,2]};r.items[{r.items=[3,4];->1}]=5",
+        "r:={->items:=[1,2]};r.items[1]={r.items=[3,4];->5}",
+        "d:@\"debug\";r:={->rows:=[{->items:=[1,2]}]};r.rows[{r.rows=[{->items:=[3,4]}];->1}].items[{d.panic(\"stop\")}]=5",
+    ] {
+        rejects(source, "E302");
+    }
+}
+
+#[test]
 pub(crate) fn nested_store_reservations_cover_each_returning_index() {
     for source in [
         "a:=[[1,2],[3,4]];r:&a[1][1];a[2][2]=*r+1",

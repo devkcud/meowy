@@ -1,4 +1,5 @@
 mod fields;
+mod paths;
 
 pub(crate) fn accepts(source: &str) {
     if let Err(errors) = crate::compile(source) {

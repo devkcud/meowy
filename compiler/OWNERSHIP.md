@@ -215,8 +215,8 @@ implementation boundary; it does not change language rules.
   storage. Every crossed named field must be mutable; an immutable root/path is
   E305. Shared-reference, temporary, emitted-name and union-payload targets remain
   B001. A field may hold any currently supported Copy value, including a whole
-  list or record, but mixed field/index write paths are not yet enabled.
-- `SetField` retains the static physical place and target span. RHS evaluates
+  list or record. Mixed paths check every field boundary and initialized index.
+- An all-field `SetPath` retains static physical offsets and the target span. RHS evaluates
   once before the selected store. These fixed typed offsets remain valid across
   same-shape Copy owner replacement inside RHS, so no list-style reservation is
   needed. Nonreturning RHS forms no later access. Final-use RHS shared reads can
@@ -410,35 +410,42 @@ implementation boundary; it does not change language rules.
   conservatively overlap all indices within a list, preserving enclosing record
   fields and nested list prefixes without enumerating capacity. They retain every
   direct-function all-input dependency.
-- `values[first][next] = rhs` replaces one initialized element through one or
-  more concrete list layers of a direct mutable reference-free Copy local.
-  Parentheses around local/path prefixes are allowed; field/reference targets,
-  union-payload projections and temporary owners remain B001.
+- `holder.rows[first].items[next] = rhs` replaces initialized storage through
+  concrete list and mutable field layers of an ordinary mutable reference-free
+  Copy local. Parentheses around path prefixes are allowed; shared-reference
+  targets, union-payload projections and temporary owners remain B001.
   Immutable list bindings report E305. This adds no source exclusive-reference
   value or `&!` semantics; the final store requires exclusive collection access.
-- `SetElement` retains the local ID, final target span and ordered `IndexStep`
-  entries. Each step contains its once-evaluated index and original prefix span.
+- `SetPath` replaces separate field/element assignment nodes. It retains the local
+  ID, final target span and ordered `WriteStep::Field`/`WriteStep::Index` entries.
+  Each index step contains its once-evaluated operand and original prefix span.
   Lowering captures each current list's initialized length, evaluates/checks that
   index and forms its actual element address before inspecting the next layer.
   After every index succeeds, it evaluates the contextually typed RHS once and
   stores only the selected leaf. Lengths, capacities and other elements stay intact.
-  Static positions use E101; P001 identifies the failing prefix, excluding later
-  indices and RHS. Later effects cannot run before an earlier bounds check.
-- The CFG defines an internal storage reservation before the first index, reads
+  Static positions use E101; P001 identifies the failing indexed prefix, excluding
+  later fields, indices and RHS. Later effects cannot precede an earlier bounds check.
+- Static fields before the first index identify the whole collection region used
+  for reservations and final write conflicts. All indices and contained fields
+  in that first list remain conservative aliases; holder fields outside it can
+  stay disjoint. Finer field/index exclusion inside the list requires later proof.
+  Pure field paths keep the full precise static place and need no reservation.
+- The CFG defines an internal collection reservation before the first index, reads
   it at every returning bounds/address phase, then consumes it at the final store. Completing index
   or RHS owner replacements/nested writes conflict (E302), while shared reads and
-  final-use RHS borrows can finish before the store. All element indices overlap
-  for exclusive-access checks; an external shared loan live after the store is
+  final-use RHS borrows can finish before the store. The whole collection region
+  is used for exclusive-access checks; an external shared loan live after the store is
   rejected. The reservation is not a user reference and never escapes.
 - A nonreturning index skips its bounds check, later indices, RHS and store;
   a nonreturning RHS skips the store. Earlier returning phases retain their uses.
   The reservation has no use after the corresponding last executed phase, so
   owner replacement before an immediate panic/leave is allowed when no other loan
   survives. Returning index effects still require valid parent storage even when
-  RHS later diverges. Only target-root refinement facts are forgotten after RHS
-  checking; immutable copied elements keep their own type/variant facts. Nodes,
+  RHS later diverges. After RHS checking, refinement invalidation uses that same
+  first-list prefix, or the complete field path for static writes; holder siblings
+  and immutable copied values keep their own facts. Nodes,
   reservation values and conflict work use the existing bounded CFG budgets.
-  Target flattening is iterative and limited to 256 indices before step allocation;
+  Target flattening is iterative and limited to 256 mixed steps before allocation;
   parser depth bounds also apply. Root types are charged once and consumed layer
   by layer, avoiding repeated suffix copies. Every target/typed/CFG step is charged,
   independently of list capacities.
@@ -463,9 +470,9 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Combine checked list paths with mutable named fields only after preserving every
-   owning boundary, bounds phase, reservation and evaluation order. Add result-slot
-   aliasing, exclusive references, slice/alias metadata and non-Copy state separately.
+7. Prove any finer disjointness within indexed containers before narrowing their
+   whole-region conflicts. Add result-slot aliasing, exclusive references,
+   slice/alias metadata and non-Copy state separately.
 
 ## Verification
 

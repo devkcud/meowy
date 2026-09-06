@@ -1,4 +1,5 @@
 use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Source, Stmt, TRUE, Type};
+use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
@@ -77,48 +78,56 @@ impl<'a> Graph<'a> {
                         ..Node::default()
                     })?;
                 }
-                Stmt::SetField { place, value, span } => {
-                    let result = self.expression(value)?;
-                    if self.current.is_empty() {
-                        continue;
-                    }
-                    self.append(Node {
-                        uses: result.into_values().collect(),
-                        write: Some((place.clone(), *span)),
-                        ..Node::default()
-                    })?;
-                }
-                Stmt::SetElement {
+                Stmt::SetPath {
                     id,
                     path,
                     value,
                     span,
                 } => {
-                    let place = Place {
-                        root: *id,
-                        fields: Vec::new(),
-                    };
-                    let reservation = self.value(vec![Origin {
-                        component: Vec::new(),
-                        source: Source::local(&place),
-                        guard: TRUE,
-                    }])?;
-                    self.append(Node {
-                        defs: vec![reservation],
-                        ..Node::default()
-                    })?;
-                    for step in path {
-                        self.charge(1)?;
-                        let index = self.expression(&step.index)?;
-                        if self.current.is_empty() {
-                            break;
-                        }
+                    self.charge(path.len() + 1)?;
+                    let first = path
+                        .iter()
+                        .position(|step| matches!(step, WriteStep::Index(_)));
+                    let fields = path
+                        .iter()
+                        .take(first.unwrap_or(path.len()))
+                        .map(|step| {
+                            let WriteStep::Field(index) = step else {
+                                unreachable!()
+                            };
+                            *index
+                        })
+                        .collect();
+                    let place = Place { root: *id, fields };
+                    self.charge(place.fields.len() + 1)?;
+                    let reservation = if first.is_some() {
+                        let value = self.value(vec![Origin {
+                            component: Vec::new(),
+                            source: Source::local(&place),
+                            guard: TRUE,
+                        }])?;
                         self.append(Node {
-                            uses: std::iter::once(reservation)
-                                .chain(index.into_values())
-                                .collect(),
+                            defs: vec![value],
                             ..Node::default()
                         })?;
+                        Some(value)
+                    } else {
+                        None
+                    };
+                    for step in path {
+                        self.charge(1)?;
+                        if let WriteStep::Index(step) = step {
+                            let index = self.expression(&step.index)?;
+                            if self.current.is_empty() {
+                                break;
+                            }
+                            self.append(Node {
+                                uses: std::iter::once(reservation.expect("indexed reservation"))
+                                    .chain(index.into_values())
+                                    .collect(),
+                                ..Node::default()
+                            })?;
+                        }
                     }
                     if self.current.is_empty() {
                         continue;
@@ -128,9 +137,7 @@ impl<'a> Graph<'a> {
                         continue;
                     }
                     self.append(Node {
-                        uses: std::iter::once(reservation)
-                            .chain(value.into_values())
-                            .collect(),
+                        uses: reservation.into_iter().chain(value.into_values()).collect(),
                         write: Some((place, *span)),
                         ..Node::default()
                     })?;

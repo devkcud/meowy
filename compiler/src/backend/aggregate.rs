@@ -1,5 +1,5 @@
 use super::{Generator, ir_type, union_words};
-use crate::hir::{Expr, Place, Type};
+use crate::hir::{Expr, Place, Type, WriteStep};
 
 impl<'a> Generator<'a> {
     pub(crate) fn place(&mut self, place: &Place) -> Result<(String, Type), String> {
@@ -30,17 +30,59 @@ impl<'a> Generator<'a> {
         Ok((ptr, ty))
     }
 
-    pub(crate) fn set_field(&mut self, place: &Place, value: &Expr) -> Result<(), String> {
-        if place.fields.is_empty() {
-            return Err("field assignment requires a named field path".into());
+    pub(crate) fn set_path(
+        &mut self,
+        id: usize,
+        path: &[WriteStep],
+        value: &Expr,
+    ) -> Result<(), String> {
+        if path.is_empty() {
+            return Err("storage assignment requires a projection path".into());
         }
-        let (ptr, ty) = self.place(place)?;
+        let root = self
+            .program
+            .locals
+            .get(id)
+            .ok_or("missing write storage root")?
+            .clone();
+        self.local(id);
+        let mut ptr = format!("%local{id}");
+        let mut ty = &root;
+        for step in path {
+            match step {
+                WriteStep::Field(index) => {
+                    let Type::Record { fields, .. } = ty else {
+                        return Err("field assignment requires concrete record storage".into());
+                    };
+                    let field = &fields.get(*index).ok_or("missing write field")?.ty;
+                    ptr = self.value(format!(
+                        "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
+                        ir_type(ty),
+                        index + 1
+                    ));
+                    ty = field;
+                }
+                WriteStep::Index(step) => {
+                    let Type::List { element, .. } = ty else {
+                        return Err("element assignment requires concrete list storage".into());
+                    };
+                    let length = self.value(format!("load i64, ptr {ptr}"));
+                    let position = self.expression(&step.index)?;
+                    if self.ended {
+                        return Ok(());
+                    }
+                    let offset = self.list_offset(&step.index, position, &length, step.span)?;
+                    ptr = self.list_item(ty, &ptr, &offset);
+                    ty = element;
+                }
+            }
+        }
         let result = self.expression(value)?;
         if self.ended {
             return Ok(());
         }
-        let result = self.coerce(&value.ty, &ty, &result)?;
-        self.store_value(&ty, &result, &ptr);
+        let result = self.coerce(&value.ty, ty, &result)?;
+        self.store_value(ty, &result, &ptr);
         Ok(())
     }
 

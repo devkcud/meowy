@@ -170,6 +170,12 @@ pub struct IndexStep {
 }
 
 #[derive(Clone, Debug)]
+pub enum WriteStep {
+    Field(usize),
+    Index(IndexStep),
+}
+
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Bind {
         id: LocalId,
@@ -179,14 +185,9 @@ pub enum Stmt {
         id: LocalId,
         value: Expr,
     },
-    SetField {
-        place: Place,
-        value: Expr,
-        span: Span,
-    },
-    SetElement {
+    SetPath {
         id: LocalId,
-        path: Vec<IndexStep>,
+        path: Vec<WriteStep>,
         value: Expr,
         span: Span,
     },

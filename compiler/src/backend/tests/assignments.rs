@@ -73,12 +73,12 @@ pub(crate) fn element_assignments_preserve_copies_neighbors_and_aggregate_layout
                             id: 1,
                             value: current.clone(),
                         },
-                        Stmt::SetElement {
+                        Stmt::SetPath {
                             id: 0,
-                            path: vec![IndexStep {
+                            path: vec![WriteStep::Index(IndexStep {
                                 index: integer(2, 64, false),
                                 span: Span { start: 10, end: 20 },
-                            }],
+                            })],
                             value: replacement.clone(),
                             span: Span { start: 10, end: 20 },
                         },
@@ -192,12 +192,12 @@ pub(crate) fn element_assignment_bounds_keep_widths_and_precede_rhs_effects() {
                             id: 0,
                             value: initial.clone(),
                         },
-                        Stmt::SetElement {
+                        Stmt::SetPath {
                             id: 0,
-                            path: vec![IndexStep {
+                            path: vec![WriteStep::Index(IndexStep {
                                 index,
                                 span: Span { start: 12, end: 34 },
-                            }],
+                            })],
                             value,
                             span: Span { start: 12, end: 34 },
                         },
@@ -291,12 +291,12 @@ pub(crate) fn element_assignments_keep_selected_index_and_skip_stores_after_leav
                 ExprKind::Block(Block {
                     id: 1,
                     ty: Type::Null,
-                    stmts: vec![Stmt::SetElement {
+                    stmts: vec![Stmt::SetPath {
                         id: 0,
-                        path: vec![IndexStep {
+                        path: vec![WriteStep::Index(IndexStep {
                             index: position,
                             span: Span { start: 10, end: 20 },
-                        }],
+                        })],
                         value,
                         span: Span { start: 10, end: 20 },
                     }],

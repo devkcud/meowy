@@ -181,7 +181,6 @@ pub fn mutable_fields_check_shapes_mutability_and_storage_boundaries() {
         ("v:={->n:=1};r:&v;r.n=2", "B001"),
         ("v:={->n:=1};r:&v;(*r).n=2", "B001"),
         ("{->n:=1}.n=2", "B001"),
-        ("v:=[{->n:=1}];v[1].n=2", "B001"),
         ("v:={->n:=1};r:&!v.n", "B001"),
     ] {
         let case = Case::new(source);

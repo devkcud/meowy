@@ -295,13 +295,10 @@ impl<'a> Generator<'a> {
                         self.line(format!("store {} {result}, ptr %local{id}", ir_type(ty)));
                     }
                 }
-                Stmt::SetElement {
+                Stmt::SetPath {
                     id, path, value, ..
                 } => {
-                    self.set_element(*id, path, value)?;
-                }
-                Stmt::SetField { place, value, .. } => {
-                    self.set_field(place, value)?;
+                    self.set_path(*id, path, value)?;
                 }
                 Stmt::Emit {
                     target,
