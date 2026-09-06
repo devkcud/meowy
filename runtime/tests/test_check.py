@@ -49,6 +49,29 @@ class CheckTests(unittest.TestCase):
         kill.assert_called_once_with(1234, signal.SIGKILL)
         self.assertEqual(process.communicate.call_count, 2)
 
+    def test_guard_crash_requires_address_and_protection_evidence(self):
+        for code, error in ((1, ""), (-signal.SIGABRT, ""), (-signal.SIGSEGV, "segmentation fault")):
+            with self.subTest(code=code, error=error):
+                result = subprocess.CompletedProcess(["binary"], code, "", error)
+                with self.assertRaises(RuntimeError):
+                    check.check_guard(result, False)
+
+    def test_guard_side_must_match_expected_boundary(self):
+        error = "guard-low: SEGV_ACCERR at expected address on alternate stack\n"
+        result = subprocess.CompletedProcess(["binary"], -signal.SIGSEGV, "", error)
+        check.check_guard(result, False)
+        with self.assertRaises(RuntimeError):
+            check.check_guard(result, True)
+
+    def test_native_suite_requires_count_and_successful_exit(self):
+        for code, out, error in ((1, "PASS sample\n1 stack allocation cases passed\n", ""),
+                                 (0, "0 stack allocation cases passed\n", ""),
+                                 (0, "PASS sample\n1 stack allocation cases passed\n", "sanitizer failure")):
+            with self.subTest(code=code, out=out, error=error):
+                result = subprocess.CompletedProcess(["binary"], code, out, error)
+                with self.assertRaises(RuntimeError):
+                    check.check_cases(result, 1, "stack allocation")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
-# Native cleanup prototype
+# Native runtime prototypes
 
-This directory exercises an explicit cleanup protocol independently of the
-compiler. It uses C++20 and Clang 22.1.8 with exceptions and RTTI disabled. The
+This directory exercises explicit cleanup and guarded native stack allocation
+independently of the compiler. It uses C++20 and Clang 22.1.8 with exceptions and RTTI disabled. The
 compiler still links its existing scalar runtime; this prototype adds no Meowy
 syntax or runtime symbols to generated programs.
 
@@ -11,10 +11,19 @@ python3 -B -m unittest discover -s runtime/tests -p 'test_*.py'
 ```
 
 The runner builds debug, optimized release, and ASan/UBSan executables in a
-temporary directory. Each executes 14 cleanup cases and two fatal subprocesses.
+temporary directory. Each executes 14 cleanup cases and two fatal subprocesses,
+plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
+guard-fault subprocesses.
 Fatal cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
+
+Stack probes require `SIGSEGV`, `SEGV_ACCERR`, the exact protected boundary
+address and execution of the fault handler on an alternate signal stack. They
+prove guard protection by direct writes, not recovery from an overflowing task.
+The normal allocation cases run under ASan/UBSan/LSan. Guard probes disable ASan's
+SIGSEGV handler and instrumented faulting access so the kernel signal is inspected
+directly; this does not validate sanitizer context-switch hooks.
 
 Use `--build-dir runtime/build` to retain executables. `--clang PATH` selects a
 compiler executable but still requires version 22.1.8. `--no-sanitizers` explicitly
@@ -22,6 +31,51 @@ omits sanitizer checks. Missing tools, sanitizer failures and unsupported execut
 environments fail the selected checks. LeakSanitizer requires an environment
 without ptrace-based sandbox supervision; run the normal command with the required
 environment access when that restriction applies.
+
+## Guarded stack allocation contract
+
+[include/meowy/stack_memory.hpp](include/meowy/stack_memory.hpp) adds the
+experimental `StackMemory` owner in the same `meowy::prototype::v0` namespace.
+This is a Linux `mmap` system-allocation prerequisite for the planned context
+wrapper. No context is created or executed on the allocated storage.
+
+- `plan(bytes, page)` checks positive page-aligned usable bytes, two guard pages
+  and a total within `PTRDIFF_MAX`, without allocating. The explicit usable budget
+  is never rounded up. Page alignment is an experimental allocator restriction,
+  not a newly imposed language manifest rule.
+- `allocate(bytes)` obtains the host page size, reserves the complete mapping as
+  `PROT_NONE`, and enables read/write access only for the usable middle pages.
+  Guard pages are neither readable, writable nor executable; the payload has no
+  execute permission. `size()` reports usable bytes, one guard's size and the
+  complete mapped extent, so guard overhead stays visible outside the usable budget.
+- Allocation is fallible and synchronous. Invalid sizes, overflow, page-query,
+  mapping and protection failures have distinct statuses and preserve OS `errno`
+  where applicable. A failed protection change tries to unmap immediately. If
+  rollback also fails, both errors are returned and the owner retains the mapping
+  for release retry; `data()` remains null because usable storage was not prepared.
+- The owner is noncopyable and nonmovable. `allocate()` rejects an already owned
+  mapping. Successful `release()` clears ownership and storage; release of an empty
+  owner is harmless. Failed release retains the mapping, layout and prior data
+  access for retry. C++ destruction does not silently release a mapping.
+- The caller must explicitly release every admitted mapping, including retained
+  rollback failures. All payload addresses are borrowed from that owner. Before
+  release, every borrower and future executing or suspended context must have
+  finished using the mapping. The allocator cannot establish those lifetimes.
+- Allocation uses only the explicitly requested system mapping. It never promotes
+  arbitrary owners or extends a borrow. There is no executor-wide admission count,
+  allocator selection, stack pool, scheduler or thread synchronization yet.
+
+Mappings reserve virtual address space; success does not guarantee future physical
+memory availability. Guard pages cannot guarantee detection of an access that
+jumps over them. The prototype supplies no recoverable stack-overflow path.
+
+Native coverage includes zeroed/writable payload boundaries, complete accounting,
+overflow, exclusive ownership, release/reuse and cleanup-stack integration. Test
+linker wrappers inject individual `mmap`, `mprotect` and `munmap` failures, including
+failed protection rollback with retained ownership. A separate child constrains
+`RLIMIT_AS` to prove real kernel `ENOMEM` admission refusal without an owner, then
+restores the limit before sanitizer teardown. No syscall injection enters the
+runtime implementation or a future production library.
 
 ## Storage and cleanup contract
 
@@ -103,8 +157,9 @@ the actual stack/unwind implementation plan.
 
 This is a bounded protocol experiment on the current Linux host. It does not
 qualify task stacks, native stack unwinding or the documented v0.0.1 release.
-There is no vendored Boost.Context, stack switching, guard-page allocation,
-register-preservation test, worker pinning, scheduler, join, timer or channel.
+Guarded allocation is now independently tested. There is no vendored Boost.Context,
+stack switching, register-preservation test, worker pinning, scheduler, join, timer
+or channel.
 There is no LLVM landing pad, Meowy personality function or pinned unwind library.
 Panic codes/messages are borrowed test inputs; source spans, task identity and
 diagnostic attachment are absent. Cancellation is an explicit cleanup edge only.
@@ -113,8 +168,9 @@ Nothing promotes owners or borrows into arbitrary heap storage.
 1. Design the compiler's generated cleanup edges and initialized-slot metadata
    alongside moves and partial initialization. Decide whether the experimental
    ordered reservation restriction should survive that design.
-2. Implement and independently qualify the planned context wrapper with bounded
-   stacks, guard pages, register preservation and sanitizer switching hooks.
+2. Integrate the guarded allocation owner with the planned revision-pinned context
+   wrapper; qualify context creation, register preservation and sanitizer switching
+   hooks. Keep stack admission/release explicit and verify no live context is unmapped.
 3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.
 4. Exercise a suspended child borrowing a parent local, cancellation while joining,

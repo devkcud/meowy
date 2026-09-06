@@ -28,11 +28,12 @@ visible and fail if they were already required by the bootstrap harness.
 Cargo receives explicit `x86_64-unknown-linux-gnu` and `compiler/target` paths;
 the harness executes that build's binary even when Cargo environment defaults
 select a different target or directory.
-`--runtime` runs the [native cleanup prototype](../runtime/README.md), its Python
-regressions, and debug/release/ASan/UBSan checks, including fatal cleanup subprocesses.
+`--runtime` runs the [native runtime prototypes](../runtime/README.md), their Python
+regressions, and debug/release/ASan/UBSan checks, including fatal cleanup and guard-page
+subprocesses. Stack allocation is bounded; task switching is not implemented.
 LeakSanitizer needs an execution environment without ptrace supervision; a blocked
 sanitizer check fails visibly. This protocol does not qualify native stack unwinding.
-`--all` includes both editors, compiler verification and runtime cleanup checks.
+`--all` includes both editors, compiler verification and native runtime checks.
 
 `--strict` with `--compiler` or `--all` requires every reference catalog case to
 pass. That gate is expected to fail while language features remain unavailable.
