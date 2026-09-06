@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Organized compiler handoff
+
+- State: Completed source organization in 8c8e90a (backend/rules), 360c8db (checker) and e3a0803 (list contexts), separate from inference feature 932297a and native evidence 89b530c. Entry files are now 587, 184 and 212 lines respectively, with cohesive child modules and tests. Both AGENTS recommendations are advisory. All workers are finished; no unfinished source code or failing checks remain.
+- Validation: All 14 combined checks pass: 140 library and 126 native Rust groups, 35 Python tests, 857 local links, editors, schemas/catalog, format, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed. Before/after refactor proofs preserve methods, test strings and public interfaces. Optimized dynamic-lists output is exactly read/301/2 on separate lines, with empty stderr.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Continue organizing ownership, parser and native test responsibilities when useful, keeping mechanical changes reviewable separately. Then progress aggregate/emitted-name/cross-element inference, mutable/exclusive ownership, generated cleanup and modules. Finalize the handoff commit and confirm clean Git state.
+
+### 2026-09-06 — Organized compiler combined gate
+
+- State: The organized compiler and unknown-primitive suffix feature pass the complete gate. Backend, checker and list-context interfaces/behavior remain intact; modules and focused tests now live in their owning directories. No implementation workers or pending source fixes remain.
+- Validation: All 14 checks pass: 140 library and 126 native Rust groups, 35 Python tests, 857 local links, editors, schemas/catalog, format, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the checker and list-context refactors separately, run optimized dynamic-lists with exact output, finalize current handoffs and remaining organization/feature next steps, then confirm a clean tree.
+
+### 2026-09-06 — Core module extraction complete
+
+- State: Core module organization is complete: backend.rs 587 lines, check.rs 184 and list_context.rs 212. Backend, checker and list-context responsibilities and tests are grouped under their owning directories. Interfaces and function behavior are preserved; both AGENTS files contain advisory guidance without a line-count rule.
+- Validation: Backend26, checker27 and list-context12 groups pass before/after their moves. Cargo checks pass at each extraction boundary. Final Clippy/format/whitespace pass; checker58 production function streams and226 test string literals match, and all28 list-context function streams match. Six native feature groups and full Cargo baseline140/126 passed before moves.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the combined gate on the organized source, verify optimized dynamic-lists output, commit checker/list-context refactors separately and finalize both handoffs with remaining organization and feature work.
+
+### 2026-09-06 — Feature commits and checker extraction
+
+- State: Backend/rules cleanup is committed as 8c8e90a, primitive suffix inference as 932297a, and native/example evidence as 89b530c. Source organization is continuing independently: check.rs will retain public/shared state while focused submodules own semantic operations; list_context.rs will retain candidate orchestration while block/probe/test responsibilities move beside it. README maps these boundaries.
+- Validation: The full 140-library/126-native Cargo baseline passed before these structural moves. Each worker is preserving function contents and public paths, running cargo checks per extraction and repeating the exact focused tests afterward. Final combined verification remains pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish both module extractions, review sizes and function preservation, commit them separately, then run the combined repository/runtime/compiler gate, optimized example and final handoff checks.
+
+### 2026-09-06 — Nonconstant inference feature validation
+
+- State: The primitive unknown suffix feature is complete, including charged grouped-condition recovery. All source values remain unknown unless immutable constants; declared types determine candidates, and live checking preserves overflow/loans. Backend cleanup/rules are committed as 8c8e90a. Checker and list-context organization are being handled as separate behavior-preserving steps.
+- Validation: Full Cargo suite passes: 140 library and 126 native groups. Twelve list_context groups, six new native groups and nine independent checks plus three grouped rechecks pass. Frontend Clippy/format/whitespace pass. Combined repository/runtime gate will run after structural moves.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the feature and its native example/README separately, then complete check.rs and list_context.rs extraction with matching proof, update implementation maps and run the final combined gate.
+
+### 2026-09-06 — Grouped condition review fix
+
+- State: Independent review passed its nine prepared cases but found grouped short-circuit conditions were keyed by an outer AST span while lowering used the inner condition span. This could falsely reject skipped arithmetic or duplicate emissions. The frontend is normalizing those Group wrappers with charged work; native cases now cover grouped AND/OR and duplicate emission. Backend/rules cleanup is committed as 8c8e90a.
+- Validation: Six new native groups passed before the grouped-condition adjustment; 12 list_context groups passed before that final edge fix. Backend before/after proof remains green. Final feature checks and list-context refactor are still pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify grouped conditions on a fresh compiler, commit feature and native evidence once stable, then split list-context modules with unchanged tests and run the combined gate.
+
+### 2026-09-06 — Backend organization and native inference evidence
+
+- State: Backend organization is complete: backend.rs is 587 lines, with four production modules and seven focused test modules plus shared helpers; no extracted file exceeds 477 lines. The advisory organization guidance is in both AGENTS files. Six new dynamic suffix native groups pass, including exact runtime overflow and correlated short-circuit behavior.
+- Validation: All 26 backend groups pass before and after extraction; Clippy, recursive backend formatting and whitespace pass, and function-token comparisons preserve all production/test helpers. New native dynamic_suffix_ run: 6 passed, 0 failed in debug/release. Final inference units/review and list-context extraction remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the independent backend/rules cleanup, finish and commit the inference feature/evidence, then extract list-context responsibilities with repeatable before/after checks and run the combined gate.
+
+### 2026-09-06 — Unknown local acceptance cases
+
+- State: Added six native groups and a dynamic-lists example for returned/mutable primitive values, parameters, aggregates, shadowing, source-order reads, guarded arithmetic/duplicate emissions, runtime overflow and explicit ownership/inference boundaries. Scratch uncertainty recovery is limited to diagnostics inside a symbolic short-circuit RHS; ordinary live checking remains authoritative.
+- Validation: Native evidence is written but awaits integration. Backend refactor baseline passed all 26 groups; production extractions passed cargo check at each boundary, and test-module separation is ongoing. AGENTS recommendations are advisory as requested.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the new native groups once suffix implementation is ready, complete backend before/after proof, validate/refactor list-context boundaries separately, then run combined checks and preserve focused commits.
+
+### 2026-09-06 — Source organization recommendation
+
+- State: The user requested ongoing source cleanup and an advisory AGENTS recommendation. Both AGENTS files now recommend cohesive modules and behavior-focused tests without a hard line-count limit. Backend source/test extraction is delegated as a behavior-preserving change, separate from the nonconstant suffix feature. List-context responsibilities will also be separated after feature validation.
+- Validation: Source inventory: backend.rs 3557 lines, check.rs 3122, list_context.rs 1266. No refactor behavior checks have run yet; backend worker will establish and repeat the existing 26-group proof. Feature work and handoff ownership remain coordinated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement unknown primitive suffix inference and its native evidence; independently split backend by responsibility with matching before/after tests; preserve separate commits and document remaining checker/module cleanup.
+
+### 2026-09-06 — Nonconstant suffix local design
+
+- State: Implementation is active for exact primitive local types in effectful list result probes. Runtime values must stay unknown: no fake zero/false, mutable initializer reuse, live guard IDs or narrowed union facts. Ordinary pure-expression deferral remains constant-only, so new mutable/nonconstant reads cannot move across effects. Frontend and two reviewers are delegated; root owns both handoffs and native evidence.
+- Validation: Read current handoffs, rules, list/block contracts and scratch-probe code; tree starts clean at d5166c8. No new implementation checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define typed unknown suffix bindings and a conservative arithmetic/Boolean proof boundary, implement within existing budgets, add native order/overflow/shadowing/loan evidence, then run full verification and split commits.
+
 ### 2026-09-06 — Effectful list inference handoff
 
 - State: Implementation is complete in 228d808 and native coverage/example/README in 1337785. Prefixes are checked once in the ordinary frame; bounded pure suffixes select candidates using actual reach and immutable primitive constants. Structural errors remain candidate-local so valid alternatives survive. All workers are finished; no unfinished source work or failing checks remain. Final tracker commit follows.

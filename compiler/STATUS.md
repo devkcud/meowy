@@ -1,26 +1,26 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Bounded effectful list context inference passes the final gate.
+Updated: 2026-09-06. Primitive suffix inference and module organization pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `228d808`; native coverage/example: `1337785`.
+Implementation: `932297a`; native coverage/example: `89b530c`.
+Organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: unresolved list candidates can be selected from an unlabeled element
-block whose context-independent prefix is followed by a terminal pure emission
-suffix. The prefix is checked once in the ordinary block frame. Suffix probes use
-its actual reach and immutable primitive constants, then the same frame continues
-with the selected expected type. Block finalization and ownership facts are shared
-with the existing checker; application effects are never replayed or deferred.
+Completed: nonconstant and mutable same-owner primitive locals can constrain
+unresolved effectful list suffixes through their exact declared types. Scratch
+bindings carry unknown values, fresh normalized IDs and no live flow/borrow facts.
+Conditional diagnostic recovery retains uncertain candidates for ordinary checking
+without enabling effectful deferral. Grouped short-circuit conditions are covered.
 
-More general suffix effects/control flow, mutable/nonconstant local constraints,
-emitted-name dependencies and unresolved cross-element constraints remain B001.
-Proved ambiguity remains E207. Structural source diagnostics and dead-emission
-rules are preserved. Nested local Copy writes remain supported. Mutable fields,
-exclusive references, owned elements, generated cleanup and modules remain pending.
+Backend, checker and list-context code now live in focused submodules, with tests
+alongside their owning responsibilities. Root entrypoints and behavior are retained.
+Both AGENTS files recommend this organization without a hard line-count rule.
+Aggregate/reference/union names, emitted-name and cross-element constraints, mutable
+fields, owned elements, generated cleanup and module/library support remain open.
 
 ## Resume here
 
@@ -46,11 +46,17 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 15 list/context and 5 guard groups |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 18 list/context and 5 guard groups |
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 23 loan, 9 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 26 focused backend tests |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 26 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 120 native groups, 4 harness tests and 20 covered examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 126 native groups, 4 harness tests and 21 covered examples |
+
+The main checker module retains state and entrypoints, with semantic operations
+under `src/check/`. `src/backend/` separates aggregate, list, arithmetic and output
+lowering plus focused tests. `src/list_context/` separates candidate orchestration,
+effectful blocks and isolated probes. Consult each root module for declarations;
+preserve these responsibility boundaries during feature work.
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -114,10 +120,17 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   ordinary frame, scope, length and completion handling. Prefix checking runs once
   at the element's actual source position; probes never rerun that prefix.
 - `list_pure` allows closed scalar/list/fresh-record suffix trees and same-owner
-  immutable primitive constants. Local defaults and shadowing are resolved before
-  building the minimal scratch environment. Mutable/nonconstant/captured values,
-  suffix effects, named blocks and emitted-name dependencies remain B001 while
-  context is unresolved. No scratch Flow IDs or borrow/call sites enter live state.
+  primitive locals. Local defaults/shadowing resolve before scratch construction.
+  Nonconstant/mutable names retain exact types and constant=None, with normalized
+  IDs; mutable initializers and narrowed types are never imported. Ordinary scalar
+  probes/deferral remain constant-only. Captures, reference/record/union names,
+  suffix effects and emitted-name dependencies remain B001 while context is unknown.
+- If an unknown suffix local loses a live Boolean relationship, only a diagnostic
+  inside a symbolic scratch &&/|| RHS can trigger a fresh dead-reach retry. Group
+  wrappers are normalized to the condition's actual lowered span with charged work.
+  A disappearing failure preserves Unknown; live checking still decides a sole
+  candidate, and multiple uncertain choices remain B001. No scratch Flow IDs or
+  borrow/call sites enter live state; unconditional structural errors stay intact.
 - A unique suffix fit selects the original list candidate and continues the same
   block frame with that expected type. Multiple fits report E207 only when proved;
   earlier deferred/later element constraints or an unknown suffix fit stay B001.
@@ -287,34 +300,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 137 library and 120 native groups pass. New coverage adds 2 list-context
-  and 5 native groups. Clippy `-D warnings` and formatting pass. The optimized
-  compiler builds/runs `examples/effectful-lists.mwy` in release with exact stdout
-  `value\n128\n1\nrow\n300\n` and empty stderr.
-- Native cases cover numeric/record/list suffixes, arithmetic widths, immutable
-  prefix-local defaults/shadowing, once-only effects, source order, early leave,
-  restart, panic, last-use loans and E201/E203/E205/E207/E302/B001 boundaries.
-  A new restart fixture initially used an unsupported direct matcher prefix;
-  enclosing it as an ordinary prefix expression preserved the tested behavior.
-- Review exposed live duplicate terminal emissions becoming generic E207. Probes
-  now retain E203/E205/E206 across trials, reporting a shared code only when all
-  candidates fail with it. A second review case proves record forwarding can be
-  invalid under one candidate and valid under another; that valid candidate now
-  survives. Native/unit regressions and directed rechecks cover both corrections.
-  Dead duplicate primary emissions still follow ordinary reach-sensitive checking.
-- Independent review checked contextual defaults/shadowing, candidate ambiguity,
-  structural diagnostics, effect order and ownership. Mutable suffix references
-  correctly remain B001. No remaining unsafe acceptance or replay was found.
-- Existing parser/path, candidate budget, call/borrow identity, list-write and
-  runtime-diagnostic regressions pass. No reference fixture or REQUIRED was changed.
+- Rust: 140 library and 126 native groups pass. This feature adds 3 list-context
+  and 6 native groups. Clippy `-D warnings` and formatting pass. The optimized
+  compiler builds/runs `examples/dynamic-lists.mwy` in release with exact stdout
+  `read\n301\n2\n` and empty stderr.
+- Native tests cover returned/mutable primitive values, exact widths, parameters,
+  aggregates, shadowing, source-order reads, loan conflicts, actual P002 operands
+  and grouped Boolean paths that skip E107/E205. Runtime overflow is never replaced
+  by a fictitious constant or width promotion. Explicit aggregate/reference/capture
+  boundaries remain checked.
+- Review passed nine directed checks and identified three grouped-condition false
+  rejections caused by AST/HIR span mismatch. Charged Group normalization fixes all
+  three; focused unit/native checks and reviewer rechecks pass.
+- Backend extraction preserves all 26 groups and all production/test function
+  contents. Checker extraction preserves its 27 groups and interfaces; list-context
+  extraction preserves all 12 groups and probe behavior. Focused before/after proof
+  brackets each refactor, and the full Cargo/combined gates pass afterward.
+- Both AGENTS files now recommend cohesive modules and separately reviewable moves;
+  this is not a hard line-count or CI rule. Remaining large ownership/parser/native
+  test files are explicit follow-up organization work.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 856 local links; schemas/catalog and Vim/Neovim pass.
+  checks 857 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime is unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with exact
   fatal/truncation/lifetime/guard/admission probes and stable layout. ASan/UBSan/LSan
   and the expired-fiber-local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
-  conformance/release qualification remains open.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. No
+  reference fixture or REQUIRED was changed; full release qualification stays open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -322,11 +334,10 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend `list_context.rs` beyond immutable constant suffix leaves. Use concrete
-   nonconstant prefix-local types only with a sound model for unknown values and
-   Boolean activity; never transfer scratch guard IDs or stale narrowings. Keep
-   emitted-name and cross-element constraints explicit until their scopes/dependencies
-   are modeled. Verify chosen widths, once-only effects, ambiguity and budgets.
+1. Continue organization around the next owning responsibility in `borrow.rs`,
+   `loans.rs`, `parser.rs` or `tests/native.rs`. Preserve method/entrypoint paths,
+   test content and exact diagnostics with focused before/after proofs. Keep
+   mechanical moves in separate commits from feature work where practical.
 2. Implement mutable field shape/type support and exclusive-reference contracts
    before field/reference write paths. Preserve every checked path phase and
    parent reservation. Owned replacements need initialization, move and cleanup
@@ -334,7 +345,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.
-4. Add static/intrinsic sources and new projections only with updated lifetime
+4. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
+   with explicit scope/dependency models and unchanged effect order. Add
+   static/intrinsic sources and new projections only with updated lifetime
    contracts/no-return assumptions. Extend diagnostic source identities and evidence
    without treating bootstrap byte-span text as a complete replay artifact.
 5. Implement required evaluation, specialization and the project/module graph;

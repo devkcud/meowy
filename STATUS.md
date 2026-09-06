@@ -7,35 +7,38 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `228d808` resolves list candidates for an unlabeled element block with
-  a context-independent prefix and a terminal pure emission suffix. It checks the
-  prefix once in the ordinary block frame, uses the resulting bindings/reach to
-  choose one type, then finishes that same frame. No application effect is replayed.
-- Closed scalar/list/record results and immutable primitive constants can constrain
-  the choice. Prefix locals retain ordinary defaults and shadowing. Probes use a
-  minimal scratch checker; live guards, borrow IDs and effects are never copied.
-- Proved ambiguity reports E207; unresolved cross-element, emitted-name or mutable/
-  nonconstant constraints stay B001. Structural E203/E205/E206 trial errors
-  are retained: another valid candidate survives, and a shared structural failure
-  is reported only when all trials agree. Duplicate/forwarding regressions pass.
-- Coverage/example: `1337785` adds five native groups and
-  `compiler/examples/effectful-lists.mwy`. Two unit groups exercise prefix types,
-  reach, source errors, required checks and the explicit inference boundaries.
-- All 14 combined checks pass: 257 Rust tests, 35 Python tests, 856 local
+- Organization: `8c8e90a` separates backend lowering/tests, `360c8db` separates
+  checker responsibilities, and `e3a0803` separates list-context orchestration,
+  effectful blocks, isolated probes and tests. Entry files are now backend.rs 587,
+  check.rs 184 and list_context.rs 212 lines. Existing public interfaces and
+  function behavior are preserved. Both AGENTS files recommend cohesive modules
+  without imposing a hard line-count limit.
+- Compiler: `932297a` admits exact same-owner primitive local types in effectful
+  suffix probes, including mutable and nonconstant values. Scratch values remain
+  unknown; initializers, narrowed types and live guard/borrow IDs are never copied.
+  Ordinary scalar deferral remains constant-only, preserving runtime read order.
+- A conditional scratch failure can retain an uncertain candidate only inside a
+  symbolic short-circuit RHS. Grouped conditions use their actual lowered span;
+  ordinary live checking still decides a sole candidate. Runtime overflow checks,
+  unconditional errors and candidate-dependent structural diagnostics are preserved.
+- Coverage/example: `89b530c` adds six native groups and
+  `compiler/examples/dynamic-lists.mwy`; three unit groups cover unknown types,
+  guarded failures, scopes and explicit inference boundaries.
+- All 14 combined checks pass: 266 Rust tests, 35 Python tests, 857 local
   links, editors, schemas/catalog, formatting, Clippy, build and conformance.
   Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs the effectful-lists example with exact output.
-  Independent effect/ownership reviews found no remaining blocker. Runtime
-  debug/release/sanitizer checks pass unchanged; generated cleanup is still pending.
-- No active workers, unfinished code or failing checks remain. General effectful
-  constraints, mutable fields, exclusive references, owned/reference elements,
-  module/library integration, cancellation and DWARF remain future work.
+- Refactor proofs preserve all existing backend/checker/list-context test groups.
+  The optimized compiler runs dynamic-lists with exact output. Runtime
+  debug/release/sanitizer checks pass unchanged; generated cleanup remains pending.
+- No active workers, unfinished code or failing checks remain. Remaining work
+  includes aggregate/emitted-name/cross-element inference, mutable fields,
+  exclusive references, owned elements, modules, cancellation and DWARF.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Nested list writes and bounded effectful context inference | Broader constraints, mutable fields, exclusive references and moves/cleanup |
+| Compiler | Modular backend/checker and runtime-valued suffix inference | Broader constraints, ownership and remaining source organization |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -45,10 +48,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend `compiler/src/list_context.rs` beyond immutable constant suffix leaves.
-   Establish how concrete nonconstant prefix-local types can constrain candidates
-   without transferring guard IDs or stale predicates. Keep unresolved cross-element
-   constraints explicit; test once-only effects, shadowing, diagnostics and budgets.
+1. Continue organization where it improves the next change: remaining large
+   `compiler/src/{borrow,loans,parser}.rs` and `compiler/tests/native.rs` are next.
+   Extract ownership/grammar/test responsibilities with matching before/after checks;
+   keep this a recommendation rather than a file-size gate.
 2. Define mutable field shapes and exclusive-reference contracts before permitting
    field/reference write targets. Keep initialized Copy writes distinct from the
    move/drop state required by owned elements, slices and removal.
@@ -57,8 +60,9 @@ The full documented v0.0.1 release remains incomplete.
    batch and preserve interleaved cleanup before cancellation and unwinding.
 4. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
-5. Build the manifest/module graph for Meowy libraries and documented projects.
-   Keep runtime, editor and library work visible here.
+5. Extend aggregate/emitted-name/cross-element constraints in the new list-context
+   modules without replay or stale facts. Build the manifest/module graph for Meowy
+   libraries and documented projects; keep runtime/editor/library progress visible.
 6. Run `python3 -B tools/verify.py --all` after integrations. LSan needs process
    inspection. Strict conformance still has 13 unsupported cases; the bootstrap
    gate and this host do not qualify a complete v0.0.1 release.
