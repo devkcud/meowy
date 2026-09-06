@@ -64,14 +64,18 @@ impl<'a> Graph<'a> {
                         self.assume(state.proof)?;
                     }
                 }
-                Stmt::SlotAlias { id, target, field } => {
+                Stmt::SlotAlias {
+                    id,
+                    target,
+                    field,
+                    mutable,
+                } => {
                     self.charge(1)?;
-                    if !self
-                        .proofs
-                        .aliases
-                        .get(id)
-                        .is_some_and(|alias| alias.target == *target && alias.field == *field)
-                    {
+                    if !self.proofs.aliases.get(id).is_some_and(|alias| {
+                        alias.target == *target
+                            && alias.field == *field
+                            && alias.mutable == *mutable
+                    }) {
                         return Err(crate::diagnostic::Diagnostic::unsupported(
                             "missing result-slot alias proof",
                             crate::ast::Span::default(),

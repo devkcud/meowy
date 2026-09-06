@@ -1,6 +1,28 @@
 use super::{accepts, rejects};
 
 #[test]
+pub(crate) fn immutable_emitted_aliases_keep_constants_lengths_and_write_protection() {
+    for source in [
+        "r:{->n:1;p:&n;v:*p}",
+        "r:{->flag:false;v:flag&&(1/0==0)}",
+        "r:{->items<int32[3]>:[1];n:items.size();v<int32[n]>:[];p:&items[1]}",
+        "r:{->row:{->n:=1};p:&row.n;v:*p}",
+    ] {
+        accepts(source);
+    }
+    for (source, code) in [
+        ("r:{->byte<uint8>:255;v:byte+1}", "E107"),
+        ("r:{->items<int32[3]>:[1];p:&items[2]}", "E101"),
+        ("r:{->n:1;n=2}", "E305"),
+        ("r:{->row:{->n:=1};row.n=2}", "E305"),
+        ("r:{->items:[1,2];items[1]=3}", "E305"),
+        ("a:1;r:{->view:&a;p:&view}", "B001"),
+    ] {
+        rejects(source, code);
+    }
+}
+
+#[test]
 pub(crate) fn mutable_emitted_names_support_slot_writes_and_mixed_paths() {
     for source in [
         "r:{->n:=1;n=2}",

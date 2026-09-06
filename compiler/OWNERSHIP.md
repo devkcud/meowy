@@ -5,7 +5,7 @@ implementation boundary; it does not change language rules.
 
 ## Shared references and loan liveness
 
-- A physical place names an ordinary local plus zero or more record field indices.
+- A physical place names a local ID plus zero or more record field indices.
   Its type is the declared storage type, independent of flow narrowing.
 - Borrowing uses that storage's address. It must not copy the referent into a new
   temporary. Distinct live locals retain distinct identities in both profiles.
@@ -13,7 +13,7 @@ implementation boundary; it does not change language rules.
   Equality compares addresses; dereference copies the supported copyable referent.
 - Eligible roots include ordinary locals, reference-free by-value parameters and
   dispatch receiver copies. Parameter/self addresses refer to their local storage,
-  not an original caller value. Mutable emitted storage uses the slot model below.
+  not an original caller value. Reference-free emitted storage uses the slot model below.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
   unreachable writes. Private tables associate those IDs and block IDs with the
@@ -166,7 +166,7 @@ implementation boundary; it does not change language rules.
   tests distinguish original versus copied addresses, nullable carrier dispatch,
   earlier argument copies, effectful receivers and enclosing-scope early leaves.
 - Taking the address of a reference-bearing holder is still B001. Shared dispatch
-  does not enable exclusive `self` mutation, captures or immutable emitted-slot addresses.
+  does not enable exclusive `self` mutation, captures or reference-bearing storage addresses.
 
 ## Shared reborrows
 
@@ -235,13 +235,15 @@ implementation boundary; it does not change language rules.
   context permits ordinary once-only checking; unresolved scope-dependent choices
   remain B001.
 
-## Mutable emitted names
+## Emitted slot aliases
 
-- A mutable named emission evaluates its initializer once through the existing
+- A reference-free named emission evaluates its initializer once through the existing
   Bind/Emit sequence, then `SlotAlias` binds that lexical name to the actual target
-  block field. Later reads, direct assignments and mixed SetPath operations resolve
-  that result storage; assignment is not a second initialization. Copies into new
-  ordinary bindings remain copies. E204/E205 slot-initialization rules are unchanged.
+  block field. The marker and private proof retain declared field mutability;
+  real backing requires an exact mutability match. Reads and permitted mutable
+  assignments/SetPath operations resolve that result storage; assignment is not
+  a second initialization. Immutable alias writes are E305 even when their payload
+  contains mutable fields. Ordinary bindings still receive independent copies. E204/E205 slot-initialization rules are unchanged.
 - The lexical alias type and final slot type remain distinct. Compatible concrete
   record destinations load/coerce from the final slot and inject assignments back
   into it. A concrete Record/List alias inside a wider union field addresses that
@@ -254,7 +256,7 @@ implementation boundary; it does not change language rules.
   target frame rather than the alias's local declaration scope. Restarting the target
   block reinitializes its cells; inner restarts preserve initialized outer slots.
   Alias names remain lexically scoped; their shared views follow target ownership below.
-- Mutable aliases stay separate from ordinary addressable places. The address
+- Slot aliases stay separate from ordinary addressable places. The address
   resolver explicitly supports `&name` and concrete field/list borrows when the
   final cell has the lexical type or contains it as one exact union member. A
   lexical union that is only a proper subset of the stored union has incompatible
@@ -278,14 +280,20 @@ implementation boundary; it does not change language rules.
   roots match alias assignment/reservation identities, preserving E302 and disjoint
   fields even when aliases arise in different guarded scopes. Slot/view metadata,
   projections and lifetime/type lookups consume existing weighted work/storage
-  limits. Borrows of immutable emitted names, exclusive references and mutable
-  reference-bearing fields remain B001 until their storage/ownership rules are ready.
-- Alias IDs enter mutable proofs and have no initializer constant/length cache.
+  limits. Reference-bearing emitted names retain their previous Bind/Emit copied
+  value and pointee-origin behavior without SlotAlias; borrowing those cells remains
+  B001. Exclusive references and mutable reference-bearing fields remain unavailable.
+- Only mutable alias IDs enter mutable proofs and omit initializer constant/length caches.
   Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
   A later immutable result snapshot cannot reuse a pre-mutation union tag; unrelated
   immutable reference-field origins remain intact. This can conservatively lose
   knowledge about an unmodified mutable field's initial tag.
+- Immutable aliases preserve their initializer constants, immutable variant/origin
+  facts and known initialized list lengths. False Boolean conditions can still
+  suppress unreachable arithmetic, constant width failures retain E107, and a
+  known immutable alias length supports E101 element checks. No fabricated facts
+  or mutable initializer values enter this immutable path.
 - Aliases of the same target block/field share a canonical conflict identity;
   mutation invalidates related alias predicate domains. Distinct initialized result
   fields stay separate. Slot identity does not convert ordinary copies into aliases.
@@ -527,9 +535,10 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Add immutable reference-free emitted names as actual read-only slot aliases
-   before enabling their borrows, preserving immutable tag/origin facts and the
-   same representation/lifetime checks. Prove finer indexed disjointness and add
+7. Separate stored-value pointee origins from cell ownership for immutable
+   reference-bearing emitted aliases, preserving existing reads/reborrows before
+   enabling any new selected-field address. Whole carrier/reference-cell borrows
+   need explicit transitive referent handling. Add finer indexed disjointness,
    exclusive references, slice/alias metadata and non-Copy state separately.
 
 ## Verification

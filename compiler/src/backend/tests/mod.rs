@@ -4,6 +4,7 @@ mod assignments;
 mod bridge;
 mod emitted_borrows;
 mod fields;
+mod immutable_aliases;
 mod lists;
 mod mixed_assignments;
 mod nested_assignments;

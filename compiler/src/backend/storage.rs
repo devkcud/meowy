@@ -5,6 +5,7 @@ use crate::hir::{BlockId, Type};
 pub(crate) struct Alias {
     pub(crate) target: BlockId,
     pub(crate) field: String,
+    pub(crate) mutable: bool,
 }
 
 impl<'a> Generator<'a> {
@@ -13,13 +14,14 @@ impl<'a> Generator<'a> {
         id: usize,
         target: BlockId,
         field: &str,
+        mutable: bool,
     ) -> Result<(), String> {
         let local = self.program.locals.get(id).ok_or("missing alias local")?;
         let destination = self.blocks.get(&target).ok_or("missing alias target")?;
         let shared = match &destination.ty {
-            Type::Record { fields, .. } => fields
-                .iter()
-                .any(|slot| slot.name == field && slot.mutable && slot.ty.accepts(local)),
+            Type::Record { fields, .. } => fields.iter().any(|slot| {
+                slot.name == field && slot.mutable == mutable && slot.ty.accepts(local)
+            }),
             _ => false,
         };
         if shared {
@@ -28,6 +30,7 @@ impl<'a> Generator<'a> {
                 Alias {
                     target,
                     field: field.into(),
+                    mutable,
                 },
             );
         } else {
@@ -60,7 +63,7 @@ impl<'a> Generator<'a> {
             .enumerate()
             .find(|(_, field)| field.name == alias.field)
             .ok_or("missing alias result field")?;
-        if !field.mutable || !field.ty.accepts(&local) {
+        if field.mutable != alias.mutable || !field.ty.accepts(&local) {
             return Err("alias local type differs from result storage".into());
         }
         let ptr = self.value(format!(

@@ -395,6 +395,13 @@ impl Checker {
         } else if let Some(name) = name {
             let ty = value.ty.clone();
             let id = self.local(ty.clone());
+            let aliasable = !ty.has_reference();
+            if !mutable
+                && aliasable
+                && let Some(fact) = self.list_fact(&value)
+            {
+                self.lengths.insert(id, fact);
+            }
             self.write_slot(
                 target,
                 Some(name.into()),
@@ -424,11 +431,11 @@ impl Checker {
                     span,
                 },
             );
-            if mutable {
+            if aliasable {
                 let hir::Stmt::Emit { id: emitted, .. } = &emission else {
                     unreachable!()
                 };
-                let alias = self.slot_alias(id, target, name, *emitted, span)?;
+                let alias = self.slot_alias(id, target, name, *emitted, mutable, span)?;
                 stmts.push(emission);
                 stmts.push(alias);
             } else {

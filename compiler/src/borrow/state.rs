@@ -15,6 +15,7 @@ pub(crate) enum Backing {
 pub(crate) struct Alias {
     pub(crate) target: BlockId,
     pub(crate) field: String,
+    pub(crate) mutable: bool,
     pub(crate) emission: EmitId,
     pub(crate) root: LocalId,
     pub(crate) span: Span,

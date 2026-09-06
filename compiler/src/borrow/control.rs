@@ -85,7 +85,12 @@ impl Checker<'_> {
                     }
                     result.flow
                 }
-                Stmt::SlotAlias { id, target, field } => {
+                Stmt::SlotAlias {
+                    id,
+                    target,
+                    field,
+                    mutable,
+                } => {
                     let alias = self
                         .proofs
                         .aliases
@@ -95,6 +100,7 @@ impl Checker<'_> {
                         || !self.types.contains_key(target)
                         || alias.target != *target
                         || alias.field != *field
+                        || alias.mutable != *mutable
                     {
                         return Err(Self::unsupported(Span::default()));
                     }

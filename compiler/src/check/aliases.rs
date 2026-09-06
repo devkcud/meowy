@@ -12,6 +12,7 @@ impl Checker {
         target: usize,
         field: &str,
         emission: usize,
+        mutable: bool,
         span: Span,
     ) -> Result<hir::Stmt> {
         if self.proofs.aliases.len() >= 65_536
@@ -35,6 +36,7 @@ impl Checker {
             Alias {
                 target,
                 field: field.into(),
+                mutable,
                 emission,
                 root,
                 span,
@@ -42,11 +44,14 @@ impl Checker {
                 borrowed: None,
             },
         );
-        self.proofs.mutable.insert(id);
+        if mutable {
+            self.proofs.mutable.insert(id);
+        }
         Ok(hir::Stmt::SlotAlias {
             id,
             target,
             field: field.into(),
+            mutable,
         })
     }
 
@@ -76,7 +81,9 @@ impl Checker {
             }
             if let Type::Record { fields, .. } = ty
                 && let Some(field) = fields.iter().find(|field| {
-                    field.name == alias.field && field.mutable && field.ty.accepts(local)
+                    field.name == alias.field
+                        && field.mutable == alias.mutable
+                        && field.ty.accepts(local)
                 })
             {
                 alias.backing = Some(Backing::Result);

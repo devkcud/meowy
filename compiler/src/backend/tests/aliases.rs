@@ -42,6 +42,16 @@ pub(crate) fn shape(name: &str, ty: Type, mutable: bool) -> Type {
 }
 
 pub(crate) fn alias(id: usize, target: usize, name: &str, value: Expr) -> Vec<Stmt> {
+    slot_alias(id, target, name, value, true)
+}
+
+pub(crate) fn slot_alias(
+    id: usize,
+    target: usize,
+    name: &str,
+    value: Expr,
+    mutable: bool,
+) -> Vec<Stmt> {
     let ty = value.ty.clone();
     vec![
         Stmt::Bind { id, value },
@@ -55,6 +65,7 @@ pub(crate) fn alias(id: usize, target: usize, name: &str, value: Expr) -> Vec<St
             id,
             target,
             field: name.into(),
+            mutable,
         },
     ]
 }

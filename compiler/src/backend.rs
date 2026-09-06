@@ -307,8 +307,13 @@ impl<'a> Generator<'a> {
                         }
                     }
                 }
-                Stmt::SlotAlias { id, target, field } => {
-                    self.result_alias(*id, *target, field)?;
+                Stmt::SlotAlias {
+                    id,
+                    target,
+                    field,
+                    mutable,
+                } => {
+                    self.result_alias(*id, *target, field, *mutable)?;
                 }
                 Stmt::SetPath {
                     id, path, value, ..

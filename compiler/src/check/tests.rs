@@ -191,7 +191,6 @@ pub(crate) fn reference_capability_boundaries_are_explicit() {
         "x:=1;r:&!x",
         "r:&(1+2)",
         "x:1;r:&x;s:&r",
-        "x:{->a:1;r:&a}",
         "f<int32>:(x<int32>){r:&!x;->*r}",
         "f<int32>:(x<&!int32>){->*x}",
         "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",

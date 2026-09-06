@@ -185,6 +185,7 @@ pub enum Stmt {
         id: LocalId,
         target: BlockId,
         field: String,
+        mutable: bool,
     },
     Assign {
         id: LocalId,
