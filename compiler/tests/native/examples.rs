@@ -83,6 +83,10 @@ pub fn examples_execute_in_both_profiles() {
             "init\n1\n2\n2\n9\n",
         ),
         (
+            include_str!("../../examples/emitted-borrows.mwy"),
+            "1\n3\n2\n9\n7\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

@@ -1,0 +1,19 @@
+debug:@"debug"
+
+result:{
+    ->count:=1
+    view:&count
+    debug.print(*view)
+    count=2
+    ->items<int32[2]>:=[3]
+    item:&items[1]
+    debug.print(*item)
+    items[1]=9
+}
+debug.print(result.count)
+debug.print(result.items[1])
+
+nested:'target{
+    view:{'target->count:=7;->&count}
+    debug.print(*view)
+}

@@ -3,7 +3,7 @@
 This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
-narrowing and shared references to ordinary local storage, including guarded
+narrowing and shared references to local and mutable emitted storage, including guarded
 block results, immutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
@@ -39,6 +39,7 @@ compiler/target/debug/meowy run compiler/examples/dynamic-lists.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-fields.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-writes.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-slots.mwy
+compiler/target/debug/meowy run compiler/examples/emitted-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -87,6 +88,9 @@ The [mixed writes example](examples/mixed-writes.mwy) updates fields inside a li
 held by a record, preserving copies and allowing changes to a separate holder field.
 The [emitted slots example](examples/emitted-slots.mwy) mutates named fields during
 construction; later reads and the returned record observe the same updated storage.
+The [emitted borrows example](examples/emitted-borrows.mwy) reads those fields through
+shared references and writes after their last use. An inner block can pass out a
+reference when its emitted owner belongs to a still-active outer result.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -140,6 +144,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   updates the returned field; scalar reads and mixed field/index writes use that
   storage. Initializers still run once. Wider final field types, nullable fields,
   named enclosing targets and restarts preserve the alias's declared type.
+- Shared borrows of mutable emitted names, their concrete fields and initialized
+  list elements. References use the slot's target-block lifetime and retain their
+  declared pointee type. Overlapping writes wait until the final shared use; result
+  publication cannot carry a reference into that same result's construction storage.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -206,7 +214,8 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
-fields, mutable primary slots and borrows of emitted storage. String interpolation
+fields, mutable primary slots, borrows of immutable emitted names and borrowed alias
+views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
 
@@ -272,9 +281,15 @@ assignments resolve the actual result cell, with conversion between the declared
 local type and a wider final slot type. Mixed paths address the compatible payload.
 When an emission is proved discarded, an initialized local cell preserves its
 remaining effects without projecting into an absent or incompatible result field.
-Borrowing emitted storage remains B001. Alias mutations publish unknown variant
-activity, preserving unrelated reference origins and preventing stale initializer
-facts from hiding a conflicting access.
+Shared borrows use the target block as their storage owner even when the alias name
+was declared in an inner scope. Discarded cells are retained as target-owned partial
+result storage. Exact slot types and concrete members of a wider union are addressable;
+proper subunion views remain B001 because borrowing cannot retag a copied value.
+References may pass through inner results, but escaping their target's publication
+reports E303. Live overlapping writes report E302, including uses across an inner
+restart. Restarting the target ends its iteration's storage. Alias mutations publish
+unknown variant activity, preserving unrelated reference origins and preventing stale
+initializer facts from hiding a conflicting access.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the
