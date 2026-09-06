@@ -1,17 +1,19 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Nullable-union milestone completed and verified.
-Full v0.0.1 remains incomplete. No implementation workers or failing milestone checks remain.
-This file is the restart point; all implementation work is under `compiler/`.
+Updated: 2026-09-06. Immutable shared references and repository verification pass.
+Full v0.0.1 remains incomplete. This milestone is complete; no workers or failing checks remain.
+This file tracks compiler implementation; `../STATUS.md` tracks the wider project.
 Baseline commits: `54080b1` (compiler), `c82354f` (tests/examples), `f2feea2` (docs).
-Union commits: `8209163` (compiler/guard behavior), `177169e` (native coverage/example).
+Union commits: `8209163` (compiler/guard behavior), `177169e` (native coverage/example),
+`f749708` (handoff). Reference commits: `71a7baf` (compiler), `064e305` (coverage).
+Repository work: `122b022` (schema examples), `6f6a0c1` (verification tooling).
 
 ## Current objective
 
-Completed: union/nullable values and guarded flow analysis for conditional emissions.
-`conditional_field` passes; native cases cover both output profiles and preserve
-E204/E205 initialization diagnostics. Next: design storage places and ownership
-analysis before enabling references, borrows, captures or owned collections.
+Completed: immutable shared-reference places, identity, copyable dereference and
+bounded lexical origin checks. `reference_identity` is required and passes in both
+profiles. Next: guarded result-origin analysis and CFG last-use liveness before
+mutable/exclusive borrowing, returned views, captures or owned collections.
 The existing reference remains authoritative. Do not change fixtures to make tests pass.
 
 ## Resume here
@@ -19,7 +21,7 @@ The existing reference remains authoritative. Do not change fixtures to make tes
 1. Read this file, `README.md`, `AGENTS.md`, and `../COMPILER.md`.
 2. Inspect `git status --short` and recent commits; preserve existing work.
 3. Run `cargo test --manifest-path compiler/Cargo.toml` from the repository root.
-4. Run `python3 compiler/tests/conformance.py`; 15 unsupported cases are currently expected.
+4. Run `python3 compiler/tests/conformance.py`; 14 unsupported cases are currently expected.
 5. Consult the validation log below before claiming any gate passed.
 6. After every compiler work step, update `Next steps` and add a checkpoint to
    `Step log` before continuing. Include investigations, edits, checks, and decisions.
@@ -30,6 +32,159 @@ provide a bundled sysroot or a qualified distribution. Never claim the documente
 Linux 5.4/glibc 2.31 execution baseline from this workstation build.
 
 ## Step log
+
+### 2026-09-06 — Complete reference and repository handoff
+
+- Completed: native/example coverage and required `reference_identity` conformance
+  committed as `064e305`, following compiler behavior `71a7baf`. Repository tooling
+  is `6f6a0c1`; schema identity corrections are `122b022`. This handoff is the final
+  focused documentation/rules commit, including the tooling cache ignore.
+- Validation: all 12 combined checks passed; 90 Rust and 18 Python tests pass;
+  catalog execution is 9 passed, 14 unsupported, 0 failed in both profiles.
+  The release compiler example printed `true`, `false`, `42`, `meowy` exactly.
+  Final documentation link and diff whitespace checks passed.
+- Blockers: no incomplete implementation edits, active workers or failing checks.
+  Full language/library/runtime and distribution gaps remain recorded below.
+- Next steps: add guarded result-origin analysis and CFG loan liveness, alongside
+  native unwind/cleanup prototyping; then build manifest/module/library integration.
+
+### 2026-09-06 — Commit shared-reference compiler behavior
+
+- Completed: `71a7baf` adds typed storage addresses, pointer lowering, frontend
+  capability checks and lexical borrow-origin validation with unit coverage.
+- Validation: staged whitespace checks passed; 90 Rust tests, conformance and
+  release execution were verified before committing.
+- Next steps: commit native reference cases/example and required conformance
+  coverage, then finish the cross-project handoff and remaining-work priorities.
+
+### 2026-09-06 — Verify release output and finish review
+
+- Completed: the optimized release compiler built successfully and ran the
+  references example with exact stdout `true`, `false`, `42`, `meowy`.
+- Validation: final diff whitespace checks pass; independent review found no
+  unresolved storage/provenance defect. All 12 combined checks already passed.
+- Handoff: tooling worker confirmed ownership of the remaining cache-ignore file;
+  it will be included with repository working rules and documentation.
+- Next steps: commit compiler implementation, native/example coverage, then the
+  final trackers/rules with concrete guarded-borrow and outside-compiler work queued.
+
+### 2026-09-06 — Pass the combined compiler and repository gate
+
+- Completed: all 12 checks in `python3 -B tools/verify.py --all` passed, using the
+  pinned host target and fresh compiler binary. No implementation worker remains.
+- Validation: 64 library + 26 native tests; 4 compiler harness + 14 tooling tests;
+  formatting, Clippy, compiler build, 818 local links, schema integrity, catalog,
+  Vim and Neovim. Conformance: 9 passed, 14 unsupported, 0 failed, both profiles.
+- Blockers: none for this milestone. Full borrow flow, owners, modules, runtime
+  unwinding, library implementation and release qualification remain open.
+- Next steps: build/run the release compiler's references example, inspect the
+  final diff and commit compiler behavior, source coverage and handoff separately.
+
+### 2026-09-06 — Pass reference identity conformance
+
+- Completed: unchanged `reference_identity` passes in debug/release and is now
+  required by the bootstrap harness. Added a runnable reference example and
+  documented the narrow storage/lifetime capability boundaries.
+- Validation: catalog execution is 9 passed, 14 unsupported, 0 failed. Independent
+  native probes passed for null/union addresses, optional fields, recursive local
+  borrows and iteration-local references. Full combined gate remains next.
+- Decision: E303 is limited to final direct emissions with proven completing
+  local result storage; guarded/discarded and other uncertain transfers use B001.
+- Next steps: finish new origin regressions, format and run `tools/verify.py --all`,
+  then split compiler behavior, source coverage and completed handoff commits.
+
+### 2026-09-06 — Commit repository verification tooling
+
+- Completed: `6f6a0c1` adds repository verification, local-link checking, 14 tests
+  and usage documentation. Compiler execution uses an explicit target/output path.
+- Validation: all six repository/editor checks and staged whitespace checks pass.
+- Next steps: finish discarded-emission diagnostic coverage, document the bounded
+  reference support, run the combined gate and commit the compiler feature/tests.
+
+### 2026-09-06 — Commit verified schema identity corrections
+
+- Completed: `122b022` corrects the three distribution references in schema examples.
+- Validation: existing schema integrity/rejection checks and staged whitespace
+  checks passed. Five focused shared-reference checker/backend/native tests pass.
+- Next steps: commit repository tooling independently, finish conservative origin
+  diagnostics, and run the combined compiler/repository gate before compiler commits.
+
+### 2026-09-06 — Review discarded reference emissions
+
+- Completed: backend identity/dereference test passes in both profiles. All six
+  borrow-origin unit tests and Clippy pass. Fixed a rejection fixture to construct
+  its record before union injection so it reaches the intended address boundary.
+- Finding: origin validation could report E303 for reference emissions discarded
+  by restart/panic or unreachable guards. Emission is not return. The origin-pass
+  owner is limiting E303 to proven escapes and using B001 for uncertain transfers.
+- Next steps: verify discarded/unreachable emissions, rerun reference checks,
+  then run the full combined repository/compiler gate and commit focused slices.
+
+### 2026-09-06 — Integrate origin checks and run first native cases
+
+- Completed: borrow.rs now validates lexical storage, aliases, branches and scoped
+  control transfers before backend lowering. Shared identity/dereference tests
+  passed in the checker, backend and native source suite.
+- Failure: one rejection regression used invalid mutable syntax (`!:`); the
+  language uses `:=`. Corrected that test input; no implementation rule changed.
+- Validation: three focused tests passed; the scope rejection case needs rerunning.
+  Repository tooling now has 14 passing tests and pins its compiler build/run
+  target directory, avoiding stale binaries under custom Cargo environments.
+- Next steps: rerun reference and origin cases, inspect control-flow handling,
+  run full checks and commit the independently verified schema/tooling changes.
+
+### 2026-09-06 — Add shared-reference behavior coverage
+
+- Completed: added source/native cases for copied references, distinct addresses,
+  nested record field storage, dereference, local function use and shadowing.
+  Rejection coverage includes local escapes and unsupported ownership boundaries.
+- Validation: HIR/backend diff checks passed; Cargo verification awaits borrow.rs.
+  Baseline Cargo process completed successfully, including doc tests.
+- Outside compiler: all six repository/editor checks now pass after correcting
+  three stale distribution digests. This is static/editor evidence; the new
+  compiler milestone is not yet validated.
+- Next steps: complete origin-pass integration, format and run focused reference
+  checks, then the full Cargo and repository verification command.
+
+### 2026-09-06 — Implement the bounded reference frontend
+
+- Completed: added shared-reference type handling, physical local/record address
+  resolution, scalar/record dereference and immutable reference aliases. Mutable,
+  temporary, emitted and parameter storage remain explicit capability boundaries.
+- Integration: backend/HIR worker added typed pointer operations; origin-pass
+  worker is checking lexical ownership and escaped emissions. Compilation is
+  pending the completed pass. Root owns frontend and native tests.
+- Outside compiler: 13 new tooling tests, 816 local links, 23 catalog records and
+  both editor checks pass. Existing schema examples contain a stale distribution
+  digest; tooling worker owns the three affected examples and is correcting it.
+- Next steps: integrate origin validation, exercise references in both profiles,
+  verify E303 and unsupported cases, then run the full compiler/repository gates.
+
+### 2026-09-06 — Bound shared-reference storage before implementation
+
+- Completed: traced locals, result-slot copies, dispatch receivers and union
+  projections. Independent review confirmed proof paths are not physical places.
+- Decision: first support immutable ordinary local storage and its record fields,
+  shared-reference copies, identity and dereference. Track borrow origins before
+  lowering. Mutable roots, exclusive loans, temporary owners and interprocedural
+  borrow contracts remain B001. Named emitted bindings cannot yet be borrowed.
+- Validation: baseline 53 library and 24 native tests passed. Final Cargo process
+  completion still needs polling. Reference fixtures remain unchanged.
+- Outside compiler: a worker is implementing repository verification using the
+  existing catalog/schema/editor checks plus a tested local-link checker.
+- Next steps: record the storage contract in `OWNERSHIP.md`, implement typed
+  addresses and origin checks, and test escaped locals and both native profiles.
+
+### 2026-09-06 — Resume after split commits and widen project work
+
+- Completed: confirmed prior work is already split into six focused commits and
+  the working tree is clean. Read compiler rules, setup and ownership contract.
+- Scope: the user also authorized implementation outside `compiler/`; repository
+  verification tooling will progress alongside storage/borrow foundations.
+- Validation: no new code yet. Fixture paths are `../docs/conformance/sources/`,
+  not `cases/`; correct that path in further investigation.
+- Next steps: inspect storage lowering and reference fixtures, record a sound
+  bounded implementation design, and delegate independent repository tooling.
 
 ### 2026-09-06 — Complete the nullable-value handoff
 
@@ -243,10 +398,11 @@ Linux 5.4/glibc 2.31 execution baseline from this workstation build.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Builds offline with no external Rust dependencies |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Implemented for the documented bootstrap subset; malformed-input and depth checks pass |
-| Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, branch narrowing and guarded emissions; 19 checker and 5 guard tests pass |
-| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM → ELF pipeline including tagged unions; 13 focused backend tests pass |
+| Names, types, flow | `src/check.rs`, `src/flow.rs` | Scalar/record unions, branch narrowing and guarded emissions; 21 checker and 5 guard tests pass |
+| Shared storage/borrow origins | `src/hir.rs`, `src/borrow.rs`, `OWNERSHIP.md` | Immutable local/record places, aliases and bounded escape checks; 8 origin tests pass |
+| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM → ELF pipeline including tagged unions; 14 focused backend tests pass |
 | CLI and diagnostic rendering | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Implemented and exercised through native tests |
-| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 24 native tests, 4 harness tests and 5 runnable examples |
+| Native tests, examples, documentation | `tests/`, `examples/`, `README.md` | 26 native tests, 4 harness tests and 6 runnable examples |
 
 Agents share this checkout. After a sudden stop, file existence is not proof that
 a component compiles. The interfaces are `parser::parse`, `check::check`,
@@ -282,6 +438,15 @@ short-name, immutable-value, and no-comment conventions.
 - [x] Pass new native cases and `conditional_field` in debug/release.
 - [x] Refresh documentation, run required checks and make focused feature commits.
 
+## Completed shared-reference milestone
+
+- [x] Record physical storage and lexical lifetime boundaries before implementation.
+- [x] Add local/record-field places, pointer identity and copyable dereference.
+- [x] Track immutable reference aliases and reject proven final local escapes.
+- [x] Keep guarded/discarded transfers and unavailable ownership rules explicit.
+- [x] Pass reference identity and native source checks in debug/release.
+- [x] Pass the combined repository gate and release compiler example.
+
 ## Still outside this compiler
 
 Items here must not be silently accepted with different semantics. `B001` is an
@@ -294,7 +459,7 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | All type and callable fixtures plus negative boundary cases |
 | Required evaluation | Type-producing helpers, effect analysis, cycle checks, logical budgets, specialization | E211/E219/E220 cases and determinism/budget tests |
-| Ownership | Moves, borrows, references, partial initialization, capture analysis, generated cleanup | Use-after-move and borrow rejection; exact-once cleanup on every exit |
+| Ownership | Mutable/exclusive borrows, returned/temporary views, moves, partial initialization, captures and cleanup | Use-after-move and borrow rejection; exact-once cleanup on every exit |
 | Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation-failure behavior |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Task/unwind prototype, one-worker progress, cleanup and sanitizer tests |
 | Modules/projects | Relative imports, manifest policy, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds, duplicate/revision identity tests |
@@ -306,6 +471,14 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 | Target qualification | Baseline host, static/shared closure, LTO modes, DWARF 5 and unwind information | ELF inspection, minimum-host execution, reproducible builds and size measurements |
 
 ## Known bootstrap limits worth preserving during handoff
+
+- Shared borrowing is limited to immutable ordinary local roots and concrete
+  record fields. Parameter/receiver/emission places, mutable roots, temporary
+  owners, exclusive loans, reference-carrying aggregates/signatures and reference
+  reassignment are B001. `OWNERSHIP.md` records the remaining stages.
+- E303 is currently proved only for a direct final local-reference emission into
+  its own completing block outside conditional branches. Other reference emissions
+  remain B001, including discarded/guarded transfers; emission is not return.
 
 - Only direct, noncapturing functions are lowered. A function declaration can be
   aliased, but first-class function-pointer storage and anonymous/indirect calls remain unavailable.
@@ -347,25 +520,30 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 - 2026-09-06: repository was clean before implementation; no prior compiler existed.
 - 2026-09-06: detected Rust 1.98.1, LLVM/Clang/LLD 22.1.8, CMake 4.4.3,
   Ninja 1.13.2, Python 3.14.7 on the current host.
-- Final `cargo test --locked --manifest-path compiler/Cargo.toml`: 53 library tests
-  and 24 native integration tests passed. Native tests execute both output profiles.
+- Final combined `python3 -B tools/verify.py --all` passed all 12 checks. It pins
+  the Cargo target/output path and runs the exact freshly built compiler.
+- Cargo tests: 64 library tests and 26 native integration tests passed. Native tests execute both output profiles.
 - Final `python3 -m unittest discover -s compiler/tests -p 'test_*.py'`: 4 harness tests passed.
 - Final `cargo clippy --manifest-path compiler/Cargo.toml --all-targets -- -D warnings`
   and `cargo fmt --manifest-path compiler/Cargo.toml --check` both passed.
-- `python3 compiler/tests/conformance.py`: 8 passed, 15 unsupported, 0 failed, both profiles.
+- Compiler conformance: 9 passed, 14 unsupported, 0 failed, both profiles.
   Passed: `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
-  `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`.
+  `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`,
+  `reference_identity`.
   This is NOT full conformance.
 - Parser tests retain 10,000 deterministic malformed/Unicode inputs and long-chain
   stress regressions. These are smoke coverage, not comprehensive fuzz qualification.
 - Backend focused validation: bounded FFI inputs, invalid LLVM syntax/SSA, ELF emission,
   integer boundaries, string/numeric output, short circuiting and `/dev/full` all passed.
-- Checker focused validation: 19 tests passed, including nullable slot inference,
+- Checker focused validation: 21 tests passed, including nullable slot inference,
   complementary predicates, field narrowing, assignment invalidation, record composition
-  and restart boundaries. Five guard tests include 16,384 independent variables.
+  and restart boundaries. Eight borrow-origin tests cover lexical aliases, final
+  escapes, function isolation and discarded/guarded emissions. Five guard tests
+  include 16,384 independent variables.
 - The reference catalog validator passed all 23 records; this was metadata validation only.
-- `cargo build --locked --release --manifest-path compiler/Cargo.toml` succeeded.
-  The release compiler runs `examples/nullable.mwy` with exact stdout
+- Release compiler build with the explicit host target succeeded. Its references
+  example prints exactly `true\nfalse\n42\nmeowy\n` under the release profile.
+  The prior release compiler also ran `examples/nullable.mwy` with exact stdout
   `meowy\nnull\nmeowy\nguest\n`. The earlier records example also passed.
 - Actual `readelf -h/-d/--version-info` inspection of `build/records` found ELF64
   x86-64 PIE, interpreter `/lib64/ld-linux-x86-64.so.2`, and only `libc.so.6` in
@@ -374,14 +552,13 @@ codes. The bootstrap's JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Read `../docs/reference/memory.md` and the `reference_identity`, `temporary_borrow`
-   and `named_owner_borrow` fixtures. Trace current locals, field projections and
-   scope exits in `src/hir.rs`, `src/check.rs` and `src/backend.rs`. Record storage-place,
-   lifetime and cleanup invariants and a concrete MIR/dataflow design before editing.
-2. Introduce explicit storage places and borrow/move analysis before accepting `&`
-   or dereference syntax. Verify reference identity, immutable/exclusive borrow
-   conflicts, mutation invalidation and returned-reference lifetimes with accepted
-   native cases and the specified E3xx rejections; preserve current union proofs.
+1. Replace bounded result checks in `src/borrow.rs` with guarded result-origin
+   propagation through block slots and named control flow. Reuse `src/flow.rs`
+   facts; verify valid ancestor/guarded/discarded transfers and definite E303 escapes.
+2. Introduce CFG backwards last-use liveness with loop fixed points. Resolve
+   mutable/exclusive loans and reference reassignment only after proving conflicting
+   storage access and returned-view lifetimes. Add accepted branch/restart cases
+   and exact E301/E302/E303/E304/E305 rejections.
 3. Add partial initialization, capture summaries and cleanup lowering; then enable
    bounded collections/slices and the owner-borrow fixtures. Test exact-once cleanup
    and temporary-owner rejection. Do not mark unsupported tests as passing rejections.
