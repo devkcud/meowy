@@ -4,8 +4,8 @@ This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to ordinary local storage, including guarded
-block results, immutable records carrying references and last-use checks for
-mutable owners. It is not the complete v0.0.1 language.
+block results, immutable records and unions carrying references, and last-use
+checks for mutable owners. It is not the complete v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -23,6 +23,7 @@ compiler/target/debug/meowy run compiler/examples/references.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
+compiler/target/debug/meowy run compiler/examples/optional-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -39,6 +40,8 @@ owners after the final use of their shared references, including loop iterations
 The [borrowed records example](examples/borrowed-records.mwy) copies nested reference
 fields, projects selected fields and a primary reference, and releases each loan
 after that component's last use.
+The [optional borrows example](examples/optional-borrows.mwy) narrows nullable
+reference fields and unions of different reference types before dereferencing.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -81,6 +84,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their
   receiving block. Record equality compares the full shape, including addresses.
+- Immutable reference-bearing unions and optional fields. Injection, widening and
+  proven narrowing preserve the active member's borrow origins. Absent reference
+  fields carry no loan; type predicates inspect the discriminant without copying
+  reference payloads. Copies and equality still consume every active reference.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - `debug.print`, streamed interpolation at output calls, `debug.panic`, string
@@ -101,7 +108,7 @@ References can pass through local blocks and immutable aliases while their owner
 remain alive. The checker reuses branch/completion proofs and checks all possible
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
-record components. Reference-bearing unions, signatures, mutable record bindings,
+record and union components. Reference-bearing signatures, mutable carriers,
 reassignment, dispatch and direct reference formatting require future analysis. Parameter,
 receiver and named-emission storage remain unavailable as borrow roots. Missing
 origin proofs or exhausted analysis budgets produce B001.
@@ -116,7 +123,11 @@ See [the storage design](OWNERSHIP.md) for the remaining analysis stages.
 
 Union literals receive a numeric width when the expected union has one matching
 numeric member. Multiple candidate widths require an explicitly typed value;
-the checker reports E207 instead of choosing a width. Named blocks conservatively
+the checker reports E207 instead of choosing a width. Record constructors must
+select one compatible union member; ambiguous shapes also report E207. Union
+equality requires the same normalized union type on both sides. Inspect a nullable
+value with a type predicate, or compare it with a null value explicitly typed as
+the same union. Named blocks conservatively
 forget mutable-value proofs at entry. Restarts that may emit again into a surviving
 outer result report B001 until full loop dataflow is implemented.
 
@@ -172,6 +183,7 @@ the fixture catalog and does not execute the compiler.
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
 | `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
 | `src/borrow.rs` | Guarded component origins, block-result transfers and lexical lifetime checks |
+| `src/borrow_value.rs` | Active union variants, component paths, coercions and bounded value snapshots |
 | `src/loans.rs` | Guarded CFG, per-component reference liveness and shared-loan/write conflicts |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
 | `src/backend.rs` | Typed LLVM IR lowering and bridge interface |

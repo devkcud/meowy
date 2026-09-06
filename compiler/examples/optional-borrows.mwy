@@ -1,0 +1,24 @@
+debug : @"debug"
+
+show<null> : (present<boolean>) {
+    owner := 7
+    record : { |present| -> view : &owner }
+    |record.view<null>| {
+        owner = 9
+        debug.print("missing")
+    }
+    |record.view<&int32>| debug.print(*record.view<&int32>)
+    owner = 8
+    debug.print(owner)
+}
+
+show(true)
+show(false)
+
+number : 42
+text : "text"
+<View> : <&int32><&string>
+first<View> : &number
+second<View><null> : &text
+|first<&int32>| debug.print(*first<&int32>)
+|second<&string>| debug.print(*second<&string>)
