@@ -6,6 +6,97 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Finalize the bounded-list restart handoff
+
+- State: Compiler b7ddf0c, native coverage/example abd1774 and runtime batches 4feecf8 are committed. Root/compiler STATUS now describe the completed subset, remaining language/runtime gaps and ordered continuation; historical checkpoints remain in their step logs. No source worker remains active.
+- Validation: All 14 repository checks pass, including 187 Rust and 34 Python tests, runtime sanitizers and 10 passed/13 unsupported/0 failed conformance. The final optimized compiler/example passes. Final handoff documentation has 849 valid local links and clean Git whitespace.
+- Blockers: no unfinished implementation or failing checks; complete v0.0.1 qualification remains outside this milestone.
+- Next steps: Implement single-evaluation inference for multiple expected list alternatives; add element places, exclusive loans and move/drop state; generate task scope closing with complete failure-batch consumption. Follow the ordered STATUS next steps and preserve explicit unsupported boundaries.
+
+### 2026-09-06 — Commit bounded lists and complete validation
+
+- State: Compiler implementation is b7ddf0c; native coverage/example and required mixed_list conformance are abd1774; runtime failure batches are 4feecf8. All source workers have finished and the implementation is complete for the documented reference-free bounded-list subset.
+- Validation: All 14 repository checks passed with 187 Rust tests, 34 Python tests and 849 local links. The final optimized compiler also built and ran the bounded-lists example in release with exact stdout and empty stderr. Conformance remains 10 passed, 13 unsupported, 0 failed; runtime sanitizers pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh the final root/compiler handoff snapshots, check their links and whitespace, commit tracking separately, then continue with multi-list contextual inference, element ownership and generated task-scope cleanup in the ordered STATUS next steps.
+
+### 2026-09-06 — Pass the integrated bounded-list gate
+
+- State: Bounded lists and complete runtime failure batches are validated. Multi-list literal contexts remain explicit B001, obsolete unavailable-list expectations are corrected, and reference fixtures are unchanged. Runtime behavior is committed as 4feecf8; compiler code and coverage are ready for focused commits.
+- Validation: All 14 combined checks passed: 110 library plus 77 native groups, 34 Python tests, 849 local links, schemas/catalog, both editors, formatting, Clippy, build and actual conformance. Runtime debug/release/ASan/UBSan/LSan suites pass. Conformance is 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify the final optimized compiler/example, commit compiler implementation separately from native examples/harness, then replace active tracking with the completed snapshot and ordered next steps.
+
+### 2026-09-06 — Check integrated lists against the full suites
+
+- State: Actual conformance is 10 passed, 13 unsupported, 0 failed in both profiles; mixed_list now requires its real E207 rejection. Completing-path length and typed-list union native checks pass. Final checker cleanup must replace an obsolete unsupported-list unit expectation and classify unimplemented multi-list literal inference as B001.
+- Validation: Full library run: 106 passed, 1 stale-boundary expectation failed. Native run: 76 passed, 1 failed because the agreed multi-list B001 diagnostic change has not landed yet. No lowering/runtime failures; final green gate is still pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Apply those two checker boundary corrections, finish checker unit coverage/docs, run formatting/Clippy and the combined gate, then split compiler implementation from native examples/harness and final tracking.
+
+### 2026-09-06 — Validate source-level bounded lists
+
+- State: Eight initial native list groups pass, including accepted copies/nesting/equality/whole-list borrows, static extent/bounds rejections and dynamic P001/P003 after argument effects. Added a final completing-path proof group and typed-list union injection; multi-list expected literal inference is explicitly B001 with a typed intermediate workaround.
+- Validation: Initial native list tests passed in debug/release. Backend 17 groups and all runtime profiles also passed. Final additional native cases, full frontend tests and conformance are now being checked.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Enable mixed_list in conformance REQUIRED only after actual E207 evidence, finish compiler documentation/unit tests, run the combined gate, then commit compiler behavior and coverage separately and write the final restart handoff.
+
+### 2026-09-06 — Commit runtime batches and validate list lowering
+
+- State: Runtime failure batches are committed as 4feecf8. Native list layout, copying, indexing, append and equality now share checked HIR target layout; checker extent arithmetic uses existing typed expression checking instead of raw i128 AST evaluation.
+- Validation: Backend worker passed 17 focused backend groups, including new list/union layouts, signed and uint64 bounds, float equality and byte-span diagnostics in both profiles. Root full runtime debug/release/sanitized gate passed. Full frontend/native list tests remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish checker method wiring and frontend tests, run all native list cases and actual mixed_list conformance, document exact supported limits, then split compiler code, native coverage and final handoff commits.
+
+### 2026-09-06 — Validate bounded runtime failure batches
+
+- State: Detailed scope closing is complete: caller-provided batches retain every consumed failure, report_full preserves the next child and mark, and retries retain counts and ticket generation identity. Root reviewed runtime code and documentation; compiler lists remain in integration.
+- Validation: Root reran python3 -B runtime/check.py outside sandbox: all debug/release/sanitized suites pass, including 25 scheduler groups, 13 owned groups and the required expired-fiber-local ASan diagnosis. The earlier isolated timeout did not recur; no sanitizer suppression was added.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit runtime batch behavior and tools documentation separately, finish compiler extent/length integration, run native/conformance and combined checks, then commit compiler behavior, examples and final tracking.
+
+### 2026-09-06 — Review native layout and extent checking
+
+- State: Native list lowering now snapshots receivers, checks signed and unsigned one-based indices and compares only initialized elements. Review found that draft AST-only extent arithmetic bypassed typed width checks; the checker owner is correcting that before acceptance. Bounds diagnostics now include byte spans.
+- Validation: New runtime/lowering code is awaiting integrated compiler tests. Native regressions now include uint8 capacity overflow and mixed-width extent arithmetic. Link and whitespace checks passed previously; sanitizer isolation is still pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Share one checked target-layout calculation, finish width-correct required extents and known-length facts, run focused compiler and runtime checks, then run the full gate and split completed implementation/docs commits.
+
+### 2026-09-06 — Review collection and report integration boundaries
+
+- State: Native collection coverage now includes signed/full-width indices, typed constant capacities, initialized-prefix equality, receiver snapshots, final-use loans and explicit unsupported limits. Runtime batch implementation and borrowed diagnostic lifetime rules have been reviewed.
+- Validation: 849 local documentation links and Git whitespace pass. Runtime debug/release passes; sanitizer diagnosis and compiler execution of new tests remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete compiler source integration, run focused native and conformance checks, finish sanitizer diagnosis without weakening the negative probe, then run the repository gate and split reviewed behavior commits.
+
+### 2026-09-06 — Integrate collection evaluation with borrow analysis
+
+- State: Borrow and loan passes now visit list receivers/items/indexes in source order, stop after nonreturning expressions and treat copied elements as reference-free. Index results get fresh union activity; whole-list reference contracts include nested element type costs without indexed borrow sources.
+- Validation: Traversal edits and final-use native probes are written and formatted; compiler integration is still pending so these changes are not yet validated. Runtime sanitizer probe diagnosis remains pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish frontend/backend integration, run cargo tests and inspect any inference or lowering failures, verify retry batches under sanitizers, then enable actual mixed-list rejection and split completed commits.
+
+### 2026-09-06 — Add bounded-list native scenarios
+
+- State: Eight native groups and the bounded-lists example now specify copy behavior, typed inference, nested values, initialized-prefix equality, snapshots, bounds and whole-list loans. Frontend and backend work are split between workers; root owns integration tests and docs.
+- Validation: New native tests are written but cannot run until compiler integration is complete. Runtime debug/release passes 25 scheduler groups; sanitizer run stopped at a timeout in the existing expired-fiber-local negative probe and is being isolated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish and compile list passes, execute new native scenarios in both profiles, resolve the sanitizer probe timeout with exact evidence, then run the combined gate and split behavior commits.
+
+### 2026-09-06 — Implement retry-safe failure batches
+
+- State: Runtime detailed scope closing now keeps a failed child pending when the caller buffer is full and reports only successfully reclaimed failures. Compiler bounded-list lowering is still in progress; root is adding native behavior coverage.
+- Validation: Runtime debug/release passes with 25 scheduler groups and existing suites. Compiler baseline remains 104 library plus 68 native groups; new lists and sanitizer results are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete runtime sanitizer checks and buffer lifetime documentation, finish bounded-list HIR/checker/lowering, then run native bounds, inference, equality and evaluation-order tests before enabling mixed_list conformance.
+
+### 2026-09-06 — Begin bounded lists and complete scope-failure reporting
+
+- State: The checkout is clean at 4a01cf6. Compiler work targets inline bounded lists with copyable reference-free elements, initialized length, checked one-based indexing and compatible literal inference. Runtime work targets bounded batches of every consumed child failure during explicit scope close. Root owns native/conformance coverage and both trackers.
+- Validation: Previous milestone passed all 14 repository checks. New collection/report behavior is not yet implemented or validated. Slices, owned/reference elements, element mutation/borrowing, core.Type evaluation, automatic cancellation and DWARF remain separate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define bounded list HIR/layout and static versus runtime bounds checks, design retry-safe failure report batches, add native accepted/rejected examples and enable conformance cases only after actual compiler support.
+
 ### 2026-09-06 — Complete scoped-borrow and task-close handoff
 
 - Completed: compiler 393471c, native coverage efe7d6e and runtime/tooling d7d1758 are committed. Current STATUS files contain supported behavior, precise limits, evidence and ordered next steps; prior checkpoints are preserved.
