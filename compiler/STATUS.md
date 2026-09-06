@@ -1,25 +1,25 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Pure-compound expected-list inference passes the final gate.
+Updated: 2026-09-06. Checked shared list-element borrows pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `e8a6157`; native coverage/example: `15a5ff6`.
+Implementation: `745ca2f`; native coverage/example: `5c9defb`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: expected-list inference now admits pure scalar unary/binary compounds
-with literal or resolved immutable scalar-constant leaves. It preserves ordinary
-operator/literal rules, typed widths, intermediate overflow, floating behavior,
-short circuits and each expression's original reach. Minimal isolated checkers do
-not copy live state or replay effects; all extra work and constant bytes are charged.
+Completed: `&values[index]` produces checked shared references into original list
+storage. Nested list/record projections and function/dispatch results retain their
+owners and all-input lifetime bounds. Parent dependencies stay live through any
+returning index evaluation; index panic/leave paths form no derived reference.
+Physical indices remain precise while abstract lifetime paths use typed Element
+regions. Missing reborrow proofs fail only when their consumption node is reachable.
 
-Complex effectful blocks, captured/mutable values and non-scalar constraints are
-not speculatively checked; existing once-only paths or explicit B001 remain.
-Unannotated list common-type rules are unchanged. Element places/ownership,
-generated cleanup/task integration, cancellation and DWARF remain pending.
-Runtime message ownership and generated failure evidence are unchanged this turn.
+Element writes, exclusive references, slices, reference-bearing/owned elements,
+temporary owner borrows and union-payload/primary-ascription addresses remain B001.
+Runtime code is unchanged; generated cleanup/task integration, cancellation and
+DWARF remain pending. Existing pure-compound inference boundaries are preserved.
 
 ## Resume here
 
@@ -45,11 +45,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 10 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 17 focused backend tests |
+| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 11 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 21 loan, 9 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 20 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 94 native groups, 4 harness tests and 16 covered examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 101 native groups, 4 harness tests and 17 covered examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -113,10 +113,22 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Known immutable/literal lengths and equal lengths on every completing block path
   give static E101/E103. Mutable/function-result lengths keep runtime checks. Never
   infer a block length from its last emission alone.
-- Whole-list references and concrete record list fields use existing places and
-  lifetime contracts. Element borrows/writes, reference/owned elements, aliases,
-  slices, removal and formatting remain unavailable. Do not add indexed borrowed
-  descendants until their storage/loan representation exists.
+- Whole-list and initialized-element shared references address original storage.
+  ElementBorrow retains the evaluated parent pointer/length, then evaluates its
+  index once and applies E101/P001 before address formation. A parent loan is used
+  through returning index effects even if the result is discarded. Index divergence
+  preserves prior effects without a derived-reference use or later bounds failure.
+- Source paths distinguish Field(index) and Element steps, separate from physical
+  HIR Place/Reborrow paths. All indices in a list conservatively overlap for loans;
+  runtime address equality still distinguishes actual elements. Contract search
+  visits element types once per nested path, independent of capacity. Zero-capacity
+  regions retain conservative input bounds but never prove initialization or remove
+  runtime checks. Extend write/alias precision explicitly before mutation.
+- Derived-reference snapshots are keyed by unique sites. Missing snapshots are
+  recorded at their consumption node and validated after reach analysis. Known-dead
+  paths do not invent origins; reachable gaps remain B001. All path/snapshot/conflict
+  work stays charged. Indexed writes, exclusive borrows, slices, aliases, removal,
+  reference-bearing/owned elements and list formatting remain unsupported.
 - Ordinary locals, reference-free parameters and copied dispatch self bindings have
   local addressable storage. Parameter/self addresses may be used in nested scopes
   but cannot escape their storage region. Shared self instead contains a reference
@@ -135,8 +147,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   effectful equality operands and argument early leaves have native regressions.
 - Function input leaves use symbolic Input sources, distinct from the parameter's
   stack copy. Separate referent paths identify storage reached through each input.
-  Calls substitute compatible whole referents/concrete named descendants and attach
-  every active input origin/transitive bound to each returned reference leaf.
+  Calls substitute compatible whole referents, named descendants and typed element
+  regions, attaching every active input origin/transitive bound to returned leaves.
   Ignored heterogeneous inputs still constrain lifetime and caller writes. Scalar
   results and scalar-only projections release these loans after consumption.
 - Contract facts use unique call-site IDs and entered guards captured after argument
@@ -144,7 +156,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   exit skips the call. Result proofs apply only on the returning edge. Every body,
   including uncalled and recursive definitions, must prove its own return sources.
 - Under the current capabilities, a reference result needs an active compatible
-  borrowed input referent or concrete named descendant; otherwise that path cannot return. Nullable results may
+  borrowed input referent or typed named/element descendant; otherwise that path cannot return. Nullable results may
   still return null. Extend this rule before adding static safe-reference sources,
   additional addressable projections or reference-producing intrinsic contracts. Existing string values are
   literal-backed static views, not local storage dependencies merely by value.
@@ -231,53 +243,56 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
-  and compiler path are explicit. Runtime sanitizers execute outside ptrace/sandbox
-  supervision; metadata validation remains separate from source execution.
-- Rust: 118 library and 94 native groups pass. New coverage is 4 context groups and
-  6 native groups, including intermediate widths, typed constants, f32 behavior,
-  Boolean/string comparisons, short circuit, nested list/record fields, effects,
-  Never ordering, mutable runtime inputs and source/capability diagnostics.
-  Formatting and all-target Clippy with `-D warnings` pass.
-- The optimized compiler builds/runs `examples/compound-lists.mwy` in release with
-  empty stderr and exact stdout `128\n-128\nfalse\n260\n`.
-- Independent differential checking passed 408 comparisons: 129 unique accepts,
-  151 ambiguous and 128 no-fit cases, with 994 compiler checks and zero mismatches.
-  The reviewer used a fresh pinned compiler snapshot; evidence/script remain in
-  /tmp/meowy_pure_list_audit.json and /tmp/meowy_pure_list_audit.py. These supplement
-  committed tests and are not a release replay artifact.
-- The old grouped-negation B001 expectation was updated after both candidates became
-  provably invalid (E207). Other unsupported constructs retain explicit diagnostics.
-  Shared resource tests include repeated long constant strings and many candidates.
+- Final `python3 -B tools/verify.py --all`: all 14 checks pass on the final source.
+  Cargo target/output and compiler identity are explicit. Native runtime sanitizers
+  ran outside sandbox/ptrace supervision; metadata checks remain distinct from
+  actual compiler execution and release qualification.
+- Rust: 125 library and 101 native groups pass. New coverage includes 3 backend,
+  1 list, 1 contract, 2 loan and 7 native groups. Clippy `-D warnings` and formatting
+  pass. The optimized compiler runs `examples/element-borrows.mwy` in release with
+  exact stdout `true\nfalse\n20\n10\n30\n`, and passes an active E302 check plus
+  zero-capacity P001 with exact index-effect output.
+- Native tests exercise actual vs copied element addresses, nested lists/records,
+  shared and copied parameters/self, nullable parents, direct-function returns,
+  ignored-input bounds, direct index-reference release, parent/index ordering,
+  early exits, E101/E302/E303, signed/uint64 dynamic bounds and remaining B001 cases.
+- A 65,536-capacity source case verifies capacity-independent contract traversal.
+  A list-wrapped source/return expansion stops at the existing B001 proof budget;
+  conflict scans charge full path weight. No capacities are enumerated into origins.
+- Independent review found two dead-branch B001 false rejections. After the fix,
+  both original cases accept and an active conflict still returns E302. Committed
+  regressions also cover false&&, dead invalid indices/writes, ordinary dead record
+  reborrows and deliberately missing reachable proof. A returning element call
+  followed by a local-reference escape still reports E303.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 852 local links; both editors, schemas/catalog and build checks pass.
-- Runtime is unchanged. Each debug/release/sanitized profile passes 6 diagnostic,
-  14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups, with exact
-  fatal truncation/lifetime/guard/admission checks and identical layout measurements.
-  ASan/UBSan/LSan and the expired-fiber-local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in debug/release. Fixtures
-  and REQUIRED were unchanged. Prior ownership/diagnostic audits stay in the step log.
+  checks 853 local links; schemas/catalog and Vim/Neovim pass.
+- Runtime is unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
+  14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with exact
+  fatal/truncation/lifetime/guard/admission probes and stable layout. ASan/UBSan/LSan
+  and the expired-fiber-local negative diagnosis pass.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Reference
+  fixtures and REQUIRED were unchanged. Prior compound/ownership/diagnostic audits
+  remain in the step log and committed tests.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
-  It was not repeated; baseline-host execution, bundled distribution, full panic
+  It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
 - Preserve the unchanged vendored fcontext.hpp EOF exception and checksum.
 
 ## Next steps
 
-1. Add verified initialized element places and exclusive access before indexed
-   mutation, slices or owned collections. Preserve evaluation order, root identity,
-   last-use checks and all-input bounds; test conflicts and cleanup boundaries.
-2. Extend remaining effectful/non-scalar contextual constraints in list_context.rs
-   without replaying effects or weakening budgets. Keep unproved cases B001 and
-   compare candidate decisions with ordinary single-context checking.
+1. Extend checked element places with exclusive access and initialized/move state
+   before indexed writes, slices or owned elements. Define target/index/RHS order,
+   keep parent storage valid during place use and verify alias/last-use behavior.
+   Current Element regions cannot prove separate constant indices disjoint.
+2. Extend remaining effectful/non-scalar contextual constraints without replaying
+   effects or weakening budgets; compare candidate decisions with ordinary checking.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
-   mark/close while parent storage lives. Retain owning outcomes, drain all reports
-   and preserve interleaved child/result/local cleanup before cancellation/unwinding.
-4. Extend static/intrinsic borrow sources and verified projections only with updated
-   lifetime contracts/no-return assumptions. Add source identities and richer
-   diagnostic evidence/events without claiming full replay from bootstrap text.
-5. Implement required evaluation/effects/budgets/specialization and the project/module
-   graph, enabling fixtures only after actual compiler support; continue into Meowy
-   libraries, tooling and distribution qualification.
-6. Keep the combined gate and both trackers/logs current. Strict conformance needs
-   zero unsupported cases and still covers only part of full v0.0.1 qualification.
+   mark/close while parents live. Retain owning outcomes, drain reports and preserve
+   interleaved cleanup before cancellation and pinned unwinding.
+4. Add static/intrinsic sources and new projections only with updated lifetime
+   contracts/no-return assumptions. Extend diagnostic source identities and evidence
+   without treating bootstrap byte-span text as a complete replay artifact.
+5. Implement required evaluation, specialization and the project/module graph;
+   enable fixtures only after actual support, then progress libraries and tools.
+6. Keep the combined gate and both handoffs/logs current. Strict conformance needs
+   zero unsupported cases and still covers only part of v0.0.1 qualification.

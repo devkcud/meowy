@@ -6,6 +6,55 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Finalize checked element-borrow handoff
+
+- State: Implementation 745ca2f and native coverage/example/docs 5c9defb are committed. Both STATUS snapshots now describe original-storage element references, typed abstract regions, parent/index loans, all-input return bounds and reachable-proof validation. No implementation workers or unfinished source files remain; runtime code is unchanged.
+- Validation: Final gate passes all 14 checks with 226 Rust tests, 35 Python tests and 853 local links, including runtime sanitizers. Optimized example, E302 conflict and zero-capacity P001/effect probes pass. Independent dead-branch repros and active-control retest pass. Initial new tests needed a dispatch-spelling correction and a diagnostic-suffix assertion adjustment; all current tests pass. Conformance remains 10 passed, 13 unsupported, 0 failed. Final links and Git whitespace pass.
+- Blockers: no failing checks. Indexed writes, exclusive access, slices, owned/reference elements and generated runtime cleanup remain explicit future work; v0.0.1 remains unqualified.
+- Next steps: Add exclusive element access and initialized/move state with defined target/index/RHS order, extend remaining contextual constraints without replaying effects, and connect generated cleanup/diagnostic layouts to runtime scope closing. Follow the ordered STATUS steps and preserve all-input lifetime bounds and actual address identity.
+
+### 2026-09-06 — Commit and verify shared element borrowing
+
+- State: Implementation is committed as 745ca2f and native coverage/example/docs as 5c9defb. Element borrows now retain original storage, initialized bounds, parent/index evaluation order and all-input lifetime constraints through function results. Missing derived-reference facts are rejected only when their consumption node can execute. No implementation workers remain active.
+- Validation: All 14 checks pass with 226 Rust tests, 35 Python tests and 853 local links. The optimized compiler also passed exact example output, active E302 and zero-capacity P001/effect checks. Independent audit repros passed after the reachability fix; conformance remains 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh both STATUS snapshots, preserve detailed checkpoints in step logs, validate final documentation and commit tracking. Continue with indexed writes/exclusive access and initialized/move state before slices or owned collections, plus generated runtime cleanup integration.
+
+### 2026-09-06 — Pass the shared-element repository gate
+
+- State: Shared initialized-element borrows and reachability-aware derived-reference proof validation are complete. Runtime addresses stay precise while lifetime paths conservatively represent any element of each list region. Indexed writes, exclusive references, slices and temporary owner borrows remain explicit B001 boundaries. All implementation/review workers are finished.
+- Validation: All 14 checks pass: 125 library plus 101 native groups, 35 Python tests, 853 local links, editors, schemas/catalog, formatting, Clippy, build and actual conformance. Both independent dead-branch repros now accept and the active conflict remains E302. Runtime profiles pass unchanged; conformance is 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify the optimized element-borrows example and key bounds/lifetime behavior, commit compiler implementation separately from native coverage/docs, refresh both STATUS handoffs with remaining exclusive-access/runtime work, then commit tracking and confirm Git state.
+
+### 2026-09-06 — Validate reachable and inactive element loans
+
+- State: The missing-snapshot false rejection is fixed: derived-reference proof gaps are checked at their CFG consumption node after reachability is computed. Known-dead paths need no invented origins; reachable missing proof still fails B001. Root native coverage also verifies nullable RefList parents, direct index-reference release and E303 after a returning element-reference call.
+- Validation: All seven updated native groups pass in debug/release. All 21 loan groups, Clippy, formatting and whitespace checks pass; independent two-repro retest is pending. Documentation links check 853 local targets. Earlier full library 124 and backend 20 groups passed before the added proof-gap group; final combined gate will establish current totals.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the small independent retest, run all repository checks and optimized original-storage example, then split compiler/source proof changes, native example/docs and final tracking into coherent commits. Keep indexed mutation, exclusive borrows and slices unsupported until their ownership work exists.
+
+### 2026-09-06 — Review inactive element-borrow paths
+
+- State: Seven new native element-borrow groups pass, covering identity, nested addresses, function/dispatch lifetimes, all-input bounds, early exits and dynamic/static bounds. Read-only review found a false B001 when CFG demanded reborrow facts for literal-false or short-circuited branches skipped by origin analysis; the proof lookup is being made reachability-aware.
+- Validation: Implementation library 124/backend 20/loan 20 and initial native groups pass. Two directed compile checks exposed the missing-proof false rejection; regression cases now include inactive invalid positions and an active conditional E302 conflict. The full gate is not yet final.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Defer missing derived-reference proof errors until CFG reachability is known while preserving B001 for reachable gaps, rerun inactive/active native and library checks, finish docs, then run the combined gate and optimized example before split commits.
+
+### 2026-09-06 — Implement and validate shared element addresses
+
+- State: ElementBorrow HIR composes original list references with one checked index. Abstract Field/Element source paths are separate from executable places and visit each element type once per list, not each capacity slot. Parent loans survive returning index evaluation; direct-call results retain original owners and all borrowed-input bounds. Root added seven native groups and element-borrows.mwy.
+- Validation: The full library suite passed 124 tests, then all 20 loan groups passed after final path-work charging. All 20 backend groups and seven native source groups pass in debug/release. Clippy, formatting and whitespace pass on implementation files. Independent integrated review and the combined gate are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish review of origin substitution and bounds/early-exit paths, update supported-feature docs, run all repository checks and the optimized example, then split implementation, native coverage and final handoff commits. Indexed mutation/exclusive loans/slices remain explicit next work.
+
+### 2026-09-06 — Begin shared initialized-element borrows
+
+- State: The checkout starts clean at ca84a7f. This slice adds shared borrows of initialized bounded-list elements with real element addresses, checked indices and owner-based lifetime tracking through calls. Frontend/origin/loan work, backend lowering and read-only ownership review are delegated; root owns native coverage/docs and all trackers.
+- Validation: Prior gate passed 212 Rust tests, 35 Python tests and 852 local links. Baseline compiler regressions are running. New element borrows have not been implemented or validated; indexed writes, exclusive references, slices and owned/reference elements remain separate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on typed element-origin projections and receiver/index evaluation, implement checked original-storage lowering and call contracts, cover pointer identity/E302/E303/bounds/early exits, then run the full gate and split implementation, coverage and handoff commits.
+
 ### 2026-09-06 — Finalize pure-compound inference handoff
 
 - State: Implementation e8a6157 and coverage/example/docs 15a5ff6 are committed. Current STATUS files describe admitted pure compounds, exact typed constants, saved reach, resource limits and remaining work. No implementation workers or unfinished source files remain; runtime behavior is unchanged.
