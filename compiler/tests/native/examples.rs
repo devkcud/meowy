@@ -1,0 +1,84 @@
+use super::Case;
+
+#[test]
+pub fn examples_execute_in_both_profiles() {
+    for (source, stdout) in [
+        (include_str!("../../examples/hello.mwy"), "Hello, meowy!\n"),
+        (include_str!("../../examples/factorial.mwy"), "3628800\n"),
+        (
+            include_str!("../../examples/records.mwy"),
+            "Sensor 7: 24 celsius\n48\n",
+        ),
+        (include_str!("../../examples/loop.mwy"), "5050\n"),
+        (
+            include_str!("../../examples/borrow-results.mwy"),
+            "11\n22\n42\ntrue\n",
+        ),
+        (
+            include_str!("../../examples/borrow-liveness.mwy"),
+            "41\n42\n7\n9\n0\n1\n2\n3\n",
+        ),
+        (
+            include_str!("../../examples/borrowed-records.mwy"),
+            "11\n44\n33\n44\nvalue\n0\n1\n2\n3\n",
+        ),
+        (
+            include_str!("../../examples/optional-borrows.mwy"),
+            "7\n8\nmissing\n8\n42\ntext\n",
+        ),
+        (
+            include_str!("../../examples/borrow-functions.mwy"),
+            "11\n22\n12\n23\n12\n24\n",
+        ),
+        (
+            include_str!("../../examples/reborrows.mwy"),
+            "true\n41\n7\n42\n8\n",
+        ),
+        (
+            include_str!("../../examples/scope-borrows.mwy"),
+            "false\n7\n8\ntrue\n9\n10\n",
+        ),
+        (
+            include_str!("../../examples/bounded-lists.mwy"),
+            "2\n3\nAda\nLin\ntrue\n0\n",
+        ),
+        (
+            include_str!("../../examples/list-unions.mwy"),
+            "20\nmeowy\n300\n2\n",
+        ),
+        (
+            include_str!("../../examples/compound-lists.mwy"),
+            "128\n-128\nfalse\n260\n",
+        ),
+        (
+            include_str!("../../examples/element-borrows.mwy"),
+            "true\nfalse\n20\n10\n30\n",
+        ),
+        (
+            include_str!("../../examples/element-writes.mwy"),
+            "10\n21\n2\n7\n9\n",
+        ),
+        (
+            include_str!("../../examples/nested-writes.mwy"),
+            "20\n11\n2\n1\n2\n99\n",
+        ),
+        (
+            include_str!("../../examples/effectful-lists.mwy"),
+            "value\n128\n1\nrow\n300\n",
+        ),
+        (
+            include_str!("../../examples/dynamic-lists.mwy"),
+            "read\n301\n2\n",
+        ),
+        (
+            include_str!("../../examples/references.mwy"),
+            "true\nfalse\n42\nmeowy\n",
+        ),
+        (
+            include_str!("../../examples/nullable.mwy"),
+            "meowy\nnull\nmeowy\nguest\n",
+        ),
+    ] {
+        Case::new(source).runs(stdout.as_bytes());
+    }
+}
