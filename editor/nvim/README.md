@@ -39,6 +39,11 @@ The defaults retain the current indentation on a new line. They disable C-style
 smart indentation and automatic comment-leader insertion: a second `#` closes a
 meowy comment. Automatic hard wrapping of source and literal strings is disabled.
 
+[Gatostyle](../../docs/guide/gatostyle.md) defines configurable layout and semantic
+style checks. Its stdin commands support editor buffers; this runtime keeps
+formatting and automatic fixes opt-in. The four-space buffer defaults can be
+overridden independently to suit a project's policy.
+
 ## Highlighted syntax
 
 The highlighter handles:
@@ -59,6 +64,11 @@ Type regions nest, so `>>` inside a generic type closes two type arguments while
 `>>` in an expression denotes task submission. A function type's `->` does not
 close its angle brackets. A comparison such as `count < limit` does not start a
 multiline type region. Unrecognized string escapes are highlighted as errors.
+
+Spaced and unspaced types share highlighting. In `|value<T>|statement`, the type
+is a matcher predicate; outside a condition it is an ascription. The highlighter
+does not use a space to distinguish these roles. Computed annotations such as
+`other<(value<>)>:value` retain explicit type delimiters too.
 
 Blocks, record types, and multiline comments also expose syntax folds. Enable
 those explicitly with `:setlocal foldmethod=syntax` if desired.

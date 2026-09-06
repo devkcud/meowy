@@ -19,7 +19,7 @@ if get(g:, 'meowy_highlight_builtin_values', 1)
 endif
 syntax match meowyBinding /\<[A-Za-z_][A-Za-z0-9_]*\>\ze\s*:\%(:\)\@!/
 syntax match meowyCall /\<[A-Za-z_][A-Za-z0-9_]*\>\ze\s*(/
-syntax match meowyCall /\<[A-Za-z_][A-Za-z0-9_]*\>\ze<[^"#{};|=]\+>\s*(/
+syntax match meowyCall /\<[A-Za-z_][A-Za-z0-9_]*\>\ze\s*<[^"#{};|=]\+>\s*(/
 
 syntax match meowyOperator /[-+*\/%=<>!~^&|:]/
 syntax match meowyOperator /:=\|==\|!=\|<=\|>=\|&&\|||/
@@ -29,7 +29,7 @@ syntax match meowyBorrow /\%(&\)\@<!&\%(&\)\@!\%(!\)\?/
 syntax match meowyUnchecked /!\ze\s*{/
 syntax match meowyDispatch /\./
 syntax match meowyScope /'[A-Za-z_][A-Za-z0-9_]*/
-syntax match meowyTaskGroup /&[A-Za-z_][A-Za-z0-9_]*\ze\%(<\|\s*>>\)/
+syntax match meowyTaskGroup /&[A-Za-z_][A-Za-z0-9_]*\ze\s*\%(<\|>>\)/
 syntax match meowyPunctuation /[,;]/
 
 syntax match meowyNumber /\<\d\%(_\?\d\)*\>/
@@ -42,18 +42,20 @@ syntax region meowyBlock matchgroup=meowyDelimiter start=/{/ end=/}/ transparent
 syntax region meowyParen matchgroup=meowyDelimiter start=/(/ end=/)/ transparent contains=@meowyCode
 syntax region meowyList matchgroup=meowyDelimiter start=/\[/ end=/\]/ transparent contains=@meowyCode
 
+" Spaces do not select predicates, ascriptions, or generic specialization.
 " A named outer type must reach a type delimiter. In particular, '< limit'
 " and '<< task' must not start a region that consumes the rest of the file.
-syntax region meowyType matchgroup=meowyTypeDelimiter start=/\%(<\)\@<!<\ze\%([:&*!({"]\|>\|[A-Za-z_][A-Za-z0-9_]*\%(\.[A-Za-z_][A-Za-z0-9_]*\)*\s*\%([><]\|\[\)\)/ end=/\%(-\)\@<!>/ contains=@meowyTypeBody
+syntax region meowyType matchgroup=meowyTypeDelimiter start=/\%(<\)\@<!<\ze\_s*\%([:&*!({"]\|>\|[A-Za-z_][A-Za-z0-9_]*\%(\.[A-Za-z_][A-Za-z0-9_]*\)*\_s*\%([><]\|\[\)\)/ end=/\%(-\)\@<!>/ contains=@meowyTypeBody
 " Once inside a type, angle brackets nest; adjacent '>>' close two levels.
 " The '>' in a function arrow never closes either region.
 syntax region meowyTypeArguments matchgroup=meowyTypeDelimiter start=/</ end=/\%(-\)\@<!>/ contained contains=@meowyTypeBody
 syntax region meowyTypeRecord matchgroup=meowyTypeDelimiter start=/{/ end=/}/ contained transparent fold contains=@meowyCode
-syntax region meowyTypeParameters matchgroup=meowyTypeDelimiter start=/(/ end=/)/ contained transparent contains=@meowyTypeBody
+" Parenthesized types cover both function parameters and computed annotations.
+syntax region meowyTypeParameters matchgroup=meowyTypeDelimiter start=/(/ end=/)/ contained transparent contains=@meowyTypeBody,meowyCall,meowyOperator,meowyFloat,meowyImport
 syntax region meowyTypeExtent matchgroup=meowyTypeDelimiter start=/\[/ end=/\]/ contained contains=meowyNumber,meowyTypeName
 syntax match meowyTypeName /\<[A-Za-z_][A-Za-z0-9_]*\>/ contained
 syntax match meowyTypeOperator /[&*!:]\|->/ contained
-syntax match meowyTypePunctuation /[,.]/ contained
+syntax match meowyTypePunctuation /[,.;]/ contained
 
 syntax region meowyComment start=/#/ end=/#/ fold contains=meowyTodo,@Spell
 syntax match meowyTodo /\<\%(TODO\|FIXME\|NOTE\|XXX\)\>/ contained

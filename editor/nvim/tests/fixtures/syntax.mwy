@@ -62,6 +62,23 @@ value <collections.Vector<
 >> : nested
 after_generic : 43
 
+# Spacing never selects a type test, ascription, or generic call. #
+|value<int32>|debug.print("{value}")
+| value < int32 > | debug.print("{value}")
+|!(value<int32>)|reject()
+|accepts < int32 > (value)|use(value)
+|accepts(value<int32>)|use(value)
+|t.{->self<MyCoolType>}<MyCoolType>|matched()
+copy:value < int32 >
+other<(name<>)>:"Ada"
+expanded < (name<>!<null>) > : name
+<Compact>:<{x<int32>;y<int32>}>
+&tight < tasks.Outcome<uint32>[4] >
+&tight>>work(1)
+job:>>work(2);joined:<<job
+|count<limit&&other>0|debug.print("comparison")
+after_compact:46
+
 | age < 18 && age >= 0 | debug.print("minor")
 | count <limit && other > 0 | debug.print("comparison")
 | result <error> || result <null> | 'scope.leave()
