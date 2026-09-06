@@ -1,24 +1,25 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Owning runtime snapshots and generated failure evidence pass.
+Updated: 2026-09-06. Pure-compound expected-list inference passes the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Runtime: `d92f94c`; compiler implementation: `eb65cbd`; coverage/docs: `e01e25f`.
+Implementation: `e8a6157`; native coverage/example: `15a5ff6`.
+Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: generated P002 reports retain the operator, original once-evaluated
-operands, signed width/range, failure cause and source byte span. P006 appends its
-call site after message completion; nested panic/leave paths do not finish the
-outer diagnostic. Nonreturning calls execute arguments and the call before ending
-the continuation, so no impossible result reaches formatting or an enclosing call.
+Completed: expected-list inference now admits pure scalar unary/binary compounds
+with literal or resolved immutable scalar-constant leaves. It preserves ordinary
+operator/literal rules, typed widths, intermediate overflow, floating behavior,
+short circuits and each expression's original reach. Minimal isolated checkers do
+not copy live state or replay effects; all extra work and constant bytes are charged.
 
-The separate C++ runtime now owns bounded panic messages across callback/capture
-cleanup, task-slot reuse, close batches and retries. Views still require a retained
-owning snapshot. Generated programs continue to use the scalar runtime; generated
-cleanup/task integration, cancellation, richer diagnostic objects and DWARF remain
-pending. Existing contextual list and element-ownership limits are unchanged.
+Complex effectful blocks, captured/mutable values and non-scalar constraints are
+not speculatively checked; existing once-only paths or explicit B001 remain.
+Unannotated list common-type rules are unchanged. Element places/ownership,
+generated cleanup/task integration, cancellation and DWARF remain pending.
+Runtime message ownership and generated failure evidence are unchanged this turn.
 
 ## Resume here
 
@@ -44,11 +45,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 6 list/context and 5 guard groups |
+| Names, types, flow | `src/check.rs`, `src/list.rs`, `src/list_context.rs`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 10 list/context and 5 guard groups |
 | Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 17 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 88 native groups, 4 harness tests and 15 covered examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 94 native groups, 4 harness tests and 16 covered examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -92,15 +93,23 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   Expected list candidates use ordinary assignment, including record-primary copies.
   Capacity, literal representability and typed/fresh aggregate shapes select a unique
   candidate; no smallest-capacity or default-width preference breaks a tie.
-- Candidate probes do not change flow proofs or replay a live checker. Pure
-  contextual literals may wait while typed expressions are checked once. Raw source
-  types are borrowed and conservatively retain potentially narrowed members; both
-  actual/expected type walks, field searches and shape comparisons are charged.
-  At most 256 list candidates are considered. Work exhaustion is B001.
-- Unresolved context-dependent effects and nested candidate constraints remain B001;
-  add an annotation rather than guessing. Unary operands keep their natural or
-  unique literal type before the result enters an expected union. Numeric widening,
-  unsigned negation and grouped signed-minimum rules remain checked.
+- Candidate probes never replay live checker state or expression effects. Pure
+  scalar unary/binary trees can use literals and same-owner immutable primitive
+  constants. A fresh checker retains only those constants, exact types and normalized
+  local IDs, reusing ordinary expression checking. Unannotated compounds remain typed.
+- Preflight suppresses reach-dependent arithmetic errors; source-order probes use
+  the actual position's reach and may select a type before later effects. Deferred
+  pure elements retain their original reach. A Never prefix can suppress later E107
+  but cannot erase prior arithmetic or literal/type errors. Scratch reach is only
+  definitely dead or potentially live; live guard IDs never cross into it.
+- Raw declared types are borrowed. Actual/expected types, lookups, record shapes,
+  constant strings and repeated scratch work are charged to the shared budget.
+  Limits are 256 list candidates and 4,096 nodes per scalar scratch tree. Exhaustion
+  remains B001 even for pure or dead expressions. No hidden reset grants extra budget.
+- Complex effectful/captured/non-scalar constraints remain B001 when no context is
+  proved. Use annotations rather than guessing. Intermediate checked widths, f32
+  parsing/operations, short circuits, unsigned negation and grouped signed-minimum
+  rules remain those of the ordinary checker; do not evaluate only the final result.
 - Known immutable/literal lengths and equal lengths on every completing block path
   give static E101/E103. Mutable/function-result lengths keep runtime checks. Never
   infer a block length from its last emission alone.
@@ -222,58 +231,53 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Final `python3 -B tools/verify.py --all`: all 14 checks pass on the finished source.
-  Cargo target/output and compiler identity are explicit. Runtime sanitizers ran
-  outside sandbox/ptrace supervision; source execution remains distinct from
-  metadata validation and release qualification.
-- Rust: 114 library and 88 native groups pass. Five new native groups cover typed
-  arithmetic evidence, operand effects, streamed panic sites, interruption and
-  direct Never continuations. The existing backend width/range group now requires
-  exact output for signed/unsigned 8/16/32/64-bit arithmetic. Clippy and formatting pass.
-- The optimized compiler passed four additional release probes with exact P002/P006
-  output, unsigned 64-bit operands and a nonreturning interpolation call. It builds
-  the final embedded scalar runtime; no scheduler linkage is implied by this check.
-- Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. The runtime
-  validator rejects missing/truncated/corrupted P008 evidence and wrong exits.
-  Documentation checks 851 local links; schemas/catalog and Vim/Neovim pass.
-- Runtime per debug/release/sanitized profile: 6 diagnostic groups plus exact fatal
-  truncation; 14 cleanup groups plus 2 fatal probes; 10 stack groups plus kernel
-  ENOMEM and 2 guard faults; 10 context groups plus fatal resumed cleanup;
-  25 scheduler groups plus admission/fatal/child/scope probes; 14 owned groups plus
-  4 exact fatal cleanup/lifetime probes. ASan/UBSan/LSan and the expired-fiber-local
-  negative diagnosis pass. Layout measurements match across all three profiles.
-- Message tests cover empty/NUL content, ASCII and UTF-8 cut boundaries, copies,
-  moves, overlapping replacement sources, callback/capture destruction, task-slot
-  reuse, close report buffers, failed release/report-full retries and P008 retaining
-  both causes after their original text is destroyed. No heap allocation was added.
-- The interrupted-message test exposed an existing F001 from formatting a Never
-  call result. The fixed continuation is covered directly and inside interpolation.
-  Arguments/earlier parts still run once; later calls/parts/sites do not run.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Reference
-  fixtures and requirements were unchanged. Earlier list-candidate audits and
-  resource-hardening evidence remain in the step log and committed tests.
+- Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
+  and compiler path are explicit. Runtime sanitizers execute outside ptrace/sandbox
+  supervision; metadata validation remains separate from source execution.
+- Rust: 118 library and 94 native groups pass. New coverage is 4 context groups and
+  6 native groups, including intermediate widths, typed constants, f32 behavior,
+  Boolean/string comparisons, short circuit, nested list/record fields, effects,
+  Never ordering, mutable runtime inputs and source/capability diagnostics.
+  Formatting and all-target Clippy with `-D warnings` pass.
+- The optimized compiler builds/runs `examples/compound-lists.mwy` in release with
+  empty stderr and exact stdout `128\n-128\nfalse\n260\n`.
+- Independent differential checking passed 408 comparisons: 129 unique accepts,
+  151 ambiguous and 128 no-fit cases, with 994 compiler checks and zero mismatches.
+  The reviewer used a fresh pinned compiler snapshot; evidence/script remain in
+  /tmp/meowy_pure_list_audit.json and /tmp/meowy_pure_list_audit.py. These supplement
+  committed tests and are not a release replay artifact.
+- The old grouped-negation B001 expectation was updated after both candidates became
+  provably invalid (E207). Other unsupported constructs retain explicit diagnostics.
+  Shared resource tests include repeated long constant strings and many candidates.
+- Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
+  checks 852 local links; both editors, schemas/catalog and build checks pass.
+- Runtime is unchanged. Each debug/release/sanitized profile passes 6 diagnostic,
+  14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups, with exact
+  fatal truncation/lifetime/guard/admission checks and identical layout measurements.
+  ASan/UBSan/LSan and the expired-fiber-local negative diagnosis pass.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in debug/release. Fixtures
+  and REQUIRED were unchanged. Prior ownership/diagnostic audits stay in the step log.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
-  It was not repeated. Baseline kernel/glibc, bundled distribution, complete panic
-  artifacts and v0.0.1 remain unqualified. Git whitespace passes.
-- Preserve the unchanged vendored fcontext.hpp EOF exception and its checksum.
+  It was not repeated; baseline-host execution, bundled distribution, full panic
+  artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
+- Preserve the unchanged vendored fcontext.hpp EOF exception and checksum.
 
 ## Next steps
 
-1. Extend `src/list_context.rs` for remaining context-dependent compounds and nested
-   constraints; preserve single evaluation, charged work and truthful ambiguity.
-2. Add initialized element places, moves and cleanup before indexed mutation,
-   exclusive loans/reborrows, reference reassignment or owned collections. Keep
-   reset/resource bounds and test suspended loans and exact-once cleanup.
-3. Define generated payload and diagnostic layouts and connect scope-exit code to
-   runtime mark/close while parent storage lives. Retain owning outcomes, drain
-   every failure batch and preserve child/result/local cleanup order; then implement
-   cancellation and pinned unwinding with failure-during-cleanup evidence.
-4. Add diagnostic source identities, related spans and structured events/artifacts.
-   Keep prototype truncation visible and do not claim full replay from text output.
-5. Extend static/intrinsic borrow sources and verified projections only after
-   updating all-input lifetime bounds and no-return assumptions.
-6. Implement required evaluation/effects/budgets/specialization and the project/module
-   graph, enabling conformance fixtures only with actual execution/rejection support.
-   Continue into Meowy libraries, tooling and distribution qualification.
-7. Keep the combined gate green and both handoffs/logs current. Strict conformance
-   needs zero unsupported cases and still covers only part of v0.0.1 qualification.
+1. Add verified initialized element places and exclusive access before indexed
+   mutation, slices or owned collections. Preserve evaluation order, root identity,
+   last-use checks and all-input bounds; test conflicts and cleanup boundaries.
+2. Extend remaining effectful/non-scalar contextual constraints in list_context.rs
+   without replaying effects or weakening budgets. Keep unproved cases B001 and
+   compare candidate decisions with ordinary single-context checking.
+3. Define generated payload/diagnostic layouts and scope cleanup using runtime
+   mark/close while parent storage lives. Retain owning outcomes, drain all reports
+   and preserve interleaved child/result/local cleanup before cancellation/unwinding.
+4. Extend static/intrinsic borrow sources and verified projections only with updated
+   lifetime contracts/no-return assumptions. Add source identities and richer
+   diagnostic evidence/events without claiming full replay from bootstrap text.
+5. Implement required evaluation/effects/budgets/specialization and the project/module
+   graph, enabling fixtures only after actual compiler support; continue into Meowy
+   libraries, tooling and distribution qualification.
+6. Keep the combined gate and both trackers/logs current. Strict conformance needs
+   zero unsupported cases and still covers only part of full v0.0.1 qualification.

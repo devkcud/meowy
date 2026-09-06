@@ -6,6 +6,48 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Finalize pure-compound inference handoff
+
+- State: Implementation e8a6157 and coverage/example/docs 15a5ff6 are committed. Current STATUS files describe admitted pure compounds, exact typed constants, saved reach, resource limits and remaining work. No implementation workers or unfinished source files remain; runtime behavior is unchanged.
+- Validation: Final repository gate passes all 14 checks with 212 Rust tests, 35 Python tests and 852 local links, including runtime sanitizers. All 408 differential comparisons pass; optimized example output is exact and saved-reach ambiguity remains E207 without executing effects. Conformance is 10 passed, 13 unsupported, 0 failed. Final documentation links and Git whitespace pass.
+- Blockers: no failing checks. Complex effectful/non-scalar contexts, initialized element places, ownership/moves and generated runtime cleanup remain explicit future work; full v0.0.1 remains unqualified.
+- Next steps: Build verified element places/exclusive access, extend remaining contextual constraints without replaying effects or weakening budgets, and connect generated payload/diagnostic cleanup to runtime scope closing. Follow the ordered STATUS steps and preserve existing lifetime and failure-evidence contracts.
+
+### 2026-09-06 — Commit and verify pure-compound inference
+
+- State: Implementation e8a6157 and native coverage/example/docs 15a5ff6 are committed. Pure compounds now constrain expected-list types without replaying effects, changing immutable leaf types or losing evaluation reach. All implementation workers are finished.
+- Validation: All 14 checks pass with 212 Rust tests, 35 Python tests and 852 local links. The optimized compiler runs compound-lists with exact stdout and rejects the saved-reach ambiguity with E207 without executing effects. The independent 408-comparison corpus passes; conformance remains 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current STATUS snapshots, preserve checkpoints in step logs, verify final links/whitespace and commit tracking. Continue with initialized element places/exclusive access, remaining non-scalar contexts and generated runtime cleanup/diagnostic integration.
+
+### 2026-09-06 — Pass the pure-compound repository gate
+
+- State: Pure-compound inference, six native groups and the compound-lists example are complete. Source workers and review have finished; no runtime code or reference fixture changed. Complex effectful/captured/non-scalar contexts remain explicit implementation limits.
+- Validation: All 14 repository checks pass: 118 library plus 94 native groups, 35 Python tests, 852 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized profiles pass unchanged. The differential corpus has 408 correct comparisons with no mismatch; conformance is 10 passed, 13 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify the optimized compiler/example, commit pure-compound analysis separately from native coverage/docs, refresh the current STATUS snapshots and next steps, then commit tracking and confirm a clean tree.
+
+### 2026-09-06 — Validate compound inference against ordinary checking
+
+- State: Pure unary/binary list constraints now preserve intermediate widths, grouped negation, typed immutable constants, floating behavior, short circuits and source-order reach. Isolated probes contain only admitted constants and share the bounded work budget. Complex effectful blocks and other unproved contexts remain explicit B001.
+- Validation: All 118 library tests, six new native groups in debug/release, Clippy, formatting and whitespace checks pass. The independent corpus passes all 408 comparisons (129 unique, 151 ambiguous, 128 no-fit; 994 compiler checks) with no mismatch. Runtime code and conformance fixtures are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the complete repository gate including the new example, verify an optimized compiler build, then commit pure-compound implementation separately from native coverage/docs and the final handoff. Retain the remaining contextual/ownership/runtime integration next steps.
+
+### 2026-09-06 — Implement and cover pure-compound candidates
+
+- State: The frontend now probes admitted pure unary/binary trees through the existing scalar checker in minimal isolated state, preserving typed constants and charging shared work. Source-order probing uses actual saved reach, so a prior nonreturning element cannot create a false unique match. Root added six native groups and compound-lists.mwy.
+- Validation: Baseline 114 library plus 88 native groups passed. All seven frontend context groups pass. New native cases and the 408-case differential corpus are starting; final integration, runtime and optimized-compiler checks are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run native cases for intermediate widths, grouped minima, short circuit, floating rules, nested literals, once-only effects and saved reach; resolve audit findings, document the admitted pure subset, then run the final gate and split implementation, coverage and tracking commits.
+
+### 2026-09-06 — Begin pure-compound list inference
+
+- State: The checkout is clean at b4626b2. Frontend work now resolves pure scalar unary/binary compounds against expected list candidates using the existing scalar checker and bounded isolated state. Root owns native tests/example/docs and all trackers; a reviewer owns a bounded differential corpus. Runtime ownership/evidence work remains at the previous completed milestone.
+- Validation: Baseline compiler tests are running; previous combined gate passed 202 Rust tests, 35 Python tests and 851 local links. New compound inference is not implemented or validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement charged pure-expression probes with saved reach and exact typed constants, add native width/intermediate/short-circuit/effect cases, compare against single-context checking, then run the final gate and make focused commits with a current restart handoff.
+
 ### 2026-09-06 — Finalize owning-diagnostic restart handoff
 
 - State: Runtime d92f94c, compiler eb65cbd and coverage/docs e01e25f are committed. Both STATUS snapshots now describe owning messages, generated operand/site evidence, fixed nonreturning continuations, measured storage costs and ordered remaining work. Historical checkpoints stay in these logs; no implementation worker remains active.

@@ -7,36 +7,36 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Runtime: `d92f94c` makes `Panic` own up to 256 message bytes, captured before the
-  source expires. Copies survive callback/capture destruction, task-slot reuse and
-  report/release retries. Original lengths and UTF-8-safe truncation are explicit;
-  P008 marks truncated text and preserves both original and cleanup snapshots.
-- Compiler: `eb65cbd` reports P002 operators, original operands, signed widths,
-  ranges, overflow/zero-divisor causes and source byte spans. P006 appends its site
-  only after message evaluation completes. Nonreturning calls execute arguments
-  and the call before stopping the continuation; impossible results are not formatted.
-- Coverage/documentation: `e01e25f` adds five native groups and documents the
-  generated evidence. Runtime checks add six snapshot groups, a capture-lifetime
-  group, exact fatal probes and per-profile layout comparison.
-- All 14 checks pass: 202 Rust tests, 35 Python tests, 851 local links, editors,
-  schemas/catalog, formatting, Clippy, build and actual conformance. Each runtime
-  debug/release/sanitized profile passes 6 diagnostic, 14 cleanup, 10 stack,
-  10 context, 25 scheduler and 14 owned groups, with exact fatal/guard/lifetime probes.
-  ASan/UBSan/LSan and the expired-fiber-local negative diagnosis pass.
-- On this host `Panic` is 280 bytes and `TaskSlot` is 6,264 bytes, up 4,352 bytes
-  for its 17 snapshots. A `message()` view still needs its particular owning value
-  to remain alive; operation names retain their separate lifetime rule.
-- The optimized compiler passed four release failure/effect checks with exact
-  P002/P006 output. Conformance remains 10 passed, 13 unsupported, 0 failed.
-- No active workers, incomplete code or failing checks remain. Generated programs
-  still use the scalar runtime; generated task cleanup, cancellation and DWARF are
-  not implemented. The full v0.0.1 release remains unqualified.
+- Compiler: `e8a6157` lets pure unary/binary scalar expressions constrain expected
+  list candidates. It reuses ordinary checked typing in bounded isolated state,
+  preserving intermediate widths, grouped negation, typed constants, floating
+  behavior and short circuits. Effectful expressions are still checked once.
+- Candidate probing uses each expression's original reach. An earlier nonreturning
+  element cannot incorrectly remove a candidate because of later arithmetic.
+  Probes never import live guard identities or turn typed constants into literals.
+- Coverage/example: `15a5ff6` adds six native groups and
+  `compiler/examples/compound-lists.mwy`. Four new unit groups cover exact scalar
+  behavior, lexical identities, saved reach and charged constant/probe work.
+- All 14 checks pass: 212 Rust tests, 35 Python tests, 852 local links, editors,
+  schemas/catalog, formatting, Clippy, build and conformance. An independent corpus
+  passes 408 differential comparisons with zero mismatches: 129 unique accepts,
+  151 ambiguities and 128 no-fit rejections across 994 compiler checks.
+- The optimized compiler builds/runs the new example with exact stdout.
+  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Runtime behavior is unchanged: owning message snapshots remain `d92f94c`, and
+  generated P002/P006 evidence remains `eb65cbd`. Full runtime debug/release/
+  sanitized profiles pass, including message lifetime/truncation, P008, guard faults
+  and the expired-fiber-local negative diagnosis. No release qualification is implied.
+- No active implementation workers, unfinished code or failing checks remain.
+  Complex effectful/captured/non-scalar contexts still need explicit annotations or
+  future support. Element ownership, generated task cleanup, cancellation and DWARF
+  remain unimplemented; the full v0.0.1 release is incomplete.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Bounded lists/shared borrows; typed runtime failure evidence | Remaining contextual constraints, element places, moves and cleanup |
+| Compiler | Pure-compound list inference, shared borrows and failure evidence | Element places, moves/cleanup and remaining contextual constraints |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -46,24 +46,23 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend `compiler/src/list_context.rs` for remaining context-dependent compound
-   elements and nested constraints. Preserve once-only checking, budgets and
-   original diagnostics; never infer ambiguity from an unproved case.
-2. Add initialized element places, exclusive loans and move/drop state before list
-   mutation, slices or owned elements. Extend static/intrinsic borrow sources
-   without weakening all-input lifetime bounds or resource limits.
-3. Define generated payload/diagnostic layouts and connect compiler cleanup to
-   runtime mark/close while parent locals remain live. Drain every failure batch,
-   retain owning outcomes rather than temporary message views, and preserve
-   interleaved child/result/local cleanup before adding cancellation and unwinding.
-4. Extend diagnostics with source identity, related evidence and artifact/event
-   capture. The 256-byte prototype prefix and generated byte-span text do not
-   implement complete release diagnostic records or replay.
+1. Add verified initialized element places and exclusive access before list mutation,
+   slices or owned elements. Preserve root/field identity, evaluation order and
+   all-input lifetime bounds; verify conflicts, last use and cleanup boundaries.
+2. Extend remaining effectful/non-scalar contextual constraints in
+   `compiler/src/list_context.rs` without replaying effects or weakening work limits.
+   Keep annotations/B001 where a candidate is unproved; test unique and ambiguous
+   cases against ordinary checking.
+3. Define generated payload/diagnostic layouts and connect cleanup to runtime
+   mark/close while parent storage lives. Retain owning outcomes, drain every failure
+   batch and preserve interleaved cleanup before adding cancellation and unwinding.
+4. Add richer diagnostic source identities, related evidence and artifacts/events;
+   current bounded snapshots and byte-span text do not implement complete replay.
 5. Build the manifest/module graph for Meowy libraries and documented projects.
-   Keep runtime, editor and library work visible in this tracker.
+   Keep runtime, editor and library progress visible here.
 6. Run `python3 -B tools/verify.py --all` after integrations. LSan needs process
-   inspection. `--strict` still fails for 13 unsupported catalog cases; this host
-   and the bootstrap gate do not qualify the complete v0.0.1 release.
+   inspection. Strict conformance still has 13 unsupported cases; neither this
+   host nor the bootstrap gate qualifies the complete v0.0.1 release.
 
 Preserve the unchanged vendored `fcontext.hpp` trailing blank line: its SHA-256
 matches upstream. Its historical blank-at-EOF exception does not apply to project
