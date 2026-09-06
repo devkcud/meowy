@@ -1,0 +1,31 @@
+debug : @"debug"
+time : @"time"
+
+square <int32> : (value <int32>) {
+    -> value * value
+}
+
+&squares<int32[4]>
+&squares.deadline(time.after(time.ms(1000)))
+
+&squares >> square(2)
+&squares >> square(3)
+&squares >> square(4)
+
+results : << &squares
+index <usize> := 1
+
+'loop {
+    | index > results.size() | 'loop.leave()
+
+    result : &results[index]
+    | *result <error> | {
+        debug.print("Result {index}: {*result}")
+        index = index + 1
+        'loop.restart()
+    }
+
+    debug.print("Result {index}: {*result}")
+    index = index + 1
+    'loop.restart()
+}

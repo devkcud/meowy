@@ -1,0 +1,32 @@
+bits : @"bits"
+numbers : @"numbers"
+
+-> <Header> : <{
+    version <uint8>
+    flags <uint8>
+    payload_size <uint16>
+}>
+
+-> <Truncated> : <{
+    expected <usize>
+    actual <usize>
+}>
+
+-> read_header <Header><Truncated> : (bytes <uint8[]>) 'result {
+    | bytes.size() < 4 | {
+        'result -> {
+            -> expected <usize> : 4
+            -> actual : bytes.size()
+        }
+        'result.leave()
+    }
+
+    high : numbers.convert<uint16>(bytes[3])
+    low : numbers.convert<uint16>(bytes[4])
+
+    -> {
+        -> version : bytes[1]
+        -> flags : bytes[2]
+        -> payload_size : bits.shl(high, 8) | low
+    }
+}

@@ -1,77 +1,19 @@
+# Copy to mod.mwy at the project root. Paths are relative to this file. #
+
 -> export : {
-    -> debug : @"./internal/utils/debug.mwy"
-
-    -> logger : @"./output/logger.mwy".{
-        -> log : self.log
-        -> warn : self.warn
-        -> error : self.error
-    }
-
-    -> fs : {
-        -> file : {
-            -> read : @"./output/fs/file.mwy".readsync
-            -> write : @"./internal/fs/file.mwy".write
-        }
-
-        -> panic : @"./internal/panic.mwy"
-    }
-
-    -> authors : ["dev 1", "dev 2"]
-    -> version : "1.0.0"
+    -> packet : @"./docs/programs/packet.mwy"
 }
 
--> import : {
-    -> base : {
-        -> fetch : "codeberg.org/meowy-lang/base"
-        -> ref : "main"
-    }
+# Foundational modules such as debug, strings, and tasks need no dependency entry. #
+-> import : {}
 
-    -> debug : {
-        -> fetch : "codeberg.org/meowy-lang/debug"
-        -> tag : "v2.0.1"
-    }
-
-    -> image : {
-        -> fetch : "codeberg.org/meowy-lang/image-utils"
-        -> hash : "f7d1f9c5"
-    }
+-> build : {
+    -> entry : "./docs/programs/main.mwy"
+    -> profile : "debug"
 }
 
-# NOTE: gatostyle is very early in development, and since it isn't just a formatter, things WILL break.
-        Either wait for a stable version or use it and give us feedback on projects you don't mind breaking. #
--> gatostyle : {
-    -> indent : "spaces"
-    -> indent_size : 4
-
-    -> semi : true
-
-    #
-    "compact":
-
-    ```meowy
-    config : << get_config()
-    connection : connect(config.pguri)
-
-    | connection == false | panic("Connection Failed")
-
-    -> connection
-    ```
-
-    ```meowy
-    ->{-><<get_config}.pguri.(connect).|!self|panic("Connection Failed")
-    ```
-
-    We are not prioritizing the "structured" style to actually generate variables or name them. This would cause more harm than good.
-    #
-    -> style : "compact"
-    -> style_compact : {
-        -> remove_spaces : true
-        -> collapse_bindings : true
-    }
-    -> style_structured : {
-        -> add_spaces : {
-            -> bindings : true
-            -> types : { -> before : true; -> after : false }
-        }
-    }
-}
+# Remote dependency records belong under import, keyed by their local alias.
+  Each record contains fetch and exactly one of hash, tag, or ref.
+  hash is a full commit identifier; tag and ref resolve through mod.lock.
+  See docs/reference/modules-and-ffi.md for resolution and lockfile rules.
+#
