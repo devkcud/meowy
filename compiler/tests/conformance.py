@@ -19,6 +19,7 @@ REQUIRED = {
     "function_equality",
     "conditional_field",
     "reference_identity",
+    "mixed_list",
 }
 
 

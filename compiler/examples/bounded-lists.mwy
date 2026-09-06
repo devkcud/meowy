@@ -1,0 +1,13 @@
+debug:@"debug"
+
+names<string[4]>:["Ada","Dev"]
+extended:names.add("Lin")
+debug.print(names.size())
+debug.print(extended.size())
+debug.print(extended[1])
+debug.print(extended[3])
+expected<string[4]>:["Ada","Dev","Lin"]
+debug.print(extended==expected)
+
+empty<uint8[0]>:[]
+debug.print(empty.size())

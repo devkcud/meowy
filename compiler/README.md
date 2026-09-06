@@ -5,8 +5,8 @@ It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to ordinary local storage, including guarded
 block results, immutable records and unions carrying references, direct-function
-borrow contracts, shared reborrows, and last-use checks for mutable owners. It is not the complete
-v0.0.1 language.
+borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
+bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -28,6 +28,7 @@ compiler/target/debug/meowy run compiler/examples/optional-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-functions.mwy
 compiler/target/debug/meowy run compiler/examples/reborrows.mwy
 compiler/target/debug/meowy run compiler/examples/scope-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/bounded-lists.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -52,6 +53,9 @@ The [reborrows example](examples/reborrows.mwy) takes references to original
 record fields through shared references and returns them through functions.
 The [scope borrows example](examples/scope-borrows.mwy) contrasts local parameter
 and receiver copies with shared receivers that keep the original owner alive.
+The [bounded lists example](examples/bounded-lists.mwy) preserves an original list
+while appending to its copy, checks one-based positions and compares initialized
+elements within an unchanged inline capacity.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -106,6 +110,12 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 - Scope-local references to by-value parameters and dispatch `self` bindings.
   Their addresses cannot escape their storage scopes. Shared-reference and
   reference-carrier dispatch retain original origins and all-input bounds.
+- Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
+  literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
+  replacement and equality of initialized elements. Elements can be scalars,
+  reference-free records/unions or nested bounded lists. Inference preserves typed
+  widths and never invents a union or projects a record primary to reconcile items.
+  Whole-list references use the same lifetime and final-use checks as other owners.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - Shared-reference function inputs and results, including immutable record/union
@@ -120,11 +130,21 @@ without running them. Debug and release both preserve dynamic arithmetic checks.
 The initial panic runtime reports failure and exits; recoverable unwinding and
 owned-resource cleanup remain unimplemented.
 
-Unavailable constructs report **B001**, including collections, exclusive borrows,
+Unavailable constructs report **B001**, including slices, named list positions,
+reference/owned list elements, element mutation/borrowing, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, and mutable record fields. String interpolation outside an
 output call requires the future formatting/storage implementation and is rejected.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
+
+List capacities accept non-negative integer constants and checked scalar
+expressions. General required evaluation through blocks or calls remains
+unavailable. Bootstrap limits are 65,536 slots and 1 MiB of inline layout per list;
+exceeding those implementation budgets reports B001. Dynamic bounds/fullness
+failures report P001/P003 with the position or capacity, initialized length and
+source byte span. They exit through the initial panic runtime.
+Literal inference across multiple expected list alternatives remains B001; bind
+the literal with one concrete list type first, then inject that value into the union.
 
 References can pass through local blocks and immutable aliases while their owners
 remain alive. The checker reuses branch/completion proofs and checks all possible
