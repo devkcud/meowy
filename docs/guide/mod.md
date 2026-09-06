@@ -2,9 +2,9 @@
 
 [Documentation index](../README.md) · [Language tour](README.md)
 
-`mod.mwy` describes a project's imports, public exports, build settings, and
-optional coding-style policy. Put it at the project root so source files share
-one explicit configuration.
+`mod.mwy` describes a project's imports, public exports, build settings,
+coding-style policy, and language-server configuration. Put it at the project
+root so source files share one explicit configuration.
 The file uses ordinary meowy blocks and emissions; its well-known field names
 are configuration values, not language keywords.
 
@@ -211,7 +211,8 @@ defines their bounds and failure behavior.
 
 ## Keep configuration predictable
 
-The recognized top-level emissions are `import`, `export`, `build`, and `gatostyle`.
+The recognized top-level emissions are `import`, `export`, `build`, `gatostyle`,
+and `lsp`.
 `aliases` is an optional table inside `import`; omitting it means there are no
 local path prefixes. An empty import block is still valid when only foundational
 and relative imports are needed.
@@ -228,6 +229,28 @@ is an import-resolution error (`E501`); a name that shadows a foundational modul
 is `E508`. Diagnostics identify the alias declaration and the import that used
 it. Use `meowy err explain E505` for the rule or `meowy err explain 1` for the
 saved occurrence and its source context.
+
+## Configure the language server
+
+All project language-server configuration lives in `mod.mwy`. Start with:
+
+```meowy
+-> lsp : {
+    -> version : 1
+}
+```
+
+`version` selects the LSP configuration schema and is required when the `lsp`
+block is present. Omitting the entire block selects schema 1 defaults. An
+optional `toolchain : "0.0.1"` field pins an exact meowy distribution version;
+it is separate from the configuration schema version.
+
+`lsp` controls editor analysis and available features. `build` selects the entry,
+target, profile, native inputs, and executor used for semantic analysis;
+`gatostyle` supplies all formatting and coding-style policy. Editor settings
+cannot override those project choices. The [language-server reference](../reference/lsp.md)
+defines every setting and default, startup and version requirements, analysis
+conditions, buffer updates, and the guarantees behind diagnostics and edits.
 
 ## Define the project's coding style
 

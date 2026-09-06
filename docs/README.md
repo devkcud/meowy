@@ -22,6 +22,8 @@ those rules by building small programs, and the design notes explain their inten
    expression forms your project prefers.
 9. Follow the [time and calendar guide](guide/time-and-date.md), then build a
    typed application command line with the standard library's `cli` module.
+10. Set up the [language server](reference/lsp.md) for editor diagnostics,
+    navigation, and repairs, with project configuration in `mod.mwy`.
 
 ## Look something up
 
@@ -35,12 +37,13 @@ those rules by building small programs, and the design notes explain their inten
 | Is `T[4]` an array or a capacity limit?               | [Collections](reference/collections.md)                           |
 | Who joins a task? What does cancellation guarantee?   | [Tasks and channels](reference/tasks-and-channels.md)             |
 | How are native data and functions declared?           | [Modules and FFI](reference/modules-and-ffi.md#native-interfaces) |
-| What does the standard library provide?              | [Standard library](reference/stdlib/README.md)                    |
-| How do durations, dates, and zones work?              | [Time and date](reference/stdlib/time-and-date.md)                 |
-| How do I use Chinese or Hebrew leap months?           | [Calendars](reference/stdlib/calendars.md)                         |
-| How do I build my own CLI application?               | [CLI library](reference/stdlib/cli.md)                            |
+| What does the standard library provide?               | [Standard library](reference/stdlib/README.md)                    |
+| How do durations, dates, and zones work?              | [Time and date](reference/stdlib/time-and-date.md)                |
+| How do I use Chinese or Hebrew leap months?           | [Calendars](reference/stdlib/calendars.md)                        |
+| How do I build my own CLI application?                | [CLI library](reference/stdlib/cli.md)                            |
 | How do I configure mod.mwy and local import aliases?  | [Manifest guide](guide/mod.md)                                    |
 | How do I enforce coding style and code quality?       | [gatostyle](guide/gatostyle.md)                                   |
+| How do I configure editor analysis and compatibility? | [Language server](reference/lsp.md)                               |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |
 | What does a diagnostic code mean?                     | [Code catalog](reference/diagnostic-codes.md)                     |
 | How do I check, build, and run a program?             | [Command line](cli/README.md#check-build-and-run)                 |

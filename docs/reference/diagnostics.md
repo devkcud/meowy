@@ -228,6 +228,14 @@ when a recommendation is printed first. `[same as 1]` does not merge occurrences
 each keeps its own spans, fixes, and artifact. IDs remain stable within a session;
 another run may number them differently. See [session selection](../cli/README.md#saved-sessions).
 
+The [language server](lsp.md#diagnostics-in-a-changing-buffer) reuses rule codes
+and evidence with versioned buffer snapshots. Its positions use the negotiated
+protocol encoding, not terminal display columns. Live diagnostics have no saved
+occurrence numbers and do not replace the last CLI session. Explicit
+[editor capture](lsp.md#inspect-facts-and-capture-a-failure) freezes unsaved inputs
+and creates a separately selected checking capsule; numbering begins in that
+saved session.
+
 ### Diagnostic codes
 
 The [code catalog](diagnostic-codes.md) covers source, types, ownership, concurrency,
@@ -407,14 +415,14 @@ facts. `--verbose` chooses the useful views for that failure; `--trace AREA`
 selects a view explicitly and is repeatable. The same selectors work with
 `meowy err inspect`, `meowy err reproduce`, and the exported capsule.
 
-| Area        | Evidence                                                                                       |
-| ----------- | ---------------------------------------------------------------------------------------------- |
-| `types`     | Required and inferred types, union narrowing, generic substitutions, and the failed constraint |
-| `ownership` | Moves, loan origins and last uses, invalidating operations, and cleanup obligations            |
-| `layout`    | Selected target size, alignment, field offsets, capacity, and padding                          |
-| `lowering`  | Available lowered IR, source mappings, pass identity, and native call boundary                 |
-| `tasks`     | Parent/child IDs, submission, admission, joins, cancellation, deadlines, and cleanup events    |
-| `channels`  | Endpoint ownership, send/receive events, capacity, occupancy, and closure                      |
+| Area        | Evidence                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `types`     | Required and inferred types, union narrowing, generic substitutions, and the failed constraint   |
+| `ownership` | Moves, loan origins and last uses, invalidating operations, and cleanup obligations              |
+| `layout`    | Selected target size, alignment, field offsets, capacity, and padding                            |
+| `lowering`  | Available lowered IR, source mappings, pass identity, and native call boundary                   |
+| `tasks`     | Parent/child IDs, submission, admission, joins, cancellation, deadlines, and cleanup events      |
+| `channels`  | Endpoint ownership, send/receive events, capacity, occupancy, and closure                        |
 | `clocks`    | Monotonic/civil readings, clock domains, timer slots, wakeups, and zone/calendar rule identities |
 
 Every view labels evidence as **recorded**, **derived from saved inputs**,

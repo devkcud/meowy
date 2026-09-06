@@ -600,6 +600,14 @@ source and binaries. See [repair contracts](../reference/diagnostics.md#repair-c
 
 ## Work with an editor buffer
 
+For continuous editor analysis, use the [language server](../reference/lsp.md).
+Its formatting and style actions use this same policy from the current `mod.mwy`
+buffer, including path overrides and proof requirements. `lsp` controls feature
+availability and scheduling; it cannot redefine indentation or rule severities.
+`lsp.format_on_save` enables layout through the client's before-save exchange.
+Semantic style changes remain explicit code actions. The commands below also
+support editors that use a process per request.
+
 For layout, send the complete buffer through stdin:
 
 ```sh

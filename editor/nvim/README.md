@@ -44,6 +44,27 @@ style checks. Its stdin commands support editor buffers; this runtime keeps
 formatting and automatic fixes opt-in. The four-space buffer defaults can be
 overridden independently to suit a project's policy.
 
+## Language server
+
+The [language-server reference](../../docs/reference/lsp.md) defines the full
+editor contract: launch `meowy lsp` over stdio with language ID `meowy`, provide
+workspace folders, and synchronize `.mwy` buffers. Use a client supporting the
+documented capabilities; the runtime bundle and LSP client have separate setup.
+There is no fixed Vim/Neovim version requirement for the protocol itself: feature
+availability follows the actual client capabilities exchanged at initialization.
+
+Put project analysis and feature settings in `mod.mwy`, including automatic
+formatting through `lsp.format_on_save`. All formatting policy comes from
+`gatostyle`; buffer options such as `shiftwidth` do not override it. An LSP client
+without the before-save wait capability can still request formatting explicitly.
+Do not duplicate meowy configuration in editor settings or automatic shell hooks.
+
+Use `meowy lsp config --resolved PATH` to inspect saved configuration and
+`meowy lsp doctor PATH` to inspect prerequisites. These commands read disk, while
+the live server includes unsaved buffers. Semantic tokens can distinguish local
+bindings from foundational values; the lexical highlighter below remains useful
+when the client omits that capability.
+
 ## Highlighted syntax
 
 The highlighter handles:

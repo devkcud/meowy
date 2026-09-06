@@ -35,6 +35,13 @@ with `meowy style explain`, and inspect their patches with `meowy style fix --di
 They do not become occurrences in the last check/build/run session or weaken any
 compiler rule. Invalid gatostyle configuration uses the existing `E505` code.
 
+The [language server](lsp.md) uses these same codes. Invalid `lsp` fields or an
+unsupported configuration schema use `E505`; a pinned toolchain mismatch or
+unavailable target input uses `E507`. Indexing limits, disconnected clients, and
+truncated diagnostic presentation are server status, not new language rules.
+JSON-RPC/LSP error numbers describe protocol requests and are separate from this
+catalog and from saved occurrence IDs.
+
 The prefix is part of the code. An exit status, OS error number, occurrence ID,
 or library error type is not interchangeable with a diagnostic code. Severity,
 phase, and capture status are separate fields in the saved diagnostic.

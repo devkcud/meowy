@@ -1,6 +1,6 @@
 # Copy this template to mod.mwy in a project containing main.mwy and codec/header.mwy.
   Paths are relative to that project root, not to this guide directory.
-  The worked packet project already includes this configuration.
+  The worked packet project already includes its own manifest.
 #
 
 -> import : {
@@ -20,6 +20,10 @@
 
 -> gatostyle : {
     -> preset : "structured"
+}
+
+-> lsp : {
+    -> version : 1
 }
 
 # Package dependency records belong under import, beside the aliases table.

@@ -18,6 +18,8 @@ contains the full three-error example used below.
 | Learn the available options         | `meowy help` or `meowy help err reproduce`   | Read help for one command without running it                         |
 | Identify a toolchain                | `meowy --version`                            | Print the version and build identity                                 |
 | Check source while editing          | `meowy check main.mwy`                       | Check the module graph without linking or executing the application  |
+| Connect an editor                  | `meowy lsp`                                  | Serve current buffers with project configuration from `mod.mwy`       |
+| Diagnose editor setup              | `meowy lsp doctor main.mwy`                   | Check toolchain, manifest, and local analysis inputs                   |
 | Check project coding policy         | `meowy style check`                          | Inspect layout, preferred expression forms, and code quality         |
 | Review safe style changes           | `meowy style fix --diff`                     | Preview proven rewrites and layout without changing source           |
 | Apply only source layout            | `meowy fmt`                                  | Use gatostyle's layout settings without semantic rewrites            |
@@ -187,6 +189,31 @@ capsules. Style findings use `G...` codes and `meowy style explain`, independent
 of saved compiler occurrences. A source edit can make an old repair stale; check
 again before applying that saved repair.
 
+## Language server and editor analysis
+
+Use `meowy lsp` (or `meowy lsp --stdio`) as the command launched by an editor's
+LSP client. Standard input/output carry protocol messages; startup logs and
+failures go to stderr. The server checks synchronized buffers, including unsaved
+modules and manifests, without executing the application or publishing ordinary
+CLI sessions.
+
+All project settings belong in `mod.mwy` under `lsp`; build inputs still come
+from `build` and `import`, and coding policy comes from `gatostyle`. Inspect the
+saved configuration and prerequisites with:
+
+```sh
+meowy lsp config --resolved main.mwy
+meowy lsp doctor main.mwy
+```
+
+These commands read disk, so they do not inspect another process's editor
+buffers. The [language-server reference](../reference/lsp.md) defines startup,
+configuration fields and defaults, version compatibility, project discovery,
+client capability fallbacks, and live inspection. It also defines explicit
+capture of an unsaved static failure into an executable replay capsule.
+`--profile`, `--target`, `--preset`, and alternate configuration files are not
+LSP overrides; edit the manifest instead.
+
 ## Saved sessions
 
 To look up a rule without a project or saved failure, use its code:
@@ -204,6 +231,13 @@ entry, including a successful run with zero errors. This prevents old failures
 from masquerading as current ones. A session contains numbered occurrences,
 patch candidates, the original command, and replay capsules for failures that
 were captured successfully. Capture failures are visible in the summary.
+
+Background language-server diagnostics have no saved occurrence numbers and do
+not change this selection. An explicit
+[editor capture](../reference/lsp.md#inspect-facts-and-capture-a-failure) stores a
+session from its frozen buffer graph without advancing the last-run pointer.
+Select it with the returned `--session` and `--entry`; it may contain source that
+has never been saved to disk.
 
 `meowy err` is shorthand for `meowy err summary`. Error commands discover the
 project from the working directory. Without a selector they use that project's
@@ -586,6 +620,9 @@ only on a terminal and honors `NO_COLOR`. `--quiet` suppresses banners, progress
 and conversational hints, while keeping errors, fix effects, and command results.
 Neither option changes the recorded diagnostic or occurrence IDs. Use
 `meowy check --offline --color never --quiet` for a predictable source check in CI.
+The serving `meowy lsp` process rejects these terminal options; its protocol
+stream has no terminal presentation and its tracing policy comes from `mod.mwy`.
+The `lsp config` and `lsp doctor` inspection commands accept them for human output.
 
 | Command outcome                                                                         | Exit status                                            |
 | --------------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -597,8 +634,13 @@ Neither option changes the recorded diagnostic or occurrence IDs. Use
 | Style check finds violations at/above policy threshold; style fix leaves such findings  | `1`                                                    |
 | Fmt check finds layout differences                                                      | `1`                                                    |
 | Invalid style/fmt input, policy, incomplete analysis, failed proof, or failed write     | `2`                                                    |
+| LSP configuration output or ready/disabled doctor result                                | `0`                                                    |
+| LSP doctor finds unavailable inputs, mismatched toolchain, or degraded operation        | `1`                                                    |
+| Invalid LSP configuration or command usage                                             | `2`                                                    |
 
 A style/fmt command otherwise succeeds with `0`, including an empty selection.
+A serving LSP process uses its [protocol shutdown statuses](../reference/lsp.md#wire-lifecycle-and-compatibility);
+source diagnostics do not terminate that connection.
 A diff preview returns success when it can present the requested candidates;
 the saved errors do not make the preview fail. Failure to save a capsule is
 reported alongside the original failure and does not replace its exit status.

@@ -124,6 +124,7 @@ and their digests even when an alias root lies outside the project directory.
 | `export`    | Public package facade, including re-exports                    |
 | `build`     | Entry file, profile, optional target, and native link inputs   |
 | `gatostyle` | Optional layout, code-quality rules, and project style policy  |
+| `lsp`       | Optional editor analysis, feature, and compatibility settings  |
 
 Unknown top-level configuration names are diagnostics. Author/version metadata
 can be ordinary exported fields if a package wants to expose it; it does not
@@ -136,6 +137,14 @@ checks or change the meaning of an import, type, or expression. Evaluating the
 policy uses only pure local manifest expressions; semantic style analysis is a
 separate operation over the declared module graph.
 
+`lsp` configures editor analysis and features through the
+[language-server contract](lsp.md). All project language-server settings come
+from this manifest; editor settings cannot override them. A present `lsp` block
+requires `version : 1` for configuration schema 1; an absent block selects that
+schema's defaults. Its optional `toolchain` field pins an exact meowy distribution
+version. `build` remains the source of semantic build inputs, and `gatostyle`
+remains the source of formatting and style policy.
+
 The manifest can combine literals, immutable bindings, and pure compile-time
 helper functions. It cannot read the network, run shell commands, inspect ambient
 environment variables, spawn tasks, or perform application I/O during evaluation.
@@ -147,9 +156,10 @@ be declared so dependency resolution and code generation do not depend on hidden
 machine state.
 
 The [manifest guide](../guide/mod.md) walks through local aliases, package imports,
-exports, and runtime settings. Its [sample manifest](../guide/mod.sample.mwy) is
-installed as `mod.mwy` at the repository root and selects the documented packet
-program. The
+exports, runtime settings, and editor policy. Its [sample manifest](../guide/mod.sample.mwy)
+can be installed as `mod.mwy` in a project with the documented
+[packet project's layout](../programs/packet/README.md); that worked project
+already has its own manifest. The
 [CLI guide](../cli/README.md#projects-and-entry-selection) defines manifest
 discovery, entry overrides, and command-line build options.
 
