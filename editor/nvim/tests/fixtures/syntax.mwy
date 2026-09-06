@@ -1,0 +1,103 @@
+# Lexical fixtures include independent declarations and deliberately invalid escapes. #
+debug : @"debug"
+local : @"./path/packet.mwy"
+
+true : "shadowed"
+false := 0
+null : "ordinary name"
+self : 7
+unsafe : "ordinary name"
+where : 1
+mut : 2
+leave : "ordinary field"
+restart : "ordinary field"
+enabled : true
+disabled : false
+empty : null
+debug.print(enabled)
+object.leave()
+object.restart()
+int32 : "ordinary value name"
+
+decimal : 1_024
+hex : 0xff_AB
+binary : 0b1010_0011
+fraction : 3.5
+exponent : 1.0e-3
+negative : -42
+21.(double)
+
+read_word <uint32> : (address <*uint32>) !{
+    -> memory.read<uint32>(address)
+}
+pointer <*!uint32> : address
+shared <&uint32> : &count
+exclusive <&!uint32> : &!count
+inverted : !({ -> true })
+
+<Pair<:T : memory.Copy & tasks.Send>> : <{
+    first <T>
+    second <T>
+}>
+callback <!(uint8[], <&!uint32>) -> uint32> : read_word
+handler <(channel.Item<uint32>) -> tasks.Outcome<uint32>> : work
+nested <collections.Vector<collections.Vector<uint8>>> : value
+rows <uint8[16]> : []
+view <uint8[]> : rows.slice()
+<Theme> : <"dark"><"light">
+result <uint32><error><null> : operation()
+present : result<>!<error>!<null>
+projected : result<uint32>
+
+<Record> : <{
+    nested <{
+        field <collections.Vector<uint8>>
+    }>
+    handler <(uint8) -> uint32>
+}>
+after_record : 42
+
+value <collections.Vector<
+    collections.Vector<uint8>
+>> : nested
+after_generic : 43
+
+| age < 18 && age >= 0 | debug.print("minor")
+| count <limit && other > 0 | debug.print("comparison")
+| result <error> || result <null> | 'scope.leave()
+| ready != false | debug.print(ready)
+mask : (left | right) & 0xff
+
+'scope {
+    finish : 'scope.leave
+    finish()
+    'scope -> true
+    'scope.restart()
+}
+
+&jobs<tasks.Outcome<uint32>[4]>
+&jobs >> work(1)
+job : >> work(2)
+result : << job
+results : << &jobs
+value
+    .(convert)
+    .{ -> self }
+
+plain : "a # is string content"
+escaped : "quote: \" slash: \\ braces: \{literal\} tab: \t nul: \0"
+invalid : "unknown: \q"
+interpolated : "value: {value + 1} tail"
+nested_string : "outer {format("inner {value}")} tail"
+quoted_brace : "outer {format("}")} tail"
+nested_block : "outer {value.{ -> { -> "inner" } }} tail"
+escaped_interpolation : "{format("\"quoted\"")} tail"
+multiline : "first
+second {value}
+third"
+after_string : 44
+
+# NOTE: strings " and types <T> are inert inside a comment.
+TODO >> <{ nested { [ ( and another "
+#
+after_comment : 45
