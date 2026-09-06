@@ -27,6 +27,7 @@ compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
 compiler/target/debug/meowy run compiler/examples/optional-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-functions.mwy
 compiler/target/debug/meowy run compiler/examples/reborrows.mwy
+compiler/target/debug/meowy run compiler/examples/scope-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -49,6 +50,8 @@ The [function borrows example](examples/borrow-functions.mwy) returns borrowed
 views through direct calls and releases their input loans after the final use.
 The [reborrows example](examples/reborrows.mwy) takes references to original
 record fields through shared references and returns them through functions.
+The [scope borrows example](examples/scope-borrows.mwy) contrasts local parameter
+and receiver copies with shared receivers that keep the original owner alive.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -96,9 +99,13 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   fields carry no loan; type predicates inspect the discriminant without copying
   reference payloads. Copies and equality still consume every active reference.
 - Shared reborrows of reference-free referents: `&*view`, `&view.field` and nested
-  parenthesized paths. Reference-valued calls/blocks evaluate once. Derived
+  parenthesized paths, including reference-valued prefixes such as
+  `&holder.view.field`. Reference-valued calls/blocks evaluate once. Derived
   function results retain all active input lifetime bounds. Union payload addresses,
   reference-bearing pointees and exclusive reborrows remain unavailable.
+- Scope-local references to by-value parameters and dispatch `self` bindings.
+  Their addresses cannot escape their storage scopes. Shared-reference and
+  reference-carrier dispatch retain original origins and all-input bounds.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - Shared-reference function inputs and results, including immutable record/union
@@ -124,8 +131,9 @@ remain alive. The checker reuses branch/completion proofs and checks all possibl
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Mutable carriers,
-reassignment, dispatch and direct reference formatting require future analysis. Parameter,
-receiver and named-emission storage remain unavailable as borrow roots. Missing
+reassignment and direct reference formatting require future analysis. Named-emission
+storage remains unavailable as a borrow root; parameter and receiver copies may
+be borrowed only while their local storage survives. Missing
 origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
