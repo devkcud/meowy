@@ -75,6 +75,10 @@ pub fn examples_execute_in_both_profiles() {
             "1\n2\n3\nkept\n",
         ),
         (
+            include_str!("../../examples/mixed-writes.mwy"),
+            "1\n8\n2\n21\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

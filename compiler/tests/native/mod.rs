@@ -10,6 +10,7 @@ pub(crate) mod fields;
 pub(crate) mod function_borrows;
 pub(crate) mod list_contexts;
 pub(crate) mod lists;
+pub(crate) mod mixed_writes;
 pub(crate) mod nested_writes;
 pub(crate) mod panics;
 pub(crate) mod reborrows;

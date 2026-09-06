@@ -37,6 +37,7 @@ compiler/target/debug/meowy run compiler/examples/nested-writes.mwy
 compiler/target/debug/meowy run compiler/examples/effectful-lists.mwy
 compiler/target/debug/meowy run compiler/examples/dynamic-lists.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-fields.mwy
+compiler/target/debug/meowy run compiler/examples/mixed-writes.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -81,6 +82,8 @@ The [dynamic lists example](examples/dynamic-lists.mwy) selects element types fr
 returned and mutable primitive locals while using their actual values at runtime.
 The [mutable fields example](examples/mutable-fields.mwy) updates a declared mutable
 field after its final shared read while preserving an earlier record copy.
+The [mixed writes example](examples/mixed-writes.mwy) updates fields inside a list
+held by a record, preserving copies and allowing changes to a separate holder field.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -153,8 +156,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   such as `matrix[row][column] = value`. It checks each one-based initialized
   position from root to leaf before evaluating the replacement, then updates only
   that element. Returning index/RHS evaluation keeps parent storage reserved
-  against writes; shared reads may finish before the final store. Index targets
-  rooted in fields, references or temporary owners remain unavailable.
+  against writes; shared reads may finish before the final store. Paths can mix
+  mutable fields and indices, such as `holder.items[i].value` or `rows[i].items[j]`.
+  The first indexed collection defines the reserved and final-write region;
+  holder fields outside that collection can remain disjoint.
 - Inline bounded lists `T[N]` with a separate initialized length, typed/inferred
   literals, `.size()`, one-based copy indexing, value-returning `.add()`, whole-value
   replacement and equality of initialized elements. Elements can be scalars,
@@ -254,7 +259,7 @@ remain valid when the RHS replaces the same Copy owner; RHS changes to other fie
 are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field
 mutability in declared construction or completing branches reports E206. Shared
-reference targets, fields reached through indices and direct emitted-name writes
+reference targets, temporary roots and direct emitted-name writes
 remain B001. A mutable emission currently fills the result from a separate local
 copy; it does not create an assignable alias to the result slot.
 Element assignment captures the local list's initialized length, evaluates its
@@ -262,15 +267,20 @@ index once and checks bounds, then evaluates the RHS once before storing. A boun
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the
 remaining assignment. `values[2] = *view + 1` is valid when the RHS is the final use
 of `view`; any later shared use conflicts, even when it selects a different index.
-Replacing the owner or another element during a returning index/RHS reports E302,
-because the pending write still depends on that list storage. Other owners remain
-independent. Copy reads keep their existing aggregate snapshot semantics.
+Replacing or modifying the first indexed collection during a returning index/RHS
+reports E302, because the pending write depends on that storage. Static holder
+fields outside that collection remain independent. Copy reads keep their existing
+aggregate snapshot semantics.
 For a nested target, each selected child has its own initialized length. The
 compiler checks each prefix before evaluating the next index; a bounds failure
 reports that prefix's byte span and skips every remaining index and the RHS.
 Captured indices keep the destination fixed when later operands change index
 variables. A borrow of any row or element conservatively conflicts with a nested
 write if the borrow is used afterward.
+The same ordered path handles both fields and indices. Every crossed field must
+be mutable, and each index uses the selected list's own initialized length before
+later indices or RHS effects. Views anywhere within the first indexed collection
+conservatively overlap its writes, including views of other fields in its elements.
 Copying a record counts as a use of all its references, even if a later operation
 selects only one field. Direct projection, scalar comparison and scalar-primary
 formatting do not keep unrelated component loans alive.
