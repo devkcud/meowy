@@ -182,8 +182,8 @@ implementation boundary; it does not change language rules.
   application control flow. Regression coverage includes effectful calls in
   equality and argument blocks that leave an enclosing scope before the call.
 - Input component paths identify references stored in parameters. Separate
-  referent paths use `Field(index)` and `Element` steps for Local and Input sources.
-  Element steps conservatively name any element in that particular list region;
+  referent paths use `Field(index)` and `Element` steps for Local, Slot and Input
+  sources. Element steps conservatively name any element in that particular list region;
   runtime index expressions remain exclusively in executable HIR.
   Reborrows preserve inherited lifetime bounds unchanged rather than projecting
   ignored-input dependencies as if they were actual pointers.
@@ -278,8 +278,8 @@ implementation boundary; it does not change language rules.
   roots match alias assignment/reservation identities, preserving E302 and disjoint
   fields even when aliases arise in different guarded scopes. Slot/view metadata,
   projections and lifetime/type lookups consume existing weighted work/storage
-  limits. Immutable emitted names, exclusive references and reference-bearing
-  mutable fields remain B001 until their distinct storage/ownership rules are ready.
+  limits. Borrows of immutable emitted names, exclusive references and mutable
+  reference-bearing fields remain B001 until their storage/ownership rules are ready.
 - Alias IDs enter mutable proofs and have no initializer constant/length cache.
   Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.

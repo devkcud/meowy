@@ -146,8 +146,8 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   named enclosing targets and restarts preserve the alias's declared type.
 - Shared borrows of mutable emitted names, their concrete fields and initialized
   list elements. References use the slot's target-block lifetime and retain their
-  declared pointee type. Overlapping writes wait until the final shared use; result
-  publication cannot carry a reference into that same result's construction storage.
+  declared pointee type. Overlapping writes are allowed only after the final shared
+  use; publication cannot carry a reference into its own construction storage.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -262,10 +262,10 @@ remain alive. The checker reuses branch/completion proofs and checks all possibl
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Mutable reference carriers,
-reference reassignment and direct reference formatting require future analysis. Named-emission
-storage remains unavailable as a borrow root; parameter and receiver copies may
-be borrowed only while their local storage survives. Missing
-origin proofs or exhausted analysis budgets produce B001.
+reference reassignment and direct reference formatting require future analysis. Immutable
+named-emission storage remains unavailable as a borrow root; parameter and receiver
+copies may be borrowed only while their local storage survives. Missing origin proofs
+or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a

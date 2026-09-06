@@ -7,40 +7,37 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `554fa6c` adds SlotAlias after mutable named initialization. Later reads,
-  direct assignment and mixed SetPath writes use the actual result field cell;
-  returned records observe the updates and ordinary copies remain independent.
-  Initializers still execute once. Wider final slot types convert to/from the
-  lexical alias type, with concrete union payload addresses for aggregate paths.
-- Checker validation requires a compatible concrete mutable result field or proves
-  the emission cannot contribute to completion. Discarded aliases retain valid
-  initialized local cells for their remaining effects. Named outer targets, optional
-  fields, own-target restart and inner-loop updates are covered.
-- Alias identities are canonical per target field for write conflicts and predicate
-  invalidation. Mutable facts seed unknown alias activity before origin analysis;
-  stale initializer tags cannot erase loans, and unrelated reference fields keep
-  their origins. Borrowing emitted storage remains B001.
-- Coverage/example: `fda4a67` adds eight native groups and
-  `compiler/examples/emitted-slots.mwy`. Nine library groups cover metadata budgets,
-  mutable facts, cells, conversions, defaults, restart and discarded paths. Function
-  return lowering now converts concrete bodies to their declared record unions.
-- All 14 combined checks pass: 310 Rust tests, 35 Python tests, 860 local links,
+- Compiler: `dddd8ae` enables shared borrows of mutable emitted names, concrete
+  fields and initialized list elements. Source::Slot separates target-block
+  ownership, canonical slot identity and the original alias's declared pointee type.
+  A reference may outlive an inner alias name while its outer target stays active.
+- Borrowed storage must match the alias type or contain it as one exact concrete
+  union member. Proper subunion views remain B001. Discarded initialized cells are
+  explicitly owned by the target's partial result under current Copy-only rules.
+- Overlapping writes report E302, including future uses across inner restarts;
+  last-use RHS reads and disjoint fields remain accepted. Publication cannot return
+  a reference into its own construction storage (E303). Canonical identities also
+  protect aliases introduced by different guarded emissions.
+- Existing backend address helpers handle these cells and payloads without new
+  production lowering or runtime ABI changes. `4a012b0` adds eight native groups,
+  `compiler/examples/emitted-borrows.mwy` and README coverage; eight library groups
+  cover origin/lifetime, conflicts and native addresses.
+- All 14 combined checks pass: 326 Rust tests, 35 Python tests, 861 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs emitted-slots with exact output. Independent checks
-  and lifecycle executions pass. No active workers, unfinished code or failing
-  checks remain. New helpers follow the existing modular source organization.
-- Emitted borrows, shared-reference/temporary write roots, mutable reference-bearing
-  fields, source-level exclusive references, owned cleanup and full release
-  qualification remain open. Next is an explicit lifetime model for borrowed result
-  storage, followed by runtime/module/library work.
+- The optimized compiler runs emitted-borrows with exact output. Ten independent
+  lifecycle/call-bound cases and source review pass. No unfinished source work,
+  active workers or failing checks remain; modular source organization is preserved.
+- Immutable emitted-name borrows, mutable reference-bearing fields, source-level
+  exclusive references, owned cleanup and full release qualification remain open.
+  Next is immutable reference-free emitted storage, preserving immutable facts.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable result-slot aliases and unified checked write paths | Result-storage borrows, exclusive ownership and cleanup |
+| Compiler | Mutable emitted-storage borrows and unified checked writes | Immutable emitted storage, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,10 +47,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Model borrowing emitted storage with explicit target-block/slot ownership rather
-   than the alias name's lexical lifetime. Coordinate references, origin validation
-   and canonical loan regions; test nested aliases, scope exit/restart and rejection
-   of references escaping result publication. Keep B001 until storage lifetime is proved.
+1. Give immutable reference-free emitted names actual slot identities before enabling
+   their borrows. Preserve immutable tag/origin facts and reject writes with E305;
+   coordinate checker aliases, native cells and target-owned lifetimes. Verify
+   outer targets, copies, widened/discarded backing, restart and E303 publication.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

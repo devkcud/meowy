@@ -6,6 +6,118 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Mutable emitted-borrow handoff
+
+- State: Shared mutable emitted-storage borrows are complete in dddd8ae, with native/example/README evidence in 4a012b0. Target-owned Result/Discarded cells preserve original pointee types and canonical write identities. Nested aliases, restarts, last-use writes and E303 publication are covered; source work and reviews are complete.
+- Validation: All 14 combined checks pass: 170 library and 156 native Rust tests, 35 Python tests, 861 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitizers. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized emitted-borrows output is exact; ten independent cases and source review pass. Both focused commits pass cached whitespace checks.
+- Blockers: No unfinished source work or failing checks. Immutable emitted-name borrows, proper subunion views, exclusive ownership/cleanup, modules and full release qualification remain open.
+- Next steps: Commit the final handoff and confirm clean Git state. Then give immutable reference-free emitted names actual slot identities, preserving immutable facts, E305 write rejection, target lifetimes and exact-layout gates. Keep reference-bearing/primary alias work and runtime/library/tooling progress explicit.
+
+### 2026-09-06 — Emitted-borrow native coverage commit
+
+- State: Committed eight native groups, emitted-borrows example and README as 4a012b0. Implementation is dddd8ae. Source work, optimized execution and reviews are complete; only the final handoff commit remains.
+- Validation: All 14 checks pass with 326 Rust and 35 Python tests. Optimized example stdout is exact and both focused commits passed cached whitespace checks. No source changes followed the gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh root/compiler STATUS with final commit identities, accurate current limits and concrete immutable emitted-slot next steps. Check 861 local links and preserved step-log history, commit final handoffs and verify clean Git state.
+
+### 2026-09-06 — Emitted-borrow implementation commit
+
+- State: Committed slot-owned borrow sources, backing/layout validation, lifetime/conflict integration, focused library evidence and obsolete boundaries as dddd8ae. Native/example/README evidence is the next separate commit; source and reviews are complete.
+- Validation: All 14 combined checks and optimized exact-output example passed before the commit; cached whitespace and staged behavior boundaries pass. No production source changes followed the gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Stage and commit emitted-borrows native groups, runnable example and README, then finalize current root/compiler handoffs and ordered immutable-slot next steps. Preserve prior logs, check links/whitespace and confirm clean Git state.
+
+### 2026-09-06 — Emitted-borrow optimized smoke and commit split
+
+- State: Optimized emitted-borrows build and execution passed with exact output. Source and ownership documentation are complete, all reviews are finished and no source changes followed the full gate. Preparing focused implementation and native evidence commits.
+- Validation: Release compiler build passed; release-profile example exited 0 with exact 1,3,2,9,7 lines and empty stderr. Full gate passed 170 library/156 native Rust tests, 35 Python tests and all 14 checks. Whitespace is clean.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit source/ownership and obsolete boundary removals, commit native/example/README evidence separately, then refresh both current STATUS files and preserve all historical logs. Check final links/whitespace and clean Git state.
+
+### 2026-09-06 — Emitted-borrow combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on the final emitted-borrow source. Shared target-slot origins, exact-layout gates, canonical writes, transient lifetimes and existing address lowering pass integrated checks. No compiler failures remain.
+- Validation: 170 library and 156 native Rust tests, 35 Python tests, 861 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized compiler build is running.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the optimized emitted-borrows example with exact output, inspect and commit implementation/obsolete boundaries separately from native/example evidence, then finalize both STATUS handoffs and preserved logs; verify clean Git state.
+
+### 2026-09-06 — Emitted-borrow combined gate started
+
+- State: Eight new native groups, 43 backend groups and independent ownership review pass. Combined repository/compiler/runtime verification is running outside the sandbox for sanitizer process inspection. Production lowering remains unchanged; shared slot origins supply the new lifetime/conflict behavior.
+- Validation: The combined gate has passed 16 tooling tests, 861 local links, conformance metadata and artifact schema checks; remaining checks are still running. Previous focused results remain valid; no full-gate claim yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect final runtime/compiler gate results, resolve any failures, then run optimized emitted-borrows example. Split implementation and obsolete boundaries, native/example/README evidence, and final STATUS handoff commits; confirm a clean tree.
+
+### 2026-09-06 — Emitted-borrow backend and ownership review
+
+- State: All 43 backend groups pass; five new groups exercise 20 native profile executions plus the proper-subunion fail-closed path. Existing lowering handles actual cells, widened payloads, discarded target-owned storage and restart. Independent source audit is clean.
+- Validation: Backend Clippy, formatting and whitespace pass. Ten independent cases and all eight root native groups pass. Root identified a new semantic fixture using unnamed branch emissions where shared outer-slot widening was intended; frontend is correcting that fixture before final semantic checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish semantic tests and bounded lookup checks, freeze source, run tools/verify.py --all, then optimized emitted-borrows smoke and focused implementation/coverage/handoff commits.
+
+### 2026-09-06 — Emitted-borrow independent lifetime review
+
+- State: Eight native groups pass and ten independent cases confirm nested retained/discarded targets, self-result/copied-input E303, ignored/projected call bounds E302, own/inner restarts, guarded canonical alias conflicts and subunion B001. No production backend change is needed.
+- Validation: Independent 10-case suite passes exact expected diagnostics/behavior. Source review confirms both Borrow constructors and indexed reservations use shared slot-source mapping. Full semantic/backend results and final combined gate are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish source budget checks and documentation, freeze source, run all 14 repository checks and optimized example, then split focused commits. Next capability: immutable reference-free emitted-name slot identity and borrows, with immutable facts preserved.
+
+### 2026-09-06 — Emitted-borrow native integration passed
+
+- State: All eight native emitted-borrow groups pass in debug/release, including actual pointer identity, last-use RHS writes, target lifetime beyond alias scope, field/list regions, widened/exact unions, discarded backing, restart, E302/E303 and exact P001.
+- Validation: Focused cargo native run: 8 passed, 0 failed. Earlier fixture failures were E203 from a duplicate emitted name and E207 from a scalar signature with a named field; corrected fixtures now test the intended E303 paths. No compiler failure was found.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish semantic budget and backend groups plus independent review; run updated legacy/example coverage through the full gate after source freeze. Build/run optimized emitted-borrows example and split implementation, native evidence and final handoff commits.
+
+### 2026-09-06 — Emitted-borrow core integration
+
+- State: Core Source::Slot changes are compile-ready. Both origin and CFG borrow construction use shared alias source mapping; resolved Result/Discarded backing owns lifetime, while original view types preserve projections and strict subunion borrows fail before lowering. Root native integration is running; focused semantic/backend evidence is being added.
+- Validation: Reviewed owner-block lookup, removal at scope end and canonical conflict matching. Native emitted_borrows cargo run has started; no completed result yet. Existing physical alias address helpers are reused.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect new native results, resolve actual source/codegen/diagnostic failures, finish budget and independent lifecycle checks, then run complete repository checks and optimized example before split commits.
+
+### 2026-09-06 — Emitted-borrow integration fixtures
+
+- State: New mutable emitted-borrow cases replace three obsolete native B001 rows for scalar, field and element addresses. Immutable emitted names, exclusive borrows, reference-bearing mutable storage and subunion views retain explicit boundary tests. Source::Slot integration is in progress.
+- Validation: The baseline B001 rejection was confirmed before editing expectations. Eight native groups, the example and README are prepared; formatting of the new native file passes. No new compiler capability is claimed validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the focused emitted_borrows and updated emitted_slots groups once frontend compiles, fix only concrete integration failures, then complete backend/independent checks and the full gate before committing.
+
+### 2026-09-06 — Emitted-borrow source representation
+
+- State: Aligned Source::Slot design records target owner, canonical slot root, original alias view and projected fields. Resolved alias metadata distinguishes result backing from proven-discarded transient storage; actual borrow sites receive late exact-layout checks. README/example describe the intended capability; implementation is underway.
+- Validation: Read-only frontend/backend/independent reviews agree on target lifetimes and compatible physical addresses. New native and backend evidence remains pending compiler integration. Proper subunion, immutable emitted-name and exclusive/reference-bearing boundaries remain explicit.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish frontend origin and loan integration, verify metadata budgets and restart/escape invariants, run focused new groups, then remove only obsolete boundary rows. Run combined checks and optimized example before split commits.
+
+### 2026-09-06 — Emitted-borrow lifetime invariants
+
+- State: Acceptance now includes last-use RHS assignment, inner-loop future-use conflicts and discarded outer-target borrows surviving an inner alias scope. Backend review supports explicit target ownership for discarded fallback cells: entry allocation and existing emission/restart gates prevent reuse during that target iteration.
+- Validation: Eight native groups and an example are ready, still pending frontend enablement. Independent contract review supplied self-result E303, whole-list E302 and union-subset B001 cases; backend is adding focused address/representation evidence.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement slot-owned origins with separate lexical referent types and bounded canonical conflicts. Verify fallback lifetime and restart cases, run new native/backend groups, then update docs and run the combined gate before focused commits.
+
+### 2026-09-06 — Emitted-borrow storage boundary
+
+- State: Baseline B001 confirmed. Added an emitted-borrows example covering final-use mutation and a borrow surviving its alias name in an inner scope. Existing native address lowering can reuse actual alias cells and exact union members; narrower union subsets need an explicit capability gate.
+- Validation: Ran the current compiler on a minimal mutable emitted borrow and confirmed B001. New example/native evidence is pending implementation. Independent review identified discarded fallback ownership as requiring an explicit partial-result storage lifetime.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve compatible versus discarded backing ownership in alias proofs, implement slot sources through origin/loan analysis, retain B001 for unrepresentable borrowed layouts, then run native/lifecycle checks and update exact boundaries.
+
+### 2026-09-06 — Emitted-borrow acceptance coverage
+
+- State: Added seven native groups for actual result-cell addresses, final-use mutation, outer target lifetime beyond the lexical alias scope, field/list regions, widened payloads, restart/discard, E302/E303 and exact P001 effects. Frontend/backend workers are aligning ownership and physical layout before enabling addresses.
+- Validation: New coverage is written but not run; current compiler intentionally reports B001 for emitted borrows. Contract requires owner-based lifetimes, no self-referential copied result and iteration invalidation. Source helpers remain modular.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish shared slot-source design, gate incompatible union-subset layouts, implement origins/address consumers and conflicts, then run the new native groups and independent lifecycle cases. Update obsolete B001 rows only where capability is proven.
+
+### 2026-09-06 — Emitted-storage borrow design
+
+- State: Starting shared borrows of mutable emitted-slot aliases. Frontend ownership design, backend address lowering and independent lifetime cases are delegated; root owns native tests and both handoffs. Preserve actual storage, canonical slot identity and publication lifetime before enabling addresses.
+- Validation: Tree starts clean at c912050. Read current alias metadata, address rejection and result storage helpers; previous all-14 gate remains historical evidence. No new source checks have run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Align target-block/slot origin representation, prove compatible payload and discarded backing lifetimes, implement reference consumers and loan conflicts, then verify accepted reads, E302 writes and E303 escapes before full checks and split commits.
+
 ### 2026-09-06 — Mutable emitted-slot handoff
 
 - State: Result-slot aliases are complete in 554fa6c, with native/example/README evidence in fda4a67. Reads and writes share returned field storage, wider slots convert correctly, and proved discarded destinations retain initialized backing. Source work and reviews are complete. Handoffs distinguish emitted writes from unsupported emitted borrows and new outer emissions from supported alias updates across inner restarts.
