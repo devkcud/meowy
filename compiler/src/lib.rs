@@ -3,6 +3,7 @@ pub mod backend;
 pub mod check;
 pub mod diagnostic;
 pub mod driver;
+pub(crate) mod flow;
 pub mod hir;
 pub mod lexer;
 pub mod parser;

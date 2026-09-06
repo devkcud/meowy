@@ -65,6 +65,38 @@ pub(crate) fn ir_type(ty: &Type) -> String {
             types.extend(fields.iter().map(|(_, ty)| ir_type(ty)));
             format!("{{ {} }}", types.join(", "))
         }
+        Type::Union(types) => format!("{{ i32, [{} x i64] }}", union_words(types)),
+    }
+}
+
+pub(crate) fn union_words(types: &[Type]) -> usize {
+    types
+        .iter()
+        .map(|ty| layout(ty).0)
+        .max()
+        .unwrap_or(0)
+        .div_ceil(8)
+}
+
+pub(crate) fn layout(ty: &Type) -> (usize, usize) {
+    match ty {
+        Type::Null | Type::Never | Type::Bool => (1, 1),
+        Type::Int { bits, .. } | Type::Float { bits } => {
+            let size = (*bits as usize).div_ceil(8);
+            (size, size)
+        }
+        Type::String => (16, 8),
+        Type::Record { primary, fields } => {
+            let mut size = 0usize;
+            let mut align = 1usize;
+            for ty in std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty)) {
+                let (part, boundary) = layout(ty);
+                size = size.next_multiple_of(boundary) + part;
+                align = align.max(boundary);
+            }
+            (size.next_multiple_of(align), align)
+        }
+        Type::Union(types) => (8 + union_words(types) * 8, 8),
     }
 }
 
@@ -217,6 +249,146 @@ impl<'a> Generator<'a> {
         }
     }
 
+    pub(crate) fn store_value(&mut self, ty: &Type, value: &str, ptr: &str) {
+        let fields = match ty {
+            Type::Record { primary, fields } => std::iter::once(primary.as_ref())
+                .chain(fields.iter().map(|(_, ty)| ty))
+                .cloned()
+                .collect::<Vec<_>>(),
+            _ => Vec::new(),
+        };
+        if !fields.is_empty() {
+            for (index, field) in fields.iter().enumerate() {
+                let part = self.value(format!("extractvalue {} {value}, {index}", ir_type(ty)));
+                let dest = self.value(format!(
+                    "getelementptr {}, ptr {ptr}, i32 0, i32 {index}",
+                    ir_type(ty)
+                ));
+                self.store_value(field, &part, &dest);
+            }
+        } else if let Type::Union(types) = ty {
+            let tag = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
+            let payload = self.value(format!("extractvalue {} {value}, 1", ir_type(ty)));
+            let dest = self.value(format!(
+                "getelementptr {}, ptr {ptr}, i32 0, i32 1",
+                ir_type(ty)
+            ));
+            self.line(format!("store i32 {tag}, ptr {ptr}"));
+            self.line(format!(
+                "store [{} x i64] {payload}, ptr {dest}",
+                union_words(types)
+            ));
+        } else {
+            self.line(format!("store {} {value}, ptr {ptr}", ir_type(ty)));
+        }
+    }
+
+    pub(crate) fn union_cases<F>(
+        &mut self,
+        ty: &Type,
+        value: &str,
+        mut apply: F,
+    ) -> Result<(), String>
+    where
+        F: FnMut(&mut Self, &Type, &str) -> Result<(), String>,
+    {
+        let Type::Union(types) = ty else {
+            return Err("variant dispatch requires a union".into());
+        };
+        let slot = self.slot(ty);
+        self.line(format!("store {} {value}, ptr {slot}", ir_type(ty)));
+        let ptr = self.value(format!(
+            "getelementptr {}, ptr {slot}, i32 0, i32 1",
+            ir_type(ty)
+        ));
+        let tag = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
+        let labels = types
+            .iter()
+            .map(|_| self.name("variant"))
+            .collect::<Vec<_>>();
+        let invalid = self.name("invalid_tag");
+        let end = self.name("union_end");
+        let cases = labels
+            .iter()
+            .enumerate()
+            .map(|(index, label)| format!("i32 {index}, label %{label}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        self.line(format!("switch i32 {tag}, label %{invalid} [ {cases} ]"));
+        self.ended = true;
+        for (label, member) in labels.iter().zip(types) {
+            self.label(label);
+            apply(self, member, &ptr)?;
+            if !self.ended {
+                self.jump(&end);
+            }
+        }
+        self.label(&invalid);
+        self.line("unreachable".into());
+        self.ended = true;
+        self.label(&end);
+        Ok(())
+    }
+
+    pub(crate) fn coerce(&mut self, from: &Type, to: &Type, value: &str) -> Result<String, String> {
+        if from == to {
+            return Ok(value.into());
+        }
+        if *from == Type::Never {
+            return Ok("undef".into());
+        }
+        if let Type::Union(_) = from {
+            if from.intersection(to) == Type::Never {
+                return Err(format!("cannot convert {from:?} to {to:?}"));
+            }
+            let slot = self.slot(to);
+            self.union_cases(from, value, |this, member, ptr| {
+                if to.accepts(member) {
+                    let value = this.value(format!("load {}, ptr {ptr}", ir_type(member)));
+                    let value = this.coerce(member, to, &value)?;
+                    this.line(format!("store {} {value}, ptr {slot}", ir_type(to)));
+                } else {
+                    this.line("unreachable".into());
+                    this.ended = true;
+                }
+                Ok(())
+            })?;
+            return Ok(self.value(format!("load {}, ptr {slot}", ir_type(to))));
+        }
+        if let Type::Union(types) = to
+            && let Some(tag) = types.iter().position(|ty| ty == from)
+        {
+            let slot = self.slot(to);
+            self.line(format!("store {} zeroinitializer, ptr {slot}", ir_type(to)));
+            let ptr = self.value(format!(
+                "getelementptr {}, ptr {slot}, i32 0, i32 1",
+                ir_type(to)
+            ));
+            self.store_value(from, value, &ptr);
+            let value = self.value(format!("load {}, ptr {slot}", ir_type(to)));
+            return Ok(self.value(format!("insertvalue {} {value}, i32 {tag}, 0", ir_type(to))));
+        }
+        Err(format!("cannot convert {from:?} to {to:?}"))
+    }
+
+    pub(crate) fn type_test(&mut self, from: &Type, to: &Type, value: &str) -> String {
+        if to.accepts(from) {
+            return "true".into();
+        }
+        let Type::Union(types) = from else {
+            return "false".into();
+        };
+        let tag = self.value(format!("extractvalue {} {value}, 0", ir_type(from)));
+        let mut result = "false".to_owned();
+        for (index, member) in types.iter().enumerate() {
+            if to.accepts(member) {
+                let matched = self.value(format!("icmp eq i32 {tag}, {index}"));
+                result = self.value(format!("or i1 {result}, {matched}"));
+            }
+        }
+        result
+    }
+
     pub(crate) fn block(&mut self, block: &Block) -> Result<String, String> {
         let start = self.name("block");
         let end = self.name("end");
@@ -255,10 +427,9 @@ impl<'a> Generator<'a> {
                     let result = self.expression(value)?;
                     if !self.ended {
                         self.local(*id);
-                        self.line(format!(
-                            "store {} {result}, ptr %local{id}",
-                            ir_type(&value.ty)
-                        ));
+                        let ty = &self.program.locals[*id];
+                        let result = self.coerce(&value.ty, ty, &result)?;
+                        self.line(format!("store {} {result}, ptr %local{id}", ir_type(ty)));
                     }
                 }
                 Stmt::Emit {
@@ -276,26 +447,39 @@ impl<'a> Generator<'a> {
                         .ok_or_else(|| format!("missing block emission target {target}"))?
                         .clone();
                     let ty = ir_type(&destination.ty);
-                    let result = match &destination.ty {
-                        Type::Record { fields, .. } => {
+                    let (index, slot) = match &destination.ty {
+                        Type::Record { primary, fields } => {
                             let index = if let Some(field) = field {
-                                fields
-                                    .iter()
-                                    .position(|(name, _)| name == field)
-                                    .ok_or_else(|| format!("missing block field {field}"))?
-                                    + 1
+                                let Some(index) = fields.iter().position(|(name, _)| name == field)
+                                else {
+                                    continue;
+                                };
+                                index + 1
                             } else {
                                 0
                             };
-                            let current =
-                                self.value(format!("load {ty}, ptr {}", destination.slot));
-                            self.value(format!(
-                                "insertvalue {ty} {current}, {} {result}, {index}",
-                                ir_type(&value.ty)
-                            ))
+                            let slot = if index == 0 {
+                                primary.as_ref()
+                            } else {
+                                &fields[index - 1].1
+                            };
+                            (Some(index), slot)
                         }
-                        _ if field.is_none() => result,
-                        _ => return Err("named emission target is not a record".into()),
+                        _ if field.is_none() => (None, &destination.ty),
+                        _ => continue,
+                    };
+                    if !slot.accepts(&value.ty) {
+                        continue;
+                    }
+                    let result = self.coerce(&value.ty, slot, &result)?;
+                    let result = if let Some(index) = index {
+                        let current = self.value(format!("load {ty}, ptr {}", destination.slot));
+                        self.value(format!(
+                            "insertvalue {ty} {current}, {} {result}, {index}",
+                            ir_type(slot)
+                        ))
+                    } else {
+                        result
                     };
                     self.line(format!("store {ty} {result}, ptr {}", destination.slot));
                 }
@@ -380,7 +564,9 @@ impl<'a> Generator<'a> {
             ExprKind::String(value) => Ok(self.string(value)),
             ExprKind::Local(id) => {
                 self.local(*id);
-                Ok(self.value(format!("load {ty}, ptr %local{id}")))
+                let stored = &self.program.locals[*id];
+                let value = self.value(format!("load {}, ptr %local{id}", ir_type(stored)));
+                self.coerce(stored, &expression.ty, &value)
             }
             ExprKind::Unary { op, value } => {
                 let result = self.expression(value)?;
@@ -458,6 +644,20 @@ impl<'a> Generator<'a> {
                     return Ok("undef".into());
                 }
                 Ok(self.value(format!("extractvalue {{ ptr, i64 }} {result}, 1")))
+            }
+            ExprKind::Coerce { value } => {
+                let result = self.expression(value)?;
+                if self.ended {
+                    return Ok("undef".into());
+                }
+                self.coerce(&value.ty, &expression.ty, &result)
+            }
+            ExprKind::TypeTest { value, ty } => {
+                let result = self.expression(value)?;
+                if self.ended {
+                    return Ok("undef".into());
+                }
+                Ok(self.type_test(&value.ty, ty, &result))
             }
         }
     }
@@ -651,6 +851,33 @@ impl<'a> Generator<'a> {
                 }
                 Ok(result)
             }
+            Type::Union(_) => {
+                let slot = self.slot(&Type::Bool);
+                self.line(format!("store i1 false, ptr {slot}"));
+                let a = self.value(format!("extractvalue {} {left}, 0", ir_type(ty)));
+                let b = self.value(format!("extractvalue {} {right}, 0", ir_type(ty)));
+                let same = self.value(format!("icmp eq i32 {a}, {b}"));
+                let compare = self.name("union_equal");
+                let end = self.name("equal_end");
+                self.branch(&same, &compare, &end);
+                self.label(&compare);
+                let other = self.slot(ty);
+                self.line(format!("store {} {right}, ptr {other}", ir_type(ty)));
+                let other = self.value(format!(
+                    "getelementptr {}, ptr {other}, i32 0, i32 1",
+                    ir_type(ty)
+                ));
+                self.union_cases(ty, left, |this, member, ptr| {
+                    let a = this.value(format!("load {}, ptr {ptr}", ir_type(member)));
+                    let b = this.value(format!("load {}, ptr {other}", ir_type(member)));
+                    let result = this.equal(member, &a, &b)?;
+                    this.line(format!("store i1 {result}, ptr {slot}"));
+                    Ok(())
+                })?;
+                self.jump(&end);
+                self.label(&end);
+                Ok(self.value(format!("load i1, ptr {slot}")))
+            }
         }
     }
 
@@ -708,6 +935,12 @@ impl<'a> Generator<'a> {
                 let value = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
                 self.print_value(primary, &value, fd)?;
             }
+            Type::Union(_) => {
+                self.union_cases(ty, value, |this, member, ptr| {
+                    let value = this.value(format!("load {}, ptr {ptr}", ir_type(member)));
+                    this.print_value(member, &value, fd)
+                })?;
+            }
         }
         Ok(())
     }
@@ -746,12 +979,6 @@ mod tests {
     }
 
     pub(crate) fn native(parts: Vec<Expr>, release: bool, full: bool) -> Output {
-        let dir = std::env::temp_dir().join(format!(
-            "meowy-native-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        std::fs::create_dir(&dir).unwrap();
         let program = Program {
             body: Block {
                 id: 0,
@@ -767,7 +994,17 @@ mod tests {
             functions: Vec::new(),
             locals: Vec::new(),
         };
-        let ir = emit_ir(&program).unwrap();
+        native_program(&program, release, full)
+    }
+
+    pub(crate) fn native_program(program: &Program, release: bool, full: bool) -> Output {
+        let dir = std::env::temp_dir().join(format!(
+            "meowy-native-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir(&dir).unwrap();
+        let ir = emit_ir(program).unwrap();
         let object = dir.join("main.o");
         emit_object(&ir, &object, release).unwrap_or_else(|error| panic!("{error}\n{ir}"));
         let runtime = dir.join("runtime.a");
@@ -979,5 +1216,516 @@ mod tests {
             true,
         );
         assert_eq!(output.status.code(), Some(1));
+    }
+
+    pub(crate) fn coerce(value: Expr, ty: &Type) -> Expr {
+        expr(
+            ExprKind::Coerce {
+                value: Box::new(value),
+            },
+            ty.clone(),
+        )
+    }
+
+    pub(crate) fn type_test(value: Expr, ty: Type) -> Expr {
+        expr(
+            ExprKind::TypeTest {
+                value: Box::new(value),
+                ty,
+            },
+            Type::Bool,
+        )
+    }
+
+    pub(crate) fn record(id: usize, primary: Expr, field: Expr) -> Expr {
+        let ty = Type::Record {
+            primary: Box::new(primary.ty.clone()),
+            fields: vec![("field".into(), field.ty.clone())],
+        };
+        expr(
+            ExprKind::Block(Block {
+                id,
+                ty: ty.clone(),
+                stmts: vec![
+                    Stmt::Emit {
+                        target: id,
+                        field: None,
+                        value: primary,
+                    },
+                    Stmt::Emit {
+                        target: id,
+                        field: Some("field".into()),
+                        value: field,
+                    },
+                ],
+            }),
+            ty,
+        )
+    }
+
+    #[test]
+    pub(crate) fn union_scalars_retag_and_extract_in_each_profile() {
+        let small = Type::union([Type::Null, Type::String]);
+        let wide = Type::union([
+            Type::Null,
+            Type::Bool,
+            Type::Int {
+                bits: 8,
+                signed: true,
+            },
+            Type::Int {
+                bits: 64,
+                signed: false,
+            },
+            Type::Float { bits: 32 },
+            Type::Float { bits: 64 },
+            Type::String,
+        ]);
+        let text = expr(ExprKind::String("猫\0".into()), Type::String);
+        let value = coerce(coerce(text, &small), &wide);
+        for release in [false, true] {
+            let output = native(
+                vec![
+                    coerce(expr(ExprKind::Null, Type::Null), &wide),
+                    coerce(expr(ExprKind::Bool(true), Type::Bool), &wide),
+                    coerce(integer(-128, 8, true), &wide),
+                    coerce(integer(u64::MAX.into(), 64, false), &wide),
+                    coerce(expr(ExprKind::Float(1.25), Type::Float { bits: 32 }), &wide),
+                    coerce(expr(ExprKind::Float(-0.0), Type::Float { bits: 64 }), &wide),
+                    type_test(value.clone(), Type::String),
+                    type_test(value.clone(), Type::Null),
+                    coerce(coerce(value.clone(), &small), &Type::String),
+                ],
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(
+                output.stdout,
+                "nulltrue-128184467440737095516151.25-0truefalse猫\0\n".as_bytes()
+            );
+        }
+    }
+
+    #[test]
+    pub(crate) fn union_records_preserve_padding_and_compare_active_payloads() {
+        let field = Type::union([Type::Null, Type::String]);
+        let first = record(
+            1,
+            integer(7, 8, false),
+            coerce(expr(ExprKind::String("one".into()), Type::String), &field),
+        );
+        let other = record(
+            2,
+            integer(7, 8, false),
+            coerce(expr(ExprKind::String("two".into()), Type::String), &field),
+        );
+        let nested = record(3, integer(9, 8, false), first.clone());
+        let ty = Type::union([
+            Type::Null,
+            Type::String,
+            first.ty.clone(),
+            nested.ty.clone(),
+        ]);
+        let a = coerce(first.clone(), &ty);
+        let b = coerce(other, &ty);
+        let none = coerce(expr(ExprKind::Null, Type::Null), &ty);
+        let text = coerce(expr(ExprKind::String("hello".into()), Type::String), &ty);
+        for release in [false, true] {
+            let output = native(
+                vec![
+                    a.clone(),
+                    coerce(nested.clone(), &ty),
+                    type_test(a.clone(), Type::Null),
+                    type_test(a.clone(), first.ty.clone()),
+                    binary("==", a.clone(), a.clone(), Type::Bool),
+                    binary("==", a.clone(), b.clone(), Type::Bool),
+                    binary("==", none.clone(), a.clone(), Type::Bool),
+                    binary("==", none.clone(), text.clone(), Type::Bool),
+                    binary("==", none.clone(), none.clone(), Type::Bool),
+                    binary("==", text.clone(), text.clone(), Type::Bool),
+                ],
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"79falsetruetruefalsefalsefalsetruetrue\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn inferred_union_emissions_and_nullable_defaults_execute() {
+        let ty = Type::union([Type::Null, Type::String]);
+        let shape = Type::Record {
+            primary: Box::new(ty.clone()),
+            fields: vec![("name".into(), ty.clone())],
+        };
+        let value = |id, present| {
+            expr(
+                ExprKind::Block(Block {
+                    id,
+                    ty: shape.clone(),
+                    stmts: vec![Stmt::If {
+                        condition: expr(ExprKind::Bool(present), Type::Bool),
+                        then: vec![Stmt::Emit {
+                            target: id,
+                            field: Some("name".into()),
+                            value: expr(ExprKind::String("hello".into()), Type::String),
+                        }],
+                        otherwise: Vec::new(),
+                    }],
+                }),
+                shape.clone(),
+            )
+        };
+        for release in [false, true] {
+            let output = native(
+                vec![
+                    expr(
+                        ExprKind::Field {
+                            value: Box::new(value(1, true)),
+                            index: 0,
+                        },
+                        ty.clone(),
+                    ),
+                    expr(
+                        ExprKind::Field {
+                            value: Box::new(value(2, false)),
+                            index: 0,
+                        },
+                        ty.clone(),
+                    ),
+                    value(3, true),
+                    expr(
+                        ExprKind::Block(Block {
+                            id: 4,
+                            ty: ty.clone(),
+                            stmts: vec![Stmt::Emit {
+                                target: 4,
+                                field: None,
+                                value: expr(ExprKind::String("primary".into()), Type::String),
+                            }],
+                        }),
+                        ty.clone(),
+                    ),
+                ],
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"hellonullnullprimary\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn union_storage_and_restart_defaults_execute() {
+        let ty = Type::union([Type::Null, Type::String]);
+        let shape = Type::Record {
+            primary: Box::new(Type::Null),
+            fields: vec![("name".into(), ty.clone())],
+        };
+        let block = expr(
+            ExprKind::Block(Block {
+                id: 1,
+                ty: shape.clone(),
+                stmts: vec![Stmt::If {
+                    condition: expr(
+                        ExprKind::Unary {
+                            op: "!".into(),
+                            value: Box::new(expr(ExprKind::Local(1), Type::Bool)),
+                        },
+                        Type::Bool,
+                    ),
+                    then: vec![
+                        Stmt::Emit {
+                            target: 1,
+                            field: Some("name".into()),
+                            value: expr(ExprKind::String("discarded".into()), Type::String),
+                        },
+                        Stmt::Assign {
+                            id: 1,
+                            value: expr(ExprKind::Bool(true), Type::Bool),
+                        },
+                        Stmt::Restart(1),
+                    ],
+                    otherwise: Vec::new(),
+                }],
+            }),
+            shape,
+        );
+        let program = Program {
+            body: Block {
+                id: 0,
+                ty: Type::Null,
+                stmts: vec![
+                    Stmt::Bind {
+                        id: 0,
+                        value: expr(ExprKind::String("stored".into()), Type::String),
+                    },
+                    Stmt::Bind {
+                        id: 1,
+                        value: expr(ExprKind::Bool(false), Type::Bool),
+                    },
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts: vec![
+                                expr(ExprKind::Local(0), Type::String),
+                                expr(ExprKind::Local(0), ty.clone()),
+                                expr(
+                                    ExprKind::Field {
+                                        value: Box::new(block),
+                                        index: 0,
+                                    },
+                                    ty.clone(),
+                                ),
+                            ],
+                            newline: true,
+                        },
+                        Type::Null,
+                    )),
+                    Stmt::Assign {
+                        id: 0,
+                        value: expr(ExprKind::Null, Type::Null),
+                    },
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts: vec![expr(ExprKind::Local(0), ty.clone())],
+                            newline: true,
+                        },
+                        Type::Null,
+                    )),
+                ],
+            },
+            functions: Vec::new(),
+            locals: vec![ty, Type::Bool],
+        };
+        for release in [false, true] {
+            let output = native_program(&program, release, false);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"storedstorednull\nnull\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn coercions_and_type_tests_evaluate_operands_once() {
+        let ty = Type::union([Type::Null, Type::String]);
+        let value = expr(
+            ExprKind::Block(Block {
+                id: 1,
+                ty: Type::String,
+                stmts: vec![
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts: vec![expr(ExprKind::String("once:".into()), Type::String)],
+                            newline: false,
+                        },
+                        Type::Null,
+                    )),
+                    Stmt::Emit {
+                        target: 1,
+                        field: None,
+                        value: expr(ExprKind::String("value".into()), Type::String),
+                    },
+                ],
+            }),
+            Type::String,
+        );
+        for release in [false, true] {
+            let output = native(
+                vec![
+                    type_test(coerce(value.clone(), &ty), Type::String),
+                    type_test(value.clone(), Type::Null),
+                ],
+                release,
+                false,
+            );
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"once:trueonce:false\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn union_function_arguments_and_results_execute() {
+        let small = Type::union([Type::Null, Type::String]);
+        let wide = Type::union([Type::Null, Type::Bool, Type::String]);
+        let call = |value| {
+            expr(
+                ExprKind::Call {
+                    id: 0,
+                    args: vec![coerce(value, &small)],
+                },
+                wide.clone(),
+            )
+        };
+        let program = Program {
+            body: Block {
+                id: 0,
+                ty: Type::Null,
+                stmts: vec![Stmt::Expr(expr(
+                    ExprKind::Print {
+                        parts: vec![
+                            call(expr(ExprKind::String("argument".into()), Type::String)),
+                            call(expr(ExprKind::Null, Type::Null)),
+                            coerce(
+                                call(expr(ExprKind::String("result".into()), Type::String)),
+                                &Type::String,
+                            ),
+                        ],
+                        newline: true,
+                    },
+                    Type::Null,
+                ))],
+            },
+            functions: vec![crate::hir::Function {
+                id: 0,
+                name: "widen".into(),
+                params: vec![0],
+                result: wide.clone(),
+                body: Block {
+                    id: 1,
+                    ty: wide,
+                    stmts: vec![Stmt::Emit {
+                        target: 1,
+                        field: None,
+                        value: expr(ExprKind::Local(0), small.clone()),
+                    }],
+                },
+            }],
+            locals: vec![small],
+        };
+        for release in [false, true] {
+            let output = native_program(&program, release, false);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"argumentnullresult\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn discarded_emission_slots_preserve_operand_effects() {
+        let effect = |id, text: &str| {
+            expr(
+                ExprKind::Block(Block {
+                    id,
+                    ty: Type::String,
+                    stmts: vec![
+                        Stmt::Expr(expr(
+                            ExprKind::Print {
+                                parts: vec![expr(ExprKind::String(text.into()), Type::String)],
+                                newline: false,
+                            },
+                            Type::Null,
+                        )),
+                        Stmt::Emit {
+                            target: id,
+                            field: None,
+                            value: expr(ExprKind::String("discarded".into()), Type::String),
+                        },
+                    ],
+                }),
+                Type::String,
+            )
+        };
+        let ty = Type::Int {
+            bits: 32,
+            signed: true,
+        };
+        let value = expr(
+            ExprKind::Block(Block {
+                id: 1,
+                ty: ty.clone(),
+                stmts: vec![
+                    Stmt::If {
+                        condition: expr(
+                            ExprKind::Unary {
+                                op: "!".into(),
+                                value: Box::new(expr(ExprKind::Local(0), Type::Bool)),
+                            },
+                            Type::Bool,
+                        ),
+                        then: vec![
+                            Stmt::Emit {
+                                target: 1,
+                                field: None,
+                                value: coerce(
+                                    effect(2, "primary:"),
+                                    &Type::union([Type::Bool, Type::String]),
+                                ),
+                            },
+                            Stmt::Emit {
+                                target: 1,
+                                field: Some("absent".into()),
+                                value: effect(3, "field:"),
+                            },
+                            Stmt::Assign {
+                                id: 0,
+                                value: expr(ExprKind::Bool(true), Type::Bool),
+                            },
+                            Stmt::Restart(1),
+                        ],
+                        otherwise: Vec::new(),
+                    },
+                    Stmt::Emit {
+                        target: 1,
+                        field: None,
+                        value: integer(7, 32, true),
+                    },
+                ],
+            }),
+            ty,
+        );
+        let program = Program {
+            body: Block {
+                id: 0,
+                ty: Type::Null,
+                stmts: vec![
+                    Stmt::Bind {
+                        id: 0,
+                        value: expr(ExprKind::Bool(false), Type::Bool),
+                    },
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts: vec![value],
+                            newline: true,
+                        },
+                        Type::Null,
+                    )),
+                ],
+            },
+            functions: Vec::new(),
+            locals: vec![Type::Bool],
+        };
+        for release in [false, true] {
+            let output = native_program(&program, release, false);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"primary:field:7\n");
+        }
     }
 }

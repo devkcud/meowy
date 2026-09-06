@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 
 use crate::ast::{self, ExprKind, Span, StmtKind, TypeKind};
 use crate::diagnostic::Diagnostic;
+use crate::flow::{FALSE, Flow, Guard, TRUE};
 use crate::hir::{self, Type};
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
-pub(crate) type Slots = BTreeMap<Option<String>, Slot>;
-pub(crate) type Path = BTreeMap<usize, Slots>;
+pub(crate) type Slots = BTreeMap<Option<String>, Vec<Slot>>;
+pub(crate) type Place = (usize, Vec<String>);
 
 #[derive(Clone)]
 pub(crate) enum Constant {
@@ -60,19 +61,29 @@ pub(crate) struct Scope {
 pub(crate) struct Slot {
     pub(crate) ty: Type,
     pub(crate) mutable: bool,
+    pub(crate) guard: Guard,
+    pub(crate) order: usize,
 }
 
 pub(crate) struct Frame {
     pub(crate) id: usize,
     pub(crate) expected: Option<Type>,
-    pub(crate) leaves: Vec<Path>,
+    pub(crate) leaves: Guard,
+    pub(crate) slots: Slots,
+    pub(crate) start: usize,
+    pub(crate) partial: bool,
     pub(crate) owner: usize,
 }
 
 pub(crate) struct Checker {
     pub(crate) scopes: Vec<Scope>,
     pub(crate) frames: Vec<Frame>,
-    pub(crate) paths: Vec<Path>,
+    pub(crate) flow: Flow,
+    pub(crate) reach: Guard,
+    pub(crate) tags: BTreeMap<(Place, Type), Vec<(Type, Guard)>>,
+    pub(crate) bools: BTreeMap<Place, Guard>,
+    pub(crate) guards: BTreeMap<(usize, usize), Guard>,
+    pub(crate) writes: usize,
     pub(crate) functions: Vec<Option<hir::Function>>,
     pub(crate) locals: Vec<Type>,
     pub(crate) constants: BTreeMap<usize, Constant>,
@@ -88,7 +99,11 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
             functions: checker.functions.into_iter().flatten().collect(),
             locals: checker.locals,
         }),
-        Err(error) => Err(vec![error]),
+        Err(error) => Err(vec![if checker.flow.exceeded() {
+            Diagnostic::unsupported("control-flow proof budget exhausted", block.span)
+        } else {
+            error
+        }]),
     }
 }
 
@@ -115,7 +130,12 @@ impl Checker {
         Self {
             scopes: vec![prelude],
             frames: Vec::new(),
-            paths: vec![Path::new()],
+            flow: Flow::new(),
+            reach: TRUE,
+            tags: BTreeMap::new(),
+            bools: BTreeMap::new(),
+            guards: BTreeMap::new(),
+            writes: 0,
             functions: Vec::new(),
             locals: Vec::new(),
             constants: BTreeMap::new(),
@@ -272,15 +292,11 @@ impl Checker {
             }
             TypeKind::Computed(value) => Ok(Spec::Data(self.type_value(value)?)),
             TypeKind::Union(types) => {
-                let mut result = None;
-                for ty in types {
-                    let ty = self.ty(ty)?;
-                    if result.as_ref().is_some_and(|value| *value != ty) {
-                        return Err(Diagnostic::unsupported("union types", expr.span));
-                    }
-                    result = Some(ty);
-                }
-                Ok(Spec::Data(result.unwrap_or(Type::Never)))
+                let types = types
+                    .iter()
+                    .map(|ty| self.ty(ty))
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(Spec::Data(Type::union(types)))
             }
             TypeKind::List { .. } => {
                 Err(Diagnostic::unsupported("list and slice types", expr.span))
@@ -419,16 +435,190 @@ impl Checker {
         }
     }
 
+    pub(crate) fn forget(&mut self, id: usize) {
+        self.tags.retain(|((root, _), _), _| *root != id);
+        self.bools.retain(|(root, _), _| *root != id);
+    }
+
+    pub(crate) fn forget_mutable(&mut self) {
+        let ids: Vec<_> = self
+            .scopes
+            .iter()
+            .flat_map(|scope| scope.values.values())
+            .filter_map(|value| match value {
+                Value::Local {
+                    id, mutable: true, ..
+                } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        for id in ids {
+            self.forget(id);
+        }
+    }
+
+    pub(crate) fn place(value: &hir::Expr) -> Option<Place> {
+        match &value.kind {
+            hir::ExprKind::Local(id) => Some((*id, Vec::new())),
+            hir::ExprKind::Coerce { value } => Self::place(value),
+            hir::ExprKind::Field { value, index } => {
+                let Type::Record { fields, .. } = &value.ty else {
+                    return None;
+                };
+                let mut place = Self::place(value)?;
+                place.1.push(fields[*index].0.clone());
+                Some(place)
+            }
+            _ => None,
+        }
+    }
+
+    pub(crate) fn variants(&mut self, place: Place, ty: &Type) -> Vec<(Type, Guard)> {
+        let key = (place, ty.clone());
+        if let Some(tags) = self.tags.get(&key) {
+            return tags.clone();
+        }
+        let mut rest = TRUE;
+        let mut tags = Vec::new();
+        let count = ty.members().len();
+        for (index, ty) in ty.members().iter().enumerate() {
+            let guard = if index + 1 == count {
+                rest
+            } else {
+                let tag = self.flow.fresh();
+                let guard = self.flow.and(rest, tag);
+                let absent = self.flow.not(tag);
+                rest = self.flow.and(rest, absent);
+                guard
+            };
+            tags.push((ty.clone(), guard));
+        }
+        self.tags.insert(key, tags.clone());
+        tags
+    }
+
+    pub(crate) fn refined(&mut self, place: Place, ty: &Type) -> Type {
+        if self.reach == FALSE || !matches!(ty, Type::Union(_)) {
+            return ty.clone();
+        }
+        let types = self
+            .variants(place, ty)
+            .into_iter()
+            .filter_map(|(ty, guard)| self.flow.overlap(self.reach, guard).then_some(ty))
+            .collect::<Vec<_>>();
+        Type::union(types)
+    }
+
+    pub(crate) fn coerce(value: hir::Expr, ty: Type) -> hir::Expr {
+        if value.ty == ty {
+            value
+        } else {
+            hir::Expr {
+                span: value.span,
+                ty,
+                kind: hir::ExprKind::Coerce {
+                    value: Box::new(value),
+                },
+            }
+        }
+    }
+
+    pub(crate) fn narrow(&mut self, value: hir::Expr) -> hir::Expr {
+        if let Some(place) = Self::place(&value) {
+            let ty = self.refined(place, &value.ty);
+            Self::coerce(value, ty)
+        } else {
+            value
+        }
+    }
+
+    pub(crate) fn storage_type(value: &hir::Expr) -> &Type {
+        match &value.kind {
+            hir::ExprKind::Coerce { value } => Self::storage_type(value),
+            _ => &value.ty,
+        }
+    }
+
+    pub(crate) fn guard(&mut self, expr: &hir::Expr) -> Guard {
+        let key = (expr.span.start, expr.span.end);
+        if let Some(guard) = self.guards.get(&key) {
+            return *guard;
+        }
+        let guard = if let Some(Constant::Bool(value)) = self.constant(expr) {
+            if value { TRUE } else { FALSE }
+        } else {
+            match &expr.kind {
+                hir::ExprKind::Unary { op, value } if op == "!" => {
+                    let guard = self.guard(value);
+                    self.flow.not(guard)
+                }
+                hir::ExprKind::Binary { op, left, right } if op == "&&" || op == "||" => {
+                    let left = self.guard(left);
+                    let right = self.guard(right);
+                    if op == "&&" {
+                        self.flow.and(left, right)
+                    } else {
+                        self.flow.or(left, right)
+                    }
+                }
+                hir::ExprKind::TypeTest { value, ty } => {
+                    if ty.accepts(&value.ty) {
+                        TRUE
+                    } else if ty.intersection(&value.ty) == Type::Never {
+                        FALSE
+                    } else if let Some(place) = Self::place(value) {
+                        let tags = self.variants(place, Self::storage_type(value));
+                        let mut guard = FALSE;
+                        for (variant, tag) in tags {
+                            if ty.accepts(&variant) {
+                                guard = self.flow.or(guard, tag);
+                            }
+                        }
+                        guard
+                    } else {
+                        self.flow.fresh()
+                    }
+                }
+                _ => {
+                    if let Some(place) = Self::place(expr) {
+                        if let Some(guard) = self.bools.get(&place) {
+                            *guard
+                        } else {
+                            let guard = self.flow.fresh();
+                            self.bools.insert(place, guard);
+                            guard
+                        }
+                    } else {
+                        self.flow.fresh()
+                    }
+                }
+            }
+        };
+        self.guards.insert(key, guard);
+        guard
+    }
+
     pub(crate) fn block(
         &mut self,
         block: &ast::Block,
         expected: Option<Type>,
         receiver: Option<hir::Expr>,
     ) -> Result<hir::Block> {
+        self.block_inner(block, expected, receiver, false)
+    }
+
+    pub(crate) fn block_inner(
+        &mut self,
+        block: &ast::Block,
+        expected: Option<Type>,
+        receiver: Option<hir::Expr>,
+        partial: bool,
+    ) -> Result<hir::Block> {
         let id = self.block;
         self.block += 1;
         self.scopes.push(Scope::default());
         if let Some(label) = &block.label {
+            self.forget_mutable();
             self.scopes
                 .last_mut()
                 .expect("scope")
@@ -438,12 +628,12 @@ impl Checker {
         self.frames.push(Frame {
             id,
             expected: expected.clone(),
-            leaves: Vec::new(),
+            leaves: FALSE,
+            slots: Slots::new(),
+            start: self.writes,
+            partial,
             owner: self.owner,
         });
-        for path in &mut self.paths {
-            path.insert(id, Slots::new());
-        }
         let mut stmts = Vec::new();
         if let Some(value) = receiver {
             let ty = value.ty.clone();
@@ -471,49 +661,56 @@ impl Checker {
             }
         }
         let frame = self.frames.pop().expect("frame");
-        self.paths.extend(frame.leaves);
-        let ty = self.block_type(id, expected.as_ref(), block.span)?;
-        for path in &mut self.paths {
-            path.remove(&id);
+        self.reach = self.flow.or(self.reach, frame.leaves);
+        let ty = self.block_type(&frame, expected.as_ref(), block.span)?;
+        if self.flow.exceeded() {
+            return Err(Diagnostic::unsupported(
+                "control-flow proof budget exhausted",
+                block.span,
+            ));
         }
         self.scopes.pop();
         Ok(hir::Block { id, ty, stmts })
     }
 
     pub(crate) fn block_type(
-        &self,
-        id: usize,
+        &mut self,
+        frame: &Frame,
         expected: Option<&Type>,
         span: Span,
     ) -> Result<Type> {
-        if self.paths.is_empty() {
+        if self.reach == FALSE {
             return Ok(Type::Never);
         }
-        let mut slots: Slots = Slots::new();
-        for path in &self.paths {
-            if let Some(fields) = path.get(&id) {
-                for (name, slot) in fields {
-                    if let Some(prior) = slots.get(name) {
-                        if prior.mutable != slot.mutable {
-                            return Err(Self::error(
-                                "E206",
-                                "result field mutability differs between paths",
-                                span,
-                            ));
-                        }
-                        if prior.ty != slot.ty {
-                            return Err(Diagnostic::unsupported(
-                                "result slots with union types",
-                                span,
-                            ));
-                        }
-                    } else {
-                        slots.insert(name.clone(), slot.clone());
-                    }
+        let mut slots = BTreeMap::new();
+        for (name, writes) in &frame.slots {
+            let mut types = Vec::new();
+            let mut initialized = FALSE;
+            let mut mutable = None;
+            for slot in writes {
+                if !self.flow.overlap(slot.guard, self.reach) {
+                    continue;
                 }
+                if mutable.is_some_and(|value| value != slot.mutable) {
+                    return Err(Self::error(
+                        "E206",
+                        "result field mutability differs between paths",
+                        span,
+                    ));
+                }
+                mutable = Some(slot.mutable);
+                types.push(slot.ty.clone());
+                initialized = self.flow.or(initialized, slot.guard);
             }
+            if types.is_empty() {
+                continue;
+            }
+            if !self.flow.implies(self.reach, initialized) {
+                types.push(Type::Null);
+            }
+            slots.insert(name.clone(), (Type::union(types), initialized));
         }
-        if let Some(expected) = expected {
+        if let Some(expected) = expected.filter(|_| !frame.partial) {
             let required: Vec<(Option<String>, Type)> = match expected {
                 Type::Record { primary, fields } => std::iter::once((None, *primary.clone()))
                     .chain(
@@ -525,12 +722,8 @@ impl Checker {
                 ty => vec![(None, ty.clone())],
             };
             for (name, ty) in required {
-                if ty != Type::Null
-                    && self
-                        .paths
-                        .iter()
-                        .any(|path| !path.get(&id).is_some_and(|slots| slots.contains_key(&name)))
-                {
+                let initialized = slots.get(&name).map(|(_, guard)| *guard).unwrap_or(FALSE);
+                if !ty.accepts(&Type::Null) && !self.flow.implies(self.reach, initialized) {
                     return Err(Self::error(
                         "E204",
                         format!(
@@ -542,65 +735,30 @@ impl Checker {
                         span,
                     ));
                 }
+                let actual = slots.get(&name).map(|(ty, _)| ty).unwrap_or(&Type::Null);
+                if !ty.accepts(actual) {
+                    return Err(Self::error(
+                        "E207",
+                        format!("result slot has type {actual:?}, expected {ty:?}"),
+                        span,
+                    ));
+                }
             }
+            return Ok(expected.clone());
         }
-        for (name, slot) in &slots {
-            if slot.ty != Type::Null
-                && self.paths.iter().any(|path| {
-                    !path
-                        .get(&id)
-                        .is_some_and(|fields| fields.contains_key(name))
-                })
-            {
-                return Err(Diagnostic::unsupported(
-                    "inferred nullable result slots",
-                    span,
-                ));
-            }
-        }
-        let primary = slots
-            .remove(&None)
-            .map(|slot| slot.ty)
-            .unwrap_or(Type::Null);
+        let primary = slots.remove(&None).map(|(ty, _)| ty).unwrap_or(Type::Null);
         let fields: Vec<_> = slots
             .into_iter()
-            .filter_map(|(name, slot)| name.map(|name| (name, slot.ty)))
+            .filter_map(|(name, (ty, _))| name.map(|name| (name, ty)))
             .collect();
-        let actual = if fields.is_empty() {
+        Ok(if fields.is_empty() {
             primary
         } else {
             Type::Record {
                 primary: Box::new(primary),
                 fields,
             }
-        };
-        if let Some(expected) = expected {
-            if let Type::Record { primary, fields } = expected {
-                let actual_fields = match &actual {
-                    Type::Record { fields, .. } => fields.clone(),
-                    _ => Vec::new(),
-                };
-                let actual_primary = Self::primary_type(&actual);
-                if actual_primary != **primary
-                    || actual_fields.iter().any(|field| !fields.contains(field))
-                {
-                    return Err(Self::error(
-                        "E207",
-                        format!("block has type {actual:?}, expected {expected:?}"),
-                        span,
-                    ));
-                }
-                return Ok(expected.clone());
-            }
-            if actual != *expected {
-                return Err(Self::error(
-                    "E207",
-                    format!("block has type {actual:?}, expected {expected:?}"),
-                    span,
-                ));
-            }
-        }
-        Ok(actual)
+        })
     }
 
     pub(crate) fn forward(&mut self, stmts: &[ast::Stmt], start: usize) -> Result<usize> {
@@ -708,7 +866,7 @@ impl Checker {
         body: &ast::Block,
         result: Option<Type>,
     ) -> Result<Type> {
-        let paths = std::mem::replace(&mut self.paths, vec![Path::new()]);
+        let reach = std::mem::replace(&mut self.reach, TRUE);
         let owner = self.owner;
         self.owner = id + 1;
         self.scopes.push(Scope::default());
@@ -740,7 +898,7 @@ impl Checker {
         });
         self.scopes.pop();
         self.owner = owner;
-        self.paths = paths;
+        self.reach = reach;
         Ok(result)
     }
 
@@ -854,10 +1012,9 @@ impl Checker {
                         target.span,
                     ));
                 }
-                Ok(vec![hir::Stmt::Assign {
-                    id,
-                    value: self.expr(value, Some(&ty))?,
-                }])
+                let value = self.expr(value, Some(&ty))?;
+                self.forget(id);
+                Ok(vec![hir::Stmt::Assign { id, value }])
             }
             StmtKind::Emit {
                 label,
@@ -887,26 +1044,14 @@ impl Checker {
                             condition.span,
                         ));
                     }
-                    let constant = match self.constant(&condition) {
-                        Some(Constant::Bool(value)) => Some(value),
-                        _ => None,
-                    };
-                    let before = self.paths.clone();
-                    if constant == Some(false) {
-                        self.paths.clear();
-                    }
+                    let guard = self.guard(&condition);
+                    let absent = self.flow.not(guard);
+                    let skipped = self.flow.and(self.reach, absent);
+                    self.reach = self.flow.and(self.reach, guard);
                     self.scopes.push(Scope::default());
                     let then = self.stmt(body)?;
                     self.scopes.pop();
-                    if constant != Some(true) {
-                        self.paths.extend(before);
-                    }
-                    if self.paths.len() > 4096 {
-                        return Err(Diagnostic::unsupported(
-                            "control-flow graphs with more than 4096 active paths",
-                            stmt.span,
-                        ));
-                    }
+                    self.reach = self.flow.or(self.reach, skipped);
                     stmts.push(hir::Stmt::If {
                         condition,
                         then,
@@ -937,10 +1082,10 @@ impl Checker {
                             value.span,
                         ));
                     }
-                    let frame = self
+                    let index = self
                         .frames
-                        .iter_mut()
-                        .find(|frame| frame.id == target)
+                        .iter()
+                        .position(|frame| frame.id == target)
                         .ok_or_else(|| {
                             Self::error(
                                 "E201",
@@ -948,11 +1093,25 @@ impl Checker {
                                 value.span,
                             )
                         })?;
-                    if !restart {
-                        frame.leaves.append(&mut self.paths);
+                    if restart {
+                        let start = self.frames[index].start;
+                        for frame in &self.frames[..index] {
+                            for slot in frame.slots.values().flatten() {
+                                if slot.order >= start && self.flow.overlap(self.reach, slot.guard)
+                                {
+                                    return Err(Diagnostic::unsupported(
+                                        "restart after an emission into an enclosing scope",
+                                        value.span,
+                                    ));
+                                }
+                            }
+                        }
+                        self.forget_mutable();
                     } else {
-                        self.paths.clear();
+                        let leaves = self.frames[index].leaves;
+                        self.frames[index].leaves = self.flow.or(leaves, self.reach);
                     }
+                    self.reach = FALSE;
                     return Ok(vec![if restart {
                         hir::Stmt::Restart(target)
                     } else {
@@ -990,6 +1149,11 @@ impl Checker {
             .iter()
             .find(|frame| frame.id == target)
             .expect("frame");
+        let record = if name.is_none() && matches!(frame.expected, Some(Type::Record { .. })) {
+            frame.expected.clone()
+        } else {
+            None
+        };
         let expected = match (&frame.expected, name) {
             (Some(Type::Record { primary, .. }), None) => Some(*primary.clone()),
             (Some(Type::Record { fields, .. }), Some(name)) => Some(
@@ -1017,7 +1181,7 @@ impl Checker {
         };
         let annotated = annotation.map(|ty| self.ty(ty)).transpose()?;
         if let (Some(expected), Some(annotated)) = (&expected, &annotated)
-            && expected != annotated
+            && !expected.accepts(annotated)
         {
             return Err(Self::error(
                 "E207",
@@ -1025,7 +1189,11 @@ impl Checker {
                 span,
             ));
         }
-        let value = self.expr(value, annotated.as_ref().or(expected.as_ref()))?;
+        let value = if let Some(record) = record {
+            self.composed(value, record, annotated.as_ref().or(expected.as_ref()))?
+        } else {
+            self.expr(value, annotated.as_ref().or(expected.as_ref()))?
+        };
         if value.ty == Type::Never {
             return Ok(vec![hir::Stmt::Expr(value)]);
         }
@@ -1111,49 +1279,139 @@ impl Checker {
         mutable: bool,
         span: Span,
     ) -> Result<()> {
-        for path in &mut self.paths {
-            let slots = path.entry(target).or_default();
-            if slots.contains_key(&name) {
-                return Err(Self::error(
-                    "E205",
-                    format!(
-                        "result {} may be emitted twice",
-                        name.as_ref()
-                            .map(|name| format!("field `{name}`"))
-                            .unwrap_or_else(|| "primary".into())
-                    ),
-                    span,
-                ));
-            }
-            slots.insert(
-                name.clone(),
-                Slot {
-                    ty: ty.clone(),
-                    mutable,
-                },
-            );
+        if self.reach == FALSE {
+            return Ok(());
         }
+        let frame = self
+            .frames
+            .iter()
+            .find(|frame| frame.id == target)
+            .expect("frame");
+        let expected = match (&frame.expected, &name) {
+            (Some(Type::Record { primary, .. }), None) => Some(primary.as_ref()),
+            (Some(Type::Record { fields, .. }), Some(name)) => fields
+                .iter()
+                .find(|(field, _)| field == name)
+                .map(|(_, ty)| ty),
+            (Some(ty), None) => Some(ty),
+            _ => None,
+        };
+        if let Some(expected) = expected
+            && !expected.accepts(&ty)
+        {
+            return Err(Self::error(
+                "E207",
+                format!("result slot has type {ty:?}, expected {expected:?}"),
+                span,
+            ));
+        }
+        if frame.expected.is_some() && expected.is_none() {
+            return Err(Self::error(
+                "E207",
+                "result field is absent from the expected type",
+                span,
+            ));
+        }
+        let slots = &mut self
+            .frames
+            .iter_mut()
+            .find(|frame| frame.id == target)
+            .expect("frame")
+            .slots;
+        let writes = slots.entry(name.clone()).or_default();
+        if writes
+            .iter()
+            .any(|slot| self.flow.overlap(slot.guard, self.reach))
+        {
+            return Err(Self::error(
+                "E205",
+                format!(
+                    "result {} may be emitted twice",
+                    name.as_ref()
+                        .map(|name| format!("field `{name}`"))
+                        .unwrap_or_else(|| "primary".into())
+                ),
+                span,
+            ));
+        }
+        writes.push(Slot {
+            ty,
+            mutable,
+            guard: self.reach,
+            order: self.writes,
+        });
+        self.writes += 1;
         Ok(())
+    }
+
+    pub(crate) fn composed(
+        &mut self,
+        value: &ast::Expr,
+        record: Type,
+        expected: Option<&Type>,
+    ) -> Result<hir::Expr> {
+        match &value.kind {
+            ExprKind::Group(value) => self.composed(value, record, expected),
+            ExprKind::Block(block) => {
+                let block = self.block_inner(block, Some(record), None, true)?;
+                Ok(hir::Expr {
+                    ty: block.ty.clone(),
+                    kind: hir::ExprKind::Block(block),
+                    span: value.span,
+                })
+            }
+            ExprKind::DispatchBlock {
+                value: receiver,
+                block,
+            } => {
+                let receiver = self.expr(receiver, None)?;
+                let block = self.block_inner(block, Some(record), Some(receiver), true)?;
+                Ok(hir::Expr {
+                    ty: block.ty.clone(),
+                    kind: hir::ExprKind::Block(block),
+                    span: value.span,
+                })
+            }
+            _ => {
+                let value = self.expression(value, expected)?;
+                if matches!(value.ty, Type::Record { .. }) {
+                    Ok(value)
+                } else if let Some(expected) = expected
+                    && expected.accepts(&value.ty)
+                {
+                    Ok(Self::coerce(value, expected.clone()))
+                } else {
+                    Ok(value)
+                }
+            }
+        }
     }
 
     pub(crate) fn expr(&mut self, expr: &ast::Expr, expected: Option<&Type>) -> Result<hir::Expr> {
         let value = self.expression(expr, expected)?;
         if value.ty == Type::Never {
-            self.paths.clear();
+            self.reach = FALSE;
             return Ok(value);
         }
         if let Some(expected) = expected
             && value.ty != *expected
         {
+            if expected.accepts(&value.ty) {
+                return Ok(Self::coerce(value, expected.clone()));
+            }
             if let Type::Record { primary, .. } = &value.ty
-                && **primary == *expected
+                && expected.accepts(primary)
                 && !matches!(expected, Type::Record { .. })
             {
-                return Ok(hir::Expr {
-                    ty: expected.clone(),
-                    span: expr.span,
-                    kind: hir::ExprKind::Primary(Box::new(value)),
-                });
+                let ty = *primary.clone();
+                return Ok(Self::coerce(
+                    hir::Expr {
+                        ty,
+                        span: expr.span,
+                        kind: hir::ExprKind::Primary(Box::new(value)),
+                    },
+                    expected.clone(),
+                ));
             }
             return Err(Self::error(
                 "E207",
@@ -1169,10 +1427,26 @@ impl Checker {
         expr: &ast::Expr,
         expected: Option<&Type>,
     ) -> Result<hir::Expr> {
+        let value = self.raw_expression(expr, expected)?;
+        if value.ty == Type::Bool {
+            self.guard(&value);
+        }
+        if value.ty == Type::Never {
+            self.reach = FALSE;
+        }
+        Ok(value)
+    }
+
+    pub(crate) fn raw_expression(
+        &mut self,
+        expr: &ast::Expr,
+        expected: Option<&Type>,
+    ) -> Result<hir::Expr> {
         let (kind, ty) = match &expr.kind {
             ExprKind::Int(text) => return self.integer(text, false, expected, expr.span),
             ExprKind::Float(text) => {
-                let ty = match expected {
+                let context = Self::numeric_context(expected, false, expr.span)?;
+                let ty = match context.as_ref() {
                     Some(Type::Float { bits }) => Type::Float { bits: *bits },
                     _ => Type::Float { bits: 64 },
                 };
@@ -1213,7 +1487,13 @@ impl Checker {
             | ExprKind::Import(_)
             | ExprKind::TypeValue(_)
             | ExprKind::TypeQuery(_) => match self.symbol(expr)?.expect("symbol") {
-                Value::Local { id, ty, .. } => (hir::ExprKind::Local(id), ty),
+                Value::Local { id, ty, .. } => {
+                    return Ok(self.narrow(hir::Expr {
+                        kind: hir::ExprKind::Local(id),
+                        ty,
+                        span: expr.span,
+                    }));
+                }
                 Value::Constant(value) => return Ok(Self::constant_expr(value, expr.span)),
                 Value::Function { .. } => {
                     return Err(Diagnostic::unsupported(
@@ -1265,7 +1545,7 @@ impl Checker {
                     ));
                 }
                 if op == "-"
-                    && !self.paths.is_empty()
+                    && self.reach != FALSE
                     && let Some(Constant::Int(number)) = self.constant(&value)
                     && number
                         .checked_neg()
@@ -1332,13 +1612,14 @@ impl Checker {
                         Self::error("E201", format!("unknown record field `{name}`"), expr.span)
                     })?;
                 let ty = ty.clone();
-                (
-                    hir::ExprKind::Field {
+                return Ok(self.narrow(hir::Expr {
+                    kind: hir::ExprKind::Field {
                         value: Box::new(value),
                         index,
                     },
                     ty,
-                )
+                    span: expr.span,
+                }));
             }
             ExprKind::Ascribe {
                 value,
@@ -1351,27 +1632,16 @@ impl Checker {
                     return Ok(value);
                 }
                 if *predicate {
-                    let id = self.next_block();
-                    let constant = Constant::Bool(value.ty == ty);
-                    self.constants.insert(id, constant.clone());
                     return Ok(hir::Expr {
-                        kind: hir::ExprKind::Block(hir::Block {
-                            id,
-                            ty: Type::Bool,
-                            stmts: vec![
-                                hir::Stmt::Expr(value),
-                                hir::Stmt::Emit {
-                                    target: id,
-                                    field: None,
-                                    value: Self::constant_expr(constant, expr.span),
-                                },
-                            ],
-                        }),
+                        kind: hir::ExprKind::TypeTest {
+                            value: Box::new(value),
+                            ty,
+                        },
                         ty: Type::Bool,
                         span: expr.span,
                     });
                 }
-                if value.ty != ty && value.ty != Type::Never {
+                if !ty.accepts(&value.ty) {
                     return Err(Self::error(
                         "E208",
                         format!(
@@ -1381,7 +1651,7 @@ impl Checker {
                         expr.span,
                     ));
                 }
-                return Ok(value);
+                return Ok(Self::coerce(value, ty));
             }
             ExprKind::Function { .. } => {
                 return Err(Diagnostic::unsupported(
@@ -1413,10 +1683,31 @@ impl Checker {
         })
     }
 
-    pub(crate) fn next_block(&mut self) -> usize {
-        let id = self.block;
-        self.block += 1;
-        id
+    pub(crate) fn numeric_context(
+        expected: Option<&Type>,
+        integer: bool,
+        span: Span,
+    ) -> Result<Option<Type>> {
+        let types: Vec<_> = expected
+            .into_iter()
+            .flat_map(Type::members)
+            .filter(|ty| {
+                if integer {
+                    matches!(ty, Type::Int { .. })
+                } else {
+                    matches!(ty, Type::Float { .. })
+                }
+            })
+            .cloned()
+            .collect();
+        if types.len() > 1 {
+            return Err(Self::error(
+                "E207",
+                "numeric literal has multiple possible expected types",
+                span,
+            ));
+        }
+        Ok(types.into_iter().next())
     }
 
     pub(crate) fn integer(
@@ -1434,7 +1725,8 @@ impl Checker {
         } else {
             (10, text.as_str())
         };
-        let ty = match expected {
+        let context = Self::numeric_context(expected, true, span)?;
+        let ty = match context.as_ref() {
             Some(Type::Int { bits, signed }) => Type::Int {
                 bits: *bits,
                 signed: *signed,
@@ -1511,10 +1803,10 @@ impl Checker {
         }
     }
 
-    pub(crate) fn hint(&self, expr: &ast::Expr) -> Option<Type> {
+    pub(crate) fn hint(&mut self, expr: &ast::Expr) -> Option<Type> {
         match &expr.kind {
             ExprKind::Name(name) => match self.value(name, expr.span).ok()? {
-                Value::Local { ty, .. } => Some(ty),
+                Value::Local { id, ty, .. } => Some(self.refined((id, Vec::new()), &ty)),
                 Value::Constant(value) => Some(Self::constant_expr(value, expr.span).ty),
                 _ => None,
             },
@@ -1531,10 +1823,15 @@ impl Checker {
             ExprKind::String(_) => Some(Type::String),
             ExprKind::Field { value, name } => {
                 if let Some(Type::Record { fields, .. }) = self.hint(value) {
-                    fields
+                    let ty = fields
                         .into_iter()
                         .find(|(field, _)| field == name)
-                        .map(|(_, ty)| ty)
+                        .map(|(_, ty)| ty)?;
+                    if let Some(place) = self.ast_place(expr) {
+                        Some(self.refined(place, &ty))
+                    } else {
+                        Some(ty)
+                    }
                 } else {
                     None
                 }
@@ -1548,6 +1845,22 @@ impl Checker {
                 } else {
                     None
                 }
+            }
+            _ => None,
+        }
+    }
+
+    pub(crate) fn ast_place(&self, expr: &ast::Expr) -> Option<Place> {
+        match &expr.kind {
+            ExprKind::Name(name) => match self.value(name, expr.span).ok()? {
+                Value::Local { id, .. } => Some((id, Vec::new())),
+                _ => None,
+            },
+            ExprKind::Group(value) | ExprKind::Ascribe { value, .. } => self.ast_place(value),
+            ExprKind::Field { value, name } => {
+                let mut place = self.ast_place(value)?;
+                place.1.push(name.clone());
+                Some(place)
             }
             _ => None,
         }
@@ -1587,19 +1900,24 @@ impl Checker {
                 })
         };
         let mut left = self.expression(left, context.as_ref())?;
-        let before = self.paths.clone();
-        let constant = self.constant(&left);
-        let skipped = matches!(
-            (&constant, op),
-            (Some(Constant::Bool(false)), "&&") | (Some(Constant::Bool(true)), "||")
-        );
-        if skipped {
-            self.paths.clear();
-        }
+        let skipped = if boolean {
+            let guard = self.guard(&left);
+            let guard = if op == "||" {
+                self.flow.not(guard)
+            } else {
+                guard
+            };
+            let absent = self.flow.not(guard);
+            let skipped = self.flow.and(self.reach, absent);
+            self.reach = self.flow.and(self.reach, guard);
+            skipped
+        } else {
+            FALSE
+        };
         let right_context = Self::primary_type(&left.ty);
         let mut right = self.expression(right, Some(&right_context))?;
-        if boolean && (skipped || !matches!(constant, Some(Constant::Bool(_)))) {
-            self.paths.extend(before);
+        if boolean {
+            self.reach = self.flow.or(self.reach, skipped);
         }
         if !["==", "!="].contains(&op)
             || !matches!(
@@ -1640,7 +1958,7 @@ impl Checker {
                 span,
             ));
         }
-        if !self.paths.is_empty()
+        if self.reach != FALSE
             && matches!(left.ty, Type::Int { .. })
             && !compare
             && let (Some(Constant::Int(a)), Some(Constant::Int(b))) =
@@ -2012,9 +2330,9 @@ mod tests {
     }
 
     #[test]
-    pub(crate) fn path_enumeration_stops_at_the_bootstrap_budget() {
-        let source = format!("flag:=true;{}", "|flag|x:1;".repeat(13));
-        rejects(&source, "B001");
+    pub(crate) fn independent_matchers_share_flow_facts() {
+        let source = format!("flag:=true;{}", "|flag|x:1;".repeat(1000));
+        accepts(&source);
     }
 
     #[test]
@@ -2037,10 +2355,106 @@ mod tests {
 
     #[test]
     pub(crate) fn unsupported_features_have_capability_diagnostics() {
-        rejects("x<int32><null>:1", "B001");
         rejects("x:[1,2]", "B001");
         rejects("x:1;f<int32>:(){->x}", "B001");
         rejects("x:1;text:\"{x}\"", "B001");
         rejects("f<int32>:(){->1};x:f==f", "E222");
+    }
+
+    #[test]
+    pub(crate) fn union_members_keep_numeric_context_without_widening() {
+        accepts("x<int8><null>:-128;y<float32><null>:1.5");
+        accepts("x<{count<int8><null>}>:{->count<int8>:127}");
+        accepts("<T>:<string><null><never><string>;x<T>:null;y<null><string>:x");
+        rejects("x<int8><null>:128", "E216");
+        rejects("x<int8>:1;y<int16><null>:x", "E207");
+        rejects("x<int8><int32>:1", "E207");
+        rejects("x<float32><float64>:1.5", "E207");
+        rejects("x<string><null>:null;y<string>:x", "E207");
+        rejects("x<string><null>:null;y:x<string>", "E208");
+    }
+
+    #[test]
+    pub(crate) fn conditional_slots_join_only_completing_paths() {
+        accepts(
+            "make:(flag<boolean>){|flag|->name:\"hello\"};value<{name<string><null>}>:make(false)",
+        );
+        accepts("f<int32><null>:(flag<boolean>){|flag|->1}");
+        accepts("x<{name<string><null>}>:{}");
+        accepts("x<{name<string><null>}>:{->{->name:\"ok\"}}");
+        accepts("x<{count<int8>;name<string><null>}>:{->{->count:127};->name:\"ok\"}");
+        rejects(
+            "f<{name<string>}>:(flag<boolean>){|flag|->name:\"x\"}",
+            "E204",
+        );
+        rejects("x<{count<int8>}>:{->{->count:128}}", "E216");
+        rejects("x<{name<string><null>}>:{->{->other:1}}", "E207");
+        let program =
+            crate::compile("n:=0;x:'loop {n=n+1;|n<2|{'loop->gone:1;'loop.restart()}}").unwrap();
+        assert_eq!(program.locals.last(), Some(&crate::hir::Type::Null));
+    }
+
+    #[test]
+    pub(crate) fn stable_predicates_prove_disjoint_emissions() {
+        accepts("f<int32>:(v<string><null>){|v<null>|->1;|!(v<null>)|->2}");
+        accepts("f<int32>:(v<string><int32><null>){|v<null>|->1;|v<string>|->2;|v<int32>|->3}");
+        accepts("f<int32>:(flag<boolean>){|flag|->1;|!flag|->2}");
+        rejects(
+            "f<int32>:(v<string><null>){|v<null>|->1;|v<null>|->2}",
+            "E205",
+        );
+        rejects("f<int32>:(v<int32>){|v>0|->1;|v>10|->2}", "E205");
+        accepts(
+            "f<int32>:(v<string><int32><null>){|!(v<int32>)&&v<string>|->1;|v<int32><null>|->2}",
+        );
+    }
+
+    #[test]
+    pub(crate) fn distinct_record_variants_keep_their_field_tag_domains() {
+        accepts(
+            "<A>:<{name<string><null>}>;<B>:<{name<int32><null>}>;f<null>:(x<A><B>){|x<A>|{|x.name<string>|y:x.name<string>};|x<B>|{|x.name<int32>|y:x.name+1}}",
+        );
+    }
+
+    #[test]
+    pub(crate) fn narrowing_tracks_short_circuit_and_leaving_paths() {
+        accepts(
+            "f<string>:(v<string><null>) 'r {|v<null>|{'r->\"fallback\";'r.leave()};->v<string>}",
+        );
+        accepts("f<null>:(v<string><null>){|v<string>&&v.size()>0|x:v<string>}");
+        accepts("f<null>:(v<string><null>){|v<null>||v.size()==0|{}}");
+        accepts("f<null>:(v<{name<string><null>}>){|!(v.name<null>)|x:v.name<string>}");
+        rejects("f<null>:(v<string><null>){|v<null>|{};x:v<string>}", "E208");
+        rejects(
+            "f<null>:(v<string><null>){|v<string>||true|x:v<string>}",
+            "E208",
+        );
+    }
+
+    #[test]
+    pub(crate) fn assignment_invalidates_scalar_and_field_proofs() {
+        rejects(
+            "v<string><null>:=\"x\";|v<string>|{v=null;x:v<string>}",
+            "E208",
+        );
+        rejects(
+            "v<{name<string><null>}>:={->name:\"x\"};|v.name<string>|{v={};x:v.name<string>}",
+            "E208",
+        );
+        rejects(
+            "v<string><null>:=\"x\";|v<null>|v=\"x\";x:v<string>",
+            "E208",
+        );
+        accepts("v<string><null>:=\"x\";|v<string>|{x:v<string>;v=null}");
+    }
+
+    #[test]
+    pub(crate) fn restart_drops_mutable_proofs_and_rejects_outer_slot_hazards() {
+        rejects(
+            "v<string><null>:=\"x\";|v<string>|'loop {x:v<string>;v=null;'loop.restart()}",
+            "E208",
+        );
+        rejects("x:'outer {'inner {'outer->1;'inner.restart()}}", "B001");
+        accepts("n:=0;x:'loop {n=n+1;|n<2|{'loop->1;'loop.restart()};->2}");
     }
 }

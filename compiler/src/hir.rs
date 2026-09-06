@@ -4,7 +4,7 @@ pub type LocalId = usize;
 pub type FunctionId = usize;
 pub type BlockId = usize;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
     Null,
     Never,
@@ -21,6 +21,57 @@ pub enum Type {
         primary: Box<Type>,
         fields: Vec<(String, Type)>,
     },
+    Union(Vec<Type>),
+}
+
+impl Type {
+    pub fn union(types: impl IntoIterator<Item = Type>) -> Self {
+        let mut members = Vec::new();
+        for ty in types {
+            match ty {
+                Self::Never => {}
+                Self::Union(types) => members.extend(Self::union(types).members().iter().cloned()),
+                ty => members.push(ty),
+            }
+        }
+        members.sort();
+        members.dedup();
+        match members.len() {
+            0 => Self::Never,
+            1 => members.pop().expect("one union member"),
+            _ => Self::Union(members),
+        }
+    }
+
+    pub fn members(&self) -> &[Self] {
+        match self {
+            Self::Never => &[],
+            Self::Union(types) => types,
+            ty => std::slice::from_ref(ty),
+        }
+    }
+
+    pub fn accepts(&self, value: &Self) -> bool {
+        value.members().iter().all(|ty| self.members().contains(ty))
+    }
+
+    pub fn intersection(&self, other: &Self) -> Self {
+        Self::union(
+            self.members()
+                .iter()
+                .filter(|ty| other.members().contains(ty))
+                .cloned(),
+        )
+    }
+
+    pub fn subtract(&self, other: &Self) -> Self {
+        Self::union(
+            self.members()
+                .iter()
+                .filter(|ty| !other.members().contains(ty))
+                .cloned(),
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -113,4 +164,39 @@ pub enum ExprKind {
     },
     Primary(Box<Expr>),
     StringSize(Box<Expr>),
+    Coerce {
+        value: Box<Expr>,
+    },
+    TypeTest {
+        value: Box<Expr>,
+        ty: Type,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Type;
+
+    #[test]
+    pub(crate) fn unions_are_normalized_sets_with_null_first() {
+        let ty = Type::union([
+            Type::String,
+            Type::Never,
+            Type::Null,
+            Type::union([Type::Bool, Type::String]),
+        ]);
+        assert_eq!(ty, Type::Union(vec![Type::Null, Type::Bool, Type::String]));
+        assert_eq!(
+            Type::union([Type::Never, Type::String, Type::String]),
+            Type::String
+        );
+        assert_eq!(Type::union([]), Type::Never);
+        assert!(ty.accepts(&Type::union([Type::String, Type::Null])));
+        assert!(!Type::String.accepts(&ty));
+        assert_eq!(
+            ty.subtract(&Type::Null),
+            Type::union([Type::Bool, Type::String])
+        );
+        assert_eq!(ty.intersection(&Type::String), Type::String);
+    }
 }
