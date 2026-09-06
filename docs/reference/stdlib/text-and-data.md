@@ -14,22 +14,22 @@ may begin at `size() + 1` only when its length is zero. Raw wire offsets remain
 zero-based and must be translated explicitly. Arithmetic validating a span cannot
 wrap before the bounds check.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `bytes.filled<N>(value <uint8>)` | `uint8[N]` | Inline list of length/capacity N, with every byte initialized |
-| `bytes.slice(data, start, length)` | `uint8[]` or `collections.Bounds` | Borrow a checked byte span |
-| `bytes.copy(destination, source)` | `usize` | Copy up to the shorter length between disjoint spans |
-| `bytes.copy_within(buffer, destination, source, length)` | `null` or `collections.Bounds` | Checked one-based spans within one exclusive initialized slice; overlap has memmove semantics |
-| `bytes.find(data, needle)` | `usize` or `null` | First matching byte position; an empty needle matches at 1 |
-| `bytes.equal(a, b)` | `boolean` | Compare lengths and bytes |
-| `strings.from_utf8(data <uint8[]>)` | `string` or `strings.InvalidUtf8` | Validate once and return a view of the same storage |
-| `strings.slice(text, start, length)` | `string` or `strings.SliceError` | Validate bounds and both UTF-8 boundaries |
-| `strings.contains(text, part)` | `boolean` | Exact, case-sensitive UTF-8 substring search |
-| `strings.starts_with(text, prefix)`, `.ends_with(text, suffix)` | `boolean` | Exact prefix/suffix test |
-| `strings.trim_ascii(text)` | `string` | Borrow after trimming ASCII space, tab, CR, LF, VT, and FF at both ends |
-| `strings.trim(text)` | `string` | Borrow after trimming Unicode White_Space scalars |
-| `strings.split(text, separator)` | `strings.Split` or `strings.InvalidSeparator` | Borrowed cursor over non-overlapping exact separators; empty separator is an error |
-| `strings.lines(text)` | `strings.Lines` | Borrowed cursor splitting LF and CRLF, omitting the terminator |
+| API                                                             | Result                                        | Contract                                                                                      |
+| --------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `bytes.filled<N>(value <uint8>)`                                | `uint8[N]`                                    | Inline list of length/capacity N, with every byte initialized                                 |
+| `bytes.slice(data, start, length)`                              | `uint8[]` or `collections.Bounds`             | Borrow a checked byte span                                                                    |
+| `bytes.copy(destination, source)`                               | `usize`                                       | Copy up to the shorter length between disjoint spans                                          |
+| `bytes.copy_within(buffer, destination, source, length)`        | `null` or `collections.Bounds`                | Checked one-based spans within one exclusive initialized slice; overlap has memmove semantics |
+| `bytes.find(data, needle)`                                      | `usize` or `null`                             | First matching byte position; an empty needle matches at 1                                    |
+| `bytes.equal(a, b)`                                             | `boolean`                                     | Compare lengths and bytes                                                                     |
+| `strings.from_utf8(data <uint8[]>)`                             | `string` or `strings.InvalidUtf8`             | Validate once and return a view of the same storage                                           |
+| `strings.slice(text, start, length)`                            | `string` or `strings.SliceError`              | Validate bounds and both UTF-8 boundaries                                                     |
+| `strings.contains(text, part)`                                  | `boolean`                                     | Exact, case-sensitive UTF-8 substring search                                                  |
+| `strings.starts_with(text, prefix)`, `.ends_with(text, suffix)` | `boolean`                                     | Exact prefix/suffix test                                                                      |
+| `strings.trim_ascii(text)`                                      | `string`                                      | Borrow after trimming ASCII space, tab, CR, LF, VT, and FF at both ends                       |
+| `strings.trim(text)`                                            | `string`                                      | Borrow after trimming Unicode White_Space scalars                                             |
+| `strings.split(text, separator)`                                | `strings.Split` or `strings.InvalidSeparator` | Borrowed cursor over non-overlapping exact separators; empty separator is an error            |
+| `strings.lines(text)`                                           | `strings.Lines`                               | Borrowed cursor splitting LF and CRLF, omitting the terminator                                |
 
 `Split.next()` returns `<string><iter.End>`. It preserves empty segments, including
 trailing ones. `Lines.next()` returns the same union; a final newline does not add
@@ -58,13 +58,13 @@ Grapheme boundaries follow the default extended rules in
 version named by `unicode.Version`. Word segmentation is a different operation;
 reading one grapheme cluster never promises one word, glyph, or terminal column.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `unicode.scalar(value <uint32>)` | `unicode.Scalar` or `unicode.InvalidScalar` | Reject surrogate values and values above the Unicode range |
-| `scalar.value()` | `uint32` | Read the validated code point |
-| `unicode.is_letter(scalar)`, `.is_number(scalar)`, `.is_whitespace(scalar)` | `boolean` | Query versioned Unicode properties |
-| `unicode.normalize_into(text, form, &!buffer)` | `string` or `strings.BufferTooSmall` | NFC, NFD, NFKC, or NFKD into caller-owned bytes |
-| `unicode.casefold_into(text, &!buffer)` | `string` or `strings.BufferTooSmall` | Full default Unicode case folding, not locale-sensitive lowercasing |
+| API                                                                         | Result                                      | Contract                                                            |
+| --------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| `unicode.scalar(value <uint32>)`                                            | `unicode.Scalar` or `unicode.InvalidScalar` | Reject surrogate values and values above the Unicode range          |
+| `scalar.value()`                                                            | `uint32`                                    | Read the validated code point                                       |
+| `unicode.is_letter(scalar)`, `.is_number(scalar)`, `.is_whitespace(scalar)` | `boolean`                                   | Query versioned Unicode properties                                  |
+| `unicode.normalize_into(text, form, &!buffer)`                              | `string` or `strings.BufferTooSmall`        | NFC, NFD, NFKC, or NFKD into caller-owned bytes                     |
+| `unicode.casefold_into(text, &!buffer)`                                     | `string` or `strings.BufferTooSmall`        | Full default Unicode case folding, not locale-sensitive lowercasing |
 
 `unicode.NFC`, `NFD`, `NFKC`, and `NFKD` are ordinary normalization-form values.
 `is_letter` uses general category L, `is_number` category N, and `is_whitespace`
@@ -76,18 +76,18 @@ collation require an explicitly selected locale and are not guessed from the OS.
 
 ## Owned strings and formatting
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `strings.copy(text, allocator)` | `strings.Owned` or `memory.AllocationFailure` | Copy UTF-8 into an owner |
-| `strings.builder(allocator, capacity)` | `strings.Builder` or `memory.AllocationFailure` | Allocate an initially empty text builder |
-| `builder.append(text)` | `null` or `memory.AllocationFailure` | Append checked UTF-8, retaining old contents if growth fails |
-| `builder.append_scalar(scalar)` | `null` or `memory.AllocationFailure` | Append one encoded Unicode scalar |
-| `builder.view()` | `string` | Borrow current contents; mutation must wait for the view to expire |
-| `builder.finish()` | `strings.Owned` | Consume the builder and transfer its allocation |
-| `owned.view()` | `string` | Borrow owned text |
-| `strings.join(parts, separator, allocator)` | `strings.Owned` or `memory.AllocationFailure` | Measure and allocate the concatenation explicitly |
-| `fmt.write(write, value)` | `null` or `io.Error` | Stream the value's diagnostic form to an explicit writer |
-| `fmt.write_line(write, value)` | `null` or `io.Error` | Stream the value followed by LF |
+| API                                         | Result                                          | Contract                                                           |
+| ------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| `strings.copy(text, allocator)`             | `strings.Owned` or `memory.AllocationFailure`   | Copy UTF-8 into an owner                                           |
+| `strings.builder(allocator, capacity)`      | `strings.Builder` or `memory.AllocationFailure` | Allocate an initially empty text builder                           |
+| `builder.append(text)`                      | `null` or `memory.AllocationFailure`            | Append checked UTF-8, retaining old contents if growth fails       |
+| `builder.append_scalar(scalar)`             | `null` or `memory.AllocationFailure`            | Append one encoded Unicode scalar                                  |
+| `builder.view()`                            | `string`                                        | Borrow current contents; mutation must wait for the view to expire |
+| `builder.finish()`                          | `strings.Owned`                                 | Consume the builder and transfer its allocation                    |
+| `owned.view()`                              | `string`                                        | Borrow owned text                                                  |
+| `strings.join(parts, separator, allocator)` | `strings.Owned` or `memory.AllocationFailure`   | Measure and allocate the concatenation explicitly                  |
+| `fmt.write(write, value)`                   | `null` or `io.Error`                            | Stream the value's diagnostic form to an explicit writer           |
+| `fmt.write_line(write, value)`              | `null` or `io.Error`                            | Stream the value followed by LF                                    |
 
 Interpolation at `fmt.write` and `fmt.write_line` streams as at `debug.print`.
 Stored runtime interpolation still requires a builder. Formatters do not silently
@@ -107,19 +107,19 @@ and `-` for signed targets; no whitespace, separators, trailing text, or overflo
 float32/float64 decimal and exponent notation, rounded to the nearest representable
 value with ties to even; textual NaN, infinities, and overflow are parse errors.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `numbers.min(a, b)`, `.max(a, b)` | Same numeric type | Numeric extrema with the floating rules below; no implicit widening |
-| `numbers.clamp(value, lower, upper)` | Same type or `numbers.RangeError` | Require ordered bounds; reject NaN inputs |
-| `numbers.checked_sub(a, b)`, `.checked_mul(a, b)` | Same integer type or `numbers.RangeError` | Recoverable arithmetic overflow |
-| `bits.count_ones(value)`, `.leading_zeros(value)`, `.trailing_zeros(value)` | `usize` | Bit-width-defined counts; zero has width leading/trailing zeros |
-| `bits.rotate_left(value, count)` | Same unsigned type | Rotate by count modulo bit width |
-| `math.sqrt(value)`, `.log(value)`, `.sin(value)`, `.cos(value)` | Same float type or `math.DomainError` or `math.RangeError` | Reject nonfinite inputs and invalid real domains; report unrepresentable results |
-| `math.floor(value)`, `.ceil(value)`, `.round(value)` | Same float type | Integral-valued floats; round ties to even; preserve nonfinite inputs |
-| `random.seeded(seed <uint64>)` | `random.Generator` | Inline, reproducible pseudorandom state for simulations and tests |
-| `generator.next_uint64()` | `uint64` | Advance the exclusively borrowed generator |
-| `generator.below(upper <uint64>)` | `uint64` or `random.InvalidBound` | Unbiased value in `0..upper`, upper exclusive and nonzero |
-| `random.secure_fill(buffer)` | `null` or `random.EntropyError` | Fill an exclusive initialized byte slice from the OS cryptographic source |
+| API                                                                         | Result                                                     | Contract                                                                         |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `numbers.min(a, b)`, `.max(a, b)`                                           | Same numeric type                                          | Numeric extrema with the floating rules below; no implicit widening              |
+| `numbers.clamp(value, lower, upper)`                                        | Same type or `numbers.RangeError`                          | Require ordered bounds; reject NaN inputs                                        |
+| `numbers.checked_sub(a, b)`, `.checked_mul(a, b)`                           | Same integer type or `numbers.RangeError`                  | Recoverable arithmetic overflow                                                  |
+| `bits.count_ones(value)`, `.leading_zeros(value)`, `.trailing_zeros(value)` | `usize`                                                    | Bit-width-defined counts; zero has width leading/trailing zeros                  |
+| `bits.rotate_left(value, count)`                                            | Same unsigned type                                         | Rotate by count modulo bit width                                                 |
+| `math.sqrt(value)`, `.log(value)`, `.sin(value)`, `.cos(value)`             | Same float type or `math.DomainError` or `math.RangeError` | Reject nonfinite inputs and invalid real domains; report unrepresentable results |
+| `math.floor(value)`, `.ceil(value)`, `.round(value)`                        | Same float type                                            | Integral-valued floats; round ties to even; preserve nonfinite inputs            |
+| `random.seeded(seed <uint64>)`                                              | `random.Generator`                                         | Inline, reproducible pseudorandom state for simulations and tests                |
+| `generator.next_uint64()`                                                   | `uint64`                                                   | Advance the exclusively borrowed generator                                       |
+| `generator.below(upper <uint64>)`                                           | `uint64` or `random.InvalidBound`                          | Unbiased value in `0..upper`, upper exclusive and nonzero                        |
+| `random.secure_fill(buffer)`                                                | `null` or `random.EntropyError`                            | Fill an exclusive initialized byte slice from the OS cryptographic source        |
 
 Floating extrema propagate NaN if supplied and choose negative zero for a minimum,
 positive zero for a maximum. Transcendental results follow the selected target's

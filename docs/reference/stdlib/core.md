@@ -28,6 +28,11 @@ The parser rejects empty input, whitespace, separators, signs other than a singl
 leading `+`, fractional numbers, trailing characters, and out-of-range values.
 `strings.ParseError` is an allocation-free concrete `<error>` with a static code
 and message; formatting can add the original input without storing an owned copy.
+It is descriptor-compatible and may be passed as `<error>` without boxing.
+The [`errors` module](errors.md) defines how to read error codes and messages,
+construct custom failures, and inspect typed payloads while preserving ownership.
+These values remain application results; creating or printing one does not
+publish a compiler diagnostic or a saved replay session.
 
 `debug.print` borrows its argument and supports primitives, errors, library values
 with a documented display, and aggregates whose fields are formattable. An aggregate's default display uses its primary

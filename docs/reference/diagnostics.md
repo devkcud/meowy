@@ -42,8 +42,12 @@ parse_age <uint8><error> : (text <string>) {
 ```
 
 The explicit result permits both the integer and the allocation-free parse error.
-For errors retaining large owned inputs, keep the concrete error type in the union
-or explicitly box its payload before erasing it to `<error>`.
+For errors retaining arbitrary inline payloads, keep the concrete error type in
+the union or explicitly box its payload before erasing it to `<error>`.
+The [`errors` library](stdlib/errors.md) defines custom failure constructors,
+code/message inspection, typed payload access, and that explicit boxing boundary.
+A failure's application code is separate from the compiler's diagnostic catalog;
+constructing or returning the value creates no saved diagnostic occurrence.
 
 An ignored owned failure is still released correctly. APIs returning a rejected
 message or unchanged collection preserve ownership in their error variant so a

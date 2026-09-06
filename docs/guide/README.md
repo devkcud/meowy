@@ -143,6 +143,12 @@ print(describe("24"))
 Conversion creates a new typed value. Removing an error from a type expression
 does not remove a possible error from a running program.
 
+Use the standard library's [`errors` module](../reference/stdlib/errors.md) to
+create your own failure types and read their codes, messages, and typed payloads.
+The chapter explains how to propagate concrete errors without allocation and
+when erasure requires explicit boxing. Returning an error remains ordinary value
+flow; it does not throw or create a compiler diagnostic.
+
 ## Loops reuse named scopes
 
 Bounded lists keep their elements inline. Their first position is **1**.

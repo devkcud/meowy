@@ -13,10 +13,10 @@ I/O algorithms take explicit callables. A read callable accepts an exclusive
 initialized `<collections.MutSlice<uint8>>`; a write callable accepts `<uint8[]>`.
 Both return small records rather than hiding a partial transfer in an exception:
 
-| Result | Fields | Meaning |
-| --- | --- | --- |
-| `io.Read` | `count <usize>`, `end <boolean>`, `error <io.Error><null>` | A valid prefix of bytes, possibly followed by EOF or an error |
-| `io.Write` | `count <usize>`, `error <io.Error><null>` | A committed prefix, possibly followed by an error |
+| Result     | Fields                                                     | Meaning                                                       |
+| ---------- | ---------------------------------------------------------- | ------------------------------------------------------------- |
+| `io.Read`  | `count <usize>`, `end <boolean>`, `error <io.Error><null>` | A valid prefix of bytes, possibly followed by EOF or an error |
+| `io.Write` | `count <usize>`, `error <io.Error><null>`                  | A committed prefix, possibly followed by an error             |
 
 The count is never larger than the supplied span. Read bytes remain valid even
 when the result also reports EOF or failure. With a nonempty buffer, a read must
@@ -30,16 +30,16 @@ Kinds include `Closed`, `Permission`, `NotFound`, `Interrupted`, `WouldBlock`,
 number is not a meowy diagnostic code. Adapter code reports malformed callable
 results as NoProgress or InvalidCount instead of looping forever.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `io.read_exact(read, buffer)` | `io.Read` | Fill the initialized span or report a short read/EOF/error with the accumulated count |
-| `io.write_all(write, bytes)` | `io.Write` | Retry partial progress until all input is written or an error occurs |
-| `io.copy(read, write, scratch)` | `io.CopyResult` | Stream through caller-owned scratch; report total read/written counts and an optional error |
-| `io.limited(read, limit <uint64>)` | Concrete reader adapter | Borrow a callable and expose at most limit bytes as a bounded stream |
-| `io.bytes_reader(bytes)` | Concrete reader cursor | Borrow bytes and advance through them without allocation |
-| `io.buffer_writer(&!buffer)` | Concrete writer cursor | Append to a bounded byte list; report a partial count and capacity failure when full |
-| `io.buffered(read, &!scratch)` | Concrete reader adapter | Borrow initialized scratch for read-ahead |
-| `io.stdin()`, `io.stdout()`, `io.stderr()` | Standard-stream handles | Borrow the runtime's standard channels without taking ownership of the host descriptors |
+| API                                        | Result                  | Contract                                                                                    |
+| ------------------------------------------ | ----------------------- | ------------------------------------------------------------------------------------------- |
+| `io.read_exact(read, buffer)`              | `io.Read`               | Fill the initialized span or report a short read/EOF/error with the accumulated count       |
+| `io.write_all(write, bytes)`               | `io.Write`              | Retry partial progress until all input is written or an error occurs                        |
+| `io.copy(read, write, scratch)`            | `io.CopyResult`         | Stream through caller-owned scratch; report total read/written counts and an optional error |
+| `io.limited(read, limit <uint64>)`         | Concrete reader adapter | Borrow a callable and expose at most limit bytes as a bounded stream                        |
+| `io.bytes_reader(bytes)`                   | Concrete reader cursor  | Borrow bytes and advance through them without allocation                                    |
+| `io.buffer_writer(&!buffer)`               | Concrete writer cursor  | Append to a bounded byte list; report a partial count and capacity failure when full        |
+| `io.buffered(read, &!scratch)`             | Concrete reader adapter | Borrow initialized scratch for read-ahead                                                   |
+| `io.stdin()`, `io.stdout()`, `io.stderr()` | Standard-stream handles | Borrow the runtime's standard channels without taking ownership of the host descriptors     |
 
 These are statically checked callable contracts, not an implicit interface lookup
 or automatic dictionary allocation. For example, pass `file.read` and
@@ -65,14 +65,14 @@ the selected target's path syntax; `path.parse(text)` returns that view or
 `path.InvalidPath`. Embedded NUL is invalid. A path does not imply that the target
 exists, is accessible, or stays inside a directory after symlink resolution.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `path.is_absolute(value)` | `boolean` | Inspect target path syntax |
-| `path.basename(value)`, `.extension(value)` | `string` | Borrow textual components; extension includes the final dot, with dotfiles alone treated as extensionless |
-| `path.parent(value)` | `path.Path` or `null` | Borrow the lexical parent where present |
-| `path.clean_into(value, &!buffer)` | `path.Path` or `path.Error` | Normalize redundant separators and lexical dot components in caller storage |
-| `path.join_into(parts, &!buffer)` | `path.Path` or `path.Error` | Join a nonempty path list; reject absolute components after the first |
-| `fs.canonicalize(value, allocator)` | `path.Owned` or `fs.Error` or `memory.AllocationFailure` | Resolve filesystem identity and symlinks explicitly |
+| API                                         | Result                                                   | Contract                                                                                                  |
+| ------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `path.is_absolute(value)`                   | `boolean`                                                | Inspect target path syntax                                                                                |
+| `path.basename(value)`, `.extension(value)` | `string`                                                 | Borrow textual components; extension includes the final dot, with dotfiles alone treated as extensionless |
+| `path.parent(value)`                        | `path.Path` or `null`                                    | Borrow the lexical parent where present                                                                   |
+| `path.clean_into(value, &!buffer)`          | `path.Path` or `path.Error`                              | Normalize redundant separators and lexical dot components in caller storage                               |
+| `path.join_into(parts, &!buffer)`           | `path.Path` or `path.Error`                              | Join a nonempty path list; reject absolute components after the first                                     |
+| `fs.canonicalize(value, allocator)`         | `path.Owned` or `fs.Error` or `memory.AllocationFailure` | Resolve filesystem identity and symlinks explicitly                                                       |
 
 Lexical normalization preserves root/volume identity and does not cross above an
 absolute root. It does not change case, expand `~`, interpolate shell variables,
@@ -88,20 +88,20 @@ borrowing the replaced contents. Input must not alias mutable output.
 
 ## Files and directories
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `fs.open(path, mode)` | `fs.File` or `fs.Error` | Open an owned file handle with explicit access/create policy |
-| `file.read(buffer)`, `.write(bytes)` | `io.Read`, `io.Write` | Transfer bytes with visible partial progress |
-| `file.seek(offset <int64>, origin)` | `uint64` or `fs.Error` | Seek a seekable handle; origin is Start, Current, or End |
-| `file.metadata()` | `fs.Metadata` or `fs.Error` | Query kind, byte length, permissions, and available timestamps |
-| `file.sync()` | `null` or `fs.Error` | Request durable data/metadata flush from the host |
-| `file.close()` | `null` or `fs.Error` | Consume the owner and report the close result |
-| `fs.read_all(path, allocator, limit <usize>)` | `collections.Vector<uint8>` or `fs.Error` or `memory.AllocationFailure` | Read under an explicit byte limit; never trust metadata as the final length |
-| `fs.write_all(path, bytes, mode)` | `null` or `fs.Error` | Open, write fully, and close; not an atomic replacement |
-| `fs.replace(path, bytes, options, allocator)` | `null` or `fs.Error` or `memory.AllocationFailure` | Stage in the destination directory, then replace according to the options |
-| `fs.entries(path, allocator)` | `fs.Directory` or `fs.Error` or `memory.AllocationFailure` | Open an owned, unsorted directory cursor |
-| `fs.create_directory(path)`, `.remove_file(path)`, `.remove_directory(path)` | `null` or `fs.Error` | Perform exactly the named operation; directory removal requires it to be empty |
-| `fs.rename(source, destination, replace <boolean>)` | `null` or `fs.Error` | Request a same-filesystem rename with explicit replacement permission |
+| API                                                                          | Result                                                                  | Contract                                                                       |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `fs.open(path, mode)`                                                        | `fs.File` or `fs.Error`                                                 | Open an owned file handle with explicit access/create policy                   |
+| `file.read(buffer)`, `.write(bytes)`                                         | `io.Read`, `io.Write`                                                   | Transfer bytes with visible partial progress                                   |
+| `file.seek(offset <int64>, origin)`                                          | `uint64` or `fs.Error`                                                  | Seek a seekable handle; origin is Start, Current, or End                       |
+| `file.metadata()`                                                            | `fs.Metadata` or `fs.Error`                                             | Query kind, byte length, permissions, and available timestamps                 |
+| `file.sync()`                                                                | `null` or `fs.Error`                                                    | Request durable data/metadata flush from the host                              |
+| `file.close()`                                                               | `null` or `fs.Error`                                                    | Consume the owner and report the close result                                  |
+| `fs.read_all(path, allocator, limit <usize>)`                                | `collections.Vector<uint8>` or `fs.Error` or `memory.AllocationFailure` | Read under an explicit byte limit; never trust metadata as the final length    |
+| `fs.write_all(path, bytes, mode)`                                            | `null` or `fs.Error`                                                    | Open, write fully, and close; not an atomic replacement                        |
+| `fs.replace(path, bytes, options, allocator)`                                | `null` or `fs.Error` or `memory.AllocationFailure`                      | Stage in the destination directory, then replace according to the options      |
+| `fs.entries(path, allocator)`                                                | `fs.Directory` or `fs.Error` or `memory.AllocationFailure`              | Open an owned, unsorted directory cursor                                       |
+| `fs.create_directory(path)`, `.remove_file(path)`, `.remove_directory(path)` | `null` or `fs.Error`                                                    | Perform exactly the named operation; directory removal requires it to be empty |
+| `fs.rename(source, destination, replace <boolean>)`                          | `null` or `fs.Error`                                                    | Request a same-filesystem rename with explicit replacement permission          |
 
 `fs.ReadOnly`, `ReadWrite`, `CreateNew`, and `ReplaceContents` are immutable mode
 values. ReadOnly and ReadWrite require an existing file. CreateNew uses exclusive
@@ -148,12 +148,12 @@ it does not reconstruct a shell command and split it again. Non-UTF-8 native
 arguments produce a text conversion error. `process.working_directory(allocator)`
 returns `path.Owned` or a corresponding process/allocation error.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `process.spawn(spec, allocator)` | `process.Child` or `process.Error` or `memory.AllocationFailure` | Start an executable with explicitly supplied arguments, directory, environment, and standard-channel modes |
-| `child.wait()` | `process.Status` or `process.Error` | Wait and reap once, acknowledging task cancellation during the wait |
-| `child.terminate()`, `.kill()` | `null` or `process.Error` | Request graceful termination or host-supported forced termination |
-| `process.run(spec, allocator, limits)` | `process.Output` or `process.RunFailure` or `memory.AllocationFailure` | Collect stdout/stderr concurrently with byte limits and a monotonic deadline |
+| API                                    | Result                                                                 | Contract                                                                                                   |
+| -------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `process.spawn(spec, allocator)`       | `process.Child` or `process.Error` or `memory.AllocationFailure`       | Start an executable with explicitly supplied arguments, directory, environment, and standard-channel modes |
+| `child.wait()`                         | `process.Status` or `process.Error`                                    | Wait and reap once, acknowledging task cancellation during the wait                                        |
+| `child.terminate()`, `.kill()`         | `null` or `process.Error`                                              | Request graceful termination or host-supported forced termination                                          |
+| `process.run(spec, allocator, limits)` | `process.Output` or `process.RunFailure` or `memory.AllocationFailure` | Collect stdout/stderr concurrently with byte limits and a monotonic deadline                               |
 
 A spawn spec has `executable <path.Path>`, `arguments <string[]>`,
 `directory <path.Path>`, `environment <&env.Environment>`, and `stdin`, `stdout`,
@@ -189,20 +189,20 @@ socket. `net.scoped_endpoint(address, port, scope <uint32>)` additionally select
 an IPv6 interface index and returns Endpoint or InvalidAddress; zero means no
 scope and a nonzero scope on IPv4 is invalid. Interface indices belong to the host.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `net.resolve(name, port, allocator, deadline)` | `net.Addresses` or `net.Error` or `memory.AllocationFailure` | Resolve a host with an explicit nullable monotonic deadline |
-| `net.connect(endpoint, deadline)` | `net.Stream` or `net.Error` | Connect a TCP stream, without implicit retries to another endpoint |
-| `net.listen(endpoint, backlog <uint32>)` | `net.Listener` or `net.Error` | Bind and listen; zero port lets the host select one |
-| `listener.local_endpoint()` | `net.Endpoint` | Read the actual bound address and port |
-| `listener.accept(deadline)` | `net.Stream` or `net.Error` | Wait for one accepted stream |
-| `stream.read(buffer)`, `.write(bytes)` | `io.Read`, `io.Write` | Byte-stream I/O; message boundaries are not preserved |
-| `stream.deadline(instant <time.Instant><null>)` | `null` | Set/clear the stream's read and write deadline |
-| `stream.shutdown_write()` | `null` or `net.Error` | Send an orderly write-side shutdown while retaining reads |
-| `net.datagram(endpoint)` | `net.Datagram` or `net.Error` | Bind a UDP endpoint |
-| `socket.receive(buffer, deadline)` | Datagram result or `net.Error` | Return sender, count, and explicit truncation status |
-| `socket.send(destination, bytes, deadline)` | `null` or `net.Error` | Submit one complete datagram or fail |
-| `stream.close()`, `listener.close()`, `socket.close()` | `null` or `net.Error` | Consume the owner and release its host resource |
+| API                                                    | Result                                                       | Contract                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `net.resolve(name, port, allocator, deadline)`         | `net.Addresses` or `net.Error` or `memory.AllocationFailure` | Resolve a host with an explicit nullable monotonic deadline        |
+| `net.connect(endpoint, deadline)`                      | `net.Stream` or `net.Error`                                  | Connect a TCP stream, without implicit retries to another endpoint |
+| `net.listen(endpoint, backlog <uint32>)`               | `net.Listener` or `net.Error`                                | Bind and listen; zero port lets the host select one                |
+| `listener.local_endpoint()`                            | `net.Endpoint`                                               | Read the actual bound address and port                             |
+| `listener.accept(deadline)`                            | `net.Stream` or `net.Error`                                  | Wait for one accepted stream                                       |
+| `stream.read(buffer)`, `.write(bytes)`                 | `io.Read`, `io.Write`                                        | Byte-stream I/O; message boundaries are not preserved              |
+| `stream.deadline(instant <time.Instant><null>)`        | `null`                                                       | Set/clear the stream's read and write deadline                     |
+| `stream.shutdown_write()`                              | `null` or `net.Error`                                        | Send an orderly write-side shutdown while retaining reads          |
+| `net.datagram(endpoint)`                               | `net.Datagram` or `net.Error`                                | Bind a UDP endpoint                                                |
+| `socket.receive(buffer, deadline)`                     | Datagram result or `net.Error`                               | Return sender, count, and explicit truncation status               |
+| `socket.send(destination, bytes, deadline)`            | `null` or `net.Error`                                        | Submit one complete datagram or fail                               |
+| `stream.close()`, `listener.close()`, `socket.close()` | `null` or `net.Error`                                        | Consume the owner and release its host resource                    |
 
 Network owners are move-only. Blocking waits are task cancellation points;
 network runtime support suspends the waiting task rather than occupying a worker

@@ -14,17 +14,17 @@ so they also compose through dispatch without adding operator overloading.
 
 ## Choose the right value
 
-| Type | Meaning | Representation and ownership |
-| --- | --- | --- |
-| `time.Duration` | A signed, fixed elapsed interval | Opaque value containing an `<int64>` nanosecond count |
-| `time.Instant` | A position on this runtime's monotonic clock | Opaque inline tick value and clock-domain identity |
-| `date.Date` | A civil day viewed in a selected calendar | Inline day number and calendar identity; no clock or time zone |
-| `date.Time` | A time of day, with nanoseconds | Validated inline value, no date or time zone |
-| `date.Civil` | A date paired with a time of day | Inline `Date` and `Time`; not yet an instant |
-| `date.Timestamp` | An absolute position on the Unix time scale | Signed seconds and a normalized nanosecond fraction |
-| `date.Zone` | UTC, a fixed offset, or versioned IANA rules | Immutable inline descriptor; rule data has program lifetime |
-| `date.DateTime` | A timestamp viewed in a zone and calendar | Inline `Timestamp`, `Zone`, and calendar identity |
-| `time.Timer`, `time.Ticker` | An owned source of timed wakeups | Move-only handles with explicit allocator-backed state |
+| Type                        | Meaning                                      | Representation and ownership                                   |
+| --------------------------- | -------------------------------------------- | -------------------------------------------------------------- |
+| `time.Duration`             | A signed, fixed elapsed interval             | Opaque value containing an `<int64>` nanosecond count          |
+| `time.Instant`              | A position on this runtime's monotonic clock | Opaque inline tick value and clock-domain identity             |
+| `date.Date`                 | A civil day viewed in a selected calendar    | Inline day number and calendar identity; no clock or time zone |
+| `date.Time`                 | A time of day, with nanoseconds              | Validated inline value, no date or time zone                   |
+| `date.Civil`                | A date paired with a time of day             | Inline `Date` and `Time`; not yet an instant                   |
+| `date.Timestamp`            | An absolute position on the Unix time scale  | Signed seconds and a normalized nanosecond fraction            |
+| `date.Zone`                 | UTC, a fixed offset, or versioned IANA rules | Immutable inline descriptor; rule data has program lifetime    |
+| `date.DateTime`             | A timestamp viewed in a zone and calendar    | Inline `Timestamp`, `Zone`, and calendar identity              |
+| `time.Timer`, `time.Ticker` | An owned source of timed wakeups             | Move-only handles with explicit allocator-backed state         |
 
 Duration, Instant, Date, Time, Civil, Timestamp, Zone, and DateTime satisfy
 `memory.Copy`, `tasks.Send`, and `tasks.Sync`. Timer and Ticker remain move-only. Their
@@ -37,17 +37,17 @@ these distinctions.
 
 These constants all have type `<time.Duration>`:
 
-| Value | Exact length |
-| --- | --- |
-| `time.Nanosecond` | 1 nanosecond |
-| `time.Microsecond` | 1,000 nanoseconds |
+| Value              | Exact length       |
+| ------------------ | ------------------ |
+| `time.Nanosecond`  | 1 nanosecond       |
+| `time.Microsecond` | 1,000 nanoseconds  |
 | `time.Millisecond` | 1,000 microseconds |
-| `time.Second` | 1,000 milliseconds |
-| `time.Minute` | 60 seconds |
-| `time.Hour` | 60 minutes |
-| `time.Day` | 24 hours |
-| `time.Week` | 7 fixed days |
-| `time.Zero` | Zero nanoseconds |
+| `time.Second`      | 1,000 milliseconds |
+| `time.Minute`      | 60 seconds         |
+| `time.Hour`        | 60 minutes         |
+| `time.Day`         | 24 hours           |
+| `time.Week`        | 7 fixed days       |
+| `time.Zero`        | Zero nanoseconds   |
 
 A duration is bounded by the signed 64-bit nanosecond range, approximately 292
 years in either direction. `Day` and `Week` are useful for timeouts and elapsed
@@ -69,20 +69,20 @@ member has an equivalent module function: `time.scale(time.Hour, 2)` and
 `time.Hour.(time.scale, 2)` call the same operation. Aliasing those functions or
 unit values preserves their behavior.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `time.ns(count <int64>)` | `Duration` | Construct an exact signed nanosecond interval |
-| `time.ms(count <uint64>)` | `Duration` | Construct nonnegative milliseconds; checked multiplication |
-| `duration.nanoseconds()` | `int64` | Extract the exact stored count |
-| `duration.add(other)`, `.sub(other)` | `Duration` | Checked addition/subtraction |
-| `duration.scale(factor <int64>)` | `Duration` | Checked integer multiplication |
-| `duration.divide(divisor <int64>)` | `Duration` | Integer division, truncating toward zero |
-| `duration.negate()`, `.abs()` | `Duration` | Checked sign change; the minimum count cannot be negated |
-| `duration.compare(other)` | `int32` | `-1`, `0`, or `1` in elapsed-length order |
-| `duration.whole(unit)` | `int64` | Count whole positive units, truncating toward zero |
-| `duration.split(unit)` | Record `{ whole <int64>; remainder <Duration> }` | Exact quotient and same-sign remainder for a positive unit |
-| `duration.try_add(other)`, `.try_sub(other)`, `.try_scale(factor)` | `Duration` or `time.RangeError` | Recoverable overflow, with operands unchanged |
-| `time.parse_duration(text)` | `Duration` or `time.ParseError` | Parse the exact duration grammar below |
+| API                                                                | Result                                           | Contract                                                   |
+| ------------------------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------- |
+| `time.ns(count <int64>)`                                           | `Duration`                                       | Construct an exact signed nanosecond interval              |
+| `time.ms(count <uint64>)`                                          | `Duration`                                       | Construct nonnegative milliseconds; checked multiplication |
+| `duration.nanoseconds()`                                           | `int64`                                          | Extract the exact stored count                             |
+| `duration.add(other)`, `.sub(other)`                               | `Duration`                                       | Checked addition/subtraction                               |
+| `duration.scale(factor <int64>)`                                   | `Duration`                                       | Checked integer multiplication                             |
+| `duration.divide(divisor <int64>)`                                 | `Duration`                                       | Integer division, truncating toward zero                   |
+| `duration.negate()`, `.abs()`                                      | `Duration`                                       | Checked sign change; the minimum count cannot be negated   |
+| `duration.compare(other)`                                          | `int32`                                          | `-1`, `0`, or `1` in elapsed-length order                  |
+| `duration.whole(unit)`                                             | `int64`                                          | Count whole positive units, truncating toward zero         |
+| `duration.split(unit)`                                             | Record `{ whole <int64>; remainder <Duration> }` | Exact quotient and same-sign remainder for a positive unit |
+| `duration.try_add(other)`, `.try_sub(other)`, `.try_scale(factor)` | `Duration` or `time.RangeError`                  | Recoverable overflow, with operands unchanged              |
+| `time.parse_duration(text)`                                        | `Duration` or `time.ParseError`                  | Parse the exact duration grammar below                     |
 
 Member equivalents pass the duration as the first argument; for example,
 `time.add(duration, other)`. Arithmetic never wraps or silently uses floating
@@ -108,18 +108,18 @@ into a caller-owned `<uint8[N]>` list and returns a borrowed `<string>` or
 
 ## Clocks, deadlines, and waits
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `time.now()` | `Instant` | Read the monotonic clock |
-| `time.after(duration)` | `Instant` | Sample once and add the duration; this creates a deadline, not a timer |
-| `instant.add(duration)` | `Instant` | Shift a monotonic instant with checked range |
-| `instant.since(earlier)` | `Duration` | Signed monotonic difference; checked duration range |
-| `instant.compare(other)` | `int32` | `-1`, `0`, or `1` within the same clock domain |
-| `time.since(start)` | `Duration` | `time.now().since(start)` |
-| `time.until(deadline)` | `Duration` | `deadline.since(time.now())`; negative after expiry |
-| `time.sleep(duration)` | `null` on continuation | Wait for a relative interval |
-| `time.sleep_until(instant)` | `null` on continuation | Wait against an existing monotonic deadline |
-| `time.clock_info()` | Record | `resolution <Duration>` and `includes_suspend <boolean>` |
+| API                         | Result                 | Contract                                                               |
+| --------------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `time.now()`                | `Instant`              | Read the monotonic clock                                               |
+| `time.after(duration)`      | `Instant`              | Sample once and add the duration; this creates a deadline, not a timer |
+| `instant.add(duration)`     | `Instant`              | Shift a monotonic instant with checked range                           |
+| `instant.since(earlier)`    | `Duration`             | Signed monotonic difference; checked duration range                    |
+| `instant.compare(other)`    | `int32`                | `-1`, `0`, or `1` within the same clock domain                         |
+| `time.since(start)`         | `Duration`             | `time.now().since(start)`                                              |
+| `time.until(deadline)`      | `Duration`             | `deadline.since(time.now())`; negative after expiry                    |
+| `time.sleep(duration)`      | `null` on continuation | Wait for a relative interval                                           |
+| `time.sleep_until(instant)` | `null` on continuation | Wait against an existing monotonic deadline                            |
+| `time.clock_info()`         | Record                 | `resolution <Duration>` and `includes_suspend <boolean>`               |
 
 The monotonic clock is nondecreasing and unaffected by setting the civil clock.
 Its epoch has no public calendar meaning. A host providing `time` must initialize
@@ -149,17 +149,17 @@ inheritance, cancellation, and mandatory joining remain governed by
 
 ## Owned timers and tickers
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `time.timer(duration, allocator)` | `Timer` or `memory.AllocationFailure` or `time.RangeError` | Allocate and arm one relative wakeup |
-| `timer.wait()` | `Instant` or `time.Stopped` | Wait for and consume the armed event; return its scheduled deadline |
-| `timer.reset(duration)` | `null` or `time.RangeError` | Replace any pending event with a fresh relative deadline |
-| `timer.stop()` | `null` | Disarm and discard a pending event; idempotent |
-| `time.ticker(period, allocator)` | `Ticker` or `memory.AllocationFailure` or `time.RangeError` | Allocate periodic state; period must be positive |
-| `ticker.next()` | `Tick` or `time.Stopped` | Wait for the next periodic observation |
-| `ticker.reset(period)` | `null` or `time.RangeError` | Discard pending ticks; anchor a new positive period at now |
-| `ticker.stop()` | `null` | Disarm and discard pending ticks; idempotent |
-| `timer.close()`, `ticker.close()` | `null` | Consume the owner and release state |
+| API                               | Result                                                      | Contract                                                            |
+| --------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| `time.timer(duration, allocator)` | `Timer` or `memory.AllocationFailure` or `time.RangeError`  | Allocate and arm one relative wakeup                                |
+| `timer.wait()`                    | `Instant` or `time.Stopped`                                 | Wait for and consume the armed event; return its scheduled deadline |
+| `timer.reset(duration)`           | `null` or `time.RangeError`                                 | Replace any pending event with a fresh relative deadline            |
+| `timer.stop()`                    | `null`                                                      | Disarm and discard a pending event; idempotent                      |
+| `time.ticker(period, allocator)`  | `Ticker` or `memory.AllocationFailure` or `time.RangeError` | Allocate periodic state; period must be positive                    |
+| `ticker.next()`                   | `Tick` or `time.Stopped`                                    | Wait for the next periodic observation                              |
+| `ticker.reset(period)`            | `null` or `time.RangeError`                                 | Discard pending ticks; anchor a new positive period at now          |
+| `ticker.stop()`                   | `null`                                                      | Disarm and discard pending ticks; idempotent                        |
+| `timer.close()`, `ticker.close()` | `null`                                                      | Consume the owner and release state                                 |
 
 Operations require exclusive access to their owner. Handles may move between tasks
 but cannot be used concurrently through a shared borrow; a child waiting on a
@@ -196,21 +196,21 @@ with `.number()` results 1–7. `date.month(number <uint8>)` returns a `Month` o
 month codes. Use `date.month_code` for the more general calendar codes. These are
 namespaced values, not numeric aliases or keywords.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `date.make_date(year <uint16>, month <Month>, day <uint8>)` | `Date` or `date.InvalidDate` | Validate the complete calendar date |
-| `date.make_time(hour <uint8>, minute <uint8>, second <uint8>, nanosecond <uint32>)` | `Time` or `date.InvalidTime` | Validate the time of day |
-| `date.civil(day <Date>, clock <Time>)` | `Civil` | Pair values without selecting a zone |
-| `day.year()`, `.month()`, `.day()` | `int32`, `Month`, `uint8` | Read components in the selected calendar |
-| `day.weekday()`, `.day_of_year()` | `Weekday`, `uint16` | Read weekday and 1-based day of year |
-| `day.iso_week()` | Record `{ year <uint16>; week <uint8> }` | ISO week-year and week number; weeks start Monday, week one contains January 4 |
-| `day.days_in_month()` | `uint8` | Read this month's valid day count |
-| `day.add_days(count <int32>)`, `.add_weeks(count <int32>)` | `Date` or `date.RangeError` | Advance through calendar dates; one week is seven calendar days |
-| `day.add_months(count <int32>, policy)`, `.add_years(count <int32>, policy)` | `Date` or `date.InvalidDate` or `date.RangeError` | Calendar arithmetic with an explicit end-of-month policy |
-| `day.days_since(earlier <Date>)` | `int32` | Signed calendar-day difference |
-| `clock.hour()`, `.minute()`, `.second()`, `.nanosecond()` | `uint8`, `uint8`, `uint8`, `uint32` | Read time-of-day components |
-| `civil.date()`, `.time()` | `Date`, `Time` | Read the paired components |
-| `value.compare(other)` | `int32` | Same-type `Date`, `Time`, or `Civil` comparison; `-1`, `0`, or `1` |
+| API                                                                                 | Result                                            | Contract                                                                       |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `date.make_date(year <uint16>, month <Month>, day <uint8>)`                         | `Date` or `date.InvalidDate`                      | Validate the complete calendar date                                            |
+| `date.make_time(hour <uint8>, minute <uint8>, second <uint8>, nanosecond <uint32>)` | `Time` or `date.InvalidTime`                      | Validate the time of day                                                       |
+| `date.civil(day <Date>, clock <Time>)`                                              | `Civil`                                           | Pair values without selecting a zone                                           |
+| `day.year()`, `.month()`, `.day()`                                                  | `int32`, `Month`, `uint8`                         | Read components in the selected calendar                                       |
+| `day.weekday()`, `.day_of_year()`                                                   | `Weekday`, `uint16`                               | Read weekday and 1-based day of year                                           |
+| `day.iso_week()`                                                                    | Record `{ year <uint16>; week <uint8> }`          | ISO week-year and week number; weeks start Monday, week one contains January 4 |
+| `day.days_in_month()`                                                               | `uint8`                                           | Read this month's valid day count                                              |
+| `day.add_days(count <int32>)`, `.add_weeks(count <int32>)`                          | `Date` or `date.RangeError`                       | Advance through calendar dates; one week is seven calendar days                |
+| `day.add_months(count <int32>, policy)`, `.add_years(count <int32>, policy)`        | `Date` or `date.InvalidDate` or `date.RangeError` | Calendar arithmetic with an explicit end-of-month policy                       |
+| `day.days_since(earlier <Date>)`                                                    | `int32`                                           | Signed calendar-day difference                                                 |
+| `clock.hour()`, `.minute()`, `.second()`, `.nanosecond()`                           | `uint8`, `uint8`, `uint8`, `uint32`               | Read time-of-day components                                                    |
+| `civil.date()`, `.time()`                                                           | `Date`, `Time`                                    | Read the paired components                                                     |
+| `value.compare(other)`                                                              | `int32`                                           | Same-type `Date`, `Time`, or `Civil` comparison; `-1`, `0`, or `1`             |
 
 Month/year operations accept the ordinary `<date.MonthPolicy>` values
 `date.Reject`, `date.Clamp`, and `date.Carry`. Reject reports an invalid target
@@ -229,21 +229,21 @@ seconds. Its range corresponds to UTC years 1–9999. The nanosecond fraction is
 always nonnegative and less than one second: half a second before the epoch is
 `seconds = -1`, `nanoseconds = 500_000_000`.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `date.now()` | `Timestamp` or `date.ClockError` or `date.RangeError` | Read the civil clock, independent of the monotonic clock |
-| `date.unix(seconds <int64>, nanoseconds <uint32>)` | `Timestamp` or `date.RangeError` | Validate seconds and an already normalized fraction |
-| `stamp.unix_seconds()`, `.nanosecond()` | `int64`, `uint32` | Read normalized epoch components |
-| `stamp.add(duration)` | `Timestamp` or `date.RangeError` | Advance by a fixed elapsed interval on the Unix scale |
-| `stamp.since(earlier)` | `Duration` or `time.RangeError` | Signed difference, possibly too large for a duration |
-| `stamp.compare(other)` | `int32` | Compare absolute timestamps |
-| `date.zone(name <string>)` | `Zone` or `date.UnknownZone` | Find an exact IANA name in the bundled rule database |
-| `date.fixed_zone(offset_seconds <int32>)` | `Zone` or `date.InvalidOffset` | Validate an offset strictly between -24 and +24 hours |
-| `date.in_zone(stamp, zone)` | `DateTime` or `date.RangeError` | View the same timestamp in a zone with a Gregorian calendar |
-| `value.in_zone(zone)` | `DateTime` or `date.RangeError` | Change a DateTime's view without changing its timestamp |
-| `value.timestamp()`, `.zone()` | `Timestamp`, `Zone` | Read a DateTime's identity and view |
-| `value.date()`, `.time()`, `.offset_seconds()` | `Date`, `Time`, `int32` | Read resolved local components and UTC offset |
-| `value.same_instant(other)` | `boolean` | Compare timestamps while ignoring the selected zones |
+| API                                                | Result                                                | Contract                                                    |
+| -------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------- |
+| `date.now()`                                       | `Timestamp` or `date.ClockError` or `date.RangeError` | Read the civil clock, independent of the monotonic clock    |
+| `date.unix(seconds <int64>, nanoseconds <uint32>)` | `Timestamp` or `date.RangeError`                      | Validate seconds and an already normalized fraction         |
+| `stamp.unix_seconds()`, `.nanosecond()`            | `int64`, `uint32`                                     | Read normalized epoch components                            |
+| `stamp.add(duration)`                              | `Timestamp` or `date.RangeError`                      | Advance by a fixed elapsed interval on the Unix scale       |
+| `stamp.since(earlier)`                             | `Duration` or `time.RangeError`                       | Signed difference, possibly too large for a duration        |
+| `stamp.compare(other)`                             | `int32`                                               | Compare absolute timestamps                                 |
+| `date.zone(name <string>)`                         | `Zone` or `date.UnknownZone`                          | Find an exact IANA name in the bundled rule database        |
+| `date.fixed_zone(offset_seconds <int32>)`          | `Zone` or `date.InvalidOffset`                        | Validate an offset strictly between -24 and +24 hours       |
+| `date.in_zone(stamp, zone)`                        | `DateTime` or `date.RangeError`                       | View the same timestamp in a zone with a Gregorian calendar |
+| `value.in_zone(zone)`                              | `DateTime` or `date.RangeError`                       | Change a DateTime's view without changing its timestamp     |
+| `value.timestamp()`, `.zone()`                     | `Timestamp`, `Zone`                                   | Read a DateTime's identity and view                         |
+| `value.date()`, `.time()`, `.offset_seconds()`     | `Date`, `Time`, `int32`                               | Read resolved local components and UTC offset               |
+| `value.same_instant(other)`                        | `boolean`                                             | Compare timestamps while ignoring the selected zones        |
 
 `date.UTC` is a `Zone` value. Named zones use the versioned
 [IANA Time Zone Database](https://www.iana.org/time-zones), which records changing
@@ -316,17 +316,17 @@ to parse Chinese, Hebrew, or another calendar's fields explicitly.
 
 Layouts are ordinary `<string>` values with these directives:
 
-| Directive | Meaning |
-| --- | --- |
-| `%Y`, `%m`, `%d` | Four-digit year, two-digit month, two-digit day |
-| `%H`, `%M`, `%S` | Two-digit 24-hour hour, minute, second |
-| `%N` | Exactly nine nanosecond digits, without a decimal point |
-| `%f` | Optional decimal point plus 1–9 fraction digits; formatting omits zero fractions and trims trailing zeros |
-| `%:z` | `Z` or a signed `HH:MM` UTC offset; formatting uses `Z` for zero |
-| `%z` | Signed `HHMM` offset |
-| `%a`, `%A` | Short or full English weekday name |
-| `%b`, `%B` | Short or full English month name |
-| `%%` | Literal percent sign |
+| Directive        | Meaning                                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| `%Y`, `%m`, `%d` | Four-digit year, two-digit month, two-digit day                                                           |
+| `%H`, `%M`, `%S` | Two-digit 24-hour hour, minute, second                                                                    |
+| `%N`             | Exactly nine nanosecond digits, without a decimal point                                                   |
+| `%f`             | Optional decimal point plus 1–9 fraction digits; formatting omits zero fractions and trims trailing zeros |
+| `%:z`            | `Z` or a signed `HH:MM` UTC offset; formatting uses `Z` for zero                                          |
+| `%z`             | Signed `HHMM` offset                                                                                      |
+| `%a`, `%A`       | Short or full English weekday name                                                                        |
+| `%b`, `%B`       | Short or full English month name                                                                          |
+| `%%`             | Literal percent sign                                                                                      |
 
 `date.DateOnly` is `"%Y-%m-%d"`; `date.TimeOnly` is `"%H:%M:%S%f"`;
 `date.ISODateTime` is `"%Y-%m-%dT%H:%M:%S%f"`;

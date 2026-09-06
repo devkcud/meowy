@@ -31,14 +31,14 @@ calendars may support a subset. `calendar.range()` returns inclusive `first` and
 `last` Gregorian Dates. Invalid fields and unsupported ranges are reported rather
 than extrapolated silently.
 
-| Value | Stable ID | Calendar contract |
-| --- | --- | --- |
-| `calendars.Gregorian` | `"gregorian"` | Proleptic Gregorian; CE years, no regional reform gap |
-| `calendars.Julian` | `"julian"` | Proleptic Julian; CE years and a leap day every fourth year |
-| `calendars.Hebrew` | `"hebrew"` | Fixed arithmetic Hebrew calendar; Anno Mundi years and explicit leap months |
-| `calendars.Chinese` | `"chinese"` | Versioned Chinese lunisolar conversion data, with related Gregorian years and leap-month identity |
-| `calendars.IslamicCivil` | `"islamic-civil"` | Tabular civil Hijri calendar, Friday epoch and the specified 30-year leap cycle |
-| `calendars.Buddhist` | `"buddhist"` | Proleptic Gregorian month/day rules with Buddhist Era year = CE year + 543 |
+| Value                    | Stable ID         | Calendar contract                                                                                 |
+| ------------------------ | ----------------- | ------------------------------------------------------------------------------------------------- |
+| `calendars.Gregorian`    | `"gregorian"`     | Proleptic Gregorian; CE years, no regional reform gap                                             |
+| `calendars.Julian`       | `"julian"`        | Proleptic Julian; CE years and a leap day every fourth year                                       |
+| `calendars.Hebrew`       | `"hebrew"`        | Fixed arithmetic Hebrew calendar; Anno Mundi years and explicit leap months                       |
+| `calendars.Chinese`      | `"chinese"`       | Versioned Chinese lunisolar conversion data, with related Gregorian years and leap-month identity |
+| `calendars.IslamicCivil` | `"islamic-civil"` | Tabular civil Hijri calendar, Friday epoch and the specified 30-year leap cycle                   |
+| `calendars.Buddhist`     | `"buddhist"`      | Proleptic Gregorian month/day rules with Buddhist Era year = CE year + 543                        |
 
 `calendars.lookup(id)` returns `<calendars.Calendar><calendars.UnknownCalendar>`.
 `calendar.id()` and `.version()` return static strings. The identifiers select
@@ -75,17 +75,17 @@ Elul as `M12`; Adar I is `M05L`, and Adar/Adar II is `M06`. Neither scheme renam
 a leap month to the next ordinary month. This separation of code, leap marker,
 and ordinal follows the model exposed by [ICU4X dates](https://icu4x.unicode.org/2_1/tsdoc/classes/Date.html).
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `date.from_calendar(calendar, year <int32>, month <date.Month>, day <uint8>)` | `date.Date` or `date.InvalidDate` or `date.RangeError` | Validate fields in the selected calendar |
-| `day.calendar()` | `Calendar` | Read the day’s calendar identity |
-| `day.year()`, `.month()`, `.day()` | `int32`, `date.Month`, `uint8` | Read calendar-specific fields |
-| `day.month_ordinal()` | `uint8` | One-based position in the calendar year |
-| `day.months_in_year()`, `.days_in_year()` | `uint8`, `uint16` | Read this year's actual sizes |
-| `calendars.months(calendar, year <int32>)` | `date.Month[13]` or `date.RangeError` | Month codes in actual chronological order |
-| `day.in_calendar(calendar)` | `date.Date` or `date.RangeError` | Preserve the day, change its calendar view |
-| `civil.in_calendar(calendar)` | `date.Civil` or `date.RangeError` | Convert the date and keep its time of day |
-| `value.in_calendar(calendar)` on a DateTime | `date.DateTime` or `date.RangeError` | Preserve timestamp and zone, change the local calendar view |
+| API                                                                           | Result                                                 | Contract                                                    |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| `date.from_calendar(calendar, year <int32>, month <date.Month>, day <uint8>)` | `date.Date` or `date.InvalidDate` or `date.RangeError` | Validate fields in the selected calendar                    |
+| `day.calendar()`                                                              | `Calendar`                                             | Read the day’s calendar identity                            |
+| `day.year()`, `.month()`, `.day()`                                            | `int32`, `date.Month`, `uint8`                         | Read calendar-specific fields                               |
+| `day.month_ordinal()`                                                         | `uint8`                                                | One-based position in the calendar year                     |
+| `day.months_in_year()`, `.days_in_year()`                                     | `uint8`, `uint16`                                      | Read this year's actual sizes                               |
+| `calendars.months(calendar, year <int32>)`                                    | `date.Month[13]` or `date.RangeError`                  | Month codes in actual chronological order                   |
+| `day.in_calendar(calendar)`                                                   | `date.Date` or `date.RangeError`                       | Preserve the day, change its calendar view                  |
+| `civil.in_calendar(calendar)`                                                 | `date.Civil` or `date.RangeError`                      | Convert the date and keep its time of day                   |
+| `value.in_calendar(calendar)` on a DateTime                                   | `date.DateTime` or `date.RangeError`                   | Preserve timestamp and zone, change the local calendar view |
 
 `date.make_date(year, month, day)` remains a convenient Gregorian constructor.
 All calendar values, dates, and month codes are immutable, copyable, and require

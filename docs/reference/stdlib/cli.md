@@ -77,14 +77,14 @@ also have `long` and/or `short`: long names use ASCII letters, digits, and hyphe
 start with a letter, and contain no leading `--`; a short name is one ASCII letter.
 At least one spelling is required. Result-field names need not match flag names.
 
-| Constructor | Result field | Additional configuration |
-| --- | --- | --- |
-| `cli.flag(spec)` | `boolean` | `default` defaults to `false` |
-| `cli.count(spec)` | `uint32` | Starts at zero and counts occurrences, including short clusters |
-| `cli.option<T>(spec)` | `T` or nullable `T` | A typed `default`, or `required : true`; without either, the result is nullable |
-| `cli.many<T, N>(spec)` | `T[N]` | Repeated option, in occurrence order; `minimum` defaults to zero |
-| `cli.argument<T>(spec)` | `T` or nullable `T` | Required by default; `required : false` makes it nullable |
-| `cli.rest<T, N>(spec)` | `T[N]` | Final positional descriptor only; `minimum` defaults to zero |
+| Constructor             | Result field        | Additional configuration                                                        |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `cli.flag(spec)`        | `boolean`           | `default` defaults to `false`                                                   |
+| `cli.count(spec)`       | `uint32`            | Starts at zero and counts occurrences, including short clusters                 |
+| `cli.option<T>(spec)`   | `T` or nullable `T` | A typed `default`, or `required : true`; without either, the result is nullable |
+| `cli.many<T, N>(spec)`  | `T[N]`              | Repeated option, in occurrence order; `minimum` defaults to zero                |
+| `cli.argument<T>(spec)` | `T` or nullable `T` | Required by default; `required : false` makes it nullable                       |
+| `cli.rest<T, N>(spec)`  | `T[N]`              | Final positional descriptor only; `minimum` defaults to zero                    |
 
 `option` cannot combine `required : true` and a default. A default must already
 have type `T` and pass every declared check. For many/rest, `minimum` is a
@@ -195,11 +195,11 @@ error encountered before that token still wins. After `--`, help-looking tokens
 are data. Help carries the exact selected command path, so it can be rendered
 without reparsing or guessing which subcommand was intended.
 
-| API | Result | Contract |
-| --- | --- | --- |
+| API                                          | Result                                    | Contract                                                                        |
+| -------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
 | `cli.write_help(help, write, width <usize>)` | `null` or `io.Error` or `cli.RenderError` | Stream usage, descriptions, options, defaults, positionals, and child summaries |
-| `cli.write_version(version, write)` | `null` or `io.Error` | Stream the declared application version and a newline |
-| `cli.write_error(error, write)` | `null` or `io.Error` | Stream the offending token, its 1-based argv position, and a help hint |
+| `cli.write_version(version, write)`          | `null` or `io.Error`                      | Stream the declared application version and a newline                           |
+| `cli.write_error(error, write)`              | `null` or `io.Error`                      | Stream the offending token, its 1-based argv position, and a help hint          |
 
 `write` is an explicitly supplied callable with the [I/O write contract](io-and-system.md#readers-and-writers),
 such as a standard-output handle's `write` member. Help uses declared order,

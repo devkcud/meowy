@@ -21,6 +21,11 @@ retains the input owner. An allocator handle retained by a constructor must
 outlive the constructed owner. `memory.Copy` is a structural capability, not an
 opt-in promise that can override ownership restrictions.
 
+For error-specific erasure, [errors.box](errors.md#choose-inline-storage-or-explicit-erasure)
+preserves an error's nominal tag and returns either an owned descriptor in a
+success record or `errors.BoxFailure<E>` retaining the original error. Common
+metadata inspection and concrete error construction need no such allocation.
+
 The [memory reference](../memory.md) defines ownership, borrowing, raw pointer
 preconditions, string lifetimes, and deterministic cleanup. These APIs do not
 relax those rules.

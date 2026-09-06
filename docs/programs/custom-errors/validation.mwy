@@ -1,0 +1,46 @@
+errors : @"errors"
+strings : @"strings"
+
+-> <AgeRequirement> : <{
+    age <uint8>
+    minimum <uint8>
+}>
+
+-> <InvalidInput> : <{
+    text <string>
+    cause <strings.ParseError>
+}>
+
+too_young : errors.define<AgeRequirement>({
+    -> code : "signup.too_young"
+    -> message : "Age must be at least 18"
+})
+
+invalid_age : errors.define<InvalidInput>({
+    -> code : "signup.invalid_age"
+    -> message : "Age must be a decimal integer from 0 to 255"
+})
+
+-> <TooYoung> : <too_young.Error>
+-> <InvalidAge> : <invalid_age.Error>
+
+-> read_age <uint8><TooYoung><InvalidAge> : (text <string>) 'result {
+    age : strings.to_uint8(text)
+    | age <strings.ParseError> | {
+        'result -> invalid_age.make({
+            -> text : text
+            -> cause : age
+        })
+        'result.leave()
+    }
+
+    | age < 18 | {
+        'result -> too_young.make({
+            -> age : age
+            -> minimum : 18
+        })
+        'result.leave()
+    }
+
+    -> age
+}

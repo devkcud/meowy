@@ -18,8 +18,8 @@ contains the full three-error example used below.
 | Learn the available options         | `meowy help` or `meowy help err reproduce`   | Read help for one command without running it                         |
 | Identify a toolchain                | `meowy --version`                            | Print the version and build identity                                 |
 | Check source while editing          | `meowy check main.mwy`                       | Check the module graph without linking or executing the application  |
-| Connect an editor                  | `meowy lsp`                                  | Serve current buffers with project configuration from `mod.mwy`       |
-| Diagnose editor setup              | `meowy lsp doctor main.mwy`                   | Check toolchain, manifest, and local analysis inputs                   |
+| Connect an editor                   | `meowy lsp`                                  | Serve current buffers with project configuration from `mod.mwy`      |
+| Diagnose editor setup               | `meowy lsp doctor main.mwy`                  | Check toolchain, manifest, and local analysis inputs                 |
 | Check project coding policy         | `meowy style check`                          | Inspect layout, preferred expression forms, and code quality         |
 | Review safe style changes           | `meowy style fix --diff`                     | Preview proven rewrites and layout without changing source           |
 | Apply only source layout            | `meowy fmt`                                  | Use gatostyle's layout settings without semantic rewrites            |
@@ -636,7 +636,7 @@ The `lsp config` and `lsp doctor` inspection commands accept them for human outp
 | Invalid style/fmt input, policy, incomplete analysis, failed proof, or failed write     | `2`                                                    |
 | LSP configuration output or ready/disabled doctor result                                | `0`                                                    |
 | LSP doctor finds unavailable inputs, mismatched toolchain, or degraded operation        | `1`                                                    |
-| Invalid LSP configuration or command usage                                             | `2`                                                    |
+| Invalid LSP configuration or command usage                                              | `2`                                                    |
 
 A style/fmt command otherwise succeeds with `0`, including an empty selection.
 A serving LSP process uses its [protocol shutdown statuses](../reference/lsp.md#wire-lifecycle-and-compatibility);

@@ -33,6 +33,7 @@ those rules by building small programs, and the design notes explain their inten
 | Does `->` return? Does `{ ... }` create a function?   | [Values and blocks](reference/values-and-blocks.md)               |
 | Can a mutable binding change type?                    | [Types](reference/types.md)                                       |
 | How do errors and nullable values narrow?             | [Types](reference/types.md#unions-and-narrowing)                  |
+| How do I create and read my own errors?               | [Errors and custom failures](reference/stdlib/errors.md)          |
 | Where does memory come from, and when is it released? | [Memory](reference/memory.md)                                     |
 | Is `T[4]` an array or a capacity limit?               | [Collections](reference/collections.md)                           |
 | Who joins a task? What does cancellation guarantee?   | [Tasks and channels](reference/tasks-and-channels.md)             |
@@ -55,8 +56,9 @@ those rules by building small programs, and the design notes explain their inten
 
 The [worked projects](programs/README.md) each include a local manifest, entry,
 helper files, and instructions. Start with validation, composition, and binary
-headers; continue with Unicode, JSON, maps, randomness, concurrency, timers, and
-complete CLI applications. File tools include small fixtures and explicit
+headers, then define and inspect [custom errors](programs/custom-errors/README.md).
+Continue with Unicode, JSON, maps, randomness, concurrency, timers, and complete
+CLI applications. File tools include small fixtures and explicit
 instructions for their I/O effects.
 
 [Design notes](design.md) record the language's main decisions.

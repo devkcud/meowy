@@ -1,0 +1,39 @@
+debug : @"debug"
+errors : @"errors"
+strings : @"strings"
+validation : @"./validation.mwy"
+
+describe <null> : (failure <validation.TooYoung><validation.InvalidAge>) 'result {
+    debug.print("{errors.code(&failure)}: {errors.message(&failure)}")
+
+    | failure <validation.TooYoung> | {
+        details : failure.payload()
+        debug.print("Age {details.age}; minimum {details.minimum}")
+        'result.leave()
+    }
+
+    # Move the payload out of the remaining InvalidAge variant. #
+    details : failure.take_payload()
+    debug.print("Could not parse: {details.text}")
+    cause : &details.cause
+    | *cause <strings.ParseError> | {
+        debug.print("Cause: strings.ParseError (the decimal parser rejected the input)")
+    }
+}
+
+show <null> : (text <string>) 'result {
+    debug.print("Input: {text}")
+    age : validation.read_age(text)
+
+    # This predicate retains the concrete TooYoung or InvalidAge value. #
+    | age <error> | {
+        describe(age)
+        'result.leave()
+    }
+
+    debug.print("Accepted age: {age}")
+}
+
+show("24")
+show("16")
+show("twenty")

@@ -20,9 +20,11 @@
 
 `Full<T, N>` exposes `list` and `value`; `Missing<T, N>` exposes `list` and the
 failed `index`. Their retained payloads use inline generic error storage and do
-not allocate. Erasing an error with a non-inline payload to the common `<error>`
+not allocate. Erasing a non-descriptor-compatible error to the common `<error>`
 representation requires explicit boxing; a predicate `<error>` still recognizes
 concrete error types without performing that erasure.
+The [errors module](errors.md) defines common metadata inspection and the
+explicit boxing and extraction operations for that boundary.
 
 Vector methods that can grow storage report allocation failure. The collection
 chapter defines indexing and alias semantics; maps have runtime key lookup and
@@ -34,13 +36,13 @@ A Vector owns contiguous initialized elements and retains its explicit allocator
 Its capacity can grow; its length changes only after an operation succeeds.
 Allocation-size overflow is an AllocationFailure with a size-overflow cause.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `vector.capacity()` | `usize` | Allocated element slots |
-| `vector.reserve(capacity <usize>)` | `null` or `memory.AllocationFailure` | Ensure at least that total capacity; leave storage unchanged on failure |
-| `vector.push(value <T>)` | `null` or `collections.PushFailure<T>` | Append, growing when necessary; failure retains `value` and the vector is unchanged |
-| `vector.pop()` | `collections.Item<T>` or `iter.End` | Remove and transfer the last element, or report an empty vector |
-| `vector.clear()` | `null` | Release all elements, retaining allocated capacity |
+| API                                | Result                                 | Contract                                                                            |
+| ---------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `vector.capacity()`                | `usize`                                | Allocated element slots                                                             |
+| `vector.reserve(capacity <usize>)` | `null` or `memory.AllocationFailure`   | Ensure at least that total capacity; leave storage unchanged on failure             |
+| `vector.push(value <T>)`           | `null` or `collections.PushFailure<T>` | Append, growing when necessary; failure retains `value` and the vector is unchanged |
+| `vector.pop()`                     | `collections.Item<T>` or `iter.End`    | Remove and transfer the last element, or report an empty vector                     |
+| `vector.clear()`                   | `null`                                 | Release all elements, retaining allocated capacity                                  |
 
 `Item<T>` has a `value <T>` field, so a null element remains distinct from an empty
 result. PushFailure contains the rejected value and its allocation-failure cause.
@@ -66,16 +68,16 @@ borrowed string keys. The string hasher's versioned algorithm is for table looku
 use `hash` and a byte encoding when a persistent digest is required. A map does
 not extend the lifetime of borrowed key data.
 
-| API | Result | Contract |
-| --- | --- | --- |
-| `map.size()` | `usize` | Stored entry count |
-| `map.get(key <&K>)` | `<&V><null>` | Borrow a value if the key is present |
-| `map.contains(key <&K>)` | `boolean` | Test presence without borrowing the value |
-| `map.insert(key <K>, value <V>)` | `null` or `collections.Duplicate<K, V>` or `collections.InsertFailure<K, V>` | Transfer a new entry; reject an existing equal key |
-| `map.remove(key <&K>)` | `collections.Entry<K, V>` or `iter.End` | Remove and transfer both stored key and value |
-| `map.reserve(capacity <usize>)` | `null` or `memory.AllocationFailure` | Ensure total entry capacity without changing entries on failure |
-| `map.entries()` | Concrete borrowed cursor | Yield entries in unspecified order without allocating |
-| `map.clear()` | `null` | Release keys/values and retain allocated capacity |
+| API                              | Result                                                                       | Contract                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `map.size()`                     | `usize`                                                                      | Stored entry count                                              |
+| `map.get(key <&K>)`              | `<&V><null>`                                                                 | Borrow a value if the key is present                            |
+| `map.contains(key <&K>)`         | `boolean`                                                                    | Test presence without borrowing the value                       |
+| `map.insert(key <K>, value <V>)` | `null` or `collections.Duplicate<K, V>` or `collections.InsertFailure<K, V>` | Transfer a new entry; reject an existing equal key              |
+| `map.remove(key <&K>)`           | `collections.Entry<K, V>` or `iter.End`                                      | Remove and transfer both stored key and value                   |
+| `map.reserve(capacity <usize>)`  | `null` or `memory.AllocationFailure`                                         | Ensure total entry capacity without changing entries on failure |
+| `map.entries()`                  | Concrete borrowed cursor                                                     | Yield entries in unspecified order without allocating           |
+| `map.clear()`                    | `null`                                                                       | Release keys/values and retain allocated capacity               |
 
 Duplicate and InsertFailure retain the supplied `key` and `value`; neither changes
 the map. InsertFailure also exposes its allocation cause. Existing entries are

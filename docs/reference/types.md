@@ -45,6 +45,13 @@ An erased error payload does not imply `tasks.Send`. Preserve a concrete
 transferable error type when sending failures across tasks; opaque task-runtime
 errors provide their own transfer guarantees.
 
+The [errors module](stdlib/errors.md) supplies custom definitions and metadata
+inspection. `errors.define<P>(spec)` exposes a nominal `<definition.Error>` and
+an allocation-free constructor retaining `P` inline. A generated error with
+`P = null` fits the common descriptor; other generated payloads stay concrete
+until explicitly boxed. Plain records do not become errors by naming a field
+`code`, `message`, or `cause`.
+
 ## Inference and assignment
 
 ```meowy
@@ -70,6 +77,13 @@ In a matcher, the predicate `value<error>` recognizes either representation
 without converting it. References may shorten their lifetimes, and an exclusive
 reference may be reborrowed as shared. Other storage conversions are explicit.
 In particular, making a slice of a bounded list uses `list.slice()`.
+
+On an erased `<error>`, a concrete matcher tests the retained nominal tag. It
+does not move the boxed owner into inline storage. `errors.view<E>` checks and
+borrows the stored concrete error; `errors.take<E>` consumes it after a proven
+match. An ascription cannot replace this explicit extraction. The erased
+descriptor itself is neither `memory.Copy` nor `tasks.Send`, even if a particular
+stored error has both capabilities.
 
 Every normal path must initialize a binding before it is read. Untyped empty
 lists require an expected element type. A function taking no arguments still

@@ -120,12 +120,17 @@ See [types](types.md) and [values and blocks](values-and-blocks.md).
 | `E214` | Public function signature is incomplete           | Mark missing parameter or result annotations at the exported boundary; state the public contract                                    |
 | `E215` | Matcher condition is not boolean                  | Show the condition type; use an explicit comparison or type predicate rather than implicit truthiness                               |
 | `E216` | Literal is not representable in its expected type | Show the literal and target range; choose the intended width or a representable value                                               |
+| `E217` | Invalid custom error definition                   | Mark the offending `errors.define` descriptor field or code and show the required static metadata contract                          |
 
 `E207` covers initialization as well as later assignment. Changing `"twenty"` to
 `20` is not a type conversion defined by the language. `E208` concerns a value
 ascription; assigning a still-nullable value into a narrower binding is `E207`.
 Flow evidence invalidated by a write or mutating call must be shown at that
 operation, so a programmer can see why an earlier type test no longer suffices.
+
+`E217` covers malformed static [error definitions](stdlib/errors.md#define-and-construct-an-error);
+runtime-dependent type construction remains `E211`. A custom application's
+error code is metadata on a returned value, not an entry in this compiler catalog.
 
 ## Ownership, borrows, and storage
 
