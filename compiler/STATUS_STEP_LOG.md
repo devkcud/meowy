@@ -6,6 +6,48 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Unified mixed-write handoff
+
+- State: Mixed checked paths are complete in d3e6b12, with native/example/README evidence in 4f6f2d2. SetPath replaces duplicate field/list statements and lowering; mutable gates, ordered bounds, captured indices and first-collection regions are preserved. All workers are finished, no unfinished code or failing checks remain, and the modular structure is retained.
+- Validation: All 14 checks pass: 153 library and 140 native Rust tests, 35 Python tests, 859 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed. Optimized mixed-writes output is exact; 12 independent region/effect checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement genuine result-slot aliases for mutable emitted names, preserving construction, named exits/restarts, read-after-write and publication. Retain reference/temporary/emitted-root and owned/exclusive limitations until their storage/initialization models are proved. Finalize the handoff commit and verify clean Git state.
+
+### 2026-09-06 — Unified write implementation commit
+
+- State: The unified SetPath implementation, unit coverage and obsolete boundary expectations are committed. Static and indexed writes now share one typed path and pointer walk; dynamic paths retain the first collection region. The optimized compiler example also passes. New native mixed-path evidence and README remain separate.
+- Validation: All 14 checks passed with 153 library and 140 native groups. Optimized mixed-writes stdout is exactly 1, 8, 2 and 21 on separate lines with empty stderr. Cached whitespace and dependency boundaries were reviewed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the new native/example/README evidence, finalize current STATUS files and logs, then verify clean Git state. Next: mutable emitted-name result-slot aliases.
+
+### 2026-09-06 — Mixed path combined gate
+
+- State: Unified SetPath mixed writes pass the complete repository/runtime/compiler gate. The first-collection reservation policy, static-only replacement behavior, per-prefix bounds and field mutability are preserved. All workers/review are complete; no implementation fixes remain. Existing boundary updates and new native evidence are ready for separate commits.
+- Validation: All 14 checks pass: 153 library and 140 native Rust groups, 35 Python tests, 859 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build/run the optimized mixed-writes example, commit implementation with obsolete-boundary updates, commit new native/example/README evidence, then finalize both handoffs/logs and verify clean Git state.
+
+### 2026-09-06 — Mixed path source freeze
+
+- State: Mixed writes are complete through unified SetPath/WriteStep handling. The first indexed collection defines reservation, final-write conflict and refinement invalidation; pure fields retain static precision and RHS owner replacement. Each returning index preserves its dependency and prefix bounds before later effects. All workers and review are finished, with no remaining implementation finding.
+- Validation: Two new semantic groups, all six list groups, all 33 backend groups (22 new debug/release executions), seven native groups and 12 independent checks pass. Final Clippy/format/whitespace pass. README documents mixed paths and deliberate whole-collection overlap.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the combined repository/runtime/compiler gate, build/run the optimized mixed-writes example, then split implementation/boundary updates, native evidence and final handoff commits. Next work is result-slot aliases for mutable emitted names.
+
+### 2026-09-06 — Mixed path acceptance cases
+
+- State: Added seven native mixed-write groups and an example covering field/index alternation, actual nested lengths, captured indices, holder-sibling disjointness, whole-list overlap, early exits, typed diagnostics and remaining unsupported owners. Existing boundary rows now distinguish supported mixed paths from immutable E305 paths. SetPath is the agreed shared HIR seam; the first indexed collection is the reserved and final-write region.
+- Validation: Native evidence is written and awaits integrated compilation. Root and reviewer agree that fields outside the first collection can be disjoint while all paths within it remain conservative; pure-field RHS replacement must remain supported. No new execution checks have run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete shared checker/origin/loan/backend traversal, run focused mixed and existing write tests, resolve any actual integration errors, then complete review, full gates and split commits.
+
+### 2026-09-06 — Mixed checked path design
+
+- State: Mixed field/index assignment is active. The path must preserve every mutable field gate, each selected list length and one-based bounds check, original index capture, and final selected-payload store. Direct ordinary mutable reference-free Copy roots remain the boundary. Frontend/ownership and backend work are delegated with independent review; root owns both handoffs and native evidence.
+- Validation: Tree starts clean at f82eaf7. Read current rules/handoffs and collection/memory mutability contracts. Existing static field and dynamic list write implementations provide the seams; no new checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on a unified typed write path and region/reservation model, implement consumers without duplicate lowering, add mixed order/bounds/alias/native evidence, then run focused/full gates and split commits.
+
 ### 2026-09-06 — Mutable record-field handoff
 
 - State: Completed mutable field metadata and checked local field writes in 6ff8807, with native coverage/example/README in ab813f8. Field flags survive type/context pipelines without changing physical layout; static writes preserve RHS order, neighbours and valid disjoint loans. All workers are finished and modular source organization is retained. No unfinished code or failing checks remain.

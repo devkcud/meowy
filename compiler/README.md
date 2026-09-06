@@ -254,7 +254,7 @@ Borrow liveness follows branches and named loop edges. An assignment evaluates i
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
 record overlaps references to any of its fields.
-Named field assignment updates only the selected initialized field. Static offsets
+An assignment with no indices updates only the selected field. Its static offsets
 remain valid when the RHS replaces the same Copy owner; RHS changes to other fields
 are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field

@@ -7,40 +7,38 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `6ff8807` preserves named field mutability as HIR Field metadata and
-  implements checked field assignment on ordinary mutable reference-free Copy
-  locals. Every crossed field must be mutable; E305 rejects immutable paths.
-  Field flags participate in type identity, constructor matching and union tags
-  while physical field layout remains unchanged.
-- SetField evaluates RHS once and stores only the selected field. Static offsets
-  permit same-shape Copy owner replacement during RHS; new sibling values survive.
-  Disjoint shared views and final-use reads are allowed, while overlapping live
-  views fail E302. Written/ancestor/descendant facts are invalidated with charged
-  work; disjoint sibling facts remain valid.
-- Construction/forwarding/list contexts preserve field flags. Expected or branch
-  mutability conflicts report E206; whole-record type mismatch remains E207.
-  Emitted-name dependencies in unresolved shape probes stay Unknown/B001 instead
-  of accidentally resolving an outer binding.
-- Coverage/example: `ab813f8` adds seven native groups and
-  `compiler/examples/mutable-fields.mwy`. Seven library groups cover field shapes,
-  access rules, loans, unchanged layouts, selected stores and early exits.
-- All 14 combined checks pass: 280 Rust tests, 35 Python tests, 858 local links,
+- Compiler: `d3e6b12` unifies field/list assignment as SetPath with ordered Field
+  and Index steps. Paths such as `holder.items[i].value` and `rows[i].items[j]`
+  work on ordinary mutable reference-free Copy locals. Every crossed field must
+  be mutable, and each selected list supplies its own initialized length.
+- Indices are captured and bounds-checked once from root to leaf before later
+  effects; P001 identifies the failing indexed prefix. Only the selected payload
+  is stored. Bounds failure and nonreturning operands skip every later phase.
+- Static fields before the first index identify the protected whole-collection
+  region. Holder siblings outside it can be disjoint; retained views anywhere
+  within it conservatively conflict. Each returning index and the final store use
+  the reservation. Pure-field paths preserve same-type RHS owner replacement.
+- Coverage/example: `4f6f2d2` adds seven native groups and
+  `compiler/examples/mixed-writes.mwy`. Six library groups cover typed paths,
+  regions, layouts, bounds, captured indices and early exits. Existing field/list
+  write fixtures use the shared representation; obsolete boundary rows are updated.
+- All 14 combined checks pass: 293 Rust tests, 35 Python tests, 859 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs mutable-fields with exact output. Fourteen independent
-  review cases pass, including inherited input bounds. No active workers, unfinished
-  code or failing checks remain. Modular source organization is retained.
-- Mixed field/index writes, shared-reference/temporary targets, mutable primary
-  slots, mutable reference-bearing fields and direct emitted-name assignment remain
-  B001. Owned cleanup, source-level exclusive references, modules and full release
-  qualification are still open.
+- The optimized compiler runs mixed-writes with exact output. Twelve independent
+  review cases pass. No active workers, unfinished code or failing checks remain.
+  Modular source organization and the runtime ABI are preserved.
+- Shared-reference/temporary/emitted roots, mutable primary slots, mutable
+  reference-bearing fields, source-level exclusive references and owned cleanup
+  remain outside this bootstrap. Next is real result-slot aliasing for mutable
+  emitted names, followed by runtime/module/library and release work.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable record shapes, checked field/list writes and modular analyses | Mixed checked paths, exclusive ownership and cleanup |
+| Compiler | Unified mixed checked write paths and modular analyses | Result-slot aliases, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,14 +48,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend checked write paths to mix mutable named fields and initialized indices
-   (`holder.items[i]`, `items[i].field`). Coordinate HIR, `check/mutation.rs`, list
-   checking, loans and backend pointer traversal; preserve field gates, per-index
-   bounds order, parent storage and precise/conservative overlap as appropriate.
-2. Give mutable emitted names real result-slot aliases before permitting assignment
-   to them. Preserve construction order, named exits/restarts and returned storage;
-   do not mutate a detached local copy. Keep reference-bearing fields and source
-   exclusive references closed until their origin/initialization rules are modeled.
+1. Give mutable emitted names real result-slot aliases before permitting their
+   assignment. Model construction order, enclosing labels, leave/restart and result
+   publication in HIR/checker/backend/loans; verify read-after-write inside the
+   block and the final returned field, not just a detached local copy.
+2. Preserve or improve region precision only with explicit alias/lifetime proof.
+   Keep shared-reference/temporary roots and reference-bearing mutation closed
+   until source-level exclusive references, initialization and cleanup are modeled.
 3. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

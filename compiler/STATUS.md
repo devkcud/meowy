@@ -1,8 +1,8 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Mutable record shapes and checked field writes pass the final gate.
+Updated: 2026-09-06. Unified mixed checked write paths pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `6ff8807`; native coverage/example: `ab813f8`.
+Implementation: `d3e6b12`; native coverage/example: `4f6f2d2`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
@@ -11,17 +11,16 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: named record fields carry name/type/mutability metadata through HIR,
-normalization, constructor/union matching, composition and native lowering.
-Static named paths rooted in mutable reference-free Copy locals support SetField;
-every crossed field must be mutable. RHS runs once before the final selected store,
-with disjoint and final-use shared reads accepted and overlapping loans rejected.
+Completed: one SetPath representation handles static field, nested list and mixed
+field/index assignments on ordinary mutable reference-free Copy locals. Every field
+retains its mutable gate; each index checks its selected list's initialized length
+before later steps/RHS. The final store writes only the selected payload.
 
-Mixed field/index paths, shared-reference/temporary targets, mutable primary slots,
-mutable reference-bearing fields and direct emitted-name assignment remain B001.
-Named emission still copies into a result slot, so it is not an assignable alias.
-Owned initialization/cleanup, exclusive references, modules and release qualification
-remain pending. The new code follows the organized module boundaries.
+The first indexed collection defines the reservation, write-conflict and predicate
+invalidation region. Static holder siblings remain disjoint, while paths within that
+collection conservatively overlap. Pure-field RHS replacement is preserved. Shared
+reference/temporary/emitted roots, mutable reference-bearing fields, exclusive
+references, owned cleanup, modules and full release qualification remain open.
 
 ## Resume here
 
@@ -47,11 +46,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 30 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 24 loan, 9 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 29 focused backend tests |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 31 checker, 18 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 25 loan, 9 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 33 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 133 native groups, 4 harness tests and 22 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 140 native groups, 4 harness tests and 23 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic and output
@@ -79,7 +78,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
 | Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
-| Collections | Remaining contextual constraints, mixed write paths, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
+| Collections | Remaining contextual constraints, finer alias precision, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
 | Native ABI | Clang ABI adapters, explicit native artifacts, record classification | Separate C fixtures, argument/return layout and safety boundaries |
@@ -96,16 +95,19 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   E206 rejects declared-slot or completing-branch mutability conflicts; ordinary
   record shape assignment mismatch remains E207, and unequal shapes cannot use
   whole-record equality. Primary record forwarding retains each named field flag.
-- SetField carries a concrete Place and target span. `check/mutation.rs` requires
-  an ordinary mutable reference-free Copy owner and mutable fields throughout the
-  named path; immutable roots/paths are E305. No source &! reference is created.
-  Backend static offsets survive same-type RHS replacement, and only the selected
-  field is stored. RHS leave/panic/restart skips that store. No dynamic reservation
-  is needed for these always-initialized fixed field paths.
-- Final field writes reuse loan overlap, permitting disjoint fields and last-use
-  RHS reads while preserving whole-owner/ancestor and all-input return bounds.
-  `forget_field` invalidates overlapping predicate paths with charged work. Source
-  path length, field lookup and type walks use existing bounded analysis machinery.
+- SetPath carries a mutable local root, ordered WriteStep::Field/Index path, RHS
+  and final target span. It replaces separate field/list write representations.
+  `check/mutation.rs` checks ordinary reference-free Copy storage and every mutable
+  field gate; immutable roots/fields are E305. No source &! reference is created.
+- With indices, static fields before the first index define a precise Place naming
+  the whole first collection. That region drives reservations, final write conflicts
+  and predicate invalidation. Holder siblings outside it can be disjoint; all views
+  inside it conservatively overlap, including different fields of indexed elements.
+  All-input call bounds and ancestor/whole-owner loans remain intact.
+- Pure-field paths use their complete static Place without an index reservation.
+  Fixed offsets survive same-type RHS owner replacement, preserving RHS-updated
+  siblings. RHS completes before the final exclusive store; final-use shared reads
+  are allowed. Field and indexed writes never write back an old aggregate snapshot.
 - Mutable field types/subtrees containing references and mutable primary emissions
   remain B001. Mutable emitted names are readable local copies, but assignments to
   them or their fields stay B001 until result-slot aliases exist. No origin-bearing
@@ -190,27 +192,20 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   paths do not invent origins; reachable gaps remain B001. All path/snapshot/conflict
   work stays charged. Exclusive borrows, slices, aliases, removal,
   reference-bearing/owned elements and list formatting remain unsupported.
-- SetElement identifies a mutable local root, ordered IndexStep path, RHS and final
-  target span. Steps retain each prefix span and evaluate/check indices from root
-  to leaf, using the selected list's actual initialized length at every layer.
-  The frontend checks static E101 positions; backend P001 identifies the failing
-  prefix. Later indices and RHS run only after earlier checks succeed. The final
-  store uses the captured leaf pointer, never an old aggregate writeback.
-- The CFG creates one bounded root reservation and uses it at every returning
-  bounds/address phase and final store. Returning root/sibling writes fail E302;
-  RHS last-use shared reads may finish before the store. A later shared root/row/
-  element use conflicts even at another index. These are internal reservations,
-  not source-level &! values or proof of disjoint indices.
-- Never indices skip their bounds check and later phases; a Never RHS skips store.
-  An earlier returning index still needs valid parent storage when a later index
-  or RHS diverges. Root refinements are forgotten after RHS checking, while copied
-  independent values keep their facts. Field/reference/temporary targets remain
-  B001 for indexed paths; static named field writes are handled by SetField.
-  Non-Copy replacements still need initialization, move and cleanup state.
-- Target flattening is iterative, capped at 256 indices before allocating another
-  step, and also subject to parser depth limits. Root types are charged once and
-  consumed layer by layer. Every target/typed/CFG step uses existing work budgets;
-  neither type suffixes nor list capacity are expanded into per-element paths.
+- Each WriteStep::Index retains its actual indexed-prefix span. Backend traversal
+  loads the selected list's own initialized length before evaluating that index,
+  applies the P001 guard, then derives the pointer for the next step. Frontend
+  checks retain E101 for statically invalid positions.
+  Captured indices cannot be retargeted by later changes to index variables.
+- The CFG consumes the first-collection reservation after every returning index
+  and at the final store. Returning writes within that region fail E302 even if a
+  later phase diverges. A Never index/RHS skips later uses and stores, so owner
+  replacement before an immediate exit is allowed when no other loan survives.
+- Target invalidation uses the first-list field prefix or full pure-field path,
+  preserving disjoint sibling facts. Flattening is iterative and capped at 256
+  mixed steps before allocation, with parser depth limits also applying. Typed
+  walks, field lookup, region construction and conflict work use existing budgets;
+  no list capacity is expanded into per-element paths.
 - Ordinary locals, reference-free parameters and copied dispatch self bindings have
   local addressable storage. Parameter/self addresses may be used in nested scopes
   but cannot escape their storage region. Shared self instead contains a reference
@@ -255,7 +250,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Immutable binding/result snapshots link type-test tags to actual variant activity,
   conditioned on the enclosing variant. Mutable ordinary storage reads receive
   unknown activity, avoiding stale initializer tags after writes. Record fields
-  preserve mutability in their types. SetField invalidates the written path and
+  preserve mutability in their types. SetPath invalidates the selected region and
   overlapping ancestors/descendants after RHS; disjoint sibling facts survive.
 - Restart edges erase iteration-specific correlations and scoped assumptions.
   Predicate assignments invalidate prior facts. Safe programs needing stronger
@@ -329,30 +324,23 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 147 library and 133 native groups pass. New coverage adds 3 checker, 1 loan,
-  3 backend and 7 native groups. Clippy `-D warnings` and formatting pass. The
-  optimized compiler builds/runs `examples/mutable-fields.mwy` in release with
-  exact stdout `1\n2\n3\nkept\n` and empty stderr.
-- Native coverage includes inferred/annotated fields, branches, composition, union
-  tags and list contexts; nested fields, list/union payloads, missing nullable fields,
-  copies, disjoint/final-use/ancestor loans, same-owner RHS replacement, early exits,
-  sibling predicates, target invalidation and E305/E206/E207/E208/E302/B001 boundaries.
-- All 29 backend groups pass, including 18 new debug/release field executions for
-  physical layouts, semantic union identity, selected stores, preserved neighbours
-  and RHS ordering. One new raw-HIR record wrapper fixture was initially invalid;
-  correcting its component emissions preserved the original expected behavior.
-- Named union slots filter by emitted mutability before selecting numeric context;
-  final review caught and fixed false uint8/uint16 ambiguity for differently mutable
-  alternatives. Both choices and unchanged primary ambiguity have regressions.
-- Frontend/loan focused checks and all 12 list-context groups pass. One new E302
-  fixture initially lacked a closing brace and was corrected. Unresolved emitted-name
-  shape dependencies have a B001 regression to prevent lookup through outer scope.
-- Fourteen independent ownership checks pass, including ignored borrowed inputs
-  retaining their write constraints and explicit disjoint field inputs. No remaining
-  unsafe acceptance or blocker was found; source-level exclusive references remain
-  unimplemented.
+- Rust: 153 library and 140 native groups pass. New coverage adds 1 checker, 1 loan,
+  4 backend and 7 native groups. Clippy `-D warnings` and formatting pass. The
+  optimized compiler builds/runs `examples/mixed-writes.mwy` in release with exact
+  stdout `1\n8\n2\n21\n` and empty stderr.
+- Native coverage includes alternating field/index targets, nested record/list
+  payloads, copied values, initialized lengths, holder siblings, first-collection
+  overlap, final-use reads, captured indices, prefix diagnostics and early exits.
+  Updated legacy boundaries require E305 for immutable paths and accept supported
+  mixed paths; reference/temporary/emitted roots remain explicitly B001.
+- All 33 backend groups pass, including 22 new debug/release executions for padded
+  layouts, each selected header, prefix spans with trailing fields, skipped later
+  effects, captured indices and preserved pure-field RHS owner replacement.
+- Two new semantic groups, all six existing list groups and 12 independent review
+  cases pass. Existing all-input bounds, path budgets, source mutability, Never
+  phase consumption and region invalidation remain intact. No blocker was found.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 858 local links; schemas/catalog and Vim/Neovim pass.
+  checks 859 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime sources/ABI are unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with fatal,
   truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and the expired
@@ -367,16 +355,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend checked paths to mixed field/index targets in HIR, `check/mutation.rs`,
-   `list.rs`, `loans/` and `backend/`. Support `holder.items[i]` and `items[i].field`
-   only with mutable field gates, initialized bounds at each index, correct prefix
-   spans and valid parent storage. Test nested lengths, last-use/disjoint overlap,
-   changing index variables and RHS/early-exit effects in both profiles.
-2. Replace detached mutable emitted-name copies with genuine result-slot aliases
-   before enabling their assignment. Model named scope exits, restart initialization
-   and result publication; retain B001 while storage identity is unproved. Mutable
-   reference-bearing fields and source exclusive references require further origin,
-   move/initialization and cleanup work.
+1. Replace detached mutable emitted-name copies with genuine result-slot aliases.
+   Coordinate HIR, `check/blocks.rs`, `check/statements.rs`, backend destinations and
+   loans so reads/writes inside the block and its returned fields share storage.
+   Test named enclosing emissions, leave/restart, optional slots, RHS effects and
+   access lifetimes; retain B001 until slot identity and initialization are proved.
+2. Preserve first-collection conflicts unless finer indexed disjointness is proved.
+   Shared-reference/temporary roots, mutable reference-bearing fields and source
+   exclusive references require explicit origin, move/initialization and cleanup
+   models before expanding the writable-place surface.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.
