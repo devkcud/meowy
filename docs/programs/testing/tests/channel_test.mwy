@@ -1,0 +1,48 @@
+channel : @"channel"
+memory : @"memory"
+strings : @"strings"
+testing : @"testing"
+
+drain <usize> : (receiver <channel.Receiver<strings.Owned>>) {
+    input := receiver
+    count <usize> := 0
+
+    'messages {
+        item : input.receive()
+        | item <channel.Closed> | 'messages.leave()
+
+        text : item.value
+        testing.text_equal(text.view(), "meow", "The receiver owns the greeting")
+        count = count + 1
+        'messages.restart()
+    }
+
+    # A closed, drained channel stays closed on another receive. #
+    again : input.receive()
+    | again <channel.Item<strings.Owned>> | {
+        testing.fail("A drained channel produced another message")
+    }
+    -> count
+}
+
+-> tests : testing.suite({
+    -> owned_message_and_close : testing.case(() {
+        endpoints : channel.bounded<strings.Owned>(memory.heap, 1)
+        | endpoints <memory.AllocationFailure> | testing.fail("Queue allocation failed")
+        text : strings.copy("meow", memory.heap)
+        | text <memory.AllocationFailure> | testing.fail("Greeting allocation failed")
+
+        output := endpoints.sender
+        consumer : >> drain(endpoints.receiver)
+        sent : output.send(text)
+        output.close()
+        received : << consumer
+
+        | sent <channel.Rejected<strings.Owned>> | {
+            testing.fail("The receiver rejected the owned greeting")
+        }
+        | received <error> | testing.fail("The consumer did not finish successfully")
+        expected <usize> : 1
+        testing.equal(&received, &expected, "Consume exactly one owned message")
+    })
+})

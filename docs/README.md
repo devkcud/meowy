@@ -4,7 +4,7 @@ This documentation defines the language's semantics and the foundational library
 contracts used in its programs. The reference is authoritative; the guide teaches
 those rules by building small programs, and the design notes explain their intent.
 
-[Pawterns](pawterns/README.md) is the practical cookbook: 35 recipes for the
+[Pawterns](pawterns/README.md) is the practical cookbook: 39 recipes for the
 language and its ecosystem, from your first project to a greeting that survives
 its own concurrency design. Pick a problem, follow the code, and learn why the
 working version works.
@@ -69,6 +69,11 @@ headers, then define and inspect [custom errors](programs/custom-errors/README.m
 Continue with Unicode, JSON, maps, randomness, concurrency, timers, and complete
 CLI applications. File tools include small fixtures and explicit
 instructions for their I/O effects.
+
+The [testing project](programs/testing/README.md) shares a helper between an
+application and its suite, then checks domain errors, byte fixtures, panic
+expectations, and an owned channel message. Follow the
+[testing recipes](pawterns/testing.md) to build your own suite.
 
 [Design notes](design.md) record the language's main decisions.
 The [manifest guide](guide/mod.md) explains project configuration alongside its

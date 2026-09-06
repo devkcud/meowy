@@ -9,7 +9,7 @@ order. We'll fix that too.
 
 These are recipes for getting things done: code to use, a result to expect, and
 the small detail that saves you an afternoon. The reference holds the full rules;
-Pawterns puts them to work. There are 35 recipes across 11 chapters.
+Pawterns puts them to work. There are 39 recipes across 12 chapters.
 
 ## Pick something to cook
 
@@ -19,6 +19,7 @@ Pawterns puts them to work. There are 35 recipes across 11 chapters.
 | [Compose values](composition.md)                          | Metadata that stays attached, one-result branches, compact syntax, and a regression driver for future-you.    |
 | [Borrow the bytes, keep the owner](ownership.md)          | Caller-owned buffers, greetings that survive their own function, and lists that mean it when they say “full.” |
 | [Errors worth keeping](errors.md)                         | Custom failures, the parser's receipts, and boxing an error without throwing away its identity.               |
+| [Tests with teeth](testing.md)                            | Table cases, expected failures, tiny fixtures, and a greeting that has to clock out.                          |
 | [Text and data](text-and-data.md)                         | Visually identical text, borrowed map keys, and JSON with limits and output that waits its turn.              |
 | [CLI apps and files](cli-and-files.md)                    | A tiny tool with proper manners, short writes, and an eight-byte file preview.                                |
 | [Time and calendars](time-and-calendars.md)               | One deadline, tomorrow's calendar day, and a trip through Chinese date labels.                                |
@@ -32,6 +33,8 @@ Pawterns puts them to work. There are 35 recipes across 11 chapters.
 **First afternoon:** follow [your first project](first-project.md), then
 [composition](composition.md) and [ownership](ownership.md). Add
 [typed errors](errors.md) once the program needs to tell a caller what went wrong.
+Give those promises a [test suite](testing.md) before future-you improves them
+into a completely different behavior.
 Set up [editor help](toolchain-workflow.md#let-the-editor-read-the-same-project-you-do)
 whenever you'd rather have the source point at the mistake.
 
@@ -53,6 +56,7 @@ smaller machine.
 | My matcher keeps going after emitting its answer.                  | [Choose exactly one result](composition.md#choose-exactly-one-result)                                    |
 | The function returns a string view into storage it just destroyed. | [Build a greeting that survives](ownership.md#build-a-greeting-that-survives-its-own-function)           |
 | I need to tell malformed input apart from a domain rule.           | [Keep the parser's receipts](errors.md#keep-the-parsers-receipts)                                        |
+| My helper works, and I'd like it to keep doing that.               | [Write a standard test suite](testing.md)                                                                |
 | Writing failed, but some bytes already escaped.                    | [Make a short write visible](cli-and-files.md#make-a-short-write-visible-before-involving-a-filesystem)  |
 | “Tomorrow” is disagreeing with my 24-hour timer.                   | [Tomorrow is not always 24 hours away](time-and-calendars.md#tomorrow-is-not-always-24-hours-away)       |
 | The tasks finished in a different order.                           | [Keep the answers in order](tasks-and-channels.md#let-the-squares-race-keep-the-answers-in-order)        |

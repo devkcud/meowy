@@ -50,7 +50,7 @@ Start with the [guide](docs/guide/README.md), or use the
 [documentation index](docs/README.md) to browse the full reference.
 
 For something to build, open [Pawterns](docs/pawterns/README.md), the meowy
-cookbook: 35 recipes from a first greeting through owned buffers, CLI tools,
+cookbook: 39 recipes from a first greeting through owned buffers, CLI tools,
 calendar surprises, and getting concurrent work to actually finish.
 
 | Topic                                                            | What it covers                                                                         |
@@ -72,10 +72,11 @@ calendar surprises, and getting concurrent work to actually finish.
 | [Language server](docs/reference/lsp.md)                         | Editor setup, compatibility, analysis, repairs, and manifest configuration             |
 | [gatostyle](docs/guide/gatostyle.md)                             | Configurable layout, code quality, expression styles, and safe fixes                   |
 
-The [worked projects](docs/programs/README.md) put these rules together in 15
+The [worked projects](docs/programs/README.md) put these rules together in 16
 self-contained directories, each with its own manifest and run instructions.
 They cover composition, custom errors, Unicode, JSON, maps, randomness, tasks,
-channels, timers, calendars, nested CLIs, and streaming file tools. The [design notes](docs/design.md)
+channels, timers, calendars, nested CLIs, streaming file tools, and a complete
+[test suite](docs/programs/testing/README.md). The [design notes](docs/design.md)
 explain the choices and the boundaries of the core.
 The [time and calendar guide](docs/guide/time-and-date.md) builds toward a small
 CLI that converts dates between six calendar systems, including Chinese.

@@ -5,8 +5,9 @@
 A number is useful. A number that remembers which sensor produced it is easier
 to debug at midnight. Meowy's blocks can carry both without making you choose.
 
-Each recipe below is an independent complete `main.mwy`. Use the minimal
-manifest from [your first project](first-project.md#print-a-greeting-from-a-project).
+The first three recipes each supply an independent complete `main.mwy`. Use the
+minimal manifest from [your first project](first-project.md#print-a-greeting-from-a-project).
+The final recipe adds a helper module and a standard test suite to that project.
 
 ## Carry metadata through a calculation
 
@@ -155,43 +156,63 @@ and [dispatch](../reference/values-and-blocks.md#dispatch).
 ## Give a pure helper a small regression driver
 
 Future-you will eventually “simplify” this helper. Leave a small tripwire for
-that occasion: an entry that checks both branches and complains if either changes.
+that occasion: a suite that checks both branches and complains if either changes.
 
-Save this complete file as `checks.mwy` beside the project's normal entry:
+Save this complete `fallback.mwy` beside the project's normal entry. Import this
+same helper from the application wherever it needs fallback behavior:
 
 ```meowy
-debug : @"debug"
-
-fallback <:T> : (value <T><null>, alternative <T>) 'result {
+-> fallback <:T> : (value <T><null>, alternative <T>) 'result {
     | value <null> | {
         'result -> alternative
         'result.leave()
     }
     -> value
 }
-
-empty : fallback<int32>(null, 7)
-present : fallback<int32>(3, 7)
-
-| empty != 7 | debug.panic("The empty case must use its fallback")
-| present != 3 | debug.panic("The present case must keep its value")
-debug.print("2 cases passed")
 ```
 
+Create `tests/fallback_test.mwy`:
+
+```meowy
+helper : @"../fallback.mwy"
+testing : @"testing"
+
+-> tests : testing.suite({
+    -> empty : testing.case(() {
+        actual : helper.fallback<int32>(null, 7)
+        expected <int32> : 7
+        testing.equal(&actual, &expected, "An empty value uses its fallback")
+    })
+    -> present : testing.case(() {
+        actual : helper.fallback<int32>(3, 7)
+        expected <int32> : 3
+        testing.equal(&actual, &expected, "A present value keeps its value")
+    })
+})
+```
+
+The default test path is `./tests`, so the existing project manifest is enough.
 From that project directory:
 
 ```sh
-meowy check checks.mwy
-meowy run checks.mwy
+meowy test --list
+meowy test
 ```
 
-The successful run prints `2 cases passed`. An explicit entry chooses this file
-while retaining the project's other manifest settings. For a real helper, export
-it from a module and import that same module in both the application and driver,
-so the check exercises the code the application uses.
+The listing identifies `tests/fallback_test.mwy::tests::empty` and
+`tests/fallback_test.mwy::tests::present`. The run reports two passed cases, each
+in a fresh process. Assertions borrow their operands and panic with `P005` on a
+mismatch; the runner records the failing case instead of relying on a hand-written
+exit-status convention.
 
-`meowy check` alone does not execute these case comparisons. A mismatch reaches
-`debug.panic` during the driver run and participates in the normal
-[failure inspection workflow](toolchain-workflow.md#inspect-and-replay-a-deliberate-failure).
+`meowy test --no-run` checks and builds the suite without executing it.
+`meowy check` alone follows the application entry's graph and does not perform
+test discovery. A suite imports the helper the application uses, keeping the
+regression check attached to the real behavior rather than a copied implementation.
+
 Choose boundary and failure cases as well as happy paths; fixed inputs make the
-result repeatable, but two cases are not proof for every possible input.
+result repeatable, but two cases are not proof for every possible input. Continue
+with [testing Pawterns](testing.md) for tables, errors, local fixtures, and a
+consumer that knows when to go home. Saved test failures use
+`meowy err summary --test`; the [testing reference](../reference/stdlib/testing.md)
+explains case identities, watchdogs, and isolated replay.

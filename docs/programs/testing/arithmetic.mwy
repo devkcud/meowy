@@ -1,0 +1,20 @@
+errors : @"errors"
+
+<OddDetails> : <{
+    requested <uint32>
+}>
+
+odd_input : errors.define<OddDetails>({
+    -> code : "arithmetic.odd_input"
+    -> message : "An exact half needs an even input"
+})
+
+-> <OddInput> : <odd_input.Error>
+
+-> half_even <uint32><OddInput> : (value <uint32>) 'result {
+    | value % 2 != 0 | {
+        'result -> odd_input.make({ -> requested : value })
+        'result.leave()
+    }
+    -> value / 2
+}

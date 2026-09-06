@@ -1,0 +1,23 @@
+-> build : {
+    -> entry : "./main.mwy"
+    -> profile : "debug"
+    -> executor : {
+        -> workers : 2
+        -> max_tasks : 2
+        -> stack_bytes : 65_536
+        -> allocator : "system"
+    }
+}
+
+-> test : {
+    -> version : 1
+    -> paths : ["./tests"]
+    -> processes : 1
+    -> timeout_ms : 30_000
+    -> output_bytes : 65_536
+    -> seed : 2026
+}
+
+-> gatostyle : {
+    -> preset : "structured"
+}

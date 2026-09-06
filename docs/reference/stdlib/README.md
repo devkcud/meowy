@@ -49,6 +49,8 @@ and [task lifetimes](../tasks-and-channels.md); a library call follows those rul
 
 [Pawterns](../../pawterns/README.md) puts these APIs to work in small recipes:
 text, typed errors, CLI apps, files, calendars, owned batches, and orderly shutdown.
+Its [testing chapter](../../pawterns/testing.md) combines these pieces into suites
+with explicit fixtures, failure expectations, and case-process budgets.
 
 ## Read the contracts
 

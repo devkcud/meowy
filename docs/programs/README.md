@@ -13,23 +13,24 @@ together across a complete application.
 
 ## Pick a project
 
-| Project                                    | What it combines                                                                    | Inputs and effects                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Age validation](age/README.md)            | Typed policy module, decimal parsing, union narrowing, named exits                  | Four fixed inputs; diagnostic output                       |
-| [Custom errors](custom-errors/README.md)   | Nominal failure types, typed causes, common inspection, specific and broad matching | Fixed `"24"`, `"16"`, and `"twenty"` inputs; no allocation |
-| [Block composition](composition/README.md) | Primary values, exact record shapes, dispatch, matcher/ascription contexts          | Fixed sensor reading; no allocation                        |
-| [Packet decoder](packet/README.md)         | Import aliases, package exports, borrowed wire bytes, explicit widening/shifts      | Valid and truncated inline headers                         |
-| [Unicode text lab](text-lab/README.md)     | Bytes, scalars, graphemes, normalization, borrowed output buffers                   | Fixed Unicode text; no allocator                           |
-| [Word count](word-count/README.md)         | Text cursors, explicit map hashing/equality, mutation and borrow lifetimes          | Fixed text; allocator-backed map                           |
-| [JSON report](json-report/README.md)       | Typed JSON, validation, owned decoded storage, buffered encoding                    | Fixed JSON input; explicit decoding allocator              |
-| [Seeded rolls](seeded-rolls/README.md)     | Reproducible randomness, numeric conversion, bounded histogram                      | Fixed seed; inline counters                                |
-| [Ordered tasks](tasks/README.md)           | Bounded groups, module callables, ordered outcomes, deadlines                       | Explicit executor; three child tasks                       |
-| [Bounded channel](channel/README.md)       | Endpoint moves, backpressure, closure, partial-result handling                      | Explicit queue allocation and executor                     |
-| [Ticker](ticker/README.md)                 | Owned timed events, monotonic readings, missed-tick coalescing                      | Explicit timer allocation; finite waits                    |
-| [Calendar CLI](calendar-cli/README.md)     | Typed options, generated help, calendar conversion, writer errors                   | Argv; six calendar profiles                                |
-| [Duration CLI](duration-cli/README.md)     | Nested typed subcommands, inherited options, checked duration arithmetic            | Argv; no implicit command dispatch                         |
-| [File hash](file-hash/README.md)           | CLI, bounded streaming reads, SHA-256, hex output                                   | Reads a named file; includes a fixture                     |
-| [File copy](file-copy/README.md)           | CLI, explicit paths, partial I/O progress, sync and close                           | Creates a new destination; refuses overwrite               |
+| Project                                    | What it combines                                                                                       | Inputs and effects                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| [Age validation](age/README.md)            | Typed policy module, decimal parsing, union narrowing, named exits                                     | Four fixed inputs; diagnostic output                       |
+| [Custom errors](custom-errors/README.md)   | Nominal failure types, typed causes, common inspection, specific and broad matching                    | Fixed `"24"`, `"16"`, and `"twenty"` inputs; no allocation |
+| [Testing](testing/README.md)               | Shared helper, table-driven cases, typed errors, byte fixtures, expected panics, and channel ownership | Six cases; explicit executor for the channel case          |
+| [Block composition](composition/README.md) | Primary values, exact record shapes, dispatch, matcher/ascription contexts                             | Fixed sensor reading; no allocation                        |
+| [Packet decoder](packet/README.md)         | Import aliases, package exports, borrowed wire bytes, explicit widening/shifts                         | Valid and truncated inline headers                         |
+| [Unicode text lab](text-lab/README.md)     | Bytes, scalars, graphemes, normalization, borrowed output buffers                                      | Fixed Unicode text; no allocator                           |
+| [Word count](word-count/README.md)         | Text cursors, explicit map hashing/equality, mutation and borrow lifetimes                             | Fixed text; allocator-backed map                           |
+| [JSON report](json-report/README.md)       | Typed JSON, validation, owned decoded storage, buffered encoding                                       | Fixed JSON input; explicit decoding allocator              |
+| [Seeded rolls](seeded-rolls/README.md)     | Reproducible randomness, numeric conversion, bounded histogram                                         | Fixed seed; inline counters                                |
+| [Ordered tasks](tasks/README.md)           | Bounded groups, module callables, ordered outcomes, deadlines                                          | Explicit executor; three child tasks                       |
+| [Bounded channel](channel/README.md)       | Endpoint moves, backpressure, closure, partial-result handling                                         | Explicit queue allocation and executor                     |
+| [Ticker](ticker/README.md)                 | Owned timed events, monotonic readings, missed-tick coalescing                                         | Explicit timer allocation; finite waits                    |
+| [Calendar CLI](calendar-cli/README.md)     | Typed options, generated help, calendar conversion, writer errors                                      | Argv; six calendar profiles                                |
+| [Duration CLI](duration-cli/README.md)     | Nested typed subcommands, inherited options, checked duration arithmetic                               | Argv; no implicit command dispatch                         |
+| [File hash](file-hash/README.md)           | CLI, bounded streaming reads, SHA-256, hex output                                                      | Reads a named file; includes a fixture                     |
+| [File copy](file-copy/README.md)           | CLI, explicit paths, partial I/O progress, sync and close                                              | Creates a new destination; refuses overwrite               |
 
 Start with age, composition, and packet for the language model. Follow age with
 custom errors to turn validation failures into nominal values with typed payloads.

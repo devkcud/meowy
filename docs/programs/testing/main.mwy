@@ -1,0 +1,6 @@
+arithmetic : @"./arithmetic.mwy"
+debug : @"debug"
+
+answer : arithmetic.half_even(42)
+| answer <arithmetic.OddInput> | debug.panic(answer)
+debug.print("Half of 42: {answer}")

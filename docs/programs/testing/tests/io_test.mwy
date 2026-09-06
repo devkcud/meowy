@@ -1,0 +1,19 @@
+io : @"io"
+testing : @"testing"
+
+-> tests : testing.suite({
+    -> partial_write : testing.case(() {
+        buffer <uint8[3]> := []
+        attempt : 'write {
+            writer := io.buffer_writer(&!buffer)
+            -> io.write_all(writer.write, "meow".bytes())
+        }
+
+        expected_count <usize> : 3
+        actual_count : attempt.count
+        testing.equal(&actual_count, &expected_count, "Keep committed progress")
+        | attempt.error <null> | testing.fail("A fourth byte cannot fit")
+        testing.bytes_equal(buffer.slice(), "meo".bytes(),
+            "The first three bytes survive the capacity failure")
+    })
+})

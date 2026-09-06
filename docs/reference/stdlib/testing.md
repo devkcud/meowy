@@ -1,6 +1,6 @@
 # Testing
 
-[Library index](README.md)
+[Library index](README.md) · [Pawterns](../../pawterns/testing.md) · [Worked suite](../../programs/testing/README.md)
 
 `@"testing"` supplies assertions and ordinary values describing test cases and
 suites. `meowy test` discovers those descriptions, builds case harnesses, and
@@ -547,4 +547,5 @@ Manifest/configuration, source/build/case failures, and disallowed empty selecti
 return status `1`. Invalid command usage returns `2`. A fully passing selection, all-skipped
 nonempty selection, or explicitly allowed empty selection returns `0`.
 Successful `--list` and `--no-run` also return `0`, without claiming executed cases.
-See [test diagnostic codes](../diagnostic-codes.md#test-runner-failures) for runner failures.
+See [test diagnostic codes](../diagnostic-codes.md#test-runner-failures) and
+[the testing cookbook](../../pawterns/testing.md) for failures you can exercise.

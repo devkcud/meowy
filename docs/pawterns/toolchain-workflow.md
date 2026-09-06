@@ -165,7 +165,7 @@ Your future changes deserve the same questions every time: does the code obey
 the language, does it follow the project's style, and do the chosen cases still
 behave the same way?
 
-For a project containing the `checks.mwy` regression driver from
+For a project containing the standard suite from
 [composition](composition.md#give-a-pure-helper-a-small-regression-driver), save
 this as `ci.sh` at the project root:
 
@@ -175,21 +175,29 @@ set -eu
 
 meowy check --offline --color never --quiet
 meowy style check --offline --color never --quiet
-meowy check checks.mwy --offline --color never --quiet
-meowy run checks.mwy --offline --color never --quiet
+meowy test --offline --color never --quiet
 ```
 
 Run `sh ci.sh` from that directory. `set -e` stops this sequence at its first
-failed command. The first check covers the application entry; the later ones
-cover and execute the explicitly selected regression entry. A file merely sitting
-in the directory is not automatically part of every checking graph.
+failed command. The first check covers the application entry; `test` checks the
+discovered suite graphs, builds their harness, and runs the selected cases. It
+does not execute the application entry. A file merely sitting in the directory
+is not automatically part of every checking graph.
 
 Prepare the selected toolchain, target inputs, and locked dependency content
 before this sequence. Offline mode requires those inputs locally and never means
 “quietly skip the missing dependency.” Resolve additions or update revisions in
 an explicit dependency-management step, not in the middle of a source check.
 
-The driver above has fixed inputs and no external data effects. Other drivers may
-create files, open sockets, or wait for tasks; run them with the fixtures and
-limits they actually require. `--offline` constrains tool dependency access, not
-the network behavior of the application launched by `run`.
+The suite above has fixed inputs and no external data effects. Other suites may
+create files, open sockets, or wait for tasks; configure their process count,
+watchdog, output limit, and seed in `mod.mwy`. `--offline` constrains tool
+dependency access, not network calls made by a case. A fresh case process does
+not give that case a private filesystem or network.
+
+Use `meowy test --no-run` for a separate build-only check, such as a target that
+the CI host cannot execute. It does not replace a run on a compatible host.
+Keep `test.allow_empty` false when the job is supposed to exercise cases: an
+accidentally empty selection should fail visibly. Skipped cases remain listed as
+skipped; a green status does not make them tested. See
+[testing Pawterns](testing.md) for fixtures and failure inspection.
