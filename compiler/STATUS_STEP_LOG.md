@@ -6,6 +6,62 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Checked element assignment handoff
+
+- State: Implementation is committed as a978c8b and native coverage/example/README as 2a15a37. Direct mutable local Copy list writes are complete, with protected target/index/RHS ordering, E101/P001 bounds, E302 aliases and no aggregate writeback. Independent review and all workers are finished. No unfinished implementation or failing checks remain; final tracker commit follows.
+- Validation: All 14 combined checks pass: 130 library and 108 native Rust groups, 35 Python tests, 854 local links, editors, schemas/catalog, format, Clippy, build and 10 passed/13 unsupported/0 failed conformance in both profiles. Runtime sanitizers pass unchanged. Optimized compiler release example output is exact. Initial fixture syntax errors were corrected before successful reruns.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Extend assignment to nested checked list paths with root-to-leaf bounds and retained parent reservations; keep field/shared-reference targets excluded until their mutability contracts exist. Then progress contextual constraints, generated cleanup/runtime integration, module/library tooling and full qualification. Finalize the handoff commit and confirm a clean tree.
+
+### 2026-09-06 — Element assignment implementation commit
+
+- State: Committed the implementation, ownership contract and two obsolete B001 removals as a978c8b. Native coverage/example and final handoffs remain unstaged for separate commits. The optimized compiler also builds and runs the new example with exact output.
+- Validation: All 14 combined checks passed; optimized release compiler example stdout is exactly 10, 21, 2, 7, 9 on separate lines with empty stderr. Cached whitespace and implementation split were checked.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the native acceptance cases, example and README; finalize both handoffs with current evidence and nested checked write paths as the next implementation step, then verify Git integrity.
+
+### 2026-09-06 — Element assignment combined gate
+
+- State: All implementation workers are finished and independent ownership review found no must-fix. Nine directed review probes confirmed no stale union/bool pruning, correct conditional exits, retained aliases and independent copies. The full repository/runtime/compiler integration gate passes.
+- Validation: All 14 tools/verify.py --all checks pass: 130 library plus 108 native Rust tests, 35 Python tests, 854 local links, editor runtimes, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized checks pass. Conformance is 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build the optimized compiler and run the element-writes example with exact output, then split commits by implementation, native evidence/example and final handoff. Next implementation slice is nested checked write paths.
+
+### 2026-09-06 — Element assignment source freeze
+
+- State: Frontend, HIR consumers, backend and ownership documentation are stable. Two new frontend/loan groups pass, including copied-union refinement preservation. Review confirms mutable reference-free lists and list reads carry unknown payload activity; root predicate invalidation cannot retain stale element tags. No new borrow snapshots or proof bypasses were introduced.
+- Validation: Focused list/loan tests, 23 backend groups, seven new native groups, Clippy with denied warnings, formatting and whitespace checks pass. Independent final adversarial probes and the combined gate are next.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the combined repository/runtime/compiler gate on frozen source, inspect any failure before editing, then verify an optimized compiler build and finalize the split commits and handoff.
+
+### 2026-09-06 — Element store backend validation
+
+- State: Backend lowering is complete and stable. It captures local length and selected index, checks bounds before RHS, and stores directly into the selected element without aggregate writeback. Three new backend groups cover Copy aggregate layouts, all index widths and early exits; frontend ownership documentation and independent review are finishing.
+- Validation: All 23 filtered backend groups pass, including 36 new native cases across debug/release. Seven new CLI/native groups pass. Backend formatting and Git whitespace checks pass. Full repository gate has not run on this change yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish review and frontend focused checks, freeze source edits, run the combined gate, then verify the optimized compiler example and split implementation, native coverage and handoff commits.
+
+### 2026-09-06 — Element write native integration
+
+- State: The integrated SetElement checker, loan reservation and backend store pass all seven new native groups. Direct local writes preserve Copy value types and initialized length; aliases and returning owner writes fail E302; bounds failure skips RHS; leave/restart/panic operands skip the final store. README documents ordering and the direct-local target boundary.
+- Validation: Filtered native element_write run: 7 passed, 0 failed, with debug/release execution. Initial run had 6 passes and one invalid union-list annotation in a new fixture; corrected it to the established named union syntax and all seven passed. Full suite and independent review remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish frontend/backend unit evidence and independent review, then run formatting, Clippy, all Rust/native tests, conformance and the combined repository/runtime gate; update handoffs and make focused commits.
+
+### 2026-09-06 — Element write acceptance cases
+
+- State: Added seven native acceptance groups and an element-writes example, with execution expectations for Copy values, last-use reads, alias conflicts, bounds-before-RHS and nonreturning operands. Frontend/backend workers agreed on SetElement with a direct local root and target-only panic span. Internal parent reservations are consumed after the index and before the final write; the final access conflicts with any remaining shared list loan.
+- Validation: Source review and test construction only; new native checks remain pending until all HIR consumers are implemented.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Compile the integrated change, correct any actual source/diagnostic mismatches, complete independent ownership review and documentation, then run full gates.
+
+### 2026-09-06 — Checked element assignment design
+
+- State: Implementation is active for initialized element writes to direct mutable local Copy lists. Resolve original parent storage and initialized length, evaluate and check the index before the RHS, then store only the selected element. Preserve shared reads until their last use while reserving parent storage against intervening writes. Field/reference/temporary owners, exclusive references and owned elements remain outside this slice. Root owns both handoffs; frontend, backend and independent review are delegated.
+- Validation: Read mutation, memory and evaluation-order contracts; repository starts clean at fbcfe9c. No new implementation checks have run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement HIR, checker, origin/loan analysis and backend lowering; add native order, alias, bounds and early-exit evidence; then run the combined gate and split commits.
+
 ### 2026-09-06 — Finalize checked element-borrow handoff
 
 - State: Implementation 745ca2f and native coverage/example/docs 5c9defb are committed. Both STATUS snapshots now describe original-storage element references, typed abstract regions, parent/index loans, all-input return bounds and reachable-proof validation. No implementation workers or unfinished source files remain; runtime code is unchanged.

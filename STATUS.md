@@ -7,37 +7,35 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `745ca2f` adds checked shared element borrows such as `&values[index]`.
-  References address original initialized list storage, compose nested list/record
-  paths and return through functions while retaining every borrowed-input bound.
-  Copied parameter/self storage cannot escape; returning index effects keep the
-  parent loan live, including when the resulting reference is discarded.
-- Physical addresses use actual indices. Abstract Field/Element lifetime paths
-  conservatively overlap indices within the same list region and do not enumerate
-  capacity. Bounds remain E101/P001; element writes and exclusive borrows stay B001.
-- Derived-reference proof gaps are checked after CFG reachability is known. Dead
-  branches need no invented origins; any reachable gap still reports B001. This
-  fixes two false rejections found in literal-false/short-circuited expressions.
-- Coverage/example: `5c9defb` adds seven native groups and
-  `compiler/examples/element-borrows.mwy`. Library coverage adds three backend,
-  one list, one contract and two loan groups, including path-budget checks.
-- All 14 checks pass: 226 Rust tests, 35 Python tests, 853 local links, editors,
-  schemas/catalog, formatting, Clippy, build and conformance. Runtime sanitizer,
-  message/lifetime, fatal and guard checks pass unchanged. Conformance remains
-  10 passed, 13 unsupported, 0 failed in both profiles.
-- The optimized compiler passed the exact element-borrows example, an active E302
-  conflict and a zero-capacity P001 check preserving index effects. Independent
-  ownership review/retests found no remaining blocker or unsafe acceptance.
+- Compiler: `a978c8b` implements checked initialized-element assignment to direct
+  mutable local Copy lists: `values[index] = value`. It captures the original
+  initialized length, evaluates/checks the index before the RHS, then stores only
+  the selected element. Length, other elements and earlier list copies survive.
+- Internal parent-storage reservations reject owner/element writes during returning
+  index/RHS evaluation. Shared reads may finish before the store; any later shared
+  use conflicts with the final exclusive access (E302). All indices conservatively
+  overlap. No source-level exclusive reference or owned-element support is implied.
+- Bounds remain E101/P001 with the target byte span. Bounds failure skips RHS;
+  leave/restart/panic operands skip the remaining assignment. Dead paths do not
+  invent accesses. Direct root writes preserve existing Copy-read snapshots.
+- Coverage/example: `2a15a37` adds seven native groups and
+  `compiler/examples/element-writes.mwy`. Library coverage adds three backend,
+  one list and one loan group. E305, E207 and B001 boundaries remain explicit.
+- All 14 combined checks pass: 238 Rust tests, 35 Python tests, 854 local
+  links, editors, schemas/catalog, formatting, Clippy, build and conformance.
+  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- The optimized compiler runs the element-writes example with exact output.
+  Independent ownership review found no remaining blocker. Runtime debug/release/
+  sanitizer checks pass unchanged; generated task cleanup remains separate work.
 - No active implementation workers, unfinished code or failing checks remain.
-  Runtime snapshots remain `d92f94c`; generated panic evidence remains `eb65cbd`.
-  Indexed mutation, exclusive references, slices, owned/reference elements,
-  generated task cleanup, cancellation and DWARF remain future work.
+  Nested write targets, field/reference/temporary targets, exclusive references,
+  slices, owned/reference elements, cancellation and DWARF remain future work.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Checked shared list-element borrows and typed failure evidence | Exclusive element access, moves/cleanup and remaining contextual constraints |
+| Compiler | Checked element borrows and direct local element writes | Nested write paths, exclusive references, moves/cleanup and contextual constraints |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -47,10 +45,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend checked element places with exclusive access and initialized/move state
-   before indexed writes, slices or owned elements. Define target/index/RHS ordering,
-   preserve parent storage while a place is in use, and test overlap/last-use cases.
-   Current abstract Element paths do not prove different indices disjoint.
+1. Extend checked write paths to nested list targets in the HIR, checker, loans and
+   backend. Evaluate each index/bounds check once from root to leaf, retain parent
+   reservations, and test aliases plus early exits. Immutable field/reference owners
+   stay excluded until their mutability/exclusive contracts are implemented.
 2. Extend remaining effectful/non-scalar contextual constraints without replaying
    effects or weakening budgets. Keep annotations/B001 for unproved candidates.
 3. Define generated payload/diagnostic layouts and connect cleanup to runtime
