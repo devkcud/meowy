@@ -1,0 +1,23 @@
+debug : @"debug"
+
+number := 41
+view : &number
+alias : view
+debug.print(*alias)
+number = *alias + 1
+debug.print(number)
+
+record := { -> value : 7 }
+field : &record.value
+debug.print(*field)
+record = { -> value : 9 }
+debug.print(record.value)
+
+count := 0
+'loop {
+    current : &count
+    debug.print(*current)
+    count = count + 1
+    | count < 3 | 'loop.restart()
+}
+debug.print(count)

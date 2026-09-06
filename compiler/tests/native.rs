@@ -73,6 +73,10 @@ pub fn examples_execute_in_both_profiles() {
             "11\n22\n42\ntrue\n",
         ),
         (
+            include_str!("../examples/borrow-liveness.mwy"),
+            "41\n42\n7\n9\n0\n1\n2\n3\n",
+        ),
+        (
             include_str!("../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
@@ -747,5 +751,162 @@ pub fn guarded_local_escapes_are_rejected_before_lowering() {
             errors.contains(&format!("\"code\":\"{code}\"")),
             "{source}: {errors}"
         );
+    }
+}
+
+#[test]
+pub fn shared_borrows_end_after_final_use_in_assignments_and_operands() {
+    Case::new(
+        r#"
+debug:@"debug"
+owner:=1
+unused:&owner
+owner=2
+view:&owner
+alias:{->view}
+owner=*alias+1
+debug.print(owner)
+current:&owner
+sum:*current+{owner=4;->owner}
+debug.print(sum)
+debug.print(owner)
+last:&owner
+skipped:false&&{owner=9;->true}
+debug.print(skipped)
+debug.print(*last)
+owner=5
+debug.print(owner)
+"#,
+    )
+    .runs(b"3\n7\n4\nfalse\n4\n5\n");
+}
+
+#[test]
+pub fn shared_borrow_liveness_follows_loop_and_named_leave_edges() {
+    Case::new(
+        r#"
+debug:@"debug"
+owner:=10
+view:&owner
+'finished {
+    debug.print(*view)
+    'finished.leave()
+    owner=99
+    debug.print(*view)
+}
+owner=11
+debug.print(owner)
+count:=0
+'loop {
+    count=count+1
+    current:&count
+    debug.print(*current)
+    |count<3|'loop.restart()
+}
+count=4
+debug.print(count)
+owner=20
+result:'result {
+    'result->&owner
+    'result.leave()
+    owner=99
+}
+debug.print(*result)
+owner=21
+debug.print(owner)
+"#,
+    )
+    .runs(b"10\n11\n1\n2\n3\n4\n20\n21\n");
+}
+
+#[test]
+pub fn guarded_borrows_allow_writes_to_unselected_storage() {
+    Case::new(
+        r#"
+debug:@"debug"
+choose<int32>:(flag<boolean>){
+    left:=11
+    right:=22
+    view:{|flag|->&left;|!flag|->&right}
+    |flag|right=33
+    |!flag|left=44
+    ->*view
+}
+disjoint<null>:(flag<boolean>){
+    owner:=7
+    view:&owner
+    |flag|owner=8
+    |!flag|debug.print(*view)
+    debug.print(owner)
+}
+debug.print(choose(true))
+debug.print(choose(false))
+disjoint(true)
+disjoint(false)
+"#,
+    )
+    .runs(b"11\n22\n8\n7\n7\n");
+}
+
+#[test]
+pub fn live_shared_borrows_reject_overlapping_writes_before_lowering() {
+    for source in [
+        "owner:=1;view:&owner;owner=2;value:*view",
+        "owner:=1;view:&owner;alias:view;owner=2;value:*alias",
+        "owner:=1;view:&owner;owner=*view+1;value:*view",
+        "owner:={->value:1;->other:2};view:&owner.value;owner={->value:3;->other:4};value:*view",
+        "owner:=1;view:{->&owner;owner=2};value:*view",
+        "owner:=1;view:&owner;other:3;same:view=={owner=2;->&other}",
+        "owner:=1;other:3;same:&owner=={owner=2;->&other}",
+        "owner:=1;view:&owner;again:=true;'loop{value:*view;|again|{owner=2;again=false;'loop.restart()}}",
+        "d:@\"debug\";owner:=1;view:&owner;later:=false;i:=0;'loop{|later|d.print(*view);|!later|owner=2;later=true;i=i+1;|i<2|'loop.restart()}",
+        "f<null>:(flag<boolean>){owner:=1;view:&owner;flag&&{owner=2;->true};value:*view}",
+        "f<int32>:(flag<boolean>){left:=1;right:=2;view:{|flag|->&left;|!flag|->&right};left=3;->*view}",
+    ] {
+        let case = Case::new(source);
+        for profile in ["debug", "release"] {
+            let result = case.command("build", &["--json", "--profile", profile]);
+            assert_eq!(result.status.code(), Some(1), "{source}");
+            let error = String::from_utf8_lossy(&result.stderr);
+            assert!(error.contains("\"code\":\"E302\""), "{source}: {error}");
+            assert!(!case.path.join("build").exists());
+        }
+    }
+}
+
+#[test]
+pub fn short_circuit_blocks_and_nonreturning_operands_preserve_effects() {
+    Case::new(
+        r#"
+d:@"debug"
+d.print(false&&{d.print("unexpected");->true})
+d.print(true||{d.print("unexpected");->false})
+f<boolean>:(flag<boolean>){->flag&&d.panic("stop")}
+g<boolean>:(flag<boolean>){->flag||d.panic("stop")}
+d.print(f(false))
+d.print(g(true))
+'outer {
+    value:{'outer.leave()}&&true
+    d.print("unexpected")
+}
+d.print("done")
+"#,
+    )
+    .runs(b"false\ntrue\nfalse\ntrue\ndone\n");
+    for expr in [
+        "true&&d.panic(\"stop\")",
+        "false||d.panic(\"stop\")",
+        "d.panic(\"stop\")&&false",
+    ] {
+        let case = Case::new(&format!(
+            "d:@\"debug\";value:{expr};d.print(\"unexpected\")"
+        ));
+        for profile in ["debug", "release"] {
+            let result = case.command("run", &["--profile", profile]);
+            assert_eq!(result.status.code(), Some(1), "{expr}");
+            assert!(result.stdout.is_empty(), "{expr}");
+            let error = String::from_utf8_lossy(&result.stderr);
+            assert!(error.contains("P006"), "{expr}: {error}");
+        }
     }
 }

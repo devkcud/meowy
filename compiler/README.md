@@ -3,8 +3,9 @@
 This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
-narrowing and shared references to immutable local storage, including guarded
-block results. It is not the complete v0.0.1 language.
+narrowing and shared references to ordinary local storage, including guarded
+block results and last-use checks for mutable owners. It is not the complete
+v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -20,6 +21,7 @@ compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile releas
 compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
+compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -31,6 +33,8 @@ absent fields and a fallback function that narrows a value after an early exit.
 The [references example](examples/references.mwy) compares storage addresses and
 copies values through shared references. The [borrowed results example](examples/borrow-results.mwy)
 selects between surviving owners and discards an iteration-local borrow on restart.
+The [borrow liveness example](examples/borrow-liveness.mwy) updates scalar and record
+owners after the final use of their shared references, including loop iterations.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -60,12 +64,15 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 - Runtime type predicates and proven ascriptions, including immutable field paths,
   complementary conditions, short-circuit operands and early-exit narrowing.
   Assignments invalidate proofs about the changed value.
-- Shared references to immutable ordinary local bindings and their concrete record
+- Shared references to ordinary local bindings and their concrete record
   fields, address equality, reference copies and copyable dereference. Record field
   access through a reference copies the field. Borrow origins are checked before
   lowering. Bare-reference block results preserve every possible origin across
   branches and named exits; completed results cannot retain expired locals.
   Restart, panic and enclosing leave discard emissions when proven by flow guards.
+  Mutable owners can be assigned after the last use of every overlapping shared
+  reference. Live aliases, reference operands and retained block results protect
+  their owners from writes; conflicting assignments report E302.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - `debug.print`, streamed interpolation at output calls, `debug.panic`, string
@@ -77,7 +84,7 @@ The initial panic runtime reports failure and exits; recoverable unwinding and
 owned-resource cleanup remain unimplemented.
 
 Unavailable constructs report **B001**, including collections, exclusive borrows,
-borrows of mutable or temporary storage, capturing closures, generic/type-producing
+borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, and mutable record fields. String interpolation outside an
 output call requires the future formatting/storage implementation and is rejected.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
@@ -89,6 +96,10 @@ evaluate their operands and effects. Reference-bearing signatures, aggregates,
 reassignment, dispatch and direct formatting require future analysis. Parameter,
 receiver and named-emission storage remain unavailable as borrow roots. Missing
 origin proofs or exhausted analysis budgets produce B001.
+Borrow liveness follows branches and named loop edges. An assignment evaluates its
+right-hand side before writing: `owner = *view + 1` is valid when that is the last
+use of `view`. A later use of that view makes the write a conflict. Replacing a
+record overlaps references to any of its fields.
 See [the storage design](OWNERSHIP.md) for the remaining analysis stages.
 
 Union literals receive a numeric width when the expected union has one matching
@@ -149,6 +160,7 @@ the fixture catalog and does not execute the compiler.
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
 | `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
 | `src/borrow.rs` | Guarded immutable origins, block-result transfers and lexical lifetime checks |
+| `src/loans.rs` | Guarded CFG, backwards reference liveness and shared-loan/write conflicts |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
 | `src/backend.rs` | Typed LLVM IR lowering and bridge interface |
 | `native/bridge.cpp` | LLVM verification, optimization and object emission |
