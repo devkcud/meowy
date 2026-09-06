@@ -65,8 +65,9 @@ The [worked programs](docs/programs/README.md) put these rules together. The
 ## Project files
 
 - `.mwy` files contain meowy source.
-- `mod.mwy` describes a module's imports, exports, and build settings. See the
-  [annotated manifest](mod.sample.mwy).
+- `mod.mwy` describes imports, local path aliases, exports, and build settings.
+  See the [manifest guide](docs/guide/mod.md) and its
+  [sample](docs/guide/mod.sample.mwy).
 - [Vim and Neovim support](editor/nvim/README.md) provides syntax highlighting,
   file detection, and buffer settings.
 

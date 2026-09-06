@@ -137,8 +137,10 @@ There is no flag that makes a manifest arbitrarily executable. Build inputs must
 be declared so dependency resolution and code generation do not depend on hidden
 machine state.
 
-See the [sample manifest](../../mod.sample.mwy), which points to the documented
-packet module and its companion entry file. The
+The [manifest guide](../guide/mod.md) walks through local aliases, package imports,
+exports, and runtime settings. Its [sample manifest](../guide/mod.sample.mwy) is
+installed as `mod.mwy` at the repository root and selects the documented packet
+program. The
 [CLI guide](../cli/README.md#projects-and-entry-selection) defines manifest
 discovery, entry overrides, and command-line build options.
 

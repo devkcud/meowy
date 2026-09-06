@@ -1,5 +1,7 @@
 # A first tour
 
+[Documentation index](../README.md) · [Configure mod.mwy](mod.md)
+
 meowy programs describe values and their transformations. Start with a file named
 `main.mwy`:
 

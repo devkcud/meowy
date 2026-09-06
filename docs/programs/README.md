@@ -6,9 +6,11 @@ These small programs share the reference's syntax and library contracts. Their
 expected behavior is explained below, including failure paths and storage costs.
 All imports resolve to a foundational module or a companion file in this directory.
 
-The [sample manifest](../../mod.sample.mwy) selects `main.mwy` as the entry and
-exports the packet module. To select another listing, set `build.entry` to that
-file's path. The task and channel programs additionally require an
+The [sample manifest](../guide/mod.sample.mwy), copied to the repository root as
+`mod.mwy`, selects `main.mwy` as the entry and exports the packet module through
+its `programs` path alias. The [manifest guide](../guide/mod.md) explains the setup.
+To select another listing, set `build.entry` to that file's path.
+The task and channel programs additionally require an
 [executor configuration](../reference/modules-and-ffi.md#build-settings).
 The [CLI guide](../cli/README.md#check-build-and-run) covers entry selection and
 the check, build, and run commands.

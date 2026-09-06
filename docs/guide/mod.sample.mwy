@@ -1,0 +1,28 @@
+# Copy this template to mod.mwy at the repository root.
+  Paths below are relative to that installed mod.mwy, not this guide directory.
+#
+
+# Local source prefixes and package dependencies share the import configuration. #
+# Foundational modules such as debug, strings, and tasks need no dependency entry. #
+-> import : {
+    -> aliases : {
+        -> programs : "./docs/programs"
+    }
+}
+
+-> export : {
+    -> packet : @"programs/packet.mwy"
+}
+
+-> build : {
+    -> entry : "./docs/programs/main.mwy"
+    -> profile : "debug"
+}
+
+# Package dependency records belong under import, beside the aliases table.
+  A local package uses path; a local source directory goes in import.aliases.
+  Remote dependencies are keyed by their local package name.
+  Each remote record contains fetch and exactly one of hash, tag, or ref.
+  hash is a full commit identifier; tag and ref resolve through mod.lock.
+  See docs/guide/mod.md for setup and docs/reference/modules-and-ffi.md for rules.
+#

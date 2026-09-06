@@ -71,7 +71,8 @@ The saved session records the selected entry, arguments, target, and profile.
 ### Projects and entry selection
 
 For a project, put its configuration in `mod.mwy`; the
-[sample manifest](../../mod.sample.mwy) demonstrates the fields. Then use:
+[manifest guide](../guide/mod.md) explains each section and its
+[sample](../guide/mod.sample.mwy). Then use:
 
 ```sh
 meowy check
