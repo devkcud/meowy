@@ -1,6 +1,6 @@
 # Time, dates, and calendars
 
-[Documentation index](../../README.md) · [Library index](README.md)
+[Documentation index](../../README.md) · [Practical guide](../../guide/time-and-date.md) · [Library index](README.md)
 
 `@"time"` supplies elapsed-time values, clocks, waits, and timers. `@"date"`
 supplies civil dates, times of day, timestamps, time zones, and calendar arithmetic.

@@ -101,3 +101,25 @@ partial sum explicitly.
 The only application allocation is the explicit bounded queue. Task scheduling
 has its separately configured runtime storage cost. No message allocates queue
 storage, and neither child borrows stack data from a scope that could disappear.
+
+## Convert calendars from the command line
+
+[calendar-cli.mwy](calendar-cli.mwy) accepts a Gregorian date plus a `--calendar`
+option (short form `-c`). `cli.command` defines typed fields, accepted calendar
+names, help text, and a version using ordinary records. `cli.parse` returns the
+parsed fields or a help/version/usage result; the program handles each explicitly.
+
+```console
+$ meowy run docs/programs/calendar-cli.mwy -- -c chinese 2026-02-17
+```
+
+The application prints `chinese:2026-M01-01`. `-v` includes the calendar data
+version. Help and valid conversions give status 0; bad options, dates, and
+unsupported ranges give status 2. Argv acquisition or output failure gives status
+1. See the [guide](../guide/time-and-date.md) for the conversion's source and the
+[CLI contract](../reference/stdlib/cli.md) for option parsing and help behavior.
+
+The argv owner uses `memory.heap` explicitly and outlives all parsed string views.
+Command metadata, parsing, and date conversion require no heap allocation. Output
+streams through supplied writer callables; the program checks their failures and
+emits a single process status at the entry boundary.

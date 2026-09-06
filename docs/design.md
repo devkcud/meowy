@@ -88,6 +88,20 @@ storage, and channel queues have visible construction boundaries. A library
 cannot promise allocation-free behavior while hiding a dynamic lookup table
 behind field syntax.
 
+## Compose a useful standard library
+
+The [standard library](reference/stdlib/README.md) applies the same rules to text,
+collections, system services, and application command lines. Callables and
+allocators are explicit; typed command descriptions produce statically known
+parse results. Convenience does not require hidden maps, process exits, or
+background work.
+
+Elapsed durations, monotonic instants, civil timestamps, and calendar dates have
+different types. A fixed Day is 24 hours; a calendar day follows date and zone
+rules. Calendar profiles preserve leap-month identity and pin their rule data,
+including Chinese lunisolar conversions. A selected calendar never guesses a
+zone, locale, or observational religious convention.
+
 ## Keep configuration and tools small
 
 A manifest declares a graph of inputs and exports. Dependency selectors resolve

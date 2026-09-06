@@ -58,7 +58,7 @@ Start with the [guide](docs/guide/README.md), or use the
 | [Collections](docs/reference/collections.md)               | Bounded lists, arrays, slices, vectors, and maps                       |
 | [Tasks and channels](docs/reference/tasks-and-channels.md) | Structured concurrency, deadlines, cancellation, and communication     |
 | [Modules and FFI](docs/reference/modules-and-ffi.md)       | Imports, exports, reproducible dependencies, and native boundaries     |
-| [Library contracts](docs/reference/stdlib/README.md)    | The foundational APIs used throughout the documentation                |
+| [Standard library](docs/reference/stdlib/README.md)       | Text, data, collections, time, calendars, system services, and CLI apps |
 | [Diagnostics](docs/reference/diagnostics.md)               | Labeled errors, ranked repairs, replay capsules, and failure behavior  |
 | [Diagnostic codes](docs/reference/diagnostic-codes.md)     | Rule catalog, required evidence, and repair guidance                   |
 | [Command line](docs/cli/README.md)                         | Check, build, run, inspect internals, apply fixes, and replay failures |
@@ -66,6 +66,8 @@ Start with the [guide](docs/guide/README.md), or use the
 
 The [worked programs](docs/programs/README.md) put these rules together. The
 [design notes](docs/design.md) explain the choices and the boundaries of the core.
+The [time and calendar guide](docs/guide/time-and-date.md) builds toward a small
+CLI that converts dates between six calendar systems, including Chinese.
 
 ## Project files
 

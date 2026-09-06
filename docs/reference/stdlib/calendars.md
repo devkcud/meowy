@@ -1,6 +1,6 @@
 # Calendar systems
 
-[Library index](README.md) · [Time and date](time-and-date.md)
+[Library index](README.md) · [Time and date](time-and-date.md) · [Practical guide](../../guide/time-and-date.md)
 
 `@"calendars"` supplies calendar values and calendar-specific operations.
 `date.calendars` re-exports the same module, so `date.calendars.Chinese` and

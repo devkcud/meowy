@@ -20,6 +20,8 @@ those rules by building small programs, and the design notes explain their inten
    reproduce failures from their saved executable capsules.
 8. Set a [gatostyle policy](guide/gatostyle.md) for layout, code quality, and the
    expression forms your project prefers.
+9. Follow the [time and calendar guide](guide/time-and-date.md), then build a
+   typed application command line with the standard library's `cli` module.
 
 ## Look something up
 
@@ -36,6 +38,7 @@ those rules by building small programs, and the design notes explain their inten
 | What does the standard library provide?              | [Standard library](reference/stdlib/README.md)                    |
 | How do durations, dates, and zones work?              | [Time and date](reference/stdlib/time-and-date.md)                 |
 | How do I use Chinese or Hebrew leap months?           | [Calendars](reference/stdlib/calendars.md)                         |
+| How do I build my own CLI application?               | [CLI library](reference/stdlib/cli.md)                            |
 | How do I configure mod.mwy and local import aliases?  | [Manifest guide](guide/mod.md)                                    |
 | How do I enforce coding style and code quality?       | [gatostyle](guide/gatostyle.md)                                   |
 | Which failures are values?                            | [Diagnostics](reference/diagnostics.md)                           |
@@ -48,8 +51,9 @@ those rules by building small programs, and the design notes explain their inten
 ## Read complete programs
 
 The [worked programs](programs/README.md) cover validation, allocation-free packet
-decoding, ordered task results, and a bounded producer/consumer channel. They are
-part of the documentation, with explanations of their data and failure paths.
+decoding, ordered task results, a bounded producer/consumer channel, and a
+calendar conversion CLI. They are part of the documentation, with explanations
+of their data and failure paths.
 
 [Design notes](design.md) record the language's main decisions.
 The [manifest guide](guide/mod.md) explains project configuration alongside its

@@ -1,0 +1,103 @@
+cli : @"cli"
+date : @"date"
+fmt : @"fmt"
+io : @"io"
+memory : @"memory"
+process : @"process"
+
+app : cli.command({
+    -> name : "moon"
+    -> summary : "Show a Gregorian date in another calendar."
+    -> version : "0.1.0"
+    -> options : [
+        cli.option<string>({
+            -> name : "calendar"
+            -> long : "calendar"
+            -> short : "c"
+            -> help : "Calendar used for the result."
+            -> default : "gregorian"
+            -> choices : [
+                "gregorian", "julian", "hebrew", "chinese",
+                "islamic-civil", "buddhist"
+            ]
+        }),
+        cli.flag({
+            -> name : "verbose"
+            -> long : "verbose"
+            -> short : "v"
+            -> help : "Include the selected rule-data version."
+        })
+    ]
+    -> arguments : [
+        cli.argument<string>({
+            -> name : "day"
+            -> help : "Gregorian date in YYYY-MM-DD form."
+        })
+    ]
+})
+
+status <int32> := 0
+
+'main {
+    output := io.stdout()
+    errors := io.stderr()
+    arguments : process.arguments(memory.heap)
+    | arguments <error> | {
+        written : fmt.write_line(errors.write, arguments)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 1
+        'main.leave()
+    }
+
+    parsed : cli.parse(app, arguments.slice())
+    | parsed <cli.Help> | {
+        written : cli.write_help(parsed, output.write, 80)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.Version> | {
+        written : cli.write_version(parsed, output.write)
+        | written <error> | status = 1
+        'main.leave()
+    }
+    | parsed <cli.UsageError> | {
+        written : cli.write_error(parsed, errors.write)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    day : date.parse_date(parsed.arguments.day, date.DateOnly)
+    | day <error> | {
+        written : fmt.write_line(errors.write, day)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    calendar : date.calendars.lookup(parsed.options.calendar)
+    | calendar <error> | {
+        written : fmt.write_line(errors.write, calendar)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    converted : day.in_calendar(calendar)
+    | converted <error> | {
+        written : fmt.write_line(errors.write, converted)
+        | written <error> | { status = 1; 'main.leave() }
+        status = 2
+        'main.leave()
+    }
+
+    written : fmt.write_line(output.write, converted)
+    | written <error> | { status = 1; 'main.leave() }
+
+    | parsed.options.verbose | {
+        version_written : fmt.write_line(output.write, "Rules: {calendar.version()}")
+        | version_written <error> | status = 1
+    }
+}
+
+-> status

@@ -1,6 +1,6 @@
 # Text, data, and numeric utilities
 
-[Library index](README.md) · [Collections](../collections.md)
+[Library index](README.md) · [Collections](../collections.md) · [I/O](io-and-system.md)
 
 These modules turn raw input into useful values without hiding storage decisions.
 Borrowed operations return views; growing operations take an allocator; streaming

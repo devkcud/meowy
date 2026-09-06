@@ -28,6 +28,11 @@ and constructors can be aliased or shadowed without adding keywords.
 | `@"date"` | Civil dates, timestamps, time zones, arithmetic, parsing, and formatting | [Date and time](time-and-date.md#civil-dates-and-times) |
 | `@"calendars"` | Gregorian, Julian, Hebrew, Chinese, Islamic civil, and Buddhist calendars | [Calendars](calendars.md) |
 | `@"tasks"`, `@"channel"` | Owned work, cancellation, and bounded message transfer | [Concurrency APIs](tasks-and-channels.md) |
+| `@"io"` | Readers, writers, buffers, streams, and partial progress | [I/O](io-and-system.md#readers-and-writers) |
+| `@"path"`, `@"fs"` | Lexical paths, files, metadata, and directory traversal | [Paths and files](io-and-system.md#paths-are-data) |
+| `@"env"`, `@"process"` | Explicit environment snapshots, argv, and child processes | [Processes](io-and-system.md#environment-and-processes) |
+| `@"net"` | Numeric addresses, DNS, TCP, and UDP | [Networking](io-and-system.md#network-services) |
+| `@"cli"` | Typed application options, subcommands, help, and usage errors | [CLI applications](cli.md) |
 | `@"ffi"` | Declared native layouts and foreign symbols | [Native APIs](ffi.md) |
 
 All library API chapters live in this directory. The surrounding reference defines
@@ -46,8 +51,8 @@ exclusive access; selecting a method does not execute it.
 A callable parameter describes a statically checked signature and a concrete
 capture environment. Passing `file.read`, a hash function, or a CLI validator
 never requests implicit interface lookup, callback boxing, or an allocator.
-Generic construction specializes result types at compile time; it cannot
-inspect live process inputs during that construction.
+Generic construction may specialize its result type at compile time, as with
+`cli.command`; it cannot inspect live process inputs during that construction.
 
 Tables abbreviate names within their module. For example, `Duration` in the time
 chapter means `time.Duration`, and `RangeError` there means the named module's
@@ -79,3 +84,11 @@ Unicode, time-zone, calendar, and pseudorandom algorithm identities are versione
 inputs. Code must not silently take different rules from a host locale or network
 lookup. External observations follow the [replay contract](../diagnostics.md#replay-fidelity);
 a saved executable records which effects it can reproduce.
+
+## Start with a complete program
+
+Follow the [time and calendar guide](../../guide/time-and-date.md) to distinguish
+elapsed time from civil arithmetic. The [calendar CLI](../../programs/calendar-cli.mwy)
+combines typed options, explicit argv storage, calendar conversion, and writer
+errors. The other [worked programs](../../programs/README.md) show numeric parsing,
+binary decoding, task results, and channel ownership.

@@ -181,3 +181,6 @@ different actions.
 
 Continue with [values and blocks](../reference/values-and-blocks.md), or inspect
 the [complete programs](../programs/README.md).
+The [standard library](../reference/stdlib/README.md) supplies text, data, storage,
+I/O, and CLI tools. Follow [time, calendars, and a small CLI](time-and-date.md) to
+combine several of those modules in one application.
