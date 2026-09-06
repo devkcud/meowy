@@ -40,6 +40,8 @@ Emitting does not end execution. A block produces at most one primary value and
 one value for each emitted name on any execution path. Its fields have a static
 shape; composing blocks does not require a dynamic object table.
 
+Current version: v0.0.1
+
 ## Documentation
 
 Start with the [guide](docs/guide/README.md), or use the
