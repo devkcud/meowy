@@ -1,0 +1,20 @@
+debug : @"debug"
+
+make : (present <boolean>) {
+    | present | -> name : "meowy"
+}
+
+greet <string> : (name <string><null>) 'result {
+    | name <null> | {
+        'result -> "guest"
+        'result.leave()
+    }
+    -> name
+}
+
+present : make(true)
+absent : make(false)
+debug.print(present.name)
+debug.print(absent.name)
+debug.print(greet(present.name))
+debug.print(greet(absent.name))

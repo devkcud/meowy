@@ -17,6 +17,7 @@ REQUIRED = {
     "forward_interrupted",
     "scalar_projection",
     "function_equality",
+    "conditional_field",
 }
 
 
