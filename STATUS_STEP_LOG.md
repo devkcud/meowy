@@ -6,6 +6,69 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Mutable record-field handoff
+
+- State: Completed mutable field metadata and checked local field writes in 6ff8807, with native coverage/example/README in ab813f8. Field flags survive type/context pipelines without changing physical layout; static writes preserve RHS order, neighbours and valid disjoint loans. All workers are finished and modular source organization is retained. No unfinished code or failing checks remain.
+- Validation: All 14 final checks pass: 147 library and 133 native Rust tests, 35 Python tests, 858 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance is 10 passed, 13 unsupported, 0 failed. Optimized mutable-fields output is exact. Final union-slot numeric ambiguity and emitted-name scope regressions pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Extend checked paths to mixed field/index targets with mutable gates, per-index bounds and protected parent storage. Then implement real result-slot aliases for mutable emitted names before permitting their assignment. Keep exclusive references, reference-bearing mutation, owned cleanup, modules and release qualification explicit. Finalize the handoff commit and verify clean Git state.
+
+### 2026-09-06 — Mutable field implementation commit
+
+- State: The mutable-field implementation and unit coverage are committed, including metadata consumers, static SetField lowering, precise predicate invalidation, emitted-name boundaries and the union-slot context correction. Native coverage/example and README remain separate. The optimized compiler example passes with exact output.
+- Validation: All 14 combined checks pass on final source; optimized mutable-fields stdout is exactly 1, 2, 3 and kept on separate lines with empty stderr. Cached whitespace and staged dependency scope were inspected.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native evidence/example/README, finalize both handoffs with exact counts and mixed field/index paths as the next task, then commit tracking and verify a clean tree.
+
+### 2026-09-06 — Mutable fields final combined gate
+
+- State: The corrected mutable-field implementation passes the complete gate. Field metadata, numeric union contexts, static writes, overlap/refinement rules and emitted-name boundaries are stable. All workers are finished; implementation and unit coverage are staged separately from native evidence and documentation.
+- Validation: All 14 checks pass on final source: 147 library and 133 native Rust tests, 35 Python tests, 858 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build/run the optimized mutable-fields example with exact output, commit implementation and native evidence separately, finalize both handoffs/logs and confirm a clean tree. Next: mixed field/index checked paths and real result-slot aliases.
+
+### 2026-09-06 — Union slot correction validated
+
+- State: Named union slots now filter candidates by emitted field mutability before providing numeric context. Mutable uint8 versus immutable uint16 alternatives select correctly; primary/composition rules are unchanged. The follow-up adds a dedicated checker regression group, leaving seven total new library groups and seven new native groups for this milestone.
+- Validation: All three checker field groups pass, including both mutability-selected widths, same-mutability ambiguity and primary ambiguity. Final Clippy/format/whitespace pass. The earlier full gate passed before this narrow correction; the final combined gate is being repeated on the corrected source.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the corrected full gate, verify the optimized mutable-fields example, then commit implementation, native evidence and final handoff separately. Keep mixed field/index writes and result-slot aliases explicit next steps.
+
+### 2026-09-06 — Union field context correction
+
+- State: The full gate passed, but final review found a narrow metadata propagation gap: union constructors with mutable uint8 versus immutable uint16 fields collected both numeric contexts before considering the emitted mutable bit, falsely reporting E207. List alternatives already selected correctly. The frontend is filtering named union slots by field mutability, and native coverage now checks both choices.
+- Validation: Full gate previously passed 146 library and 133 native groups, 35 Python tests and all 14 checks. Directed probes reproduced the two union-constructor false rejections; no unsafe acceptance or backend layout issue was found. The focused correction must be checked before final commits.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Apply and validate the named union-slot correction, preserving primary composition and all-input bounds, then rerun the compiler/combined gate and optimized example before committing the final implementation and handoff.
+
+### 2026-09-06 — Mutable fields source freeze
+
+- State: Mutable Field metadata, expected/inferred construction and static SetField lowering are complete and stable. All workers/review are finished. Pure list shape probing now preserves the emitted-name dependency boundary instead of reading a same-named outer local. The new behavior stays within ordinary reference-free Copy local records and named mutable paths.
+- Validation: Six focused field groups (three frontend/loan and three backend), all 12 list-context groups, seven native groups and 14 independent review cases pass. Backend has 18 new debug/release cases. Final Clippy/format/whitespace pass. One frontend fixture had a missing brace and one backend fixture had an invalid raw-HIR record wrapper; both were corrected before successful reruns.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the full repository/runtime/compiler gate on frozen source, build/run the optimized mutable-fields example, then split implementation, native evidence and final handoff commits. Next useful extension is mixed field/index checked write paths.
+
+### 2026-09-06 — Mutable fields native integration
+
+- State: All seven new native field groups pass against the integrated Field/SetField representation. Mutability survives constructors, forwarding, function returns, unions and list contexts; writes preserve copies/neighbours, allow disjoint and final-use shared reads, and invalidate only overlapping value facts. Static RHS owner replacement and early exits behave as specified.
+- Validation: Filtered native fields:: run: 7 passed, 0 failed in debug/release. Backend first run passed 28/29 groups; one new record-RHS HIR fixture needed correctly lowered primary/named emissions and is being fixed. Independent ownership review is running on the rebuilt compiler; full gate remains pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish focused metadata/backend/loan evidence, resolve review findings and old boundary expectations, update README/ownership notes, then run complete verification and optimized example before focused commits.
+
+### 2026-09-06 — Mutable field acceptance cases
+
+- State: Added seven native groups and a mutable-fields example covering metadata through constructors/calls/composition/unions/lists, selected field writes, nested mutable paths, copied values, disjoint and last-use borrows, RHS owner replacement, early exits, sibling/target proof invalidation and explicit unsupported storage boundaries. HIR Field metadata is agreed; static SetField needs final-write checking rather than dynamic list reservations.
+- Validation: Reference E305 governs mutable exclusive locations; E206 handles expected field/branch mutability conflicts, while whole-record shape mismatch is E207. Tests are written but await the cross-component Field migration. No new native execution has run yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish semantic and backend Field consumers, run focused unit/native evidence, correct any actual integration failures, complete ownership review, then run full gates and split commits.
+
+### 2026-09-06 — Mutable record-field design
+
+- State: Mutable field metadata and checked named local field writes are active. Mutability must remain part of normalized record shape and construction contracts while physical field layout stays unchanged. Frontend/ownership and backend implementations are delegated with one read-only reviewer; root owns native evidence and both handoffs. No source-level exclusive reference or owned cleanup support is implied.
+- Validation: Tree starts clean at 8efe709. Read current rules/handoffs, HIR and reference mutability contract. Existing AST fields already retain a mutable flag; HIR/checker reject it. Mutable emitted-name storage and reference-bearing fields need explicit safe boundaries before enabling writes.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on field metadata and bounded write HIR, implement type/constructor/loan/backend paths, add native mutability/layout/evaluation-order evidence, then run focused and combined checks with split commits.
+
 ### 2026-09-06 — Parser and ownership refactor handoff
 
 - State: Completed independent refactors: native suite c83f1f1, parser d599149, borrow analysis f550947 and loan analysis 717f5af. Entry files are now 2, 171, 83 and 49 lines with cohesive modules and tests. Program behavior, public paths, budgets, source literals and the single native target are preserved. All workers are finished; no unfinished source or failing checks remain.

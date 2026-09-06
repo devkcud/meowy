@@ -1,8 +1,8 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Parser, ownership and native-suite organization passes the final gate.
+Updated: 2026-09-06. Mutable record shapes and checked field writes pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `932297a`; native coverage/example: `89b530c`.
+Implementation: `6ff8807`; native coverage/example: `ab813f8`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
@@ -11,17 +11,17 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: parser grammar, borrow-origin analysis, loan graph construction/solving
-and native integration tests are organized into focused modules. Entry files keep
-root interfaces and reexports; native tests remain one target with one shared
-Case/NEXT harness. Function bodies, input strings, includes, budgets and diagnostic
-behavior are preserved. This pass adds no language feature or new test cases.
+Completed: named record fields carry name/type/mutability metadata through HIR,
+normalization, constructor/union matching, composition and native lowering.
+Static named paths rooted in mutable reference-free Copy locals support SetField;
+every crossed field must be mutable. RHS runs once before the final selected store,
+with disjoint and final-use shared reads accepted and overlapping loans rejected.
 
-Primitive runtime-valued suffix inference and the earlier backend/checker/list
-context boundaries remain intact. Both AGENTS files keep the organization guidance
-advisory. Next implementation work is record-field mutability in HIR/type checking
-before checked field writes; owned initialization, exclusive references, generated
-cleanup, modules and complete release qualification remain pending.
+Mixed field/index paths, shared-reference/temporary targets, mutable primary slots,
+mutable reference-bearing fields and direct emitted-name assignment remain B001.
+Named emission still copies into a result slot, so it is not an assignable alias.
+Owned initialization/cleanup, exclusive references, modules and release qualification
+remain pending. The new code follows the organized module boundaries.
 
 ## Resume here
 
@@ -47,11 +47,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 27 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 23 loan, 9 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 26 focused backend tests |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 30 checker, 18 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 24 loan, 9 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 29 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 126 native groups, 4 harness tests and 21 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 133 native groups, 4 harness tests and 22 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic and output
@@ -79,7 +79,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
 | Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
-| Collections | Remaining contextual constraints, mutable fields, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
+| Collections | Remaining contextual constraints, mixed write paths, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
 | Native ABI | Clang ABI adapters, explicit native artifacts, record classification | Separate C fixtures, argument/return layout and safety boundaries |
@@ -91,6 +91,28 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Known limits to preserve
 
+- HIR Field contains name, type and mutable flag. Structural Eq/Ord/Hash and
+  constructor matching include that flag; physical layout walks only field types.
+  E206 rejects declared-slot or completing-branch mutability conflicts; ordinary
+  record shape assignment mismatch remains E207, and unequal shapes cannot use
+  whole-record equality. Primary record forwarding retains each named field flag.
+- SetField carries a concrete Place and target span. `check/mutation.rs` requires
+  an ordinary mutable reference-free Copy owner and mutable fields throughout the
+  named path; immutable roots/paths are E305. No source &! reference is created.
+  Backend static offsets survive same-type RHS replacement, and only the selected
+  field is stored. RHS leave/panic/restart skips that store. No dynamic reservation
+  is needed for these always-initialized fixed field paths.
+- Final field writes reuse loan overlap, permitting disjoint fields and last-use
+  RHS reads while preserving whole-owner/ancestor and all-input return bounds.
+  `forget_field` invalidates overlapping predicate paths with charged work. Source
+  path length, field lookup and type walks use existing bounded analysis machinery.
+- Mutable field types/subtrees containing references and mutable primary emissions
+  remain B001. Mutable emitted names are readable local copies, but assignments to
+  them or their fields stay B001 until result-slot aliases exist. No origin-bearing
+  mutable carrier can reach these new writes.
+- Pure/list context probes retain field flags and treat earlier emitted-name reads
+  as Unknown/B001; they never use a same-named outer binding to choose a false type.
+  Explicit annotations still use ordinary lexical checking.
 - Lists store initialized length separately from capacity. Only reference-free Copy
   elements are enabled, including nested lists, records and unions. Copies and
   equality inspect initialized elements; append returns the same capacity/type.
@@ -120,8 +142,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   remains B001 even for pure or dead expressions. No hidden reset grants extra budget.
 - When candidate element types differ, `list_effect_block` accepts an unlabeled
   block with prefix bindings/assignments/expression statements followed by terminal
-  unconditional unannotated immutable emissions. `block_start`/`block_end` share
-  ordinary frame, scope, length and completion handling. Prefix checking runs once
+  unconditional unannotated emissions. Field mutability is retained in probes.
+  `block_start`/`block_end` share ordinary frame, scope, length and completion
+  handling. Prefix checking runs once
   at the element's actual source position; probes never rerun that prefix.
 - `list_pure` allows closed scalar/list/fresh-record suffix trees and same-owner
   primitive locals. Local defaults/shadowing resolve before scratch construction.
@@ -182,7 +205,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   An earlier returning index still needs valid parent storage when a later index
   or RHS diverges. Root refinements are forgotten after RHS checking, while copied
   independent values keep their facts. Field/reference/temporary targets remain
-  B001; mutable fields and non-Copy replacements need additional shape/move state.
+  B001 for indexed paths; static named field writes are handled by SetField.
+  Non-Copy replacements still need initialization, move and cleanup state.
 - Target flattening is iterative, capped at 256 indices before allocating another
   step, and also subject to parser depth limits. Root types are charged once and
   consumed layer by layer. Every target/typed/CFG step uses existing work budgets;
@@ -231,7 +255,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Immutable binding/result snapshots link type-test tags to actual variant activity,
   conditioned on the enclosing variant. Mutable ordinary storage reads receive
   unknown activity, avoiding stale initializer tags after writes. Record fields
-  remain immutable; replacing non-reference records invalidates field proofs.
+  preserve mutability in their types. SetField invalidates the written path and
+  overlapping ancestors/descendants after RHS; disjoint sibling facts survive.
 - Restart edges erase iteration-specific correlations and scoped assumptions.
   Predicate assignments invalidate prior facts. Safe programs needing stronger
   temporal relationships may still receive conservative E302/E303; reads may
@@ -304,31 +329,37 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: unchanged 140 library and 126 native groups pass. No test cases were added
-  or removed. Clippy `-D warnings` and formatting pass. The optimized compiler
-  builds/runs `examples/dynamic-lists.mwy` in release with exact stdout
-  `read\n301\n2\n` and empty stderr.
-- Native before/after runs both pass 126 tests in debug/release, including 21
-  examples. All 11,479 function tokens and string bytes are preserved apart from
-  relocated include paths; all 22 included files have matching hashes. Cargo
-  metadata confirms one native integration target and one shared harness/counter.
-- Parser before/after proof passes 11 groups, including Unicode, span and depth
-  coverage. All 38 production and 12 test/helper functions are preserved, and all
-  267 string literals are byte-for-byte identical.
-- Origin before/after proof passes 14 groups; all 35 function streams and 103
-  strings are exact. Loan proof passes 23 groups; all 53 functions retain behavior
-  (one optional test-call comma was formatted), with 192 exact string literals.
-- Cargo checks bracket the module moves. A transient missing ownership import and
-  parser warning during parallel extraction were corrected before final checks.
-  No reference fixture, REQUIRED entry, runtime source or dependency was changed.
+- Rust: 147 library and 133 native groups pass. New coverage adds 3 checker, 1 loan,
+  3 backend and 7 native groups. Clippy `-D warnings` and formatting pass. The
+  optimized compiler builds/runs `examples/mutable-fields.mwy` in release with
+  exact stdout `1\n2\n3\nkept\n` and empty stderr.
+- Native coverage includes inferred/annotated fields, branches, composition, union
+  tags and list contexts; nested fields, list/union payloads, missing nullable fields,
+  copies, disjoint/final-use/ancestor loans, same-owner RHS replacement, early exits,
+  sibling predicates, target invalidation and E305/E206/E207/E208/E302/B001 boundaries.
+- All 29 backend groups pass, including 18 new debug/release field executions for
+  physical layouts, semantic union identity, selected stores, preserved neighbours
+  and RHS ordering. One new raw-HIR record wrapper fixture was initially invalid;
+  correcting its component emissions preserved the original expected behavior.
+- Named union slots filter by emitted mutability before selecting numeric context;
+  final review caught and fixed false uint8/uint16 ambiguity for differently mutable
+  alternatives. Both choices and unchanged primary ambiguity have regressions.
+- Frontend/loan focused checks and all 12 list-context groups pass. One new E302
+  fixture initially lacked a closing brace and was corrected. Unresolved emitted-name
+  shape dependencies have a B001 regression to prevent lookup through outer scope.
+- Fourteen independent ownership checks pass, including ignored borrowed inputs
+  retaining their write constraints and explicit disjoint field inputs. No remaining
+  unsafe acceptance or blocker was found; source-level exclusive references remain
+  unimplemented.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 857 local links; schemas/catalog and Vim/Neovim pass.
-- Runtime debug/release/sanitized profiles pass 6 diagnostic, 14 cleanup, 10 stack,
-  10 context, 25 scheduler and 14 owned groups with fatal/truncation/lifetime/guard/
-  admission probes and stable layout. ASan/UBSan/LSan and the expired-fiber-local
-  negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
-  language/release qualification remains open.
+  checks 858 local links; schemas/catalog and Vim/Neovim pass.
+- Runtime sources/ABI are unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
+  14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with fatal,
+  truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and the expired
+  fiber local negative diagnosis pass.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. No
+  reference fixture or REQUIRED was changed; full language/release qualification
+  remains open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -336,15 +367,16 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Preserve AST record-field mutability through `hir.rs` and
-   `check/{names,blocks,statements}.rs`. Current AST fields already carry a mutable
-   flag, but HIR record fields and checker capability guards do not implement it.
-   Include mutability in shape compatibility/normalization while preserving physical
-   field layout. Verify construction, expected types and E206 across branches.
-2. Add checked field writes after that metadata path is complete. Require both a
-   mutable field and exclusive owner access; preserve RHS order and place identity.
-   Reuse `borrow/` and `loans/` for overlap/last-use checks. Owned replacements need
-   initialization, move and cleanup state before removal or non-Copy fields/lists.
+1. Extend checked paths to mixed field/index targets in HIR, `check/mutation.rs`,
+   `list.rs`, `loans/` and `backend/`. Support `holder.items[i]` and `items[i].field`
+   only with mutable field gates, initialized bounds at each index, correct prefix
+   spans and valid parent storage. Test nested lengths, last-use/disjoint overlap,
+   changing index variables and RHS/early-exit effects in both profiles.
+2. Replace detached mutable emitted-name copies with genuine result-slot aliases
+   before enabling their assignment. Model named scope exits, restart initialization
+   and result publication; retain B001 while storage identity is unproved. Mutable
+   reference-bearing fields and source exclusive references require further origin,
+   move/initialization and cleanup work.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.
