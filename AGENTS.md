@@ -19,6 +19,10 @@
 - Keep tools, editor integration, library and runtime progress visible in the root
   tracker. Distinguish static checks, compiler execution and release qualification.
 - Reuse existing checks and architecture. Add dependencies only when necessary.
+- Prefer cohesive modules and consider splitting files when distinct responsibilities
+  make them hard to navigate. This is an organizational recommendation, not a fixed
+  line-count rule. Keep behavior-preserving moves separate from feature changes
+  when practical, and retain the existing checks across each move.
 - Run checks appropriate to changed behavior. Never count unsupported features,
   missing tools or crashes as successful conformance rejections.
 - Split requested commits by coherent behavior and dependencies. Do not push,

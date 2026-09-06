@@ -27,6 +27,10 @@ These instructions apply to this directory and all descendants.
 - Use `static` for members that belong to a class rather than an instance.
 - Do not add code comments unless the logic is extremely complex or cannot otherwise be made clear.
 - Prefer small, cohesive modules and existing representations over duplicate infrastructure or unnecessary dependencies.
+- Consider extracting focused modules and grouping tests by behavior when a file
+  becomes hard to navigate or spans several responsibilities. This is a
+  recommendation, not a hard line-count limit. Prefer separately reviewable
+  structural changes that preserve interfaces, diagnostics and existing checks.
 
 ## Architecture and semantics
 
