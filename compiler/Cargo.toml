@@ -1,0 +1,22 @@
+[workspace]
+members = ["."]
+resolver = "3"
+
+[package]
+name = "meowy"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98.1"
+build = "build.rs"
+
+[lib]
+name = "meowy"
+path = "src/lib.rs"
+
+[[bin]]
+name = "meowy"
+path = "src/main.rs"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
