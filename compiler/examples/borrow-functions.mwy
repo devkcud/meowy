@@ -1,0 +1,27 @@
+debug : @"debug"
+
+identity<&int32> : (value<&int32>) { -> value }
+choose<&int32> : (flag<boolean>, left<&int32>, right<&int32>) {
+    |flag| -> left
+    |!flag| -> right
+}
+read<int32> : (value<&int32>) { -> *value }
+packet<{view<&int32>;count<int32>}> : (value<&int32>) {
+    -> view : value
+    -> count : *value
+}
+
+left := 11
+right := 22
+debug.print(read(identity(&left)))
+selected : choose(false, &left, &right)
+debug.print(*selected)
+left = 12
+right = 23
+debug.print(left)
+debug.print(right)
+record : packet(&left)
+left = 13
+debug.print(record.count)
+right = read(&right) + 1
+debug.print(right)

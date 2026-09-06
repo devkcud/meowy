@@ -4,8 +4,9 @@ This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to ordinary local storage, including guarded
-block results, immutable records and unions carrying references, and last-use
-checks for mutable owners. It is not the complete v0.0.1 language.
+block results, immutable records and unions carrying references, direct-function
+borrow contracts, and last-use checks for mutable owners. It is not the complete
+v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -24,6 +25,7 @@ compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
 compiler/target/debug/meowy run compiler/examples/optional-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/borrow-functions.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -42,6 +44,8 @@ fields, projects selected fields and a primary reference, and releases each loan
 after that component's last use.
 The [optional borrows example](examples/optional-borrows.mwy) narrows nullable
 reference fields and unions of different reference types before dereferencing.
+The [function borrows example](examples/borrow-functions.mwy) returns borrowed
+views through direct calls and releases their input loans after the final use.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -90,6 +94,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   reference payloads. Copies and equality still consume every active reference.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
+- Shared-reference function inputs and results, including immutable record/union
+  carriers. A returned reference retains every active borrow-carrying input under
+  the conservative public contract, including ignored inputs of another type.
+  Scalar results and scalar-only projections end those loans after the call.
 - `debug.print`, streamed interpolation at output calls, `debug.panic`, string
   byte length, and string comparison.
 
@@ -108,7 +116,7 @@ References can pass through local blocks and immutable aliases while their owner
 remain alive. The checker reuses branch/completion proofs and checks all possible
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
-record and union components. Reference-bearing signatures, mutable carriers,
+record and union components and direct-function signatures. Mutable carriers,
 reassignment, dispatch and direct reference formatting require future analysis. Parameter,
 receiver and named-emission storage remain unavailable as borrow roots. Missing
 origin proofs or exhausted analysis budgets produce B001.
@@ -183,6 +191,7 @@ the fixture catalog and does not execute the compiler.
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
 | `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
 | `src/borrow.rs` | Guarded component origins, block-result transfers and lexical lifetime checks |
+| `src/borrow_contract.rs` | Symbolic function inputs, caller origin substitution and all-input lifetime bounds |
 | `src/borrow_value.rs` | Active union variants, component paths, coercions and bounded value snapshots |
 | `src/loans.rs` | Guarded CFG, per-component reference liveness and shared-loan/write conflicts |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
