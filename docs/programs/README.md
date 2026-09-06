@@ -25,12 +25,12 @@ Above the maximum age
 Enter a whole number from 0 to 255
 ```
 
-| Input | Result |
-| --- | --- |
-| `"18"` or `"100"` | Accepted; endpoints are inclusive |
-| `"17"` | Below the minimum |
-| `"101"` | Above the maximum |
-| `"256"`, `"-1"`, `"twenty"`, or `""` | Parse error |
+| Input                                | Result                            |
+| ------------------------------------ | --------------------------------- |
+| `"18"` or `"100"`                    | Accepted; endpoints are inclusive |
+| `"17"`                               | Below the minimum                 |
+| `"101"`                              | Above the maximum                 |
+| `"256"`, `"-1"`, `"twenty"`, or `""` | Parse error                       |
 
 The options contract requires `minimum <= maximum`; the supplied options satisfy
 it. All returned text is static borrowed storage. Each rejection emits to the
@@ -42,12 +42,12 @@ function's labeled body and leaves it, so no path emits twice. See
 [packet.mwy](packet.mwy) exports a decoder; [main.mwy](main.mwy) supplies bytes and
 formats its result. The custom wire format is four bytes:
 
-| Byte offset | meowy position | Meaning |
-| --- | --- | --- |
-| 0 | 1 | Version |
-| 1 | 2 | Flags |
-| 2 | 3 | High byte of payload size |
-| 3 | 4 | Low byte of payload size |
+| Byte offset | meowy position | Meaning                   |
+| ----------- | -------------- | ------------------------- |
+| 0           | 1              | Version                   |
+| 1           | 2              | Flags                     |
+| 2           | 3              | High byte of payload size |
+| 3           | 4              | Low byte of payload size  |
 
 The size is big-endian. The input `[1, 0, 1, 44]` produces version `1`, flags `0`,
 and payload size `300`. Fewer than four bytes produce `Truncated` with the
