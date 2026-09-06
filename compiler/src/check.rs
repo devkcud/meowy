@@ -658,6 +658,26 @@ impl Checker {
         receiver: Option<hir::Expr>,
         partial: bool,
     ) -> Result<hir::Block> {
+        let mut stmts = self.block_start(block, expected, receiver, partial)?;
+        let mut index = 0;
+        while index < block.stmts.len() {
+            if matches!(block.stmts[index].kind, StmtKind::Forward { .. }) {
+                index = self.forward(&block.stmts, index)?;
+            } else {
+                stmts.extend(self.stmt(&block.stmts[index])?);
+                index += 1;
+            }
+        }
+        self.block_end(block, stmts)
+    }
+
+    pub(crate) fn block_start(
+        &mut self,
+        block: &ast::Block,
+        expected: Option<Type>,
+        receiver: Option<hir::Expr>,
+        partial: bool,
+    ) -> Result<Vec<hir::Stmt>> {
         let id = self.block;
         self.block += 1;
         self.scopes.push(Scope::default());
@@ -671,7 +691,7 @@ impl Checker {
         }
         self.frames.push(Frame {
             id,
-            expected: expected.clone(),
+            expected,
             leaves: FALSE,
             slots: Slots::new(),
             start: self.writes,
@@ -696,18 +716,18 @@ impl Checker {
             )?;
             stmts.push(hir::Stmt::Bind { id: local, value });
         }
-        let mut index = 0;
-        while index < block.stmts.len() {
-            if matches!(block.stmts[index].kind, StmtKind::Forward { .. }) {
-                index = self.forward(&block.stmts, index)?;
-            } else {
-                stmts.extend(self.stmt(&block.stmts[index])?);
-                index += 1;
-            }
-        }
+        Ok(stmts)
+    }
+
+    pub(crate) fn block_end(
+        &mut self,
+        block: &ast::Block,
+        stmts: Vec<hir::Stmt>,
+    ) -> Result<hir::Block> {
         let frame = self.frames.pop().expect("frame");
+        let id = frame.id;
         self.reach = self.flow.or(self.reach, frame.leaves);
-        let ty = self.block_type(&frame, expected.as_ref(), block.span)?;
+        let ty = self.block_type(&frame, frame.expected.as_ref(), block.span)?;
         self.block_list_length(&frame, &ty);
         self.proofs.completions.insert(id, self.reach);
         if self.flow.exceeded() {

@@ -290,6 +290,26 @@ implementation boundary; it does not change language rules.
   cannot suppress earlier arithmetic or dead-path literal/type errors. Scratch
   checks receive only definitely-dead or potentially-live reach, never live guard
   identities. Retained HIR keeps source order and ordinary assignment coercions.
+- An unlabeled effectful result block may check a context-independent prefix of
+  bindings, assignments and expression statements once in its ordinary live frame.
+  A terminal suffix of unconditional, unannotated immutable emissions is then
+  checked against candidate element types using the prefix's actual reach. A
+  unique candidate supplies that same frame's expected type before suffix checking
+  and normal block finalization. The prefix is never replayed or deferred past a
+  later list element, and no synthetic union substitutes for the candidates.
+- Suffix probes admit pure scalar/list/fresh-record construction and same-owner
+  immutable primitive constants from the prefix or surrounding scope, preserving
+  their exact types. Mutable/nonconstant names, captures, typed-record names,
+  references to names emitted by the suffix, direct matcher prefixes and effects
+  after the first emission remain B001 when context is unresolved. These limits
+  do not restrict ordinary checking after earlier constraints select one type.
+- Prefix errors retain normal diagnostics, and Never prefixes suppress only the
+  checks the ordinary checker suppresses. Common duplicate-slot/declaration errors
+  are retained after every candidate fails; a candidate-specific record-composition
+  error cannot discard another valid context. Multiple fits are E207 only when no
+  earlier deferred or later element constraints remain; otherwise this bounded
+  path returns B001 without moving later effects ahead. Pure suffix AST size/bytes
+  are charged before copying, and all candidate/context work shares existing caps.
 - Multiple proved candidates report E207, as does no element-compatible candidate;
   when every capacity is too small, E103 applies. There is no smallest-capacity or
   default-width preference. Single-candidate literal failures retain their existing

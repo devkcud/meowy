@@ -2649,7 +2649,7 @@ pub fn compound_list_candidates_preserve_ambiguity_and_source_errors() {
         ("values<int8[2]><string[2]>:[1,missing+1]", "E201"),
         (
             "value<uint8>:1;values<uint8[1]><uint16[1]>:[{d:@\"debug\";d.print(1);->1}]",
-            "B001",
+            "E207",
         ),
         (
             "outer<int8>:1;f<null>:(){values<int8[1]><int16[1]>:[outer+1]}",
