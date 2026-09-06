@@ -99,6 +99,13 @@ or waiting for child completion. Tasks can run on different threads; scheduling
 order and parallel execution are not promised. No program may depend on one
 particular interleaving.
 
+Once a child begins execution, it remains on the same worker thread through
+completion and cleanup. Runtime waits suspend it and resume it on that worker;
+other runnable work can use the worker during the wait. This permits a child to
+acquire and release a thread-affine resource locally. Such a resource still
+cannot cross a capture, result, or channel boundary without `tasks.Send`.
+Worker pinning gives no scheduling-order or fairness guarantee.
+
 ## Deadlines and cancellation
 
 ```meowy
@@ -166,14 +173,88 @@ right to join it. An operation's public signature must expose this group paramet
 ## Transfer and synchronization
 
 Moving data to another task requires `tasks.Send`, for both captures and results.
-Scalars and aggregates of transferable owners qualify. A shared borrow additionally requires `tasks.Sync`
-for the referenced type. An exclusive borrow can cross into one child when its
-referent is transferable and the parent cannot access it until the borrow ends.
+A shared borrow requires `tasks.Sync` for its referent. An exclusive borrow can
+cross into one child when its referent is transferable and the parent cannot
+access it until the borrow ends. These capabilities never extend a lifetime:
+channel messages cannot contain non-static external borrows, even when their
+types satisfy both capabilities. References internal to an opaque owner, such
+as a decoded document's views of bytes it owns, are not external borrows when
+that owner's verified contract preserves them on transfer. An extracted view
+of that owner is an ordinary external borrow and cannot outlive it.
 
-Mutable unsynchronized globals, raw pointers, and erased `any` values do not
-automatically qualify. Opaque libraries declare these capabilities only when
-their release and access rules are safe on the receiving thread. Channel
-messages cannot contain non-static borrows; transfer an owner instead.
+### Capability rules
+
+`tasks.Send` and `tasks.Sync` are compiler-known structural capabilities, not
+application-defined declarations. `Send` permits transferring an owner between
+tasks, including releasing it on the receiving worker. `Sync` permits sharing
+immutable access between tasks. Neither capability permits concurrent exclusive
+access. Derivation uses the entire type, not the currently selected alternative
+of an unnarrowed union or a resource's observed runtime state.
+
+| Type                                                                                           | `tasks.Send`                                   | `tasks.Sync`                                |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------- |
+| `null`, `never`, booleans, fixed-width numbers, `isize`, `usize`, literal subtypes             | Yes                                            | Yes                                         |
+| `string`                                                                                       | Yes, subject to its backing storage's lifetime | Yes                                         |
+| Shared reference `&T`, immutable slice `T[]`                                                   | Exactly when `T` is `Sync`                     | Exactly when `T` is `Sync`                  |
+| Exclusive reference `&!T`, `collections.MutSlice<T>`                                           | Exactly when `T` is `Send`                     | No; form a shared reborrow to share reads   |
+| Ordinary or native record, closed union, bounded list, fixed `Array`, generated concrete error | Exactly when every constituent is `Send`       | Exactly when every constituent is `Sync`    |
+| Non-capturing function item or pointer, including an unsafe callable                           | Yes                                            | Yes                                         |
+| Capturing callable                                                                             | Exactly when every stored capture is `Send`    | Exactly when every stored capture is `Sync` |
+| Raw pointer, erased `any`, erased `error`                                                      | No                                             | No                                          |
+| Task handle, group, or ticket                                                                  | No                                             | No                                          |
+
+A record's primary is a constituent. List alias metadata consists of immutable
+names and inline positions and adds no capability restriction. A closure's
+capture mode determines the stored constituent: a shared borrow checks its
+referent's `Sync`, while a moved owner checks that owner's capability. Shared,
+exclusive, and consuming call requirements remain in force; a shared borrow of
+a `Sync` closure cannot invoke a method that requires exclusive access.
+
+A non-capturing function pointer does not grant access to unsynchronized global
+mutation. Within child tasks, safe access to module storage is restricted to
+immutable `Sync` values or an opaque API whose contract provides synchronization.
+This restriction also applies through helper calls. An unsafe callable retains
+its caller-proven memory and thread-access preconditions when transferred.
+
+Opaque types derive neither capability merely from their name, apparent fields,
+or representation size. Their foundational-library contract must explicitly
+grant a capability. The following grants apply to the documented owner families;
+all retained borrows must still remain valid:
+
+| Opaque type or family                                                                             | Capability grant                                                                                        |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `memory.Allocator`                                                                                | `Send` and `Sync`; its implementation synchronizes allocation/release across runtime threads            |
+| `collections.Vector<T>`, `json.Document<T>`                                                       | `Send` when `T` is `Send`; `Sync` when `T` is `Sync`                                                    |
+| `collections.Map<K,V>`                                                                            | Each capability requires it for `K` and `V`; its pure non-capturing hash/equality pointers satisfy both |
+| `strings.Owned`, `strings.Builder`, `path.Owned`                                                  | `Send` and `Sync`; mutation still needs exclusive access                                                |
+| `channel.Sender<T>`, `channel.Receiver<T>`                                                        | `Send` when `T` is `Send`; never `Sync`                                                                 |
+| `time.Timer`, `time.Ticker`, `fs.File`, process child/pipe owners, network socket/listener owners | `Send`, never `Sync`                                                                                    |
+| `tasks.Cancelled`, `tasks.Timeout`, `tasks.Panicked`, `tasks.SpawnFailed`                         | `Send` and `Sync`, including any runtime-owned diagnostic storage                                       |
+
+An opaque type with an additional grant in its own API chapter uses that grant;
+otherwise the default is neither capability. An opaque constructor cannot hide
+a non-transferable captured owner or a borrowed referent behind an unconditional
+grant. User-defined error payloads and public result records follow the structural
+rule above; boxing into `error` or `any` loses transferability.
+
+```meowy
+read <int32> : (value <&int32>) { -> *value }
+number := 7
+job : >> read(&number)  # Accepted: int32 is Sync; number survives the join. #
+result : << job
+```
+
+**Rejected — an exclusive reference cannot itself be shared between tasks:**
+
+```meowy
+<ExclusiveInt> : <&!int32>
+inspect <null> : (value <&ExclusiveInt>) { }
+number := 7
+exclusive : &!number
+job : >> inspect(&exclusive)  # &!int32 is not Sync. #
+```
+
+For shared reads, pass a shared reborrow of the original referent instead.
 
 Submission makes preceding parent writes visible to the child. Completion followed
 by join makes child writes visible to the owner. A successful channel send/receive

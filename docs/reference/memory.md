@@ -47,11 +47,17 @@ Every resource has one owner. Initialization, assignment, parameter passing, and
 emission copy a `memory.Copy` value and move any other value. A move invalidates
 the source until it is assigned a new value.
 
-Scalars, shared references, raw pointers, non-capturing function pointers, strings,
+Scalars, shared references, raw pointers, non-capturing function items/pointers, strings,
 and immutable slices are copyable. Records, unions, arrays, and bounded lists are
 copyable exactly when every constituent is copyable. Exclusive references,
 allocation owners, channel endpoints, and task handles are not copyable. Copying a
 borrowed view never extends the referenced storage's lifetime.
+
+A capturing callable is copyable exactly when all of its captures are copyable
+and it supports shared, repeatable calls. A callable requiring exclusive access
+or consuming its environment is not copyable, even when its stored fields would
+otherwise be copyable. Transfer between tasks follows the separate
+[`Send` and `Sync` rules](tasks-and-channels.md#capability-rules).
 
 ```meowy
 <Point> : <{
@@ -94,6 +100,15 @@ With no such inputs or captures, a returned borrowed view must be static. This
 rule is available to callers without inspecting the body or parsing an extra
 declaration modifier.
 
+Opaque foundational-library operations can have a narrower, explicitly documented
+borrow-origin contract checked by the compiler against their intrinsic behavior.
+Only the named origins constrain their result: an owning copy constructor can
+copy all source bytes while retaining only its allocator, and a lookup can return
+a receiver-bounded view without retaining its search key. These are declarations
+of verified library behavior, not inferred exceptions for an ordinary function.
+User-defined wrappers retain the conservative all-input rule above, including
+when they call such an operation internally.
+
 ```meowy
 bytes <uint8[]> : (text <string>) {
     -> text.bytes()
@@ -114,6 +129,47 @@ Safe field moves are forbidden for opaque resources with a custom cleanup
 contract. References cannot outlive a task join, loop iteration, or allocation
 that they borrow from.
 
+### Temporary owners
+
+An expression result that has not moved into a binding, emission slot, argument,
+or other owner is a temporary. Its storage lasts until the end of the innermost
+complete statement that evaluated it. This includes an entire call or dispatch
+chain and, for a matcher, its condition and controlled statement. Temporaries
+remaining at that boundary are released in reverse initialization order. An
+unwind or scoped control transfer releases them before leaving their statement.
+Moving a temporary into another owner transfers cleanup to that owner normally.
+
+A borrow of a temporary can be used during that statement. Storing the borrow
+does not extend the temporary's lifetime into later statements. There is no
+initializer-specific lifetime extension or automatic promotion to static storage;
+constant folding cannot turn an otherwise invalid borrow into valid source.
+
+```meowy
+bytes : @"bytes"
+debug : @"debug"
+
+# Accepted: the temporary list survives the complete print statement. #
+debug.print(bytes.filled<4>(0).slice().size())
+
+# Accepted: explicit owner storage survives the subsequent view use. #
+buffer : bytes.filled<4>(0)
+view : buffer.slice()
+debug.print(view.size())
+```
+
+**Rejected — the temporary owner has expired at the later use:**
+
+```meowy
+view : bytes.filled<4>(0).slice()
+debug.print(view.size())
+```
+
+Task submission does not extend a borrowed temporary either. Moving an owned
+temporary into a child's capture is valid; capturing its borrowed view requires
+the child to have joined before the temporary's statement ends. A bound task
+that will be joined in a later statement therefore needs an explicit surviving
+owner for any such borrow.
+
 ## Explicit allocation
 
 Dynamic storage takes an allocator:
@@ -130,9 +186,14 @@ collections : @"collections"
 }
 ```
 
-`memory.heap` is an explicitly selected system allocator. Library operations that
-grow storage accept or retain the allocator chosen at construction. Allocation
-failure is a value, not a null pointer or an automatic process abort.
+`memory.heap` is an explicitly selected system allocator. Its type is
+`memory.Allocator`, a copyable borrowed handle supporting `tasks.Send` and
+`tasks.Sync`; this particular handle has static lifetime. Every safe allocator
+handle supports allocation and release on any runtime thread, synchronizing its
+own state as needed. A thread-affine allocator cannot expose this safe handle.
+Library operations that grow storage accept or retain the allocator chosen at
+construction. Allocation failure is a value, not a null pointer or an automatic
+process abort.
 
 An allocator handle is borrowed by its allocations and must remain valid until
 they are released. An arena can use caller-provided storage; resetting it requires
@@ -191,7 +252,49 @@ Process termination, a fatal trap, and an explicit abort do not promise cleanup.
 Raw pointers describe addresses without proving validity. They may be null or
 dangling, but reading or writing through them requires a `!{ ... }` block and a
 proof of allocation lifetime, bounds, alignment, initialization, and access rights.
-Creating a reference from a raw pointer must establish all safe-reference rules.
+A raw pointer alone establishes none of the safe-reference rules.
+
+### Raw pointer values
+
+The following operations construct or inspect raw **data** pointers. None exposes
+a function's code address, allocates storage, reads pointed-to bytes, or extends
+a borrowed owner's lifetime:
+
+- `memory.address<T>(value <&T>)` returns `<*T>` with the referent's address and
+  allocation provenance. `memory.address_mut<T>(value <&!T>)` returns `<*!T>`.
+  These safe operations borrow only for the call. Afterward the pointer can
+  become dangling; using it still requires proving the original owner is live
+  and the requested access is permitted at that use.
+- `memory.null<T>()` and `memory.null_mut<T>()` return a null `<*T>` or `<*!T>`.
+  They do not produce a safe reference or a `T` value. A literal `null` does not
+  implicitly convert to either pointer type.
+- `memory.is_null<T>(pointer)` returns `boolean` and accepts either `<*T>` or
+  `<*!T>`. It tests only the address, so it can inspect a dangling raw pointer
+  without dereferencing it. A false result proves neither validity nor alignment.
+- `memory.readonly<T>(pointer <*!T>)` returns `<*T>` with unchanged address and
+  provenance. It grants no new access rights and does not release an owner.
+- `memory.cast<T,U>(pointer <*T>)` returns `<*U>`; its writable counterpart
+  `memory.cast_mut<T,U>(pointer <*!T>)` returns `<*!U>`. Both require `!{ ... }`
+  and preserve address and allocation provenance. They establish no bounds,
+  alignment, initialization, lifetime, or permission for `U`. Null remains null;
+  a resulting misaligned pointer can exist but cannot be dereferenced as `U`.
+  A cast cannot turn a read-only pointer into a writable one.
+
+These are the complete pointer-construction conversions in this profile. There
+is no integer-to-pointer conversion, pointer-to-integer conversion, implicit
+mutability conversion, or raw-pointer-to-safe-reference constructor. Use an
+explicit safe wrapper with an existing borrow when safe access must be returned;
+unsafe native results can instead be copied through `memory.read` once its
+preconditions hold. The absence of a safe-reference constructor does not permit
+an ascription to perform that conversion.
+
+`T` and `U` must be concrete runtime data types; a function or callable type is
+not a data-pointer target for these constructors. `null` may be used as the
+target of a raw void pointer at the native boundary, but cannot be dereferenced
+as a live zero-sized object. Casting an address into or out of `<*null>` retains
+the source allocation's provenance and all obligations for its actual contents.
+
+### Reading pointed-to storage
 
 ```meowy
 memory : @"memory"
@@ -203,7 +306,8 @@ read_word <uint32> : (address <*uint32>) !{
 
 The function's `!{ ... }` body preserves the caller's precondition: `address` must
 point to a live, aligned, initialized `uint32` that can be read without racing a writer.
-Its type is `<!(*uint32) -> uint32>`; calling it requires a `!{ ... }` block even
+Its item has signature `!(*uint32) -> uint32` and may coerce to that unsafe
+function-pointer type; calling it requires a `!{ ... }` block even
 though it has a meowy body.
 Prefer a safe slice parameter when bounds and ownership can be expressed in the type.
 
@@ -214,9 +318,9 @@ spawned task: each must establish its own boundary. An intrinsic such as
 binding named `unsafe` has no special meaning.
 
 Pointer arithmetic uses byte offsets (`memory.offset_bytes`); collection indexing
-remains one-based. Integer-to-pointer conversion cannot establish provenance or
-make an arbitrary address valid. `!{ ... }` never disables integer checks, type
-checking, cleanup, or task ownership rules.
+remains one-based. Integer/pointer conversions are unavailable in this profile;
+an integer containing an address is not a valid pointer proof. `!{ ... }` never
+disables integer checks, type checking, cleanup, or task ownership rules.
 
 For memory shared between tasks, use channels, locks, or atomics. Ordinary shared
 mutable storage and raw pointers are not automatically transferable. Volatile
