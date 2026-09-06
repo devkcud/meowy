@@ -8,6 +8,7 @@ use crate::hir::{Block, BlockId, Expr, ExprKind, LocalId, Place, Program, Stmt, 
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Live = BTreeMap<usize, Guard>;
+pub(crate) type Bundle = BTreeMap<Vec<usize>, usize>;
 pub(crate) const MAX_NODES: usize = 65_536;
 pub(crate) const MAX_VALUES: usize = 65_536;
 pub(crate) const MAX_WORK: usize = 1_048_576;
@@ -32,7 +33,8 @@ pub(crate) struct Node {
 pub(crate) struct Scope {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    pub(crate) result: Option<usize>,
+    pub(crate) result: Bundle,
+    pub(crate) ty: Type,
 }
 
 pub(crate) struct Graph<'a> {
@@ -42,7 +44,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) guards: &'a mut Flow,
     pub(crate) nodes: Vec<Node>,
     pub(crate) values: Vec<Vec<Origin>>,
-    pub(crate) locals: BTreeMap<LocalId, usize>,
+    pub(crate) locals: BTreeMap<LocalId, Bundle>,
     pub(crate) blocks: BTreeMap<BlockId, Scope>,
     pub(crate) current: Vec<usize>,
     pub(crate) work: usize,
@@ -147,13 +149,47 @@ impl<'a> Graph<'a> {
         Ok(id)
     }
 
-    pub(crate) fn local(&mut self, id: LocalId) -> Result<usize> {
+    pub(crate) fn bundle(&mut self, origins: Vec<Origin>) -> Result<Bundle> {
+        let mut groups = BTreeMap::<Vec<usize>, Vec<Origin>>::new();
+        for origin in origins {
+            groups
+                .entry(origin.component.clone())
+                .or_default()
+                .push(origin);
+        }
+        groups
+            .into_iter()
+            .map(|(path, origins)| Ok((path, self.value(origins)?)))
+            .collect()
+    }
+
+    pub(crate) fn select(value: Bundle, path: &[usize]) -> Bundle {
+        value
+            .into_iter()
+            .filter_map(|(key, id)| key.strip_prefix(path).map(|path| (path.to_vec(), id)))
+            .collect()
+    }
+
+    pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
+        let mut value = Bundle::new();
+        for (path, id) in &source {
+            value.insert(path.clone(), self.value(self.values[*id].clone())?);
+        }
+        self.append(Node {
+            uses: source.into_values().collect(),
+            defs: value.values().copied().collect(),
+            ..Node::default()
+        })?;
+        Ok(value)
+    }
+
+    pub(crate) fn local(&mut self, id: LocalId) -> Result<Bundle> {
         if let Some(value) = self.locals.get(&id) {
-            return Ok(*value);
+            return Ok(value.clone());
         }
         let origins = self.facts.locals.get(&id).cloned().unwrap_or_default();
-        let value = self.value(origins)?;
-        self.locals.insert(id, value);
+        let value = self.bundle(origins)?;
+        self.locals.insert(id, value.clone());
         Ok(value)
     }
 
@@ -191,26 +227,33 @@ impl<'a> Graph<'a> {
         Ok((yes, no))
     }
 
-    pub(crate) fn block(&mut self, block: &Block) -> Result<Option<usize>> {
+    pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
         let origins = self
             .facts
             .blocks
             .get(&block.id)
             .cloned()
             .unwrap_or_default();
-        let reference = matches!(block.ty, Type::Reference(_));
-        let result = reference.then(|| self.value(origins.clone())).transpose()?;
-        let value = reference.then(|| self.value(origins)).transpose()?;
+        let result = self.bundle(origins.clone())?;
+        let value = self.bundle(origins)?;
         let start = self.append(Node {
-            defs: result.into_iter().collect(),
+            defs: result.values().copied().collect(),
             ..Node::default()
         })?;
         let end = self.node(Node {
-            uses: result.into_iter().collect(),
-            defs: value.into_iter().collect(),
+            uses: result.values().copied().collect(),
+            defs: value.values().copied().collect(),
             ..Node::default()
         })?;
-        self.blocks.insert(block.id, Scope { start, end, result });
+        self.blocks.insert(
+            block.id,
+            Scope {
+                start,
+                end,
+                result,
+                ty: block.ty.clone(),
+            },
+        );
         self.statements(&block.stmts)?;
         self.connect(end, TRUE, false);
         self.blocks.remove(&block.id);
@@ -229,20 +272,21 @@ impl<'a> Graph<'a> {
             match statement {
                 Stmt::Bind { id, value } => {
                     let value = self.expression(value)?;
-                    let target = self.program.locals[*id]
-                        .has_reference()
-                        .then(|| self.local(*id))
-                        .transpose()?;
+                    let target = if self.program.locals[*id].has_reference() {
+                        self.local(*id)?
+                    } else {
+                        Bundle::new()
+                    };
                     self.append(Node {
-                        uses: value.into_iter().collect(),
-                        defs: target.into_iter().collect(),
+                        uses: value.into_values().collect(),
+                        defs: target.into_values().collect(),
                         ..Node::default()
                     })?;
                 }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     self.append(Node {
-                        uses: result.into_iter().collect(),
+                        uses: result.into_values().collect(),
                         write: Some((
                             Place {
                                 root: *id,
@@ -260,14 +304,13 @@ impl<'a> Graph<'a> {
                     ..
                 } => {
                     let value = self.expression(value)?;
-                    let result = if field.is_none() {
-                        self.blocks.get(target).and_then(|scope| scope.result)
-                    } else {
-                        None
-                    };
+                    let scope = self.blocks.get(target).expect("emission target");
+                    let result = crate::borrow::slot(&scope.ty, field)
+                        .map(|(prefix, _)| Self::select(scope.result.clone(), &prefix))
+                        .unwrap_or_default();
                     self.append(Node {
-                        uses: value.into_iter().collect(),
-                        defs: result.into_iter().collect(),
+                        uses: value.into_values().collect(),
+                        defs: result.into_values().collect(),
                         ..Node::default()
                     })?;
                 }
@@ -294,7 +337,7 @@ impl<'a> Graph<'a> {
                 Stmt::Expr(value) => {
                     let value = self.expression(value)?;
                     self.append(Node {
-                        uses: value.into_iter().collect(),
+                        uses: value.into_values().collect(),
                         ..Node::default()
                     })?;
                 }
@@ -303,10 +346,15 @@ impl<'a> Graph<'a> {
         Ok(())
     }
 
-    pub(crate) fn expression(&mut self, expr: &Expr) -> Result<Option<usize>> {
+    pub(crate) fn expression(&mut self, expr: &Expr) -> Result<Bundle> {
+        self.project(expr, &[])
+    }
+
+    pub(crate) fn project(&mut self, expr: &Expr, path: &[usize]) -> Result<Bundle> {
         let value = match &expr.kind {
             ExprKind::Borrow(place) => {
                 let value = self.value(vec![Origin {
+                    component: Vec::new(),
                     place: place.clone(),
                     guard: TRUE,
                 }])?;
@@ -314,32 +362,34 @@ impl<'a> Graph<'a> {
                     defs: vec![value],
                     ..Node::default()
                 })?;
-                Some(value)
+                Bundle::from([(Vec::new(), value)])
             }
-            ExprKind::Local(id) if matches!(expr.ty, Type::Reference(_)) => {
-                let local = self.local(*id)?;
-                let value = self.value(self.values[local].clone())?;
-                self.append(Node {
-                    uses: vec![local],
-                    defs: vec![value],
-                    ..Node::default()
-                })?;
-                Some(value)
+            ExprKind::Local(id) if expr.ty.has_reference() => {
+                let local = Self::select(self.local(*id)?, path);
+                self.copy(local)?
             }
-            ExprKind::Coerce { value } => self.expression(value)?,
-            ExprKind::Block(block) => self.block(block)?,
+            ExprKind::Coerce { value } => self.project(value, path)?,
+            ExprKind::Block(block) => Self::select(self.block(block)?, path),
+            ExprKind::Field { value, index } => {
+                let prefix: Vec<_> = std::iter::once(index + 1)
+                    .chain(path.iter().copied())
+                    .collect();
+                self.project(value, &prefix)?
+            }
+            ExprKind::Primary(value) => {
+                let prefix: Vec<_> = std::iter::once(0).chain(path.iter().copied()).collect();
+                self.project(value, &prefix)?
+            }
             ExprKind::Deref(value)
             | ExprKind::Unary { value, .. }
-            | ExprKind::Field { value, .. }
-            | ExprKind::Primary(value)
             | ExprKind::StringSize(value)
             | ExprKind::TypeTest { value, .. } => {
                 let value = self.expression(value)?;
                 self.append(Node {
-                    uses: value.into_iter().collect(),
+                    uses: value.into_values().collect(),
                     ..Node::default()
                 })?;
-                None
+                Bundle::new()
             }
             ExprKind::Binary { op, left, right } if ["&&", "||"].contains(&op.as_str()) => {
                 self.expression(left)?;
@@ -353,47 +403,47 @@ impl<'a> Graph<'a> {
                 self.current.push(yes);
                 self.expression(right)?;
                 self.current.push(no);
-                None
+                Bundle::new()
             }
             ExprKind::Binary { left, right, .. } => {
                 let left = self.expression(left)?;
                 let right = self.expression(right)?;
                 self.append(Node {
-                    uses: left.into_iter().chain(right).collect(),
+                    uses: left.into_values().chain(right.into_values()).collect(),
                     ..Node::default()
                 })?;
-                None
+                Bundle::new()
             }
             ExprKind::Call { args, .. } => {
                 let mut uses = Vec::new();
                 for arg in args {
-                    uses.extend(self.expression(arg)?);
+                    uses.extend(self.expression(arg)?.into_values());
                 }
                 self.append(Node {
                     uses,
                     ..Node::default()
                 })?;
-                None
+                Bundle::new()
             }
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {
                     let value = self.expression(part)?;
                     self.append(Node {
-                        uses: value.into_iter().collect(),
+                        uses: value.into_values().collect(),
                         ..Node::default()
                     })?;
                 }
                 if matches!(expr.kind, ExprKind::Panic { .. }) {
                     self.current.clear();
                 }
-                None
+                Bundle::new()
             }
             ExprKind::Null
             | ExprKind::Bool(_)
             | ExprKind::Int(_)
             | ExprKind::Float(_)
             | ExprKind::String(_)
-            | ExprKind::Local(_) => None,
+            | ExprKind::Local(_) => Bundle::new(),
         };
         if expr.ty == Type::Never {
             self.current.clear();
@@ -643,5 +693,69 @@ mod tests {
             assert_eq!(errors[0].code, "B001", "{errors:?}");
             assert!(errors[0].message.contains(budget), "{errors:?}");
         }
+    }
+
+    #[test]
+    pub(crate) fn projections_only_read_the_selected_record_components() {
+        accepts("a:=1;b:=2;r:{->left:&a;->right:&b};b=3;x:*r.left");
+        accepts("a:=1;r:{->count:3;->view:&a};a=2;x:r.count");
+        accepts("a:=1;b:=2;r:{->left:{->view:&a};->right:{->view:&b}};b=3;x:*r.left.view");
+        accepts("a:=1;r:{->5;->view:&a};a=2;d:@\"debug\";d.print(r);x:r+1;number<int32>:r");
+        rejects(
+            "a:=1;b:=2;r:{->left:&a;->right:&b};b=3;copy:r;x:*copy.left",
+            "E302",
+        );
+        rejects("a:=1;b:=2;r:{->left:&a;->right:&b};a=3;x:*r.left", "E302");
+    }
+
+    #[test]
+    pub(crate) fn record_operands_and_result_slots_hold_all_copied_components() {
+        accepts("a:=1;b:=2;r:{->left:&a;->right:&b};same:r.left=={b=3;->&a}");
+        rejects(
+            "a:=1;b:=2;r:{->left:&a;->right:&b};same:r=={a=3;->r}",
+            "E302",
+        );
+        rejects(
+            "a:=1;b:2;left:{->view:&a};right:{->view:&b};same:left=={a=3;->right}",
+            "E302",
+        );
+        rejects("a:=1;b:=2;r:{->left:&a;a=3;->right:&b};x:*r.left", "E302");
+        accepts(
+            "a:=1;again:=true;r:'out {|again|{'out->view:&a;a=2;again=false;'out.restart()};->view:&a};x:*r.view",
+        );
+    }
+
+    #[test]
+    pub(crate) fn component_origins_keep_branch_and_iteration_liveness() {
+        accepts(
+            "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|b=3;|!flag|a=4;->*r.view}",
+        );
+        rejects(
+            "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|a=3;->*r.view}",
+            "E302",
+        );
+        accepts("a:=0;i:=0;'loop {r:{->view:&a};x:*r.view;a=a+1;i=i+1;|i<2|'loop.restart()}");
+        rejects(
+            "a:=1;r:{->view:&a};i:=0;'loop {x:*r.view;a=2;i=i+1;|i<2|'loop.restart()}",
+            "E302",
+        );
+    }
+
+    #[test]
+    pub(crate) fn component_aliases_obey_the_reference_value_budget() {
+        let mut source = "a:=1;r:{".to_owned();
+        for id in 0..64 {
+            source.push_str(&format!("->field{id}:&a;"));
+        }
+        source.push_str("};");
+        for id in 0..1024 {
+            source.push_str(&format!("copy{id}:r;"));
+        }
+        let errors = crate::compile(&source).unwrap_err();
+        assert_eq!(errors[0].code, "B001", "{errors:?}");
+        assert!(
+            errors[0].message.contains("loan-analysis budget"),
+            "{errors:?}"
+        );
     }
 }

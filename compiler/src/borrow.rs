@@ -18,8 +18,57 @@ pub(crate) struct Proofs {
 
 #[derive(Clone)]
 pub(crate) struct Origin {
+    pub(crate) component: Vec<usize>,
     pub(crate) place: Place,
     pub(crate) guard: Guard,
+}
+
+pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Vec<usize>, &'a Type)> {
+    match (ty, field) {
+        (Type::Record { primary, .. }, None) => Some((vec![0], primary)),
+        (Type::Record { fields, .. }, Some(name)) => fields
+            .iter()
+            .enumerate()
+            .find(|(_, (field, _))| field == name)
+            .map(|(index, (_, ty))| (vec![index + 1], ty)),
+        (ty, None) => Some((Vec::new(), ty)),
+        _ => None,
+    }
+}
+
+pub(crate) fn components(ty: &Type, span: Span) -> Result<BTreeSet<Vec<usize>>> {
+    let mut paths = BTreeSet::new();
+    let mut pending = vec![(ty, Vec::new())];
+    while let Some((ty, path)) = pending.pop() {
+        match ty {
+            Type::Reference(_) => {
+                paths.insert(path);
+            }
+            Type::Record { primary, fields } => {
+                for (index, ty) in std::iter::once(primary.as_ref())
+                    .chain(fields.iter().map(|(_, ty)| ty))
+                    .enumerate()
+                {
+                    if ty.has_reference() {
+                        let mut path = path.clone();
+                        path.push(index);
+                        pending.push((ty, path));
+                        if pending.len() + paths.len() > MAX_ORIGINS {
+                            return Err(Diagnostic::unsupported(
+                                "borrow-component budget exhausted",
+                                span,
+                            ));
+                        }
+                    }
+                }
+            }
+            Type::Union(_) if ty.has_reference() => {
+                return Err(Diagnostic::unsupported("reference-carrying unions", span));
+            }
+            _ => {}
+        }
+    }
+    Ok(paths)
 }
 
 #[derive(Default)]
@@ -165,11 +214,10 @@ impl Checker<'_> {
             .locals
             .get(id)
             .ok_or_else(|| Self::unsupported(span))?;
-        if self.locals.contains_key(&id)
-            || (ty.has_reference() && (!matches!(ty, Type::Reference(_)) || origins.is_empty()))
-        {
+        if self.locals.contains_key(&id) {
             return Err(Self::unsupported(span));
         }
+        Self::complete(ty, &origins, span)?;
         self.reserve_origins(origins.len(), span)?;
         self.locals.insert(
             id,
@@ -189,6 +237,18 @@ impl Checker<'_> {
         self.locals.get(&place.root).ok_or_else(|| {
             Diagnostic::new("E303", "borrowed storage has ended before this use", span)
         })
+    }
+
+    pub(crate) fn complete(ty: &Type, origins: &[Origin], span: Span) -> Result<()> {
+        let paths = components(ty, span)?;
+        let actual: BTreeSet<_> = origins
+            .iter()
+            .map(|origin| origin.component.clone())
+            .collect();
+        if paths != actual {
+            return Err(Self::unsupported(span));
+        }
+        Ok(())
     }
 
     pub(crate) fn emit(
@@ -215,24 +275,31 @@ impl Checker<'_> {
         if retained == FALSE {
             return Ok(());
         }
-        if field.is_some()
-            || !matches!(self.types.get(&target), Some(Type::Reference(_)))
-            || origins.is_empty()
-        {
-            return Err(Self::unsupported(span));
-        }
+        let target_type = self
+            .types
+            .get(&target)
+            .ok_or_else(|| Self::unsupported(span))?;
+        let (prefix, ty) = slot(target_type, field).ok_or_else(|| Self::unsupported(span))?;
+        let paths = components(ty, span)?;
         let target_index = self
             .blocks
             .iter()
             .position(|id| *id == target)
             .ok_or_else(|| Self::unsupported(span))?;
-        let mut covered = FALSE;
+        let mut covered = BTreeMap::new();
         for mut origin in origins {
             origin.guard = self.guards.and(origin.guard, retained);
             if origin.guard == FALSE {
                 continue;
             }
-            covered = self.guards.or(covered, origin.guard);
+            if !paths.contains(&origin.component) {
+                return Err(Self::unsupported(span));
+            }
+            let prior = covered.get(&origin.component).copied().unwrap_or(FALSE);
+            covered.insert(
+                origin.component.clone(),
+                self.guards.or(prior, origin.guard),
+            );
             let storage = self.live(&origin.place, span)?;
             let source = self
                 .blocks
@@ -247,7 +314,11 @@ impl Checker<'_> {
                 ));
             }
             let result = self.results.get_mut(&target).expect("result origins");
-            if let Some(existing) = result.iter_mut().find(|item| item.place == origin.place) {
+            origin.component.splice(0..0, prefix.iter().copied());
+            if let Some(existing) = result
+                .iter_mut()
+                .find(|item| item.place == origin.place && item.component == origin.component)
+            {
                 existing.guard = self.guards.or(existing.guard, origin.guard);
             } else if result.len() == MAX_ORIGINS {
                 return Err(Diagnostic::unsupported(
@@ -258,7 +329,11 @@ impl Checker<'_> {
                 result.push(origin);
             }
         }
-        if !self.guards.implies(retained, covered) {
+        if paths.iter().any(|path| {
+            !self
+                .guards
+                .implies(retained, covered.get(path).copied().unwrap_or(FALSE))
+        }) {
             return Err(Self::unsupported(span));
         }
         Ok(())
@@ -392,6 +467,7 @@ impl Checker<'_> {
                     return Err(Self::unsupported(expr.span));
                 }
                 vec![Origin {
+                    component: Vec::new(),
                     place: place.clone(),
                     guard: TRUE,
                 }]
@@ -425,9 +501,39 @@ impl Checker<'_> {
                 }
                 Vec::new()
             }
+            ExprKind::Field { value, index } => {
+                let value = self.expression(value)?;
+                flow = value.flow;
+                value
+                    .origins
+                    .into_iter()
+                    .filter_map(|mut origin| {
+                        if origin.component.first() == Some(&(index + 1)) {
+                            origin.component.remove(0);
+                            Some(origin)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }
+            ExprKind::Primary(value) => {
+                let value = self.expression(value)?;
+                flow = value.flow;
+                value
+                    .origins
+                    .into_iter()
+                    .filter_map(|mut origin| {
+                        if origin.component.first() == Some(&0) {
+                            origin.component.remove(0);
+                            Some(origin)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }
             ExprKind::Unary { value, .. }
-            | ExprKind::Field { value, .. }
-            | ExprKind::Primary(value)
             | ExprKind::StringSize(value)
             | ExprKind::TypeTest { value, .. } => {
                 flow = self.expression(value)?.flow;
@@ -491,11 +597,8 @@ impl Checker<'_> {
             | ExprKind::String(_)
             | ExprKind::Local(_) => Vec::new(),
         };
-        if flow.next
-            && expr.ty.has_reference()
-            && (!matches!(expr.ty, Type::Reference(_)) || origins.is_empty())
-        {
-            return Err(Self::unsupported(expr.span));
+        if flow.next {
+            Self::complete(&expr.ty, &origins, expr.span)?;
         }
         if expr.ty == Type::Never {
             flow.next = false;
@@ -598,7 +701,7 @@ mod tests {
     #[test]
     pub(crate) fn reference_aggregates_mutation_and_function_contracts_remain_explicit() {
         for source in [
-            "a:1;r:{->field:&a}",
+            "a:1;r:={->field:&a}",
             "a:1;flag:=true;r:{|flag|->&a}",
             "a:1;r:=&a",
             "a:=1;r:&!a",
@@ -618,5 +721,49 @@ mod tests {
             "f<int32>:(){a:1;r:{->&a};->*r};g:(){a:2;r:{->&a};->r}",
             "E303",
         );
+    }
+
+    #[test]
+    pub(crate) fn record_origins_preserve_primary_named_and_nested_components() {
+        accepts(
+            "a:1;b:2;r<{left<&int32>;right<&int32>}>:{->left:&a;->right:&b};copy:r;x:*copy.left;y:*copy.right",
+        );
+        accepts("a:1;b:2;r:{->&a;->ref:&b};copy:{->r};view<&int32>:copy;x:*view;y:*copy.ref");
+        accepts("a:1;r:{->outer:{->inner:&a}};copy:r.outer;view:copy.inner;x:*view");
+        accepts("a:1;r:{b:2;pair:{->safe:&a;->bad:&b};copy:pair;->copy.safe};x:*r");
+        rejects("a:1;r:{b:2;pair:{->safe:&a;->bad:&b};->pair}", "E303");
+        rejects("r:{a:1;->outer:{->inner:&a}}", "E303");
+    }
+
+    #[test]
+    pub(crate) fn each_record_component_retains_its_own_guarded_origins() {
+        accepts(
+            "f<int32>:(flag<boolean>){a:1;b:2;r:{|flag|->left:&a;|!flag|->left:&b;->right:&a};->*r.left+*r.right}",
+        );
+        rejects(
+            "a:1;flag:=true;r:'out {b:2;|flag|'out->field:&a;|!flag|'out->field:&b}",
+            "E303",
+        );
+        accepts(
+            "a:1;again:=true;r:'out {|again|{b:2;'out->field:&b;again=false;'out.restart()};->field:&a};x:*r.field",
+        );
+        accepts(
+            "a:1;d:@\"debug\";f<int32>:(flag<boolean>){b:2;r:'out {|flag|{c:3;'out->nested:{->view:&c};d.panic(\"stop\")};->nested:{->view:&b}};->*r.nested.view}",
+        );
+    }
+
+    #[test]
+    pub(crate) fn reference_union_and_carrier_borrows_remain_explicit_boundaries() {
+        for source in [
+            "<R>:<{view<&int32>}><null>",
+            "a:1;flag:=true;r:{|flag|->view:&a}",
+            "a:1;r:{->view:&a};alias:&r",
+            "a:1;r:{->view:&a};alias:&r.view",
+            "a:1;r:={->view:&a}",
+            "f<null>:(r<{view<&int32>}>){x:*r.view}",
+            "a:1;r:{->&a;->count:3};d:@\"debug\";d.print(r)",
+        ] {
+            rejects(source, "B001");
+        }
     }
 }

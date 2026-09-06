@@ -737,7 +737,7 @@ pub fn guarded_local_escapes_are_rejected_before_lowering() {
             "E303",
         ),
         ("'result{{local:1;'result->&local;'result.leave()}}", "E303"),
-        ("owner:1;view:{->field:&owner}", "B001"),
+        ("owner:1;view:={->field:&owner}", "B001"),
         (
             "f<null>:(flag<boolean>){owner:1;view:{|flag|->&owner}}",
             "B001",

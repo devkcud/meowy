@@ -309,12 +309,6 @@ impl Checker {
                     primary: Box::new(primary),
                     fields: result.into_iter().collect(),
                 };
-                if ty.has_reference() {
-                    return Err(Diagnostic::unsupported(
-                        "reference-carrying records",
-                        expr.span,
-                    ));
-                }
                 Ok(Spec::Data(ty))
             }
             TypeKind::Computed(value) => Ok(Spec::Data(self.type_value(value)?)),
@@ -2063,13 +2057,20 @@ impl Checker {
             ));
         }
         let boolean = ["&&", "||"].contains(&op);
+        let equality = ["==", "!="].contains(&op);
         let compare = ["==", "!=", "<", ">", "<=", ">="].contains(&op);
         let context = if boolean {
             Some(Type::Bool)
         } else {
             self.hint(left)
                 .or_else(|| self.hint(right))
-                .map(|ty| Self::primary_type(&ty))
+                .map(|ty| {
+                    if equality {
+                        ty
+                    } else {
+                        Self::primary_type(&ty)
+                    }
+                })
                 .or_else(|| {
                     if compare {
                         None
@@ -2078,7 +2079,13 @@ impl Checker {
                     }
                 })
         };
-        let mut left = self.expression(left, context.as_ref())?;
+        let mut left = if equality && matches!(context, Some(Type::Record { .. })) {
+            let record = context.clone().expect("record context");
+            let primary = Self::primary_type(&record);
+            self.composed(left, record, Some(&primary))?
+        } else {
+            self.expression(left, context.as_ref())?
+        };
         let skipped = if boolean {
             let guard = self.guard(&left);
             let guard = if op == "||" {
@@ -2093,8 +2100,17 @@ impl Checker {
         } else {
             FALSE
         };
-        let right_context = Self::primary_type(&left.ty);
-        let mut right = self.expression(right, Some(&right_context))?;
+        let right_context = if equality {
+            left.ty.clone()
+        } else {
+            Self::primary_type(&left.ty)
+        };
+        let mut right = if equality && matches!(right_context, Type::Record { .. }) {
+            let primary = Self::primary_type(&right_context);
+            self.composed(right, right_context, Some(&primary))?
+        } else {
+            self.expression(right, Some(&right_context))?
+        };
         if boolean {
             self.reach = self.flow.or(self.reach, skipped);
         }
@@ -2298,7 +2314,7 @@ impl Checker {
             }
             ExprKind::Group(value) => self.format_parts(value, parts)?,
             _ => {
-                let value = self.expr(expr, None)?;
+                let value = Self::project(self.expr(expr, None)?);
                 if value.ty.has_reference() {
                     return Err(Diagnostic::unsupported(
                         "reference formatting; dereference the copyable value",
@@ -2568,6 +2584,24 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn record_equality_preserves_aggregate_and_scalar_contexts() {
+        accepts("a:1;b:2;left:{->view:&a};right:{->view:&b};same:left=={->right}");
+        accepts("a:1;b:2;left:{->view:&a};same:left=={->view:&b}");
+        accepts("a:1;n<int64>:7;packet:{->n;->view:&a};same:packet==7;reverse:7==packet");
+        accepts("a:1;n<uint8>:7;packet:{->n;->view:&a};same:packet==7");
+        accepts(
+            "a:=1;n<int64>:7;packet:{->n;->view:&a};a=2;same:packet=={->7};reverse:{->7}==packet",
+        );
+        accepts(
+            "f<boolean>:(flag<boolean>){a:1;n<int64>:7;packet:{->n;->view:&a};->packet=='result {|flag|{'result->7;'result.leave()};->7}}",
+        );
+        rejects(
+            "a:1;n<uint8>:7;packet:{->n;->view:&a};same:packet==256",
+            "E216",
+        );
+    }
+
+    #[test]
     pub(crate) fn reference_capability_boundaries_are_explicit() {
         for source in [
             "x:1;r:=&x",
@@ -2577,7 +2611,7 @@ mod tests {
             "x:{->a:1;r:&a}",
             "f<int32>:(x<int32>){r:&x;->*r}",
             "f<int32>:(x<&int32>){->*x}",
-            "<R>:<{x<&int32>}>",
+            "<R>:<{x<&int32>}><null>",
             "<R>:<&int32><null>",
             "x:1;r:&x;r.{v:*self}",
             "x:1;r:&x;debug:@\"debug\";debug.print(r)",
