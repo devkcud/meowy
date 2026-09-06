@@ -2,7 +2,8 @@
 
 This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
-It implements the first scalar milestone, not the complete v0.0.1 language.
+It implements scalar programs, record composition, nullable unions, and branch
+narrowing. It is not the complete v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
@@ -15,13 +16,15 @@ cargo build --locked --manifest-path compiler/Cargo.toml
 compiler/target/debug/meowy check compiler/examples/factorial.mwy
 compiler/target/debug/meowy run compiler/examples/hello.mwy
 compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile release
+compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
 
 The examples print a greeting, `3628800`, and `5050`. The
 [records example](examples/records.mwy) demonstrates primary values, named fields,
-interpolation, and dispatch.
+interpolation, and dispatch. The [nullable example](examples/nullable.mwy) exercises
+absent fields and a fallback function that narrows a value after an early exit.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -46,6 +49,11 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   operations, comparisons, and short-circuit boolean operators.
 - Blocks with primary and immutable named emissions, record composition,
   scalar-primary projection, dispatch, and duplicate/uninitialized slot checks.
+- Normalized scalar/record unions, nullable field and primary defaults, and
+  conversions between compatible union sets without numeric widening.
+- Runtime type predicates and proven ascriptions, including immutable field paths,
+  complementary conditions, short-circuit operands and early-exit narrowing.
+  Assignments invalidate proofs about the changed value.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - `debug.print`, streamed interpolation at output calls, `debug.panic`, string
@@ -56,11 +64,17 @@ without running them. Debug and release both preserve dynamic arithmetic checks.
 The initial panic runtime reports failure and exits; recoverable unwinding and
 owned-resource cleanup remain unimplemented.
 
-Unavailable constructs report **B001**, including collections, borrows, unions,
+Unavailable constructs report **B001**, including collections, borrows,
 capturing closures, generic/type-producing helpers, imports beyond the foundational
 bootstrap modules, and mutable record fields. String interpolation outside an
 output call requires the future formatting/storage implementation and is rejected.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
+
+Union literals receive a numeric width when the expected union has one matching
+numeric member. Multiple candidate widths require an explicitly typed value;
+the checker reports E207 instead of choosing a width. Named blocks conservatively
+forget mutable-value proofs at entry. Restarts that may emit again into a surviving
+outer result report B001 until full loop dataflow is implemented.
 
 ## CLI behavior
 
@@ -112,6 +126,7 @@ the fixture catalog and does not execute the compiler.
 | --- | --- |
 | `src/lexer.rs`, `src/parser.rs`, `src/ast.rs` | Lossless tokens and punctuation-aware syntax |
 | `src/check.rs`, `src/hir.rs` | Resolution, scalar types, emission flow, checked lowering input |
+| `src/flow.rs` | Shared boolean guards for reachability, disjoint emissions and narrowing |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
 | `src/backend.rs` | Typed LLVM IR lowering and bridge interface |
 | `native/bridge.cpp` | LLVM verification, optimization and object emission |
