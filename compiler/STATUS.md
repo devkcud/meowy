@@ -1,26 +1,24 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Direct-function borrow contracts and explicit child waits pass.
+Updated: 2026-09-06. Shared reborrows and explicit owned runtime values pass.
 Full v0.0.1 remains incomplete. No active workers, incomplete code or failing checks remain.
-Implementation: `3acfc97`; native coverage/example: `cb04d32`; runtime/tooling: `7b9dc05`.
+Implementation: `406c817`; native coverage/example: `21086be`; runtime/tooling: `979c8e8`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: direct function inputs and results carry shared references and immutable
-record/union carriers. Actual Local/Input origins are separate from conservative
-all-input lifetime bounds. Returned views preserve ignored and transitive input
-loans; scalar-only projections and inactive payloads do not. Every function body
-is checked independently; E303 rejects local/dependency escapes and E302 rejects
-caller writes before the returned view's final use. Inference, recursion, aliases
-and strict forward groups work with the same contract.
-Next: reborrows, exclusive access, moves and generated cleanup. The independent
-runtime now admits parent-owned children and waits by yielding the worker. Its
-callbacks must explicitly join while borrowed locals live; automatic scope-exit
-joining, cancellation, owned capture/result transfer and DWARF remain pending.
-Generated programs still use the scalar runtime. The reference is authoritative;
-do not change fixtures or infer narrower ordinary-function contracts from a body.
+Completed: shared reborrows preserve original referent addresses through `&*view`
+and concrete named-field paths, including parenthesized expressions and temporary
+reference values from calls/blocks. Parent evaluation occurs once. Referent paths
+are separate from parameter component paths, and function contracts enumerate
+compatible whole referents and named descendants before accepting field returns.
+Inherited all-input bounds remain intact; E302/E303 still protect live storage.
+Next: exclusive access, new reference sources, moves and generated cleanup. The
+independent runtime now moves owned captures/results through fixed caller buffers
+with explicit initialization, relocation and release. Compiler-generated payload
+layouts/cleanup, automatic joins, cancellation and DWARF remain pending.
+Generated programs still use the scalar runtime. The reference remains authoritative.
 
 ## Resume here
 
@@ -45,10 +43,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/flow.rs` | Reference unions, narrowing and contextual record composition; 24 checker and 5 guard tests |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 6 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 8 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including records, references and tagged unions; 14 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 54 native groups, 4 harness tests and 11 runnable examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 61 native groups, 4 harness tests and 12 runnable examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -66,7 +64,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Reborrows, static/intrinsic sources, exclusive borrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -79,12 +77,18 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Known limits to preserve
 
-- Shared borrow roots are ordinary immutable/mutable locals and concrete record
-  fields. Taking parameter/receiver/emission storage addresses, temporary owners,
-  exclusive loans, mutable carriers and carrier-address/reborrow operations remain
-  B001. Direct signatures carry references; see `OWNERSHIP.md` for the boundary.
+- Ordinary local storage and concrete fields can be borrowed directly. Shared
+  reborrows inspect reference-free referents, including reference values returned
+  by functions. Temporary owners, parameter/receiver/emission storage addresses,
+  reference-bearing pointees, union-payload/primary-ascription addresses, exclusive
+  borrows and mutable reference carriers remain B001.
+- Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
+  field indices while inherited bounds stay unchanged. Lowering evaluates the parent
+  once and derives addresses without record copies. Address hints perform no lowering;
+  effectful equality operands and argument early leaves have native regressions.
 - Function input leaves use symbolic Input sources, distinct from the parameter's
-  stack copy. Calls substitute type-compatible possible pointer origins and attach
+  stack copy. Separate referent paths identify storage reached through each input.
+  Calls substitute compatible whole referents/concrete named descendants and attach
   every active input origin/transitive bound to each returned reference leaf.
   Ignored heterogeneous inputs still constrain lifetime and caller writes. Scalar
   results and scalar-only projections release these loans after consumption.
@@ -93,9 +97,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   exit skips the call. Result proofs apply only on the returning edge. Every body,
   including uncalled and recursive definitions, must prove its own return sources.
 - Under the current capabilities, a reference result needs an active compatible
-  borrowed input; otherwise that reference path cannot return. Nullable results may
+  borrowed input referent or concrete named descendant; otherwise that path cannot return. Nullable results may
   still return null. Extend this rule before adding static safe-reference sources,
-  reborrows or reference-producing intrinsic contracts. Existing string values are
+  additional addressable projections or reference-producing intrinsic contracts. Existing string values are
   literal-backed static views, not local storage dependencies merely by value.
 - Every active retained reference component must outlive its receiving block,
   even when a later consumer ignores it. A safe-field projection may leave a local
@@ -142,51 +146,52 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   source bytes into owned LLVM storage. Compiler binaries embed the scalar runtime
   archive but require installed LLVM and exact native-tool paths. Generated output
   is separate from the Rust compiler and LLVM libraries.
-- `../runtime/` has bounded cleanup, guarded contexts and explicit parent-owned
-  child admission/waiting joins on one worker. Only the active parent can consume
-  child tickets; root joins stay nonblocking. Release failures retain ownership.
-  Body/cleanup callbacks must join before borrowed locals expire, or a private fatal
-  protocol error stops execution. Automatic scope-exit joining/cancellation, owned
-  capture/result storage, Meowy personality, landing pads and integration are pending.
-  Callback data and panic text are borrowed; pump bounds transitions, not CPU time.
+- `../runtime/` has bounded cleanup, guarded contexts, parent-owned child waits and
+  explicit owned capture/result transfers. `Owned` reserves caller buffers, commits
+  initialized objects, relocates via static descriptors and releases exactly once.
+  Accepted admission failures drop captures; failed joins retain results untouched.
+  Move/drop callbacks cannot suspend; results need independently surviving storage.
+  This is a trusted private C++ API, not compiler-checked payload layout/Send/Sync.
+- Runtime body/cleanup callbacks must join before borrowed locals expire, or a private
+  fatal protocol error stops execution. Owned result/capture movement rejects live
+  child obligations. Automatic scope-exit joins/cancellation, generated cleanup,
+  Meowy personality, landing pads and compiler integration remain pending.
 - Timeout supervision kills/reaps the entire compiler/application process group.
   B001 cannot hide a later fault or count as an expected language rejection.
 
 ## Validation evidence
 
 - Final `python3 -B tools/verify.py --all`: all 14 selected checks pass outside
-  ptrace supervision. The gate pins the Cargo target/output and freshly built compiler.
-- Rust: 100 library and 54 native groups pass, including both output profiles.
-  All-target Clippy with `-D warnings` and `cargo fmt --check` pass.
+  ptrace supervision. The gate pins Cargo target/output and the freshly built compiler.
+- Rust: 102 library and 61 native groups pass in the required profiles. All-target
+  Clippy with `-D warnings` and `cargo fmt --check` pass.
 - Python: 16 tooling, 13 runtime and 4 compiler-harness regressions pass. Local
-  documentation validation checks 845 links; schemas/catalog and Vim/Neovim pass.
+  documentation validation checks 847 links; schemas/catalog and Vim/Neovim pass.
 - Runtime per debug/release/sanitized profile: 14 cleanup cases plus 2 fatal probes;
   10 stack cases plus kernel ENOMEM and 2 guard faults; 10 context cases plus fatal
-  resumed cleanup; 18 scheduler cases plus admission refusal, fatal task cleanup
-  and exact body/cleanup unjoined-child probes. ASan/UBSan/LSan normal runs pass;
-  expired fiber locals produce the required ASan diagnosis. Automatic scope-exit
-  joins/cancellation and task-overflow recovery remain unqualified.
+  resumed cleanup; 18 scheduler cases plus admission/fatal/unjoined-child probes;
+  12 owned-value cases plus 2 exact owned-cleanup fatal probes. ASan/UBSan/LSan
+  normal runs pass; the expired fiber-local negative probe is diagnosed as required.
 - Conformance: 9 passed, 14 unsupported, 0 failed in debug/release. Passed cases:
   `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
   `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`,
   `reference_identity`. This is not full conformance.
-- The final optimized compiler passes all 384 independent contract oracle cases:
-  216 accepted, 168 E302, zero conservative or unexpected results. Twelve directed
-  lifetime/divergence/argument-control probes and ten additional native runs passed
-  on the preceding debug snapshot. Temporary oracle/provenance files supplement
-  committed source and native regressions; they are not required to resume work.
-- The optimized compiler builds `examples/borrow-functions.mwy` in release with
-  empty stderr and exact stdout `11\n22\n12\n23\n12\n24\n`.
-- Native tests cover inferred and recursive/forward signatures, aliases, temporary
-  carriers, nullable returns, independent calls, scalar projections, all-input and
-  transitive E302 bounds, and E303 local/ignored-input escapes. Reference fixtures
-  were not changed. Every body is checked even when no call reaches it.
-- Contract resource tests reject many-input/many-result expansion and oversized
-  reference targets with B001. Origins and bounds both count toward snapshot/CFG
-  budgets; type walks check each frontier push. Missing reachable call snapshots
-  are B001 rather than invented empty results.
+- The final optimized compiler passes all 150 reborrow guard oracle cases:
+  114 accepted, 36 E302, no unexpected or conservative rejections. It compares
+  direct and function-returned field references under independent write/use guards.
+  Temporary oracle files supplement committed source/native regression coverage.
+- The optimized compiler builds `examples/reborrows.mwy` in release with empty
+  stderr and exact stdout `true\n41\n7\n42\n8\n`.
+- Native tests verify original nested addresses, nullable/guarded parents, inherited
+  call bounds, loops, effectful operands executing once and argument early leaves.
+  Source regressions verify nested symbolic field paths, E303 ignored-input bounds
+  and bounded candidate expansion. Reference fixtures were not changed.
+- Owned runtime tests relocate a real pipe descriptor, preserve results across failed
+  joins, release consumed captures on admission failure, and check result-before-capture
+  panic cleanup. Child-to-parent transfer, callback reentry and movement with live
+  children are covered. Backing-buffer/descriptor contracts remain caller obligations.
 - Existing coverage retains 10,000 deterministic malformed/Unicode parser inputs,
-  depth/budget stress, bounded backend FFI, integer boundaries, short circuiting,
+  depth/budget stress, bounded backend FFI, arithmetic boundaries, short circuiting,
   tagged unions, nullable records and `/dev/full`. These are bounded regressions.
 - Prior ELF inspection found x86-64 PIE with only `libc.so.6` in DT_NEEDED and a
   GLIBC_2.34 requirement. It was not repeated this milestone; glibc 2.31 and
@@ -196,21 +201,20 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend `src/borrow_contract.rs`, source identities and CFG proofs for reborrows,
-   static safe references and verified intrinsic contracts before enabling those
-   capabilities. Replace the current no-compatible-input return assumption where
-   necessary. Verify actual origins, all-input bounds, E303 escapes and E302 writes.
-2. Add explicit reads, moves, initialized-slot tracking and cleanup edges to
-   `src/loans.rs` before exclusive loans, reference reassignment or owned collections.
-   Preserve reset/resource bounds and improve predicate precision. Verify final-use
-   access, read/write conflicts, temporary-owner lifetime and exact-once cleanup.
+1. Extend `src/borrow_contract.rs`, source identities and CFG proofs for static
+   references, verified intrinsic sources and additional addressable projections
+   before enabling them. Keep all-input bounds and update no-return assumptions
+   where new sources become valid; test E302/E303 and address identity.
+2. Add explicit reads, moves, initialized-slot tracking and cleanup edges before
+   exclusive loans/reborrows, reference reassignment or owned collections. Preserve
+   reset/resource bounds and improve predicate precision; verify final-use access,
+   parent-loan suspension, temporary-owner lifetime and exact-once cleanup.
 3. Add required evaluation, effects, logical budgets and constrained specialization,
    then enable the type-helper, compile-effect/budget and callable fixtures.
-4. Add owned capture/result storage and generated scope-exit joins over `../runtime/`
-   parent/child ownership while parent locals still live. Add cooperative cancellation
-   and pinned unwind support, Meowy personality and landing pads. Verify cancellation
-   while joining, child failures during cleanup and interleaved partial-result/local
-   cleanup order. Do not substitute host destructors for Meowy cleanup semantics.
+4. Generate runtime owned payload layouts, move/drop operations and scope-exit joins
+   while parent locals still live. Add cancellation and pinned unwind support,
+   Meowy personality and landing pads. Verify child failures during cleanup,
+   cancellation while joining and interleaved partial-result/local release order.
 5. Implement the project/module graph for native adapters and real Meowy library
    sources, then tools/artifacts and distribution qualification from the table above.
 6. Keep the combined gate green and expand the conformance harness REQUIRED set only

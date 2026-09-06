@@ -6,6 +6,125 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete reborrow and owned-runtime handoff
+
+- Completed: shared reborrows are 406c817, native example/coverage is 21086be, and owned runtime/tooling is 979c8e8. Current STATUS files record exact behavior, capability limits, verification and ordered next steps; all prior checkpoints are preserved.
+- Validation: All 14 repository checks pass: 163 Rust tests, 33 Python regressions, 847 links and every native runtime/sanitizer profile. The optimized example has exact stdout; all 150 release oracle cases pass (114 accepted, 36 E302). Final tracker links and whitespace pass.
+- Blockers: none for this milestone. Worker usage limits were handled by root without leaving incomplete code. Conformance remains 9 passed, 14 unsupported, 0 failed; exclusive/new reference sources, generated cleanup, automatic joins/cancellation and DWARF remain pending.
+- Next steps: extend source contracts before enabling new addressable/static/intrinsic references; add read/move/initialization/cleanup edges; generate owned payload layouts and scope-exit joins while locals live; continue cancellation/unwinding and module/library implementation. Update STATUS and add a checkpoint after each logical step.
+
+### 2026-09-06 — Refresh shared-reborrow and owned-runtime handoff
+
+- State: Current snapshots now identify compiler 406c817, native coverage 21086be and runtime/tooling 979c8e8. Completed shared-reborrow and owned-payload priorities were replaced by exclusive/new-source work, generated cleanup, automatic joins and cancellation. All prior checkpoints remain intact.
+- Validation: All 14 combined checks, optimized example and 150 release oracle cases pass. Final tracker links and whitespace are next.
+- Blockers: none for this milestone; full-language and automatic cleanup/unwind integration remain pending.
+- Next steps: Verify and commit the handoff, then resume the ordered source-contract, ownership, runtime and module work in STATUS.
+
+### 2026-09-06 — Commit owned runtime capture and result transfer
+
+- State: Owned runtime storage, scheduler integration, lifecycle/fatal tests, rules and tooling are committed. Compiler implementation and native coverage are 406c817 and 21086be. Only current root/compiler handoff files and their step logs remain uncommitted.
+- Validation: All runtime profiles pass 12 owned-value groups, two owned-cleanup fatal probes and prior suites. The complete 14-check gate and staged whitespace checks pass. No source edits or active implementation workers remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current STATUS with the final three implementation commits, exact validation and remaining exclusive/static/cleanup/cancellation work; check links/whitespace and commit the handoff.
+
+### 2026-09-06 — Commit reborrow native coverage and example
+
+- State: Compiler implementation is 406c817 and native/example/usage coverage is 21086be. Coverage protects original field addresses, single evaluation, control-flow exits, inherited bounds, guarded parents and E302/E303 rejection. Runtime ownership and final handoff are next.
+- Validation: All 61 native groups, 102 library groups, optimized example and 150-case release oracle pass. Staged whitespace checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit owned capture/result storage with scheduler tests and tooling, then refresh and validate both current STATUS snapshots and step logs before the handoff commit.
+
+### 2026-09-06 — Commit shared reborrow implementation
+
+- State: The compiler shared-reborrow implementation is committed, including dedicated sites, pure address hints, direct field addresses, referent projection sources, inherited bounds and bounded function-source enumeration. Existing exclusive/temporary/union-payload boundaries remain explicit.
+- Validation: All combined and optimized checks passed before commit; staged whitespace checks pass. New native coverage/example, runtime ownership and current handoff remain to commit.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit reborrow native coverage/example and usage docs, then owned runtime/tooling; finish current handoff and next steps with exact commit IDs.
+
+### 2026-09-06 — Pass optimized reborrow execution and prepare final commits
+
+- State: The optimized compiler executes reborrows.mwy with exact output and passes all 150 guard-oracle cases. Runtime owned storage and source review are complete with no remaining blocker. Root is preparing coherent compiler, coverage, runtime and handoff commits.
+- Validation: Release oracle: 114 accepted, 36 expected E302, zero failures. Exact example stdout: true, 41, 7, 42, 8 on separate lines. All 14 combined checks, 163 Rust tests, 33 Python tests, runtime profiles and 847 links pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit shared reborrow implementation, then native/example documentation, then owned-runtime/tooling; refresh current STATUS snapshots with those commits and remaining cleanup/cancellation work, validate and commit the handoff.
+
+### 2026-09-06 — Pass the complete reborrow and owned-runtime gate
+
+- State: All 14 repository checks pass with shared reborrows, projected function sources and owned runtime capture/result transfer integrated. No pending source edits or failing checks remain. Root is building the optimized compiler and preparing focused commits.
+- Validation: 102 library plus 61 native Rust groups, 33 Python regressions, 847 links, schemas/catalog, editors, formatting/Clippy/build and conformance pass. Runtime debug/release/ASan/UBSan/LSan include 12 owned-value groups and two owned-cleanup fatal probes plus all prior suites. Conformance is 9 passed, 14 unsupported, 0 failed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run reborrows.mwy with the optimized compiler and exact output, rerun the 150-case guard oracle on that binary, then commit compiler, native coverage, runtime ownership and refreshed STATUS handoff separately.
+
+### 2026-09-06 — Complete owned runtime validation and start final integration
+
+- State: Owned capture/result storage now passes all runtime profiles with real relocation, consumed admission failures, panic cleanup order, child-safe movement and result-preserving join retries. Compiler shared reborrows and projected function sources are complete. Root is starting the combined gate with no pending source edits.
+- Validation: Compiler: 102 library groups, 60 earlier native groups plus the new control-flow group, 150 oracle cases, formatting and Clippy pass. Runtime: 12 owned groups and two exact fatal probes plus all prior suites pass in debug/release/ASan/UBSan/LSan. Thirteen runtime and 16 tooling Python tests and 847 links pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 repository checks, verify the optimized reborrow example and final 150-case oracle, then commit compiler implementation, native coverage, runtime ownership and current handoff as focused slices.
+
+### 2026-09-06 — Pass compiler projection regressions and document reborrow limits
+
+- State: All 102 library groups and the new native early-leave/effect test pass. Shared reborrow docs now explain original addresses, separate referent projections, inherited bounds, call-source enumeration and explicit unsupported pointee/union/static cases. Root corrected two test-string escaping errors before these passes.
+- Validation: Clippy with warnings denied and formatting pass; the 150-case oracle and 60 earlier native groups pass. Runtime owned values pass debug/release with 12 new groups, including OS-resource relocation and exactly-once cleanup; sanitizer and final fatal probes remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish owned runtime sanitizer/docs checks, review all final diffs, then run the combined gate and optimized reborrow example/oracle before focused implementation, coverage, runtime and handoff commits.
+
+### 2026-09-06 — Pass the reborrow guard oracle and extend source regressions
+
+- State: The 150-case oracle passes for direct and function-returned field reborrows. Root added public-source regressions for nested input projections, inherited ignored-input lifetime bounds, field-candidate expansion limits, and native early-leave behavior in an effectful reborrow equality operand.
+- Validation: Oracle: 114 accepted, 36 expected E302, zero failures. All 60 previously added/native baseline groups passed. Formatting found two incorrectly escaped new Rust test strings; root is correcting them before running updated library and control-flow checks. Runtime owned transfer tests are under construction.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Pass projected-source/budget and control-flow regressions, review runtime owned relocation/drop behavior, update ownership/usage docs, then run final combined verification and optimized examples/oracles before commits.
+
+### 2026-09-06 — Pass native reborrow identity and lifetime checks
+
+- State: All 60 native groups pass, including original nested addresses, field-returning function contracts, single evaluation, inherited call bounds, guarded parents and E302/E303 boundaries. Root prepared a 150-case truth-table oracle for direct and function-returned field references.
+- Validation: Native debug/release passes. The only earlier library failure was the corrected obsolete B001 expectation for shared &*ref. Runtime owned scheduling APIs are implemented but not yet validated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the reborrow oracle on a fresh binary, add focused call-field/budget regressions and formatting/Clippy, then review owned runtime transfer semantics and execute the combined gate.
+
+### 2026-09-06 — Preserve exclusive-reborrow rejection after enabling shared reborrows
+
+- State: The first compiler run passed 99 of 100 existing library groups; the sole failure was the old expectation that &*ref is unsupported. That boundary case now checks exclusive &!*ref, which remains B001. Root is running the full 60-group native suite.
+- Validation: No behavioral library regression appeared beyond the obsolete shared-reborrow capability expectation. Native address identity, field-return contracts and lifetime behavior are being exercised next; runtime owned storage is still under implementation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve native failures, add focused projected-source and budget regressions, run a guarded reborrow oracle and formatting/Clippy, then complete runtime ownership validation and integrated checks.
+
+### 2026-09-06 — Implement shared reborrow lowering and projected call sources
+
+- State: Root implemented explicit HIR reborrow sites, pure address hints, one-time parent evaluation and direct field-address lowering. Actual Local/Input sources now carry referent projections separately; inherited lifetime bounds remain unchanged. Call contracts enumerate compatible concrete named descendants before allowing field-returning functions.
+- Validation: cargo check passes. Source and native regressions are starting; runtime owned storage remains with its active worker. No static references, exclusive loans, union payload addresses or reference-bearing pointees were enabled.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the 60 native groups and library tests, correct obsolete capability expectations, audit projected-source/liveness boundaries and resource caps, then integrate owned runtime storage and final verification.
+
+### 2026-09-06 — Take over compiler work after worker usage limits
+
+- State: The compiler and review workers stopped on usage limits after design, before editing compiler sources. Root is taking over shared reborrow implementation. Native coverage and example remain intact; runtime ownership design is approved and its worker was notified to report availability before handoff.
+- Validation: Baseline 100 library and 54 native groups passed. No partial compiler source migration exists yet. New 60-group native suite remains pending shared reborrow support; no validated work was lost.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement dedicated HIR reborrow/address projection, symbolic referent fields and bounded call-source enumeration, run targeted/native checks, then complete runtime ownership work and final repository validation.
+
+### 2026-09-06 — Preserve pure type hints and single evaluation for reborrow operands
+
+- State: Independent review identified that generalized address resolution must not execute through the pure type-hint path. Root added effectful reborrow calls inside equality, complementing direct field/call cases, so lowered operands must run exactly once.
+- Validation: Baseline compiler checks pass. New reborrow native coverage now has 60 groups and remains unvalidated pending implementation. Existing native source fixtures were preserved; no new borrow syntax or implicit allocations were introduced.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Keep address hints pure while lowering reborrow operands once, preserve projected origins and inherited bounds, finalize bounded owned-payload admission semantics, then run focused native and ownership checks.
+
+### 2026-09-06 — Specify shared reborrow execution and lifetime coverage
+
+- State: Root added reborrows.mwy and six native groups covering identity, nested field addresses, temporary reference-valued calls, once-only evaluation, guarded/nullable parents, loops, inherited call bounds and E302/E303 rejection. Temporary owners, exclusive reborrows and reference-carrying storage remain explicit capability boundaries.
+- Validation: Baseline 100 library and 54 native groups pass. New reborrow cases are specifications awaiting implementation. Runtime ownership design must release accepted transferred captures on failed admission and reserve result storage before join.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete projected source/address representation and call-compatible field enumeration, settle runtime owned storage/move/failure contracts, then execute the new native cases and ownership lifecycle probes.
+
+### 2026-09-06 — Begin shared reborrows and owned task payload work
+
+- State: The checkout is clean at 0294d5b. Compiler work targets shared reborrows and concrete field references through shared record inputs, with projected call provenance before enabling those returns. Runtime work is designing a bounded explicit capture/result ownership API. Root owns native examples/coverage and both trackers; independent review audits provenance and lifetimes.
+- Validation: The previous milestone passed all 14 repository checks. New reborrow/owned-payload behavior is not yet implemented or validated. Exclusive access, reference-carrying referents, static/intrinsic sources and automatic cleanup/unwinding remain separate unless fully proven.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define referent projection paths distinct from carrier component paths, implement shared address-preserving reborrows and call-source substitution, settle runtime ownership/failure contracts, then add E302/E303 and exactly-once cleanup coverage.
+
 ### 2026-09-06 — Complete function-contract and child-wait handoff
 
 - Completed: compiler contracts are 3acfc97, native example/coverage is cb04d32, and child-wait runtime/tooling is 7b9dc05. Current STATUS files contain supported behavior, capability boundaries, exact evidence and ordered next steps; prior checkpoints are preserved.

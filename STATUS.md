@@ -7,23 +7,22 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current handoff
 
-- Compiler: `3acfc97` adds verified direct-function shared-borrow contracts,
-  including inferred results, recursion and record/union carriers. Actual pointer
-  origins are separate from the conservative all-input lifetime bounds. Ignored
-  and transitive inputs still protect returned views; violations report E302/E303.
-- Native coverage/example: `cb04d32`; `compiler/examples/borrow-functions.mwy`
-  demonstrates returned views, scalar-only projections and final-use writes.
-- Runtime/tooling: `7b9dc05` adds parent-owned child admission and waiting joins.
-  Parents yield their worker while retaining their stack. Child release failures
-  retain ownership for retry; missing explicit joins cause a private fatal error.
-- All 14 combined checks pass: 154 Rust tests, 33 Python tests, 845 local links,
+- Compiler: `406c817` adds shared reborrows and concrete field references through
+  shared inputs. Parent expressions evaluate once and point into original storage.
+  Function contracts include compatible referent fields and preserve inherited
+  all-input lifetime bounds; conflicts and escapes remain E302/E303.
+- Native coverage/example: `21086be`; `compiler/examples/reborrows.mwy` verifies
+  original field addresses, function-returned views and final-use writes.
+- Runtime/tooling: `979c8e8` adds explicit owned capture/result storage over fixed
+  caller buffers, actual relocation and exactly-once release. Accepted admission
+  failures drop captures; failed joins preserve owned results for retry.
+- All 14 combined checks pass: 163 Rust tests, 33 Python tests, 847 local links,
   schemas/catalog, editors, formatting/Clippy/build and conformance. Each runtime
-  debug/release/sanitized profile passes 14 cleanup, 10 stack, 10 context and
-  18 scheduler cases with exact fatal/guard/admission/unjoined-child probes.
-  ASan/UBSan/LSan pass, including the required expired-fiber-local ASan diagnosis.
-- The optimized compiler/example passes with exact stdout. Its independent function
-  oracle passes all 384 cases: 216 accepted, 168 E302, no unexpected results.
-  Twelve directed semantic probes and ten additional native runs also pass.
+  debug/release/sanitized profile passes 14 cleanup, 10 stack, 10 context,
+  18 scheduler and 12 owned-value cases with exact fatal/guard/admission probes.
+  ASan/UBSan/LSan pass, including the required expired-fiber-local diagnosis.
+- The optimized compiler/example passes with exact stdout. Its reborrow guard
+  oracle passes all 150 cases: 114 accepted, 36 E302, no unexpected results.
 - No active workers, incomplete code or failing checks remain. Conformance is
   9 passed, 14 unsupported, 0 failed. Generated programs still use the scalar
   runtime; automatic scope-exit joins, cancellation and DWARF are not implemented.
@@ -32,8 +31,8 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Shared loans through local records/unions and direct function contracts | Reborrows, exclusive access, moves and generated cleanup |
-| Runtime | Fixed-slot parent/child ownership and explicit worker-yielding joins | Owned captures/results, automatic scope-exit joins, cancellation and DWARF |
+| Compiler | Shared loans, concrete reborrows and direct function contracts | Exclusive access, static/intrinsic sources, moves and generated cleanup |
+| Runtime | Fixed-slot child waits and explicit owned capture/result transfers | Generated payload layouts, scope-exit joins, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
 | Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
@@ -42,16 +41,16 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend compiler origins and contract substitution for reborrows, static references
-   and verified intrinsic sources before enabling those capabilities. Preserve
-   all-input bounds, E303 escape checks and E302 caller conflicts.
+1. Extend origins and function contracts for static references, verified intrinsic
+   sources and additional addressable projections before enabling them. Preserve
+   all-input bounds and avoid false no-return assumptions for newly valid sources.
 2. Add explicit reads, moves, initialized-slot tracking and cleanup edges before
    exclusive loans, reference reassignment or owned collections. Improve predicate
    and loop precision without weakening proof/resource bounds.
-3. Add owned capture/result storage and compiler-generated scope-exit joins to the
-   parent/child scheduler while borrowed locals are still alive. Add cancellation
+3. Generate payload layouts and explicit move/drop operations for runtime owned
+   values, then scope-exit joins while borrowed locals still live. Add cancellation
    and pinned unwind support, preserving child completion before parent cleanup
-   and interleaved partial-result cleanup order. Do not join after C++ locals expire.
+   and interleaved partial-result order. Do not join after C++ locals expire.
 4. Build the manifest/module graph needed for real Meowy library sources and the
    documented projects. Keep runtime, editor and library progress visible here.
 5. Use `python3 -B tools/verify.py --all` after integrations. LSan needs an environment
