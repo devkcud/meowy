@@ -1,9 +1,17 @@
 use crate::ast::{self, ExprKind, Span, StmtKind};
-use crate::check::{Checker, Result, Scope, Value};
+use crate::check::{Checker, Constant, Result, Scope, Value};
 use crate::diagnostic::Diagnostic;
+use crate::flow::{FALSE, Guard, TRUE};
 use crate::hir::{self, Type};
 
 pub(crate) const MAX_CONTEXTS: usize = 256;
+pub(crate) const MAX_SCALAR_NODES: usize = 4096;
+
+pub(crate) struct Scalar {
+    pub(crate) checker: Checker,
+    pub(crate) nodes: usize,
+    pub(crate) bytes: usize,
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Fit {
@@ -60,7 +68,7 @@ impl Checker {
             };
             let mut fit = Fit::Yes;
             for value in values {
-                fit = fit.and(self.list_probe(value, element)?);
+                fit = fit.and(self.list_probe(value, element, FALSE)?);
             }
             if fit != Fit::No {
                 viable.push(choice);
@@ -80,9 +88,12 @@ impl Checker {
         let mut items = vec![None; values.len()];
         let mut deferred = Vec::new();
         for (index, value) in values.iter().enumerate() {
-            if choices.len() > 1 && self.list_deferred(value) {
-                deferred.push((index, self.reach));
-                continue;
+            if choices.len() > 1 && self.list_deferred(value)? {
+                choices = self.list_filter(value, choices, self.reach)?;
+                if choices.len() > 1 {
+                    deferred.push((index, self.reach));
+                    continue;
+                }
             }
             let elements: Vec<_> = choices
                 .iter()
@@ -124,13 +135,19 @@ impl Checker {
             }
             items[index] = Some(item);
         }
+        for (index, reach) in &deferred {
+            if choices.len() == 1 {
+                break;
+            }
+            choices = self.list_filter(&values[*index], choices, *reach)?;
+        }
         if choices.len() != 1 {
             for choice in &choices {
                 let Type::List { element, .. } = choice else {
                     unreachable!()
                 };
-                for (index, _) in &deferred {
-                    if self.list_probe(&values[*index], element)? == Fit::Unknown {
+                for (index, reach) in &deferred {
+                    if self.list_probe(&values[*index], element, *reach)? == Fit::Unknown {
                         return Err(Diagnostic::unsupported(
                             "list candidates need unresolved nested contextual inference",
                             values[*index].span,
@@ -177,6 +194,31 @@ impl Checker {
         })
     }
 
+    pub(crate) fn list_filter<'a>(
+        &mut self,
+        value: &ast::Expr,
+        choices: Vec<&'a Type>,
+        reach: Guard,
+    ) -> Result<Vec<&'a Type>> {
+        let mut matching = Vec::new();
+        for ty in choices {
+            let Type::List { element, .. } = ty else {
+                unreachable!()
+            };
+            if self.list_probe(value, element, reach)? != Fit::No {
+                matching.push(ty);
+            }
+        }
+        if matching.is_empty() {
+            return Err(Self::error(
+                "E207",
+                "list element fits no expected list type",
+                value.span,
+            ));
+        }
+        Ok(matching)
+    }
+
     pub(crate) fn list_assigns(expected: &Type, actual: &Type) -> bool {
         expected.accepts(actual)
             || matches!(actual, Type::Record { primary, .. }
@@ -198,19 +240,226 @@ impl Checker {
         }
     }
 
-    pub(crate) fn list_deferred(&self, value: &ast::Expr) -> bool {
+    pub(crate) fn list_deferred(&mut self, value: &ast::Expr) -> Result<bool> {
+        if !self.flow.spend(
+            value
+                .span
+                .end
+                .saturating_sub(value.span.start)
+                .saturating_add(1),
+        ) {
+            return Err(Diagnostic::unsupported(
+                "list deferral budget exhausted",
+                value.span,
+            ));
+        }
         if self.scalar_literal(value) {
-            return true;
+            return Ok(true);
         }
         match &value.kind {
             ExprKind::Group(value) => self.list_deferred(value),
-            ExprKind::List(values) => values.iter().all(|value| self.list_deferred(value)),
-            ExprKind::Block(block) if block.label.is_none() => block.stmts.iter().all(|stmt| {
-                matches!(&stmt.kind, StmtKind::Emit { label: None, ty: None, mutable: false, value, .. }
-                    if self.list_deferred(value))
-            }),
-            _ => false,
+            ExprKind::List(values) => {
+                for value in values {
+                    if !self.list_deferred(value)? {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            ExprKind::Block(block) if block.label.is_none() => {
+                for stmt in &block.stmts {
+                    let StmtKind::Emit {
+                        label: None,
+                        ty: None,
+                        mutable: false,
+                        value,
+                        ..
+                    } = &stmt.kind
+                    else {
+                        return Ok(false);
+                    };
+                    if !self.list_deferred(value)? {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
+            }
+            _ => Ok(self.list_scalar(value)?.is_some()),
         }
+    }
+
+    pub(crate) fn list_scalar(&mut self, value: &ast::Expr) -> Result<Option<Scalar>> {
+        let mut scalar = Scalar {
+            checker: Self::new(),
+            nodes: 0,
+            bytes: 0,
+        };
+        scalar.checker.scopes[0].values.clear();
+        let mut pending = vec![value];
+        while let Some(value) = pending.pop() {
+            scalar.nodes += 1;
+            if scalar.nodes > MAX_SCALAR_NODES
+                || pending.len().saturating_add(2) > MAX_SCALAR_NODES
+                || !self.flow.spend(1)
+            {
+                return Err(Diagnostic::unsupported(
+                    "scalar list probe budget exhausted",
+                    value.span,
+                ));
+            }
+            let bytes = match &value.kind {
+                ExprKind::Int(text) | ExprKind::Float(text) => text.len(),
+                ExprKind::String(parts) => {
+                    let mut bytes = parts.len();
+                    for part in parts {
+                        let ast::StringPart::Text(text) = part else {
+                            return Ok(None);
+                        };
+                        bytes = bytes.saturating_add(text.len());
+                    }
+                    bytes
+                }
+                ExprKind::Group(value) => {
+                    pending.push(value);
+                    0
+                }
+                ExprKind::Unary { op, value } if ["-", "!", "~"].contains(&op.as_str()) => {
+                    pending.push(value);
+                    0
+                }
+                ExprKind::Binary { op, left, right }
+                    if [
+                        "+", "-", "*", "/", "%", "&", "|", "^", "&&", "||", "==", "!=", "<", ">",
+                        "<=", ">=",
+                    ]
+                    .contains(&op.as_str()) =>
+                {
+                    pending.push(right);
+                    pending.push(left);
+                    0
+                }
+                ExprKind::Name(name) => {
+                    if scalar.checker.scopes[0].values.contains_key(name) {
+                        continue;
+                    }
+                    let lookups = self.scopes.iter().fold(0usize, |work, scope| {
+                        work.saturating_add(
+                            scope.values.len().checked_ilog2().unwrap_or(0) as usize + 1,
+                        )
+                    });
+                    if !self.flow.spend(lookups.saturating_mul(name.len() + 1)) {
+                        return Err(Diagnostic::unsupported(
+                            "scalar list lookup budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    let Some(symbol) = Self::list_symbol(&self.scopes, name) else {
+                        return Ok(None);
+                    };
+                    let constant = match symbol {
+                        Value::Constant(value) => value,
+                        Value::Local {
+                            ty,
+                            mutable: false,
+                            owner,
+                            constant: Some(value),
+                            ..
+                        } if *owner == self.owner
+                            && matches!(
+                                ty,
+                                Type::Null
+                                    | Type::Bool
+                                    | Type::Int { .. }
+                                    | Type::Float { .. }
+                                    | Type::String
+                            ) =>
+                        {
+                            value
+                        }
+                        _ => return Ok(None),
+                    };
+                    let bytes = name.len().saturating_add(match constant {
+                        Constant::String(value) => value.len(),
+                        _ => 0,
+                    });
+                    if !self.flow.spend(bytes) {
+                        return Err(Diagnostic::unsupported(
+                            "scalar list constant budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    let symbol = match symbol {
+                        Value::Local { ty, .. } => {
+                            let id = scalar.checker.locals.len();
+                            scalar.checker.locals.push(ty.clone());
+                            Value::Local {
+                                id,
+                                ty: ty.clone(),
+                                mutable: false,
+                                owner: 0,
+                                constant: Some(constant.clone()),
+                            }
+                        }
+                        _ => Value::Constant(constant.clone()),
+                    };
+                    scalar.checker.scopes[0].values.insert(name.clone(), symbol);
+                    bytes
+                }
+                _ => return Ok(None),
+            };
+            if pending.len() > MAX_SCALAR_NODES || !self.flow.spend(bytes) {
+                return Err(Diagnostic::unsupported(
+                    "scalar list probe budget exhausted",
+                    value.span,
+                ));
+            }
+            scalar.bytes = scalar.bytes.saturating_add(bytes);
+        }
+        Ok(Some(scalar))
+    }
+
+    pub(crate) fn list_scalar_probe(
+        &mut self,
+        value: &ast::Expr,
+        expected: &Type,
+        reach: Guard,
+    ) -> Result<Option<Fit>> {
+        let Some(mut scalar) = self.list_scalar(value)? else {
+            return Ok(None);
+        };
+        let weight = crate::borrow_contract::type_weight(expected, &mut self.flow, value.span)?;
+        let names = scalar.checker.scopes[0].values.len();
+        let work = scalar.nodes.saturating_mul(scalar.nodes).saturating_mul(
+            names
+                .saturating_add(weight)
+                .saturating_add(scalar.bytes)
+                .saturating_add(1),
+        );
+        if !self.flow.spend(work) {
+            return Err(Diagnostic::unsupported(
+                "scalar list checking budget exhausted",
+                value.span,
+            ));
+        }
+        scalar.checker.reach = if reach == FALSE { FALSE } else { TRUE };
+        let result = scalar.checker.expr(value, Some(expected));
+        if scalar.checker.flow.exceeded() || !self.flow.spend(scalar.checker.flow.work) {
+            return Err(Diagnostic::unsupported(
+                "scalar list checking budget exhausted",
+                value.span,
+            ));
+        }
+        Ok(Some(match result {
+            Ok(_) => Fit::Yes,
+            Err(error) if error.code == "B001" => return Err(error),
+            Err(error)
+                if error.code == "E207"
+                    && error.message.contains("multiple possible expected types") =>
+            {
+                Fit::Unknown
+            }
+            Err(_) => Fit::No,
+        }))
     }
 
     pub(crate) fn list_symbol<'a>(scopes: &'a [Scope], name: &str) -> Option<&'a Value> {
@@ -293,7 +542,12 @@ impl Checker {
         }
     }
 
-    pub(crate) fn list_probe(&mut self, value: &ast::Expr, expected: &Type) -> Result<Fit> {
+    pub(crate) fn list_probe(
+        &mut self,
+        value: &ast::Expr,
+        expected: &Type,
+        reach: Guard,
+    ) -> Result<Fit> {
         crate::borrow_contract::type_weight(expected, &mut self.flow, value.span)?;
         if !self
             .flow
@@ -332,8 +586,13 @@ impl Checker {
                 _ => Fit::No,
             });
         }
+        if matches!(value.kind, ExprKind::Unary { .. } | ExprKind::Binary { .. })
+            && let Some(fit) = self.list_scalar_probe(value, expected, reach)?
+        {
+            return Ok(fit);
+        }
         match &value.kind {
-            ExprKind::Group(value) => return self.list_probe(value, expected),
+            ExprKind::Group(value) => return self.list_probe(value, expected, reach),
             ExprKind::List(values) => {
                 let mut matches = Vec::new();
                 for ty in expected.members() {
@@ -345,7 +604,7 @@ impl Checker {
                     }
                     let mut fit = Fit::Yes;
                     for value in values {
-                        fit = fit.and(self.list_probe(value, element)?);
+                        fit = fit.and(self.list_probe(value, element, reach)?);
                     }
                     if fit != Fit::No {
                         matches.push(fit);
@@ -357,7 +616,7 @@ impl Checker {
                     _ => Fit::Unknown,
                 });
             }
-            ExprKind::Block(block) => return self.list_block_probe(block, expected),
+            ExprKind::Block(block) => return self.list_block_probe(block, expected, reach),
             _ => {}
         }
         if let ExprKind::Name(name) = &value.kind
@@ -397,7 +656,12 @@ impl Checker {
         Ok(Fit::Unknown)
     }
 
-    pub(crate) fn list_block_probe(&mut self, block: &ast::Block, expected: &Type) -> Result<Fit> {
+    pub(crate) fn list_block_probe(
+        &mut self,
+        block: &ast::Block,
+        expected: &Type,
+        reach: Guard,
+    ) -> Result<Fit> {
         if block.label.is_some() {
             return Ok(Fit::Unknown);
         }
@@ -458,7 +722,7 @@ impl Checker {
                         Some(primary.as_ref())
                     };
                     fit = fit.and(if let Some(slot) = slot {
-                        self.list_probe(value, slot)?
+                        self.list_probe(value, slot, reach)?
                     } else {
                         Fit::No
                     });
@@ -477,7 +741,7 @@ impl Checker {
             } else if fields.iter().any(|(name, _)| name.is_some()) {
                 fit = Fit::No;
             } else if let Some((_, value)) = fields.first() {
-                fit = self.list_probe(value, ty)?;
+                fit = self.list_probe(value, ty, reach)?;
             } else if !ty.accepts(&Type::Null) {
                 fit = Fit::No;
             }
@@ -516,10 +780,100 @@ mod tests {
         ] {
             assert!(crate::compile(source).is_ok(), "{source}");
         }
-        rejects("values<int8[1]><uint8[1]>:[-(128)]", "B001");
+        rejects("values<int8[1]><uint8[1]>:[-(128)]", "E207");
         rejects("values<uint8[1]><string[1]>:[-0]", "E207");
         rejects("values<float32[1]><float64[1]>:[1.0]", "E207");
         rejects("values<uint8[2]><string[1]>:[256,1]", "E216");
+    }
+
+    #[test]
+    pub(crate) fn pure_compounds_reuse_contextual_operator_rules() {
+        for source in [
+            "values<int8[1]><int16[1]>:[-(128)]",
+            "values<int8[1]><int16[1]>:[-(-128)]",
+            "values<int8[1]><int16[1]>:[(127+1)-1]",
+            "values<int8[1]><uint8[1]>:[~128]",
+            "values<float32[1]><float64[1]>:[1e39-1e39]",
+            "values<boolean[1]><int32[1]>:[!(false||true)&&false]",
+            "values<boolean[1]><int32[1]>:[false&&(1/0==1)]",
+            "values<boolean[1]><int32[1]>:[true||(1/0==1)]",
+            "values<int8[1]><string[1]>:[(-128)%-1]",
+            "values<int8[1][1]><int16[1][1]>:[[(127+1)-1]]",
+            "<A>:<{value<int8>}>;<B>:<{value<int16>}>;values<A[1]><B[1]>:[{->value:127+1}]",
+        ] {
+            assert!(crate::compile(source).is_ok(), "{source}");
+        }
+        for source in [
+            "values<int8[1]><uint8[1]>:[~1]",
+            "values<float32[1]><float64[1]>:[3e38+3e38]",
+            "values<int8[1]><uint8[1]>:[256-256]",
+            "values<int8[1]><int16[1]>:[1/0]",
+        ] {
+            rejects(source, "E207");
+        }
+        rejects("values<int8[2]><string[1]>:[127+1,0]", "E107");
+        rejects("values<boolean[1]><string[1]>:[true&&(1/0==1)]", "E107");
+    }
+
+    #[test]
+    pub(crate) fn pure_constant_leaves_retain_types_and_lexical_identity() {
+        for source in [
+            "byte<uint8>:254;values<uint8[1]><uint16[1]>:[byte+1]",
+            "flag:false;values<boolean[1]><int32[1]>:[!flag]",
+            "f<null>:(){true:false;values<boolean[1]><int32[1]>:[true&&(1/0==0)]}",
+        ] {
+            assert!(crate::compile(source).is_ok(), "{source}");
+        }
+        rejects(
+            "byte<uint8>:255;values<uint8[1]><uint16[1]>:[byte+1]",
+            "E107",
+        );
+        rejects(
+            "byte<uint8>:1;values<uint16[1]><string[1]>:[byte+1]",
+            "E207",
+        );
+        rejects("byte<uint8>:1;values:[byte,1+1]", "E207");
+        rejects(
+            "byte<uint8>:1;f<null>:(){values<uint8[1]><uint16[1]>:[byte+1]}",
+            "B001",
+        );
+    }
+
+    #[test]
+    pub(crate) fn compound_candidates_use_their_original_evaluation_reach() {
+        for source in [
+            "d:@\"debug\";values<int8[2]><uint8[2]>:[127+1,{d.print(1);->1}]",
+            "d:@\"debug\";stop<never>:(){d.panic(\"stop\")};values<int8[2]><uint8[2]>:[127+1,stop()]",
+            "d:@\"debug\";stop<never>:(){d.panic(\"stop\")};values<int8[2]><string[2]>:[stop(),127+1]",
+        ] {
+            assert!(crate::compile(source).is_ok(), "{source}");
+        }
+        rejects(
+            "d:@\"debug\";stop<never>:(){d.panic(\"stop\")};values<int8[2]><uint8[2]>:[stop(),127+1]",
+            "E207",
+        );
+        rejects(
+            "d:@\"debug\";stop<never>:(){d.panic(\"stop\")};values<int8[2]><uint8[2]>:[stop(),256-256]",
+            "E207",
+        );
+        rejects(
+            "d:@\"debug\";stop<never>:(){d.panic(\"stop\")};values<int8[2]><string[2]>:[127+1,stop()]",
+            "E107",
+        );
+    }
+
+    #[test]
+    pub(crate) fn scalar_probe_work_includes_referenced_constant_bytes() {
+        let source = format!(
+            "text:\"{}\";values<boolean[1]><string[1]>:[text==text]",
+            "a".repeat(500_000)
+        );
+        rejects(&source, "B001");
+        let expression = (0..64).map(|_| "1").collect::<Vec<_>>().join("+");
+        let types = (1..=64)
+            .map(|capacity| format!("<int32[{capacity}]>"))
+            .collect::<String>();
+        rejects(&format!("values{types}:[{expression}]"), "B001");
     }
 
     #[test]

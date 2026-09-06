@@ -269,10 +269,21 @@ implementation boundary; it does not change language rules.
   concrete element types and fresh list/record literal shapes. Probes never check
   expression effects or change flow proofs. Raw declared source types keep probes
   conservative when later effects can invalidate a narrowing fact.
-- A unique candidate supplies element type and capacity. Otherwise pure contextual
-  literals may be deferred while typed expressions are checked once in source
-  order. Retained HIR is coerced with ordinary assignment rules after selection;
-  its runtime order stays unchanged. No candidate replays a live checker state.
+- A unique candidate supplies element type and capacity. Pure scalar compounds
+  also constrain expected candidates: grouped/chained `-`, `!`, `~`, arithmetic,
+  bitwise, Boolean and comparison expressions may use literals and resolved
+  immutable scalar constants. A fresh checker retains only referenced constants,
+  their exact primitive types and normalized local IDs; it invokes the ordinary
+  expression checker. Mutable or captured values, calls and effectful blocks are
+  never replayed. Unannotated list compounds retain their already-typed semantics.
+- Preflight compound probes suppress reach-dependent arithmetic errors. During
+  the source-order pass, pure elements are probed at their actual reach and may
+  establish a unique context before later effects. Still-ambiguous pure elements
+  wait while typed/effectful expressions are checked once; their saved reach is
+  restored for final checking. A nonreturning prefix can suppress later E107, but
+  cannot suppress earlier arithmetic or dead-path literal/type errors. Scratch
+  checks receive only definitely-dead or potentially-live reach, never live guard
+  identities. Retained HIR keeps source order and ordinary assignment coercions.
 - Multiple proved candidates report E207, as does no element-compatible candidate;
   when every capacity is too small, E103 applies. There is no smallest-capacity or
   default-width preference. Single-candidate literal failures retain their existing
@@ -281,6 +292,11 @@ implementation boundary; it does not change language rules.
   and charges source/type probe work against the shared analysis budget.
   Probes borrow declared type descriptions instead of cloning them per candidate;
   actual-type walks, failed field searches and record-shape scans also consume work.
+  Scalar scratch trees are limited to 4,096 nodes. Referenced string bytes are
+  charged before copying; repeated node, constant, type and lookup work consumes
+  the same shared budget. Floating operations retain ordinary per-operation
+  rounding/infinity behavior, unsigned negation remains invalid, and grouped
+  positive signed-minimum magnitudes are not folded into compact negative literals.
 - Unary operators use the operand's type or a unique literal context before
   assignment injects their result into a union. Expected unions do not turn a
   scalar operand into a union before applying `!`, `-` or `~`.
