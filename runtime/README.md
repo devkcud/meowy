@@ -479,6 +479,31 @@ and [task scope exit](../docs/reference/tasks-and-channels.md#scope-exit).
 [COMPILER.md](../COMPILER.md#prove-the-runtime-before-it-gets-comfortable) specifies
 the actual stack/unwind implementation plan.
 
+## Owned diagnostic continuation
+
+The current borrowed-message contract remains required. The next diagnostic
+implementation should capture text in an owning `Panic` value while the source
+bytes are live. Copying in the scheduler after a body/drop callback returns can
+already be too late; copying after child reclamation cannot repair that lifetime.
+
+A bounded inline representation can keep existing by-value `TaskOutcome`, `Joined`,
+`ChildFailure` and scope-summary copies independent. It should store bytes and
+lengths, with `message()` creating a fresh view rather than caching a pointer into
+its own storage. Drop callbacks must construct that snapshot before destroying
+their message storage. Static operation names keep their existing lifetime rule.
+
+Before implementing it, choose an explicit byte capacity and visible overflow
+policy consistent with the [diagnostic contract](../docs/reference/diagnostics.md).
+If truncation is supported, preserve the original code/length, report incompleteness
+and avoid splitting UTF-8. Measure the added size of task outcomes, all 16 scope
+records per task and caller report buffers; this design must not hide allocation.
+
+Required checks: overwrite callback-local text, destroy capture-owned text, copy
+outcomes, reuse task slots and report buffers, retry release/report-full returns,
+exercise capacity boundaries, and verify P008 retains both original and cleanup
+snapshots. This is a reviewed implementation plan; no owning diagnostic storage
+has been added or qualified yet.
+
 ## Validation boundary and next steps
 
 This is a bounded runtime experiment on the current Linux x86-64 host. The pinned
