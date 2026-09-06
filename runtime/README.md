@@ -17,10 +17,10 @@ plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
 ASan stack-use-after-return report for a deliberately expired fiber local.
-Each profile also runs 18 scheduler cases, a real admission-refusal subprocess,
-a fatal task-cleanup subprocess and two unjoined-child protocol probes.
-Each profile also runs 12 owned-value cases and two fatal owned-cleanup probes,
-including cleanup of a capture after rejected admission.
+Each profile also runs 22 scheduler cases, a real admission-refusal subprocess,
+a fatal task-cleanup subprocess and four child/scope protocol probes.
+Each profile also runs 13 owned-value cases and three fatal owned-cleanup probes,
+including rejected admission and owned-result discard during scope closing.
 Cleanup panic cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
@@ -101,7 +101,8 @@ storage; it is separate from the cleanup stack's obligation-only transfer.
   check or context release leaves the result in its original slot, destination
   untouched, and ticket/parent obligation valid for retry. Joining allocates no
   additional result storage. Plain `join()` rejects a live owned result rather
-  than silently discarding it; use `join_owned()` and explicitly release the owner.
+  than silently discarding it; use `join_owned()` and explicitly release the owner,
+  or explicitly close the child's task scope to discard the result.
 - Scheduler-owned move/drop callbacks reject scheduler reentry and task suspension.
   Generic `Owned` operations still require caller-exclusive access and non-suspending
   callbacks. Admission and join never manufacture ownership for a borrowed pointer.
@@ -112,6 +113,54 @@ destination/release retry, owned child-to-parent transfer and parent capture bor
 A real pipe descriptor remains open through transfers and closes only when its final
 owner is explicitly released. Automatic compiler payload layout, full typed task
 results, allocation policy and cancellation unwinding remain separate work.
+
+## Explicit task scope closing
+
+`Task::mark()` opens a scope for the currently running task; `Task::close(mark)`
+finishes it explicitly while the parent's C++ locals still exist. It is a runtime
+foundation for future generated scope-exit code, not automatic joining or unwinding.
+
+- Each `TaskSlot` contains exactly 16 scope records (`Task::scope_limit`). This is
+  bounded prototype metadata capacity in the caller's slot array, independent of
+  the configured execution-stack budget. Opening a seventeenth scope returns
+  `full` without changing existing records.
+- Marks are opaque tokens tied to parent identity and a nonreused generation.
+  Generation exhaustion rejects opening instead of wrapping. Only the innermost
+  open mark can close; default, foreign, stale, already closed and out-of-order
+  marks reject. The active-task and worker checks also apply to scope operations.
+- A mark records the next admission sequence. Closing selects remaining direct
+  children admitted since that mark, in submission order, and waits through the
+  existing worker-yielding child-join path. Children admitted earlier remain the
+  parent's responsibility. An inner close does not consume an outer scope's older
+  children. This deterministic reporting order grants no language scheduling promise.
+- Closing explicitly discards owned child results. It releases the completed
+  child's context first, then destroys its result and consumes its ticket. Failed
+  context release leaves that child/result and the mark intact; a later close can
+  retry. Earlier successfully reclaimed children are never joined or dropped again.
+  Plain joins retain their existing protection against discarding owned results.
+- `ScopeClose` reports cumulative `joined`, `panicked` and `spawn_failed` counts
+  plus the first consumed failure. Counts advance only after successful reclamation
+  and remain in the slot across retries, including retries through a copied mark.
+  A failure to reclaim exposes the `pending` child and its `pending_result`, with
+  context/storage errors and outcome, separately from those cumulative counts.
+- Counts summarize every failure consumed by close; only the first diagnostic is
+  retained in this bounded report. Additional diagnostic attachment is not provided.
+  The caller must handle child failures explicitly. `ok` means scope closing
+  finished, not that all children succeeded; close does not automatically raise a
+  Meowy panic or propagate cancellation. Panic text remains borrowed and must
+  survive the entire close, any retries and subsequent report use. Children manually joined elsewhere are
+  already observed and do not contribute to a later close's counts.
+- A body or cleanup callback must close all its marks before returning. An open
+  mark is a private fatal protocol violation, even when it contains no children.
+  A cleanup callback may open/close scopes while its own locals are still alive.
+  C++ destruction never calls close, and an open mark cannot extend local lifetimes.
+
+Close waits for children to finish; it neither requests cancellation nor imposes
+a time limit. No callback can be forcibly unwound by this prototype. Native checks
+cover nested boundaries, older children, exact capacity, parent/worker generations,
+failure summaries, body/cleanup locals and partial close retry with an owned result.
+Fatal probes distinguish unclosed-scope misuse from P008 when discarded result
+cleanup itself panics.
 
 ## Bounded worker scheduler
 
@@ -166,11 +215,14 @@ API; it does not implement the complete Meowy task or group contract.
   returns would access expired local storage; this prototype requires explicit
   joins while that storage is alive. Compiler-inserted scope-exit joins, including
   exceptional exits, remain future work.
+  `Task::close()` provides an explicit bulk join/discard operation for a marked
+  scope, with the same requirement to finish before its locals leave scope.
 - Parent cleanup starts only after all body children have been joined. A cleanup
   callback may create and join its own children before returning. Nested parents
   use more slots from the same fixed pool, without a heap-allocated child list or
   recursive host scheduling. Parent/waiting identities and outstanding child counts
-  appear in `inspect()` results; a parent cannot settle or release with children.
+  appear in `inspect()` results, alongside open scope depth; a parent cannot settle
+  or release with children or unclosed marks.
 - A body panic result becomes `panicked` only after cleanup. A panic returned from
   cleanup takes the existing fatal P008 path with the body cause and cleanup
   operation. The scheduler does not infer panic from host exceptions or crashes.
@@ -207,7 +259,7 @@ mapping through a failed join; a kernel `RLIMIT_AS` refusal verifies a joined
 cleanup locals alive across waits, exercise nested chains and unrelated worker
 progress, and reject active-capability misuse. Unjoined-child probes require exact
 private failure text and `SIGABRT`; no abandoned child is resumed to fake cleanup.
-Scoped groups, automatically lowered captures/results, implicit scope-exit
+Scoped task groups, automatically lowered captures/results, implicit scope-exit
 joins, cancellation unwinding, timers, channels and a multi-worker executor remain
 unimplemented. An observed child panic is returned to the explicit join caller;
 automatic propagation of unobserved child failures is not provided.
@@ -415,9 +467,10 @@ Nothing promotes owners or borrows into arbitrary heap storage.
 1. Design the compiler's generated cleanup edges and initialized-slot metadata
    alongside moves and partial initialization. Decide whether the experimental
    ordered reservation restriction should survive that design.
-2. Connect typed compiler moves/results and generated scope-exit joins to the owned
-   payload and parent/child primitives. Keep context release behind terminal cleanup
-   and child completion; preserve worker, admission and sanitizer invariants.
+2. Connect typed compiler moves/results and generated scope-exit calls to the owned
+   payload and explicit task-scope primitives while locals are still alive. Keep
+   context release behind terminal cleanup and child completion; preserve worker,
+   admission and sanitizer invariants.
 3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.
 4. Exercise a suspended child borrowing a parent local, cancellation while joining,

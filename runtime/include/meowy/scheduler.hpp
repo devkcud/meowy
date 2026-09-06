@@ -4,6 +4,7 @@
 #include "meowy/context.hpp"
 #include "meowy/owned.hpp"
 
+#include <array>
 #include <span>
 
 namespace meowy::prototype::v0 {
@@ -50,6 +51,7 @@ public:
     TaskTicket waiting;
     std::size_t children = 0;
     bool has_result = false;
+    std::size_t scopes = 0;
 };
 
 struct PumpResult final {
@@ -69,8 +71,36 @@ public:
     OwnedStatus storage = OwnedStatus::ok;
 };
 
+class ScopeMark final {
+public:
+    ScopeMark() = default;
+
+private:
+    friend class Scheduler;
+    TaskTicket parent;
+    std::uint64_t id = 0;
+};
+
+struct ScopeOpen final {
+public:
+    ScheduleStatus status = ScheduleStatus::invalid;
+    ScopeMark mark;
+};
+
+struct ScopeClose final {
+public:
+    ScheduleStatus status = ScheduleStatus::invalid;
+    std::size_t joined = 0;
+    std::size_t panicked = 0;
+    std::size_t spawn_failed = 0;
+    TaskOutcome first_failure{};
+    TaskTicket pending{};
+    Joined pending_result{};
+};
+
 class Task final {
 public:
+    static constexpr std::size_t scope_limit = 16;
     Task(const Task &) = delete;
     Task &operator=(const Task &) = delete;
     Task(Task &&) = delete;
@@ -82,6 +112,8 @@ public:
     [[nodiscard]] Joined join_owned(TaskTicket child, Owned &destination) noexcept;
     [[nodiscard]] OwnedStatus set_result(Owned &value) noexcept;
     [[nodiscard]] OwnedStatus emit_capture() noexcept;
+    [[nodiscard]] ScopeOpen mark() noexcept;
+    [[nodiscard]] ScopeClose close(ScopeMark mark) noexcept;
 
 private:
     friend class Scheduler;
@@ -101,6 +133,15 @@ public:
 private:
     friend class Scheduler;
     friend class Task;
+    struct Scope final {
+    public:
+        std::uint64_t id = 0;
+        std::uint64_t boundary = 0;
+        std::size_t joined = 0;
+        std::size_t panicked = 0;
+        std::size_t spawn_failed = 0;
+        TaskOutcome first_failure{};
+    };
     Context context;
     TaskState state = TaskState::vacant;
     TaskOutcome outcome;
@@ -117,6 +158,8 @@ private:
     Owned result;
     bool owned = false;
     bool producing = false;
+    std::array<Scope, Task::scope_limit> scopes{};
+    std::size_t scope_depth = 0;
 };
 
 [[nodiscard]] std::size_t select_task(std::span<const TaskSlot> slots, std::size_t cursor) noexcept;
@@ -143,13 +186,16 @@ private:
     static Panic clean(void *data) noexcept;
     static Panic drop_capture(void *data) noexcept;
     static Panic drop_result(void *data) noexcept;
-    [[noreturn]] static void unjoined(std::string_view phase) noexcept;
+    [[noreturn]] static void unfinished(std::string_view phase, std::string_view pending) noexcept;
     [[nodiscard]] ScheduleStatus access() const noexcept;
     [[nodiscard]] ScheduleStatus task_access(TaskTicket ticket) const noexcept;
     [[nodiscard]] Submission admit(TaskBody body, void *data, TaskBody cleanup, TaskTicket parent,
                                    Owned *capture = nullptr) noexcept;
-    [[nodiscard]] Joined join_child(TaskTicket parent, TaskTicket child, Owned *destination = nullptr) noexcept;
-    [[nodiscard]] Joined consume(TaskTicket ticket, Owned *destination = nullptr) noexcept;
+    [[nodiscard]] Joined join_child(TaskTicket parent, TaskTicket child, Owned *destination = nullptr,
+                                    bool discard = false) noexcept;
+    [[nodiscard]] Joined consume(TaskTicket ticket, Owned *destination = nullptr, bool discard = false) noexcept;
+    [[nodiscard]] ScopeOpen mark(TaskTicket parent) noexcept;
+    [[nodiscard]] ScopeClose close(TaskTicket parent, ScopeMark mark) noexcept;
     void wake(TaskTicket child) noexcept;
     [[nodiscard]] bool valid(TaskTicket ticket) const noexcept;
     [[nodiscard]] std::size_t runnable_count() const noexcept;
@@ -159,6 +205,7 @@ private:
     const std::size_t stack_bytes;
     std::size_t cursor = 0;
     std::uint64_t next = 1;
+    std::uint64_t next_scope = 1;
     const pthread_t worker;
     bool pumping = false;
     bool owning = false;

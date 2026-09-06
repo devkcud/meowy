@@ -652,6 +652,208 @@ Panic leave_child(Task &task, void *) noexcept {
     return {};
 }
 
+struct ScopedWork final {
+public:
+    bool closed = false;
+    bool done = false;
+
+    static Panic run(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ScopedWork *>(data);
+        Work before;
+        before.yields = 1;
+        const auto older = task.spawn(Work::run, &before, Work::clean);
+        check(older.status == ScheduleStatus::ok);
+        const auto scope = task.mark();
+        check(scope.status == ScheduleStatus::ok);
+        {
+            Work local;
+            local.yields = 1;
+            local.cleanup_yields = true;
+            check(task.spawn(Work::run, &local, Work::clean).status == ScheduleStatus::ok);
+            const auto closed = task.close(scope.mark);
+            check(closed.status == ScheduleStatus::ok && closed.joined == 1 && closed.panicked == 0);
+            check(local.cleaned && local.cleanups == 1 && local.steps == 2);
+        }
+        value.closed = true;
+        check(task.yield() == ContextStatus::ok);
+        check(task.join(older.ticket).status == ScheduleStatus::ok && before.cleaned);
+        value.done = true;
+        return {};
+    }
+};
+
+void closing_scope_waits_while_locals_live_and_preserves_older_children() {
+    for (const bool cleanup : {false, true}) {
+        std::array<TaskSlot, 3> slots;
+        Scheduler scheduler(slots, stack_bytes);
+        ScopedWork value;
+        const auto parent = scheduler.submit(cleanup ? CleanupChild::body : ScopedWork::run, &value,
+                                             cleanup ? ScopedWork::run : nullptr);
+        check(parent.status == ScheduleStatus::ok);
+        for (int step = 0; step < 16 && !value.closed; ++step) {
+            check(scheduler.pump(1).status == ScheduleStatus::ok);
+        }
+        check(value.closed && !value.done);
+        const auto state = scheduler.inspect(parent.ticket);
+        check(state.scopes == 0 && state.children == 1);
+        check(scheduler.pump(5).status == ScheduleStatus::ok && value.done);
+        check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+    }
+}
+
+struct ScopeNesting final {
+public:
+    ScopeMark old;
+
+    static Panic first(Task &task, void *data) noexcept {
+        const auto outer = task.mark();
+        Work a;
+        Work b;
+        check(outer.status == ScheduleStatus::ok);
+        check(task.spawn(Work::run, &a).status == ScheduleStatus::ok);
+        const auto inner = task.mark();
+        check(inner.status == ScheduleStatus::ok);
+        check(task.spawn(Work::run, &b).status == ScheduleStatus::ok);
+        check(task.close(outer.mark).status == ScheduleStatus::invalid);
+        const auto inner_done = task.close(inner.mark);
+        check(inner_done.status == ScheduleStatus::ok && inner_done.joined == 1 && b.steps == 1);
+        check(task.close(inner.mark).status == ScheduleStatus::invalid);
+        const auto outer_done = task.close(outer.mark);
+        check(outer_done.status == ScheduleStatus::ok && outer_done.joined == 1 && a.steps == 1);
+        static_cast<ScopeNesting *>(data)->old = outer.mark;
+        std::array<ScopeMark, Task::scope_limit> marks;
+        for (auto &mark : marks) {
+            const auto opened = task.mark();
+            check(opened.status == ScheduleStatus::ok);
+            mark = opened.mark;
+        }
+        check(task.mark().status == ScheduleStatus::full);
+        check(task.close(marks.front()).status == ScheduleStatus::invalid);
+        for (std::size_t index = marks.size(); index != 0; --index) {
+            const auto closed = task.close(marks[index - 1]);
+            check(closed.status == ScheduleStatus::ok && closed.joined == 0);
+        }
+        check(task.close({}).status == ScheduleStatus::invalid);
+        return {};
+    }
+
+    static Panic reused(Task &task, void *data) noexcept {
+        const auto opened = task.mark();
+        check(opened.status == ScheduleStatus::ok);
+        check(task.close(static_cast<ScopeNesting *>(data)->old).status == ScheduleStatus::invalid);
+        check(task.close(opened.mark).status == ScheduleStatus::ok);
+        return {};
+    }
+};
+
+void scope_nesting_capacity_and_generation_are_checked() {
+    std::array<TaskSlot, 3> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    ScopeNesting value;
+    for (const auto body : {ScopeNesting::first, ScopeNesting::reused}) {
+        const auto parent = scheduler.submit(body, &value);
+        check(parent.status == ScheduleStatus::ok);
+        check(scheduler.pump(20).status == ScheduleStatus::ok);
+        check(scheduler.inspect(parent.ticket).scopes == 0);
+        check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+    }
+}
+
+struct ScopeAccess final {
+public:
+    Task *first = nullptr;
+    ScopeMark first_mark;
+    ScopeMark second_mark;
+    bool checked = false;
+
+    static Panic a(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ScopeAccess *>(data);
+        const auto opened = task.mark();
+        check(opened.status == ScheduleStatus::ok);
+        value.first = &task;
+        value.first_mark = opened.mark;
+        check(task.yield() == ContextStatus::ok);
+        check(task.close(value.second_mark).status == ScheduleStatus::invalid);
+        check(task.close(opened.mark).status == ScheduleStatus::ok);
+        value.first = nullptr;
+        return {};
+    }
+
+    static Panic b(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ScopeAccess *>(data);
+        const auto opened = task.mark();
+        check(opened.status == ScheduleStatus::ok && value.first != nullptr);
+        value.second_mark = opened.mark;
+        check(value.first->mark().status == ScheduleStatus::invalid);
+        check(value.first->close(value.first_mark).status == ScheduleStatus::invalid);
+        check(task.close(value.first_mark).status == ScheduleStatus::invalid);
+        check(task.close(opened.mark).status == ScheduleStatus::ok);
+        value.checked = true;
+        return {};
+    }
+
+    static void *foreign(void *data) noexcept {
+        auto &value = *static_cast<ScopeAccess *>(data);
+        check(value.first->mark().status == ScheduleStatus::wrong_thread);
+        check(value.first->close(value.first_mark).status == ScheduleStatus::wrong_thread);
+        return nullptr;
+    }
+};
+
+void scope_operations_require_active_owner_and_worker() {
+    std::array<TaskSlot, 2> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    ScopeAccess value;
+    const auto a = scheduler.submit(ScopeAccess::a, &value);
+    const auto b = scheduler.submit(ScopeAccess::b, &value);
+    check(a.status == ScheduleStatus::ok && b.status == ScheduleStatus::ok);
+    check(scheduler.pump(1).resumed == 1);
+    pthread_t thread{};
+    check(pthread_create(&thread, nullptr, ScopeAccess::foreign, &value) == 0);
+    check(pthread_join(thread, nullptr) == 0);
+    check(scheduler.pump(5).status == ScheduleStatus::ok && value.checked);
+    check(scheduler.join(a.ticket).status == ScheduleStatus::ok);
+    check(scheduler.join(b.ticket).status == ScheduleStatus::ok);
+}
+
+Panic scope_failures(Task &task, void *) noexcept {
+    const auto opened = task.mark();
+    check(opened.status == ScheduleStatus::ok);
+    Work normal;
+    Work first;
+    Work second;
+    Work failed;
+    first.panic = {6, "first failed"};
+    second.panic = {2, "second failed"};
+    for (auto *work : {&normal, &first, &second}) {
+        check(task.spawn(Work::run, work, Work::clean).status == ScheduleStatus::ok);
+    }
+    fail_map = true;
+    const auto refused = task.spawn(Work::run, &failed, Work::clean);
+    fail_map = false;
+    check(refused.status == ScheduleStatus::context_failed);
+    check(task.spawn(Work::run, &failed).status == ScheduleStatus::full);
+    const auto closed = task.close(opened.mark);
+    check(closed.status == ScheduleStatus::ok && closed.joined == 4 && closed.panicked == 2 && closed.spawn_failed == 1);
+    check(closed.first_failure.kind == OutcomeKind::panicked && closed.first_failure.panic.message == "first failed");
+    check(normal.cleaned && first.cleaned && second.cleaned && failed.steps == 0 && failed.cleanups == 0);
+    check(task.close(opened.mark).status == ScheduleStatus::invalid);
+    return {};
+}
+
+void scope_close_reports_child_failures_without_hiding_later_children() {
+    std::array<TaskSlot, 5> slots;
+    Scheduler scheduler(slots, stack_bytes);
+    const auto parent = scheduler.submit(scope_failures, nullptr);
+    check(parent.status == ScheduleStatus::ok && scheduler.pump(20).status == ScheduleStatus::ok);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok);
+}
+
+Panic leave_scope(Task &task, void *) noexcept {
+    check(task.mark().status == ScheduleStatus::ok);
+    return {};
+}
+
 void os_admission_failure() {
     std::array<TaskSlot, 1> slots;
     Scheduler scheduler(slots, stack_bytes);
@@ -706,6 +908,10 @@ constexpr std::array cases{
     Case{"failed_child_release_retains_parent_ownership_until_retry", failed_child_release_retains_parent_ownership_until_retry},
     Case{"child_apis_reject_parent_sibling_root_and_foreign_capabilities", child_apis_reject_parent_sibling_root_and_foreign_capabilities},
     Case{"only_the_selected_child_wakes_its_waiting_parent", only_the_selected_child_wakes_its_waiting_parent},
+    Case{"closing_scope_waits_while_locals_live_and_preserves_older_children", closing_scope_waits_while_locals_live_and_preserves_older_children},
+    Case{"scope_nesting_capacity_and_generation_are_checked", scope_nesting_capacity_and_generation_are_checked},
+    Case{"scope_operations_require_active_owner_and_worker", scope_operations_require_active_owner_and_worker},
+    Case{"scope_close_reports_child_failures_without_hiding_later_children", scope_close_reports_child_failures_without_hiding_later_children},
 };
 
 }
@@ -740,6 +946,16 @@ extern "C" int __wrap_munmap(void *address, std::size_t size) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && (std::string_view(argv[1]) == "--unclosed-body" || std::string_view(argv[1]) == "--unclosed-cleanup")) {
+        const rlimit limit{0, 0};
+        check(setrlimit(RLIMIT_CORE, &limit) == 0);
+        std::array<TaskSlot, 1> slots;
+        Scheduler scheduler(slots, stack_bytes);
+        const bool body = std::string_view(argv[1]) == "--unclosed-body";
+        check(scheduler.submit(body ? leave_scope : CleanupChild::body, nullptr, body ? nullptr : leave_scope).status == ScheduleStatus::ok);
+        static_cast<void>(scheduler.pump(1));
+        return 3;
+    }
     if (argc == 2 && (std::string_view(argv[1]) == "--unjoined-body" || std::string_view(argv[1]) == "--unjoined-cleanup")) {
         const rlimit limit{0, 0};
         check(setrlimit(RLIMIT_CORE, &limit) == 0);

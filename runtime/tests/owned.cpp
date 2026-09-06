@@ -64,7 +64,11 @@ public:
         if (log.source != nullptr) { check(log.source->release() == OwnedStatus::invalid); }
         if (log.destination != nullptr) { check(log.destination->release() == OwnedStatus::invalid); }
         if (log.scheduler != nullptr) { check(log.scheduler->submit(empty, nullptr).status == ScheduleStatus::invalid); }
-        if (log.task != nullptr) { check(log.task->yield() == ContextStatus::invalid); }
+        if (log.task != nullptr) {
+            check(log.task->yield() == ContextStatus::invalid);
+            check(log.task->mark().status == ScheduleStatus::invalid);
+            check(log.task->close({}).status == ScheduleStatus::invalid);
+        }
         std::construct_at(static_cast<Resource *>(destination), value);
         ++log.moves;
         std::destroy_at(&value);
@@ -76,7 +80,11 @@ public:
         check(log.live[value.id]);
         check(log.count < log.drops.size());
         if (log.scheduler != nullptr) { check(log.scheduler->submit(empty, nullptr).status == ScheduleStatus::invalid); }
-        if (log.task != nullptr) { check(log.task->yield() == ContextStatus::invalid); }
+        if (log.task != nullptr) {
+            check(log.task->yield() == ContextStatus::invalid);
+            check(log.task->mark().status == ScheduleStatus::invalid);
+            check(log.task->close({}).status == ScheduleStatus::invalid);
+        }
         log.task = nullptr;
         log.live[value.id] = false;
         log.drops[log.count++] = value.id;
@@ -436,6 +444,82 @@ void cleanup_cannot_emit_an_owned_result() {
     check(fixture.scheduler.join(submitted.ticket).status == ScheduleStatus::ok);
 }
 
+struct ScopeRetry final {
+public:
+    Log log;
+    ScopeClose first;
+    bool paused = false;
+    bool done = false;
+
+    static Panic failed_child(Task &, void *) noexcept { return {6, "first child failed"}; }
+
+    static Panic held_result(Task &task, void *) noexcept {
+        check(task.yield() == ContextStatus::ok);
+        fail_release = true;
+        check(task.emit_capture() == OwnedStatus::ok);
+        return {};
+    }
+
+    static Panic parent(Task &task, void *data) noexcept {
+        auto &value = *static_cast<ScopeRetry *>(data);
+        const auto opened = task.mark();
+        check(opened.status == ScheduleStatus::ok);
+        const auto copy = opened.mark;
+        check(task.spawn(failed_child, nullptr).status == ScheduleStatus::ok);
+        Buffer buffer;
+        Owned capture(buffer.bytes);
+        initialize(capture, value.log, 1);
+        const auto child = task.spawn_owned(held_result, capture);
+        check(child.status == ScheduleStatus::ok && capture.empty());
+        value.first = task.close(opened.mark);
+        fail_release = false;
+        check(value.first.status == ScheduleStatus::context_failed && value.first.joined == 1 && value.first.panicked == 1);
+        check(value.first.first_failure.panic.message == "first child failed");
+        check(value.first.pending == child.ticket && value.first.pending_result.context.memory.error == EIO);
+        check(value.first.pending_result.outcome.kind == OutcomeKind::completed && value.log.count == 0);
+        value.paused = true;
+        check(task.yield() == ContextStatus::ok);
+        value.log.task = &task;
+        const auto closed = task.close(copy);
+        check(closed.status == ScheduleStatus::ok && closed.joined == 2 && closed.panicked == 1 && closed.spawn_failed == 0);
+        check(closed.first_failure.panic.message == "first child failed" && closed.pending.scheduler == nullptr);
+        check(value.log.count == 1 && !value.log.live[1]);
+        check(task.close(opened.mark).status == ScheduleStatus::invalid);
+        value.done = true;
+        return {};
+    }
+};
+
+void scope_close_preserves_progress_and_owned_result_until_release_succeeds() {
+    std::array<Buffer, 3> input;
+    std::array<Buffer, 3> output;
+    std::array<TaskSlot, 3> slots{TaskSlot(input[0].bytes, output[0].bytes), TaskSlot(input[1].bytes, output[1].bytes),
+                                TaskSlot(input[2].bytes, output[2].bytes)};
+    Scheduler scheduler(slots, stack_bytes);
+    ScopeRetry value;
+    const auto parent = scheduler.submit(ScopeRetry::parent, &value);
+    check(parent.status == ScheduleStatus::ok && scheduler.pump(6).resumed == 6);
+    check(value.paused && !value.done && value.log.count == 0);
+    const auto state = scheduler.inspect(parent.ticket);
+    check(state.scopes == 1 && state.children == 1);
+    check(scheduler.inspect(value.first.pending).has_result);
+    check(scheduler.pump(2).status == ScheduleStatus::ok && value.done);
+    check(scheduler.join(parent.ticket).status == ScheduleStatus::ok && value.log.count == 1);
+}
+
+Panic scope_drop_failure(Task &task, void *data) noexcept {
+    auto &log = *static_cast<Log *>(data);
+    const auto scope = task.mark();
+    check(scope.status == ScheduleStatus::ok);
+    Buffer buffer;
+    Owned capture(buffer.bytes);
+    initialize(capture, log, 1);
+    static_cast<Resource *>(capture.data())->fail = true;
+    check(task.spawn_owned(forward, capture).status == ScheduleStatus::ok);
+    static_cast<void>(task.close(scope.mark));
+    return {};
+}
+
 struct Case final {
 public:
     std::string_view name;
@@ -455,6 +539,7 @@ constexpr std::array cases{
     Case{"capture_storage_cannot_move_until_borrowing_children_join", capture_storage_cannot_move_until_borrowing_children_join},
     Case{"transferred_file_descriptor_closes_only_at_final_owner_release", transferred_file_descriptor_closes_only_at_final_owner_release},
     Case{"cleanup_cannot_emit_an_owned_result", cleanup_cannot_emit_an_owned_result},
+    Case{"scope_close_preserves_progress_and_owned_result_until_release_succeeds", scope_close_preserves_progress_and_owned_result_until_release_succeeds},
 };
 
 }
@@ -479,6 +564,18 @@ extern "C" int __wrap_munmap(void *address, std::size_t size) {
 }
 
 int main(int argc, char **argv) {
+    if (argc == 2 && std::string_view(argv[1]) == "--fatal-scope-owned-cleanup") {
+        const rlimit limit{0, 0};
+        check(setrlimit(RLIMIT_CORE, &limit) == 0);
+        std::array<Buffer, 2> input;
+        std::array<Buffer, 2> output;
+        std::array<TaskSlot, 2> slots{TaskSlot(input[0].bytes, output[0].bytes), TaskSlot(input[1].bytes, output[1].bytes)};
+        Scheduler scheduler(slots, stack_bytes);
+        Log log;
+        check(scheduler.submit(scope_drop_failure, &log).status == ScheduleStatus::ok);
+        static_cast<void>(scheduler.pump(5));
+        return 3;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "--fatal-owned-admission") {
         const rlimit limit{0, 0};
         check(setrlimit(RLIMIT_CORE, &limit) == 0);

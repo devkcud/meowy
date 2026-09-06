@@ -133,6 +133,13 @@ class CheckTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             check.check_unjoined(result, "cleanup")
 
+    def test_unclosed_scope_probe_is_distinct_from_unjoined_children(self):
+        result = subprocess.CompletedProcess(["scheduler"], -signal.SIGABRT, "",
+                                             "fatal runtime protocol: body returned with unclosed task scopes\n")
+        check.check_unjoined(result, "body", "unclosed task scopes")
+        with self.assertRaises(RuntimeError):
+            check.check_unjoined(result, "body")
+
 
 if __name__ == "__main__":
     unittest.main()

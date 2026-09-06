@@ -80,6 +80,14 @@ OwnedStatus Task::emit_capture() noexcept {
     return status;
 }
 
+ScopeOpen Task::mark() noexcept {
+    return scheduler.mark(ticket);
+}
+
+ScopeClose Task::close(ScopeMark scope) noexcept {
+    return scheduler.close(ticket, scope);
+}
+
 TaskSlot::TaskSlot(std::span<std::byte> input, std::span<std::byte> output) noexcept
     : capture(input), result(output) {}
 
@@ -139,6 +147,7 @@ Submission Scheduler::admit(TaskBody body, void *data, TaskBody cleanup, TaskTic
         slot.children = 0;
         slot.owned = capture != nullptr;
         slot.producing = false;
+        slot.scope_depth = 0;
         if (parent.scheduler != nullptr) {
             ++slots[parent.index].children;
         }
@@ -220,7 +229,8 @@ TaskInfo Scheduler::inspect(TaskTicket ticket) const noexcept {
         return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, TaskState::vacant, {}, {}, {}, 0};
     }
     const auto &slot = slots[ticket.index];
-    return {ScheduleStatus::ok, slot.state, slot.outcome, slot.parent, slot.waiting, slot.children, slot.result.initialized()};
+    return {ScheduleStatus::ok, slot.state, slot.outcome, slot.parent, slot.waiting, slot.children,
+            slot.result.initialized(), slot.scope_depth};
 }
 
 Joined Scheduler::join(TaskTicket ticket) noexcept {
@@ -239,7 +249,7 @@ Joined Scheduler::join_owned(TaskTicket ticket, Owned &destination) noexcept {
     return consume(ticket, &destination);
 }
 
-Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destination) noexcept {
+Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destination, bool discard) noexcept {
     const auto status = task_access(parent);
     if (status != ScheduleStatus::ok || !valid(child) || slots[child.index].parent != parent) {
         return {status == ScheduleStatus::ok ? ScheduleStatus::invalid : status, {}, {}};
@@ -255,18 +265,19 @@ Joined Scheduler::join_child(TaskTicket parent, TaskTicket child, Owned *destina
             return {ScheduleStatus::context_failed, {}, {result, {}}};
         }
     }
-    return consume(child, destination);
+    return consume(child, destination, discard);
 }
 
-Joined Scheduler::consume(TaskTicket ticket, Owned *destination) noexcept {
+Joined Scheduler::consume(TaskTicket ticket, Owned *destination, bool discard) noexcept {
     auto &slot = slots[ticket.index];
-    if (slot.state != TaskState::settled || slot.children != 0) {
+    if (slot.state != TaskState::settled || slot.children != 0 || slot.scope_depth != 0 ||
+        (discard && destination != nullptr)) {
         return {};
     }
     if (destination != nullptr && !destination->empty()) {
         return {ScheduleStatus::storage_failed, slot.outcome, {}, OwnedStatus::occupied};
     }
-    if (slot.result.initialized()) {
+    if (slot.result.initialized() && !discard) {
         const auto status = destination == nullptr ? OwnedStatus::invalid : slot.result.fits(*destination);
         if (status != OwnedStatus::ok) {
             return {ScheduleStatus::storage_failed, slot.outcome, {}, status};
@@ -279,7 +290,7 @@ Joined Scheduler::consume(TaskTicket ticket, Owned *destination) noexcept {
         return {ScheduleStatus::context_failed, slot.outcome, result};
     }
     if (slot.result.initialized()) {
-        const auto moved = slot.result.move_to(*destination);
+        const auto moved = discard ? slot.result.release() : slot.result.move_to(*destination);
         if (moved != OwnedStatus::ok) {
             owning = false;
             return {ScheduleStatus::storage_failed, slot.outcome, {}, moved};
@@ -304,6 +315,69 @@ Joined Scheduler::consume(TaskTicket ticket, Owned *destination) noexcept {
     slot.owned = false;
     slot.producing = false;
     return {ScheduleStatus::ok, outcome, {}};
+}
+
+ScopeOpen Scheduler::mark(TaskTicket parent) noexcept {
+    const auto status = task_access(parent);
+    if (status != ScheduleStatus::ok) {
+        return {status, {}};
+    }
+    auto &owner = slots[parent.index];
+    if (owner.scope_depth == owner.scopes.size() || next_scope == std::numeric_limits<std::uint64_t>::max()) {
+        return {ScheduleStatus::full, {}};
+    }
+    auto &scope = owner.scopes[owner.scope_depth++];
+    scope = {};
+    scope.id = next_scope++;
+    scope.boundary = next;
+    ScopeMark mark;
+    mark.parent = parent;
+    mark.id = scope.id;
+    return {ScheduleStatus::ok, mark};
+}
+
+ScopeClose Scheduler::close(TaskTicket parent, ScopeMark mark) noexcept {
+    const auto status = task_access(parent);
+    if (status != ScheduleStatus::ok || mark.parent != parent || mark.id == 0) {
+        ScopeClose result;
+        result.status = status == ScheduleStatus::ok ? ScheduleStatus::invalid : status;
+        return result;
+    }
+    auto &owner = slots[parent.index];
+    if (owner.scope_depth == 0 || owner.scopes[owner.scope_depth - 1].id != mark.id) {
+        return {};
+    }
+    auto &scope = owner.scopes[owner.scope_depth - 1];
+    for (;;) {
+        TaskTicket child;
+        for (std::size_t index = 0; index < slots.size(); ++index) {
+            const auto &slot = slots[index];
+            if (slot.state != TaskState::vacant && slot.parent == parent && slot.id >= scope.boundary &&
+                (child.id == 0 || slot.id < child.id)) {
+                child = {this, index, slot.id};
+            }
+        }
+        if (child.id == 0) {
+            const ScopeClose result{ScheduleStatus::ok, scope.joined, scope.panicked, scope.spawn_failed,
+                                    scope.first_failure, {}, {}};
+            scope = {};
+            --owner.scope_depth;
+            return result;
+        }
+        const auto joined = join_child(parent, child, nullptr, true);
+        if (joined.status != ScheduleStatus::ok) {
+            return {joined.status, scope.joined, scope.panicked, scope.spawn_failed,
+                    scope.first_failure, child, joined};
+        }
+        ++scope.joined;
+        if (joined.outcome.kind == OutcomeKind::panicked || joined.outcome.kind == OutcomeKind::spawn_failed) {
+            scope.panicked += joined.outcome.kind == OutcomeKind::panicked;
+            scope.spawn_failed += joined.outcome.kind == OutcomeKind::spawn_failed;
+            if (scope.first_failure.kind == OutcomeKind::pending) {
+                scope.first_failure = joined.outcome;
+            }
+        }
+    }
 }
 
 void Scheduler::wake(TaskTicket child) noexcept {
@@ -340,7 +414,10 @@ void Scheduler::run(Context &context, void *data) noexcept {
     const auto panic = slot.body(activation.task, slot.data);
     slot.producing = false;
     if (slot.children != 0) {
-        unjoined("body");
+        unfinished("body", "unjoined children");
+    }
+    if (slot.scope_depth != 0) {
+        unfinished("body", "unclosed task scopes");
     }
     if (panic.code != 0 && slot.result.initialized()) {
         const auto reserved = cleanup.reserve();
@@ -360,7 +437,10 @@ Panic Scheduler::clean(void *data) noexcept {
     auto &activation = *static_cast<Activation *>(data);
     const auto panic = activation.slot.cleanup(activation.task, activation.slot.data);
     if (activation.slot.children != 0) {
-        unjoined("cleanup");
+        unfinished("cleanup", "unjoined children");
+    }
+    if (activation.slot.scope_depth != 0) {
+        unfinished("cleanup", "unclosed task scopes");
     }
     return panic;
 }
@@ -381,9 +461,9 @@ Panic Scheduler::drop_result(void *data) noexcept {
     return panic;
 }
 
-[[noreturn]] void Scheduler::unjoined(std::string_view phase) noexcept {
+[[noreturn]] void Scheduler::unfinished(std::string_view phase, std::string_view pending) noexcept {
     for (auto text : {std::string_view("fatal runtime protocol: "), phase,
-                      std::string_view(" returned with unjoined children\n")}) {
+                      std::string_view(" returned with "), pending, std::string_view("\n")}) {
         while (!text.empty()) {
             const auto count = ::write(STDERR_FILENO, text.data(), text.size());
             if (count < 0 && errno == EINTR) {

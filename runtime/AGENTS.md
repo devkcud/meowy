@@ -30,6 +30,10 @@
   Never resume or reclaim a child after the scope of its borrowed locals has ended.
   Keep missing explicit joins a private fatal protocol violation until generated
   scope-exit joins and unwind support can preserve those lifetimes.
+- Task scopes have fixed metadata capacity and parent-bound, nonreused marks.
+  Close only the innermost mark, retain progress on release failure and discard an
+  owned child result only after its context releases successfully. Close is explicit
+  and never substitutes for cancellation or joining after C++ locals expire.
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the
