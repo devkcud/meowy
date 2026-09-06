@@ -38,6 +38,7 @@ compiler/target/debug/meowy run compiler/examples/effectful-lists.mwy
 compiler/target/debug/meowy run compiler/examples/dynamic-lists.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-fields.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-writes.mwy
+compiler/target/debug/meowy run compiler/examples/emitted-slots.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -84,6 +85,8 @@ The [mutable fields example](examples/mutable-fields.mwy) updates a declared mut
 field after its final shared read while preserving an earlier record copy.
 The [mixed writes example](examples/mixed-writes.mwy) updates fields inside a list
 held by a record, preserving copies and allowing changes to a separate holder field.
+The [emitted slots example](examples/emitted-slots.mwy) mutates named fields during
+construction; later reads and the returned record observe the same updated storage.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -133,6 +136,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   Named field paths on mutable local owners support assignment when every crossed
   field is mutable. Writes preserve other fields and copies; disjoint shared views
   may stay live, and overlapping views must finish before the store.
+- Mutable emitted names backed by result fields. After `->count:=1`, `count=2`
+  updates the returned field; scalar reads and mixed field/index writes use that
+  storage. Initializers still run once. Wider final field types, nullable fields,
+  named enclosing targets and restarts preserve the alias's declared type.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -199,7 +206,7 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
-fields, mutable primary slots and assignments to emitted names. String interpolation
+fields, mutable primary slots and borrows of emitted storage. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
 
@@ -259,9 +266,15 @@ remain valid when the RHS replaces the same Copy owner; RHS changes to other fie
 are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field
 mutability in declared construction or completing branches reports E206. Shared
-reference targets, temporary roots and direct emitted-name writes
-remain B001. A mutable emission currently fills the result from a separate local
-copy; it does not create an assignable alias to the result slot.
+reference targets and temporary roots remain B001.
+Mutable named emissions register an alias after initialization. Later reads and
+assignments resolve the actual result cell, with conversion between the declared
+local type and a wider final slot type. Mixed paths address the compatible payload.
+When an emission is proved discarded, an initialized local cell preserves its
+remaining effects without projecting into an absent or incompatible result field.
+Borrowing emitted storage remains B001. Alias mutations publish unknown variant
+activity, preserving unrelated reference origins and preventing stale initializer
+facts from hiding a conflicting access.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the

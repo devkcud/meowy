@@ -79,6 +79,10 @@ pub fn examples_execute_in_both_profiles() {
             "1\n8\n2\n21\n",
         ),
         (
+            include_str!("../../examples/emitted-slots.mwy"),
+            "init\n1\n2\n2\n9\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
