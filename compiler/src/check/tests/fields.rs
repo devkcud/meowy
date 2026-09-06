@@ -64,8 +64,6 @@ pub(crate) fn field_assignment_requires_each_owning_mutable_boundary() {
         ("r:={->child:{->n:=1}};r.child.n=2", "E305"),
         ("r:={->child:={->n:1}};r.child.n=2", "E305"),
         ("r:={->n:=1};p:&r;p.n=2", "B001"),
-        ("r:{->n:=1;n=2}", "B001"),
-        ("r:{->child:={->n:=1};child.n=2}", "B001"),
         ("a:1;r:{->view:=&a}", "B001"),
         ("<Bad>:<{view<&int32>:=}>", "B001"),
         ("<Bad>:<{child<{view<&int32>}>:=}>", "B001"),

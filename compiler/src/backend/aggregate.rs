@@ -3,14 +3,7 @@ use crate::hir::{Expr, Place, Type, WriteStep};
 
 impl<'a> Generator<'a> {
     pub(crate) fn place(&mut self, place: &Place) -> Result<(String, Type), String> {
-        let mut ty = self
-            .program
-            .locals
-            .get(place.root)
-            .ok_or_else(|| format!("missing storage root {}", place.root))?
-            .clone();
-        self.local(place.root);
-        let mut ptr = format!("%local{}", place.root);
+        let (mut ptr, mut ty) = self.local_place(place.root)?;
         for index in &place.fields {
             let Type::Record { fields, .. } = &ty else {
                 return Err("storage projection requires a declared record".into());
@@ -39,14 +32,7 @@ impl<'a> Generator<'a> {
         if path.is_empty() {
             return Err("storage assignment requires a projection path".into());
         }
-        let root = self
-            .program
-            .locals
-            .get(id)
-            .ok_or("missing write storage root")?
-            .clone();
-        self.local(id);
-        let mut ptr = format!("%local{id}");
+        let (mut ptr, root) = self.local_place(id)?;
         let mut ty = &root;
         for step in path {
             match step {

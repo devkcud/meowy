@@ -1,7 +1,16 @@
 use super::{
-    BTreeMap, BTreeSet, BlockId, CallId, EmitId, Guard, Guards, LocalId, Program, ReborrowId,
+    BTreeMap, BTreeSet, BlockId, CallId, EmitId, Guard, Guards, LocalId, Program, ReborrowId, Span,
     State, Tags, Type,
 };
+
+#[derive(Clone)]
+pub(crate) struct Alias {
+    pub(crate) target: BlockId,
+    pub(crate) field: String,
+    pub(crate) emission: EmitId,
+    pub(crate) root: LocalId,
+    pub(crate) span: Span,
+}
 
 #[derive(Default)]
 pub(crate) struct Proofs {
@@ -12,6 +21,7 @@ pub(crate) struct Proofs {
     pub(crate) tags: Tags,
     pub(crate) mutable: BTreeSet<LocalId>,
     pub(crate) calls: BTreeMap<CallId, Guard>,
+    pub(crate) aliases: BTreeMap<LocalId, Alias>,
 }
 
 #[derive(Default)]

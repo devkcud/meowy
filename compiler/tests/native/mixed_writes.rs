@@ -187,7 +187,6 @@ pub fn mixed_write_paths_enforce_mutability_types_and_remaining_boundaries() {
         ("h:={->items:=[{->n:=1}]};h.items[1].n=\"wrong\"", "E207"),
         ("h:={->items:=[{->n:=1}]};p:&h;p.items[1].n=2", "B001"),
         ("h:={->items:=[{->n:=1}]};p:&h;(*p).items[1].n=2", "B001"),
-        ("h:{->items:=[{->n:=1}];items[1].n=2}", "B001"),
         ("[{->n:=1}][1].n=2", "B001"),
         ("h:={->items:=[{->n:=1}]};p:&!h.items[1].n", "B001"),
     ] {

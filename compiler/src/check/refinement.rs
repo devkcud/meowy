@@ -6,14 +6,37 @@ use crate::hir::{self, Type};
 
 impl Checker {
     pub(crate) fn forget(&mut self, id: usize) {
-        self.tags.retain(|((root, _), _), _| *root != id);
-        self.bools.retain(|(root, _), _| *root != id);
+        let aliases = &self.proofs.aliases;
+        let alias = aliases.get(&id).map(|alias| alias.root);
+        if alias.is_some()
+            && !self.flow.spend(
+                (self.tags.len() + self.bools.len())
+                    .saturating_mul(aliases.len().checked_ilog2().unwrap_or(0) as usize + 1),
+            )
+        {
+            return;
+        }
+        let same = |root: usize| {
+            root == id
+                || alias.is_some_and(|alias| {
+                    aliases.get(&root).is_some_and(|other| other.root == alias)
+                })
+        };
+        self.tags.retain(|((root, _), _), _| !same(*root));
+        self.bools.retain(|(root, _), _| !same(*root));
     }
 
     pub(crate) fn forget_field(&mut self, id: usize, fields: &[String], span: Span) -> Result<()> {
         let width = fields
             .iter()
             .fold(1usize, |width, name| width.saturating_add(name.len()));
+        let aliases = &self.proofs.aliases;
+        let alias = aliases.get(&id).map(|alias| alias.root);
+        let width = width.saturating_add(if alias.is_some() {
+            aliases.len().checked_ilog2().unwrap_or(0) as usize + 1
+        } else {
+            0
+        });
         if !self
             .flow
             .spend((self.tags.len() + self.bools.len()).saturating_mul(width))
@@ -23,12 +46,18 @@ impl Checker {
                 span,
             ));
         }
-        self.tags.retain(|((root, path), _), _| {
-            *root != id || !(path.starts_with(fields) || fields.starts_with(path))
-        });
-        self.bools.retain(|(root, path), _| {
-            *root != id || !(path.starts_with(fields) || fields.starts_with(path))
-        });
+        let affected = |root: usize, path: &[String]| {
+            if root == id {
+                path.starts_with(fields) || fields.starts_with(path)
+            } else {
+                alias.is_some_and(|alias| {
+                    aliases.get(&root).is_some_and(|other| other.root == alias)
+                })
+            }
+        };
+        self.tags
+            .retain(|((root, path), _), _| !affected(*root, path));
+        self.bools.retain(|(root, path), _| !affected(*root, path));
         Ok(())
     }
 

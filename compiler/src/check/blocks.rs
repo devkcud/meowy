@@ -93,6 +93,7 @@ impl Checker {
         self.reach = self.flow.or(self.reach, frame.leaves);
         let ty = self.block_type(&frame, frame.expected.as_ref(), block.span)?;
         self.block_list_length(&frame, &ty);
+        self.validate_aliases(id, &ty)?;
         self.proofs.completions.insert(id, self.reach);
         if self.flow.exceeded() {
             return Err(Diagnostic::unsupported(

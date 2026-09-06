@@ -174,8 +174,6 @@ pub fn mutable_fields_check_shapes_mutability_and_storage_boundaries() {
         ("f:(flag<boolean>){|flag|->n:=1;|!flag|->n:2}", "E206"),
         ("<I>:<{n<int32>}>;v:{->n:=1};copy<I>:v", "E207"),
         ("v:={->n:=1};v.n=\"wrong\"", "E207"),
-        ("v:{->n:=1;n=2}", "B001"),
-        ("v:{->inner:={->n:=1};inner.n=2}", "B001"),
         ("owner:1;v:{->view:=&owner}", "B001"),
         ("<Bad>:<{view<&int32>:=}>", "B001"),
         ("v:={->n:=1};r:&v;r.n=2", "B001"),

@@ -48,7 +48,7 @@ impl Checker {
                 target.span,
             ));
         };
-        if !self.places.contains(&id)
+        if (!self.places.contains(&id) && !self.proofs.aliases.contains_key(&id))
             || !matches!(ty, Type::Record { .. } | Type::List { .. })
             || ty.has_reference()
         {

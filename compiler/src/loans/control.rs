@@ -64,13 +64,32 @@ impl<'a> Graph<'a> {
                         self.assume(state.proof)?;
                     }
                 }
+                Stmt::SlotAlias { id, target, field } => {
+                    self.charge(1)?;
+                    if !self
+                        .proofs
+                        .aliases
+                        .get(id)
+                        .is_some_and(|alias| alias.target == *target && alias.field == *field)
+                    {
+                        return Err(crate::diagnostic::Diagnostic::unsupported(
+                            "missing result-slot alias proof",
+                            crate::ast::Span::default(),
+                        ));
+                    }
+                }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     self.append(Node {
                         uses: result.into_values().collect(),
                         write: Some((
                             Place {
-                                root: *id,
+                                root: self
+                                    .proofs
+                                    .aliases
+                                    .get(id)
+                                    .map(|alias| alias.root)
+                                    .unwrap_or(*id),
                                 fields: Vec::new(),
                             },
                             value.span,
@@ -98,7 +117,15 @@ impl<'a> Graph<'a> {
                             *index
                         })
                         .collect();
-                    let place = Place { root: *id, fields };
+                    let place = Place {
+                        root: self
+                            .proofs
+                            .aliases
+                            .get(id)
+                            .map(|alias| alias.root)
+                            .unwrap_or(*id),
+                        fields,
+                    };
                     self.charge(place.fields.len() + 1)?;
                     let reservation = if first.is_some() {
                         let value = self.value(vec![Origin {

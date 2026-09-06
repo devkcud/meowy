@@ -135,7 +135,7 @@ impl Checker {
                         target.span,
                     ));
                 }
-                if !self.places.contains(&id) {
+                if !self.places.contains(&id) && !self.proofs.aliases.contains_key(&id) {
                     return Err(Diagnostic::unsupported(
                         "assignment to emitted result bindings",
                         target.span,
@@ -415,7 +415,7 @@ impl Checker {
                 span,
             )?;
             stmts.push(hir::Stmt::Bind { id, value });
-            stmts.push(self.emission(
+            let emission = self.emission(
                 target,
                 Some(name.into()),
                 hir::Expr {
@@ -423,7 +423,17 @@ impl Checker {
                     ty,
                     span,
                 },
-            ));
+            );
+            if mutable {
+                let hir::Stmt::Emit { id: emitted, .. } = &emission else {
+                    unreachable!()
+                };
+                let alias = self.slot_alias(id, target, name, *emitted, span)?;
+                stmts.push(emission);
+                stmts.push(alias);
+            } else {
+                stmts.push(emission);
+            }
         } else {
             self.write_slot(
                 target,

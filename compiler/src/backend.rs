@@ -2,11 +2,13 @@ mod aggregate;
 mod arithmetic;
 mod lists;
 mod output;
+mod storage;
 
 use crate::hir::{Block, BlockId, Expr, ExprKind, Program, Stmt, Type};
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::c_char;
 use std::path::Path;
+use storage::Alias;
 
 pub const RUNTIME_ARCHIVE: &[u8] = include_bytes!(env!("MEOWY_RUNTIME_ARCHIVE"));
 pub const CLANG: &str = env!("MEOWY_CLANG");
@@ -108,6 +110,7 @@ pub(crate) struct Generator<'a> {
     pub(crate) slots: Vec<String>,
     pub(crate) locals: BTreeSet<usize>,
     pub(crate) blocks: HashMap<BlockId, Destination>,
+    pub(crate) aliases: HashMap<usize, Alias>,
     pub(crate) next: usize,
     pub(crate) ended: bool,
 }
@@ -123,6 +126,7 @@ impl<'a> Generator<'a> {
             slots: Vec::new(),
             locals: BTreeSet::new(),
             blocks: HashMap::new(),
+            aliases: HashMap::new(),
             next: 0,
             ended: false,
         }
@@ -146,6 +150,7 @@ impl<'a> Generator<'a> {
             }
             let value = self.block(&function.body)?;
             if !self.ended {
+                let value = self.coerce(&function.body.ty, &function.result, &value)?;
                 self.line(format!("ret {} {value}", ir_type(&function.result)));
             }
             self.finish(format!(
@@ -189,6 +194,7 @@ impl<'a> Generator<'a> {
         self.slots.clear();
         self.locals.clear();
         self.blocks.clear();
+        self.aliases.clear();
         self.ended = false;
     }
 
@@ -289,11 +295,20 @@ impl<'a> Generator<'a> {
                 Stmt::Bind { id, value } | Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if !self.ended {
-                        self.local(*id);
-                        let ty = &self.program.locals[*id];
-                        let result = self.coerce(&value.ty, ty, &result)?;
-                        self.line(format!("store {} {result}, ptr %local{id}", ir_type(ty)));
+                        if matches!(statement, Stmt::Bind { .. }) {
+                            self.aliases.remove(id);
+                        }
+                        let (ptr, ty) = self.local_cell(*id)?;
+                        let result = self.coerce(&value.ty, &ty, &result)?;
+                        if self.aliases.contains_key(id) {
+                            self.store_value(&ty, &result, &ptr);
+                        } else {
+                            self.line(format!("store {} {result}, ptr {ptr}", ir_type(&ty)));
+                        }
                     }
+                }
+                Stmt::SlotAlias { id, target, field } => {
+                    self.result_alias(*id, *target, field)?;
                 }
                 Stmt::SetPath {
                     id, path, value, ..
@@ -432,10 +447,9 @@ impl<'a> Generator<'a> {
             }
             ExprKind::ListAdd { value, item } => self.list_add(value, item, expression.span),
             ExprKind::Local(id) => {
-                self.local(*id);
-                let stored = &self.program.locals[*id];
-                let value = self.value(format!("load {}, ptr %local{id}", ir_type(stored)));
-                self.coerce(stored, &expression.ty, &value)
+                let (ptr, stored) = self.local_cell(*id)?;
+                let value = self.value(format!("load {}, ptr {ptr}", ir_type(&stored)));
+                self.coerce(&stored, &expression.ty, &value)
             }
             ExprKind::Borrow(place) => {
                 let (ptr, stored) = self.place(place)?;

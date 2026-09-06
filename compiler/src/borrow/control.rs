@@ -85,6 +85,21 @@ impl Checker<'_> {
                     }
                     result.flow
                 }
+                Stmt::SlotAlias { id, target, field } => {
+                    let alias = self
+                        .proofs
+                        .aliases
+                        .get(id)
+                        .ok_or_else(|| Self::unsupported(Span::default()))?;
+                    if !self.locals.contains_key(id)
+                        || !self.types.contains_key(target)
+                        || alias.target != *target
+                        || alias.field != *field
+                    {
+                        return Err(Self::unsupported(Span::default()));
+                    }
+                    Flow::new()
+                }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next

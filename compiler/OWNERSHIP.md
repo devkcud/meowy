@@ -211,9 +211,9 @@ implementation boundary; it does not change language rules.
   flag; forwarding never stamps the outer emission flag onto nested fields.
   Branch or expected-slot mutability conflicts report E206. Whole incompatible
   record assignment keeps E207, and nullable omissions inherit declared flags.
-- `owner.child.field = rhs` addresses ordinary mutable reference-free Copy local
+- `owner.child.field = rhs` addresses mutable reference-free Copy local
   storage. Every crossed named field must be mutable; an immutable root/path is
-  E305. Shared-reference, temporary, emitted-name and union-payload targets remain
+  E305. Shared-reference, temporary and union-root payload targets remain
   B001. A field may hold any currently supported Copy value, including a whole
   list or record. Mixed paths check every field boundary and initialized index.
 - An all-field `SetPath` retains static physical offsets and the target span. RHS evaluates
@@ -226,16 +226,47 @@ implementation boundary; it does not change language rules.
   after RHS checking. Unrelated sibling predicates and immutable copied values
   remain valid. Path lookup, bounded depth and refinement scans consume shared
   work budgets; path collection checks its 256-field limit before each push.
-- Mutable named emissions create the correct completed field shape, but their
-  in-block name is still a copied local feeding the result slot. Direct mutation
-  of that name or its field path remains B001 until result-slot aliasing exists.
-  Reads keep existing copy behavior. Mutable primary emissions and mutable fields
+- Mutable primary emissions and mutable fields
   whose subtree carries references also remain B001; no exclusive reference or
   mutable reference carrier capability is implied by this metadata.
 - List candidate probes compare mutable flags and keep later emitted-name
   dependencies unresolved instead of reading a same-named outer binding. A known
   context permits ordinary once-only checking; unresolved scope-dependent choices
   remain B001.
+
+## Mutable emitted names
+
+- A mutable named emission evaluates its initializer once through the existing
+  Bind/Emit sequence, then `SlotAlias` binds that lexical name to the actual target
+  block field. Later reads, direct assignments and mixed SetPath operations resolve
+  that result storage; assignment is not a second initialization. Copies into new
+  ordinary bindings remain copies. E204/E205 slot-initialization rules are unchanged.
+- The lexical alias type and final slot type remain distinct. Compatible concrete
+  record destinations load/coerce from the final slot and inject assignments back
+  into it. A concrete Record/List alias inside a wider union field addresses that
+  active member's payload for SetPath; a union-typed alias itself has no field/index
+  write path. Every crossed mutable-field and bounds rule still applies.
+- Missing, incompatible or non-record final destinations are permitted only when
+  the original emission is proved disjoint from target completion. The initialized
+  local cell then represents that discarded partial slot until leave/restart/exit.
+  A retained unsupported destination is B001. Named outer emissions resolve the
+  target frame rather than the alias's local declaration scope; restart reinitializes
+  the target and aliases cannot outlive their lexical/target scope.
+- Aliases stay outside ordinary addressable places, so `&name`, field/element
+  borrowing through a name, exclusive references and reference-bearing mutable
+  fields remain B001. Writability does not manufacture a borrowable lifetime.
+- Alias IDs enter mutable proofs and have no initializer constant/length cache.
+  Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
+  before emission, preserving narrower type bounds and nullable omission guards.
+  A later immutable result snapshot cannot reuse a pre-mutation union tag; unrelated
+  immutable reference-field origins remain intact. This can conservatively lose
+  knowledge about an unmodified mutable field's initial tag.
+- Aliases of the same target block/field share a canonical conflict identity;
+  mutation invalidates related alias predicate domains. Distinct initialized result
+  fields stay separate. Slot identity does not convert ordinary copies into aliases.
+  Alias metadata caps at 65,536 entries and charges name copies, lookup, validation
+  and predicate work to the shared budget. Final validation uses completion guards
+  from the same arena and never invents an absent-field address.
 
 ## Control-flow and last use
 
@@ -411,8 +442,8 @@ implementation boundary; it does not change language rules.
   fields and nested list prefixes without enumerating capacity. They retain every
   direct-function all-input dependency.
 - `holder.rows[first].items[next] = rhs` replaces initialized storage through
-  concrete list and mutable field layers of an ordinary mutable reference-free
-  Copy local. Parentheses around path prefixes are allowed; shared-reference
+  concrete list and mutable field layers of a mutable reference-free Copy local
+  or emitted slot alias. Parentheses around path prefixes are allowed; shared-reference
   targets, union-payload projections and temporary owners remain B001.
   Immutable list bindings report E305. This adds no source exclusive-reference
   value or `&!` semantics; the final store requires exclusive collection access.
@@ -471,8 +502,8 @@ implementation boundary; it does not change language rules.
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
 7. Prove any finer disjointness within indexed containers before narrowing their
-   whole-region conflicts. Add result-slot aliasing, exclusive references,
-   slice/alias metadata and non-Copy state separately.
+   whole-region conflicts. Extend emitted-storage borrowing, exclusive references,
+   slice/alias metadata and non-Copy state with explicit lifetime contracts.
 
 ## Verification
 

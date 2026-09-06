@@ -181,6 +181,11 @@ pub enum Stmt {
         id: LocalId,
         value: Expr,
     },
+    SlotAlias {
+        id: LocalId,
+        target: BlockId,
+        field: String,
+    },
     Assign {
         id: LocalId,
         value: Expr,

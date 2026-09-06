@@ -15,7 +15,6 @@ pub(crate) fn mixed_writes_check_each_field_and_selected_list_type() {
         ("r:=[{->n:1}];r[1].n=2", "E305"),
         ("r:{->items:=[1,2]};r.items[1]=3", "E305"),
         ("r:={->items:=[1,2]};p:&r;p.items[1]=3", "B001"),
-        ("r:{->items:=[1,2];items[1]=3}", "B001"),
         ("r:={->items:=[1,2]};r.items[0]=3", "E101"),
         (
             "<R>:<{items<uint8[1]>:=}>;r<R>:={->items:=[1]};r.items[1]=256",
