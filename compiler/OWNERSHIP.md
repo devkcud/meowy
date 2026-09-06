@@ -117,8 +117,8 @@ implementation boundary; it does not change language rules.
   E303. A parameter's own address is a Local source and can only be used while
   its function storage survives; it never receives the Input-source exemption.
 - `State.bounds` is separate from actual pointer origins. At a call, possible
-  actual sources are compatible whole input referents and their concrete named
-  descendants, using the result leaf's exact reference type. Each returned reference also inherits every active input
+  actual sources are compatible whole input referents, concrete named fields and
+  bounded-list element regions, using the result leaf's exact reference type. Each returned reference also inherits every active input
   origin and transitive bound, including ignored inputs of another referent type.
   These are lifetime/loan dependencies, not claims about pointer identity.
 - Consequently, `first(p, q)` remains bounded by both inputs even if the body
@@ -134,7 +134,8 @@ implementation boundary; it does not change language rules.
   An early argument exit prevents call consumption. Missing snapshots on a
   potentially reachable call are B001, not an invented empty result.
 - A completed reference result requires an active compatible input source under
-  the currently supported capability set. Shared reborrows preserve those input sources or concrete named descendants.
+  the currently supported capability set. Shared reborrows preserve those input
+  sources or their concrete field/list-element descendants.
   There is no static safe-reference construction, allocation or capture path that
   could supply another source. Calls without such a source have no returning reference path; nullable
   results can still return null. An entered-call guard, captured after argument
@@ -179,19 +180,24 @@ implementation boundary; it does not change language rules.
 - Pure address hints resolve types without lowering expressions or changing
   application control flow. Regression coverage includes effectful calls in
   equality and argument blocks that leave an enclosing scope before the call.
-- Input component paths identify references stored in parameters. A separate
-  referent-field path identifies storage reached through such a reference. Local
-  sources append physical field indices; Input sources append referent indices.
+- Input component paths identify references stored in parameters. Separate
+  referent paths use `Field(index)` and `Element` steps for Local and Input sources.
+  Element steps conservatively name any element in that particular list region;
+  runtime index expressions remain exclusively in executable HIR.
   Reborrows preserve inherited lifetime bounds unchanged rather than projecting
   ignored-input dependencies as if they were actual pointers.
 - Each HIR reborrow has a unique site and bounded snapshot. The CFG consumes the
   parent dependencies at reborrow creation, then defines the projected actual
   sources plus inherited bounds. Shared parents remain readable; this does not
   implement exclusive-parent suspension or mutable reference reassignment.
-- Function contracts enumerate compatible whole referents and concrete named
-  descendants. This must precede field-returning function support: an input
-  `&Record` can now supply a field reference with a different target type. Fields
-  inside union payloads, reference-bearing pointees, primary-ascription addresses,
+  Missing snapshots are checked against final node reachability: known-dead
+  branches need no invented origins, while any reachable proof gap remains B001.
+- Function contracts enumerate compatible whole referents, concrete named fields
+  and list-element types once per nested type path, independently of capacity.
+  An input `&Record` or `&List` can supply a descendant reference with a different
+  target type. The abstract list region preserves potential input bounds even at
+  capacity zero; it does not prove initialized storage or bypass bounds checks.
+  Fields inside union payloads, reference-bearing pointees, primary-ascription addresses,
   static sources and reference-producing intrinsic contracts remain separate work.
 - Type walks, candidate frontiers, projected paths and snapshot expansion consume
   existing work/storage budgets. Many matching fields multiplied by returned
@@ -321,9 +327,24 @@ implementation boundary; it does not change language rules.
 - Whole lists and concrete record fields containing lists use existing shared
   places, reborrows and E302/E303 checks. A copied list has no continuing reference
   origin; dereference copies finish their loan before later operand effects unless
-  another reference use keeps it live. Element addresses/writes, slices, aliases,
-  removal, owned elements and list formatting remain B001. Caller-origin searches
-  do not invent indexed descendants.
+  another reference use keeps it live.
+- `&values[index]` forms a checked shared reference into original list storage.
+  Nested lists and concrete record fields compose element and field reborrows.
+  A temporary reference-valued parent is allowed; temporary owner lists and
+  copied/ascribed owner expressions remain B001. Borrowed copied parameters and
+  dispatch `self` belong to their local storage and cannot escape (E303).
+- `ElementBorrow` evaluates its parent pointer and snapshots initialized length
+  before checking its once-evaluated index. It shares integer/static E101 rules
+  with copy indexing; runtime checks report P001 before address formation. The CFG
+  holds parent actual origins and inherited bounds through any returning index
+  evaluation, even when the resulting element reference is discarded. Index
+  panic/leave paths consume no derived reference. Owner writes conflict with a
+  live parent/element loan (E302), and resume after its final use.
+- Physical element pointers retain actual index identity. Abstract element paths
+  conservatively overlap all indices within a list, preserving enclosing record
+  fields and nested list prefixes without enumerating capacity. They retain every
+  direct-function all-input dependency. Element writes, exclusive borrows, slices,
+  aliases, removal, owned elements and list formatting remain B001.
 
 ## Next analysis stages
 
@@ -343,8 +364,8 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Add verified element places, slice/alias metadata and non-Copy element state
-   before expanding bounded-list mutation or collection library APIs.
+7. Extend checked shared element places with exclusive access, slice/alias metadata
+   and non-Copy element state before expanding mutation or collection library APIs.
 
 ## Verification
 

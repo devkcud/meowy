@@ -629,6 +629,9 @@ impl<'a> Generator<'a> {
                 Ok(self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty))))
             }
             ExprKind::ListIndex { value, index } => self.list_index(value, index, expression.span),
+            ExprKind::ElementBorrow { value, index, .. } => {
+                self.element_borrow(value, index, &expression.ty, expression.span)
+            }
             ExprKind::ListAdd { value, item } => self.list_add(value, item, expression.span),
             ExprKind::Local(id) => {
                 self.local(*id);
@@ -827,10 +830,51 @@ impl<'a> Generator<'a> {
         let ptr = self.slot(&value.ty);
         self.line(format!("store {} {result}, ptr {ptr}", ir_type(&value.ty)));
         let length = self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty)));
-        let mut position = self.expression(index)?;
+        let position = self.expression(index)?;
         if self.ended {
             return Ok("undef".into());
         }
+        let offset = self.list_offset(index, position, &length, span)?;
+        let ptr = self.list_item(&value.ty, &ptr, &offset);
+        Ok(self.value(format!("load {}, ptr {ptr}", ir_type(element))))
+    }
+
+    pub(crate) fn element_borrow(
+        &mut self,
+        value: &Expr,
+        index: &Expr,
+        result: &Type,
+        span: Span,
+    ) -> Result<String, String> {
+        let ptr = self.expression(value)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let Type::Reference(list) = &value.ty else {
+            return Err("element borrowing requires a shared list reference".into());
+        };
+        let Type::List { element, .. } = list.as_ref() else {
+            return Err("element borrowing requires concrete list storage".into());
+        };
+        let length = self.value(format!("load i64, ptr {ptr}"));
+        let position = self.expression(index)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        if result != &Type::Reference(element.clone()) {
+            return Err("element borrow result type mismatch".into());
+        }
+        let offset = self.list_offset(index, position, &length, span)?;
+        Ok(self.list_item(list, &ptr, &offset))
+    }
+
+    pub(crate) fn list_offset(
+        &mut self,
+        index: &Expr,
+        mut position: String,
+        length: &str,
+        span: Span,
+    ) -> Result<String, String> {
         let Type::Int { bits, signed } = index.ty else {
             return Err("list position requires an integer".into());
         };
@@ -852,9 +896,7 @@ impl<'a> Generator<'a> {
                 i32::from(signed), span.start, span.end
             ),
         );
-        let index = self.value(format!("sub i64 {position}, 1"));
-        let ptr = self.list_item(&value.ty, &ptr, &index);
-        Ok(self.value(format!("load {}, ptr {ptr}", ir_type(element))))
+        Ok(self.value(format!("sub i64 {position}, 1")))
     }
 
     pub(crate) fn list_add(
@@ -1341,6 +1383,38 @@ mod tests {
             ExprKind::ListIndex {
                 value: Box::new(value),
                 index: Box::new(position),
+            },
+            ty,
+        )
+    }
+
+    pub(crate) fn borrow(root: usize, ty: Type) -> Expr {
+        expr(
+            ExprKind::Borrow(Place {
+                root,
+                fields: Vec::new(),
+            }),
+            Type::Reference(Box::new(ty)),
+        )
+    }
+
+    pub(crate) fn element_ref(value: Expr, index: Expr) -> Expr {
+        let Type::Reference(list) = &value.ty else {
+            unreachable!()
+        };
+        let Type::List { element, .. } = list.as_ref() else {
+            unreachable!()
+        };
+        let ty = if index.ty == Type::Never {
+            Type::Never
+        } else {
+            Type::Reference(element.clone())
+        };
+        expr(
+            ExprKind::ElementBorrow {
+                site: 0,
+                value: Box::new(value),
+                index: Box::new(index),
             },
             ty,
         )
@@ -1895,6 +1969,255 @@ mod tests {
                 String::from_utf8_lossy(&output.stderr)
             );
             assert_eq!(output.stdout, b"truefalse427true2\n");
+        }
+    }
+
+    #[test]
+    pub(crate) fn element_references_preserve_owner_identity_and_nested_offsets() {
+        let int = Type::Int {
+            bits: 32,
+            signed: true,
+        };
+        let values = list(
+            int.clone(),
+            3,
+            vec![integer(11, 32, true), integer(22, 32, true)],
+        );
+        let row = record(
+            2,
+            integer(7, 16, false),
+            list(
+                int.clone(),
+                4,
+                vec![integer(88, 32, true), integer(99, 32, true)],
+            ),
+        );
+        let rows = list(row.ty.clone(), 2, vec![row.clone()]);
+        let nested = record(1, expr(ExprKind::Bool(true), Type::Bool), rows.clone());
+        let list_ref = Type::Reference(Box::new(values.ty.clone()));
+        let first = element_ref(borrow(0, values.ty.clone()), integer(1, 8, false));
+        let second = element_ref(borrow(0, values.ty.clone()), integer(2, 16, true));
+        let inner = expr(
+            ExprKind::Reborrow {
+                site: 1,
+                value: Box::new(borrow(3, nested.ty.clone())),
+                fields: vec![0],
+            },
+            Type::Reference(Box::new(rows.ty.clone())),
+        );
+        let Type::Record { fields, .. } = &row.ty else {
+            unreachable!()
+        };
+        let inner = expr(
+            ExprKind::Reborrow {
+                site: 2,
+                value: Box::new(element_ref(inner, integer(1, 32, false))),
+                fields: vec![0],
+            },
+            Type::Reference(Box::new(fields[0].1.clone())),
+        );
+        let inner = element_ref(inner, integer(2, 64, false));
+        let parts = separated(vec![
+            binary("==", first.clone(), first.clone(), Type::Bool),
+            binary("==", first.clone(), second.clone(), Type::Bool),
+            binary(
+                "==",
+                first,
+                element_ref(borrow(1, values.ty.clone()), integer(1, 32, true)),
+                Type::Bool,
+            ),
+            binary(
+                "==",
+                second.clone(),
+                element_ref(
+                    expr(ExprKind::Local(2), list_ref.clone()),
+                    integer(2, 8, true),
+                ),
+                Type::Bool,
+            ),
+            expr(ExprKind::Deref(Box::new(second)), int.clone()),
+            expr(ExprKind::Deref(Box::new(inner.clone())), int),
+            binary("==", inner.clone(), inner, Type::Bool),
+        ]);
+        let program = Program {
+            body: Block {
+                id: 0,
+                ty: Type::Null,
+                stmts: vec![
+                    Stmt::Bind {
+                        id: 0,
+                        value: values.clone(),
+                    },
+                    Stmt::Bind {
+                        id: 1,
+                        value: expr(ExprKind::Local(0), values.ty.clone()),
+                    },
+                    Stmt::Bind {
+                        id: 2,
+                        value: borrow(0, values.ty.clone()),
+                    },
+                    Stmt::Bind {
+                        id: 3,
+                        value: nested.clone(),
+                    },
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts,
+                            newline: true,
+                        },
+                        Type::Null,
+                    )),
+                ],
+            },
+            functions: Vec::new(),
+            locals: vec![values.ty.clone(), values.ty, list_ref, nested.ty],
+        };
+        for release in [false, true] {
+            let output = native_program(&program, release, false);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"true|false|false|true|22|99|true|\n");
+            assert!(output.stderr.is_empty());
+        }
+    }
+
+    #[test]
+    pub(crate) fn element_reference_failures_preserve_index_widths_and_initialized_length() {
+        let values = list(Type::Bool, 4, vec![expr(ExprKind::Bool(true), Type::Bool)]);
+        for release in [false, true] {
+            for bits in [8, 16, 32, 64] {
+                for signed in [false, true] {
+                    let number = if signed {
+                        -(1i128 << (bits - 1))
+                    } else {
+                        (1i128 << bits) - 1
+                    };
+                    let mut value =
+                        element_ref(borrow(0, values.ty.clone()), integer(number, bits, signed));
+                    value.span = Span { start: 12, end: 34 };
+                    let program = Program {
+                        body: Block {
+                            id: 0,
+                            ty: Type::Null,
+                            stmts: vec![
+                                Stmt::Bind {
+                                    id: 0,
+                                    value: values.clone(),
+                                },
+                                Stmt::Expr(value),
+                            ],
+                        },
+                        functions: Vec::new(),
+                        locals: vec![values.ty.clone()],
+                    };
+                    let output = native_program(&program, release, false);
+                    assert_eq!(output.status.code(), Some(1));
+                    assert!(output.stdout.is_empty());
+                    assert_eq!(output.stderr, format!("panic[P001]: index {number} is outside initialized length 1 at bytes 12..34\n").as_bytes());
+                }
+            }
+        }
+    }
+
+    #[test]
+    pub(crate) fn element_references_evaluate_parent_then_index_and_stop_on_divergence() {
+        let print = |text: &str| {
+            Stmt::Expr(expr(
+                ExprKind::Print {
+                    parts: vec![expr(ExprKind::String(text.into()), Type::String)],
+                    newline: true,
+                },
+                Type::Null,
+            ))
+        };
+        for release in [false, true] {
+            for panic in [false, true] {
+                let values = list(Type::Bool, 0, Vec::new());
+                let parent = expr(
+                    ExprKind::Block(Block {
+                        id: 1,
+                        ty: Type::Reference(Box::new(values.ty.clone())),
+                        stmts: vec![
+                            print("parent"),
+                            Stmt::Emit {
+                                id: 0,
+                                target: 1,
+                                field: None,
+                                value: borrow(0, values.ty.clone()),
+                            },
+                        ],
+                    }),
+                    Type::Reference(Box::new(values.ty.clone())),
+                );
+                let result = if panic {
+                    Type::Never
+                } else {
+                    integer(1, 32, true).ty
+                };
+                let end = if panic {
+                    Stmt::Expr(Expr {
+                        kind: ExprKind::Panic {
+                            parts: vec![expr(ExprKind::String("stop".into()), Type::String)],
+                        },
+                        ty: Type::Never,
+                        span: Span { start: 30, end: 40 },
+                    })
+                } else {
+                    Stmt::Emit {
+                        id: 1,
+                        target: 2,
+                        field: None,
+                        value: integer(1, 32, true),
+                    }
+                };
+                let index = expr(
+                    ExprKind::Block(Block {
+                        id: 2,
+                        ty: result.clone(),
+                        stmts: vec![print("index"), end],
+                    }),
+                    result,
+                );
+                let mut value = element_ref(parent, index);
+                value.span = Span { start: 10, end: 50 };
+                let program = Program {
+                    body: Block {
+                        id: 0,
+                        ty: Type::Null,
+                        stmts: vec![
+                            Stmt::Bind {
+                                id: 0,
+                                value: values.clone(),
+                            },
+                            Stmt::Expr(value),
+                        ],
+                    },
+                    functions: Vec::new(),
+                    locals: vec![values.ty],
+                };
+                if panic {
+                    assert!(
+                        !emit_ir(&program)
+                            .unwrap()
+                            .contains("call void @meowy_index_fail_v1")
+                    );
+                }
+                let output = native_program(&program, release, false);
+                assert_eq!(output.status.code(), Some(1));
+                assert_eq!(output.stdout, b"parent\nindex\n");
+                assert_eq!(
+                    output.stderr,
+                    if panic {
+                        b"panic[P006]: stop at bytes 30..40\n".as_slice()
+                    } else {
+                        b"panic[P001]: index 1 is outside initialized length 0 at bytes 10..50\n"
+                            .as_slice()
+                    }
+                );
+            }
         }
     }
 

@@ -1892,11 +1892,28 @@ impl Checker {
                 _ => None,
             },
             ExprKind::Field { .. } => self.hint(expr),
+            ExprKind::Index { value, .. } => {
+                let ty = self.address_hint(value).or_else(|| self.hint(value))?;
+                let ty = if let Type::Reference(ty) = ty {
+                    *ty
+                } else {
+                    ty
+                };
+                match ty {
+                    Type::List { element, .. } => Some(*element),
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
 
     pub(crate) fn borrowed(&mut self, expr: &ast::Expr, span: Span) -> Result<hir::Expr> {
+        match &expr.kind {
+            ExprKind::Group(value) => return self.borrowed(value, span),
+            ExprKind::Index { value, index } => return self.element_borrow(value, index, span),
+            _ => {}
+        }
         let error = match self.address(expr) {
             Ok((place, ty)) => {
                 return Ok(hir::Expr {
@@ -1909,7 +1926,9 @@ impl Checker {
         };
         let mut names = Vec::new();
         let root = Self::address_root(expr, &mut names);
-        let mut value = if let ExprKind::Unary { op, value } = &root.kind
+        let mut value = if matches!(root.kind, ExprKind::Index { .. }) {
+            self.borrowed(root, root.span)?
+        } else if let ExprKind::Unary { op, value } = &root.kind
             && op == "*"
         {
             self.expr(value, None)?

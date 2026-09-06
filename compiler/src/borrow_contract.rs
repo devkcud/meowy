@@ -1,5 +1,5 @@
 use crate::ast::Span;
-use crate::borrow_value::{MAX_PARTS, Origin, Path, Result, Source, State, Step};
+use crate::borrow_value::{MAX_PARTS, Origin, Path, Projection, Result, Source, State, Step};
 use crate::flow::{FALSE, Flow, Guard};
 use crate::hir::{LocalId, Type};
 
@@ -93,12 +93,13 @@ pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a 
     Some(ty)
 }
 
-pub(crate) fn projected_type<'a>(mut ty: &'a Type, path: &[usize]) -> Option<&'a Type> {
-    for index in path {
-        let Type::Record { fields, .. } = ty else {
-            return None;
+pub(crate) fn projected_type<'a>(mut ty: &'a Type, path: &[Projection]) -> Option<&'a Type> {
+    for step in path {
+        ty = match (step, ty) {
+            (Projection::Field(index), Type::Record { fields, .. }) => &fields.get(*index)?.1,
+            (Projection::Element, Type::List { element, .. }) => element,
+            _ => return None,
         };
-        ty = &fields.get(*index)?.1;
     }
     Some(ty)
 }
@@ -108,7 +109,7 @@ pub(crate) fn projections(
     to: &Type,
     flow: &mut Flow,
     span: Span,
-) -> Result<Vec<Vec<usize>>> {
+) -> Result<Vec<Vec<Projection>>> {
     let (Type::Reference(from), Type::Reference(to)) = (from, to) else {
         return Ok(Vec::new());
     };
@@ -122,17 +123,29 @@ pub(crate) fn projections(
         if ty == to.as_ref() {
             result.push(path.clone());
         }
-        if !ty.has_reference()
-            && let Type::Record { fields, .. } = ty
-        {
-            for (index, (_, field)) in fields.iter().enumerate() {
-                if pending.len() + result.len() >= MAX_PARTS {
-                    return Err(State::budget(span));
-                }
-                let mut nested = path.clone();
-                nested.push(index);
-                pending.push((field, nested));
+        if ty.has_reference() {
+            continue;
+        }
+        let mut push = |step, field| -> Result<()> {
+            if pending.len() + result.len() >= MAX_PARTS {
+                return Err(State::budget(span));
             }
+            if !flow.spend(path.len() + 1) {
+                return Err(State::budget(span));
+            }
+            let mut nested = path.clone();
+            nested.push(step);
+            pending.push((field, nested));
+            Ok(())
+        };
+        match ty {
+            Type::Record { fields, .. } => {
+                for (index, (_, field)) in fields.iter().enumerate() {
+                    push(Projection::Field(index), field)?;
+                }
+            }
+            Type::List { element, .. } => push(Projection::Element, element.as_ref())?,
+            _ => {}
         }
     }
     Ok(result)
@@ -390,6 +403,25 @@ mod tests {
     }
 
     #[test]
+    pub(crate) fn list_element_contracts_visit_types_without_enumerating_capacity() {
+        for source in [
+            "first<&int32>:(p<&int32[2]>){->&p[1]};a:[1,2];r:first(&a);v:*r",
+            "first<&int32>:(p<&int32[65536]>){->&p[1]};a<int32[65536]>:[1];r:first(&a);v:*r",
+            "first<&int32>:(p<&int32[2][2]>){->&p[1][1]};a:[[1,2],[3,4]];r:first(&a);v:*r",
+            "first<&int32>:(p<&{items<{value<int32>}[2]>}>){->&p.items[1].value};a:{->items:[{->value:1},{->value:2}]};r:first(&a);v:*r",
+        ] {
+            accepts(source);
+        }
+        rejects("first<&int32>:(p<int32[2]>){->&p[1]}", "E303");
+        rejects(
+            "first<&int32>:(p<&int32[2]>,other<&string>){->&p[1]};wrap<&int32>:(p<&int32[2]>){local:\"x\";->first(p,&local)}",
+            "E303",
+        );
+        rejects("r:{a:[1,2];->&a[1]}", "E303");
+        rejects("a:[1,2];r:a.{->&self[1]}", "E303");
+    }
+
+    #[test]
     pub(crate) fn projected_candidates_stop_at_the_contract_budget() {
         let fields = (0..64)
             .map(|id| format!("n{id}<int32>;"))
@@ -405,6 +437,15 @@ mod tests {
             .collect::<String>();
         let source = format!(
             "<R>:<{{{fields}}}>;get<{{{output}}}>:(p<&R>){{{returns}}};owner<R>:{{{values}}};view:get(&owner)"
+        );
+        let errors = crate::compile(&source).unwrap_err();
+        assert_eq!(errors[0].code, "B001", "{errors:?}");
+        assert!(errors[0].message.contains("budget"));
+        let returns = (0..64)
+            .map(|id| format!("->r{id}:&p[1].n0;"))
+            .collect::<String>();
+        let source = format!(
+            "<R>:<{{{fields}}}>;get<{{{output}}}>:(p<&R[1]>){{{returns}}};owner<R[1]>:[{{{values}}}];view:get(&owner)"
         );
         let errors = crate::compile(&source).unwrap_err();
         assert_eq!(errors[0].code, "B001", "{errors:?}");

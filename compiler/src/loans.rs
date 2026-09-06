@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::ast::Span;
-use crate::borrow::{Facts, Origin, Path, Proofs, Source, Step};
+use crate::borrow::{Facts, Origin, Path, Projection, Proofs, Source, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
 use crate::hir::{Block, BlockId, CallId, Expr, ExprKind, LocalId, Place, Program, Stmt, Type};
@@ -50,6 +50,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) work: usize,
     pub(crate) origins: usize,
     pub(crate) missing_calls: Vec<(usize, Span)>,
+    pub(crate) missing_reborrows: Vec<(usize, Span)>,
 }
 
 pub(crate) fn check(
@@ -95,6 +96,7 @@ impl<'a> Graph<'a> {
             work: 0,
             origins: 0,
             missing_calls: Vec::new(),
+            missing_reborrows: Vec::new(),
         }
     }
 
@@ -505,7 +507,7 @@ impl<'a> Graph<'a> {
             ExprKind::Borrow(place) => {
                 let value = self.value(vec![Origin {
                     component: Vec::new(),
-                    source: Source::Local(place.clone()),
+                    source: Source::local(place),
                     guard: TRUE,
                 }])?;
                 self.append(Node {
@@ -514,19 +516,32 @@ impl<'a> Graph<'a> {
                 })?;
                 Bundle::from([(Vec::new(), value)])
             }
-            ExprKind::Reborrow { site, value, .. } => {
-                let parent = self.expression(value)?;
+            ExprKind::Reborrow { site, value, .. }
+            | ExprKind::ElementBorrow { site, value, .. } => {
+                let mut parent = self.expression(value)?.into_values().collect::<Vec<_>>();
                 if self.current.is_empty() {
                     return Ok(Bundle::new());
                 }
-                let state = self.facts.reborrows.get(site).ok_or_else(|| {
-                    Diagnostic::unsupported("missing shared reborrow proof", expr.span)
-                })?;
+                if let ExprKind::ElementBorrow { index, .. } = &expr.kind {
+                    parent.extend(self.expression(index)?.into_values());
+                }
+                if self.current.is_empty() {
+                    return Ok(Bundle::new());
+                }
+                let Some(state) = self.facts.reborrows.get(site) else {
+                    let node = self.append(Node {
+                        uses: parent,
+                        ..Node::default()
+                    })?;
+                    self.missing_reborrows.push((node, expr.span));
+                    self.assume(FALSE)?;
+                    return Ok(Bundle::new());
+                };
                 self.charge(state.weight() + 1)?;
                 let result =
                     self.bundle(state.origins.iter().chain(&state.bounds).cloned().collect())?;
                 self.append(Node {
-                    uses: parent.into_values().collect(),
+                    uses: parent,
                     defs: result.values().copied().collect(),
                     ..Node::default()
                 })?;
@@ -727,9 +742,14 @@ impl<'a> Graph<'a> {
         Ok(live)
     }
 
-    pub(crate) fn overlap(left: &Place, right: &Place) -> bool {
-        left.root == right.root
-            && (left.fields.starts_with(&right.fields) || right.fields.starts_with(&left.fields))
+    pub(crate) fn overlap(place: &Place, source: &Source) -> bool {
+        let Source::Local { id, fields } = source else {
+            return false;
+        };
+        place.root == *id
+            && place.fields.iter().zip(fields).all(|(index, field)| {
+                matches!(field, Projection::Element) || *field == Projection::Field(*index)
+            })
     }
 
     pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
@@ -762,6 +782,14 @@ impl<'a> Graph<'a> {
                 ));
             }
         }
+        for (node, span) in &self.missing_reborrows {
+            if reach[*node] != FALSE {
+                return Err(Diagnostic::unsupported(
+                    "missing shared reborrow proof",
+                    *span,
+                ));
+            }
+        }
         let live = self.liveness(&reach)?;
         for (id, reachable) in reach.iter().enumerate() {
             let Some((place, span)) = self.nodes[id].write.clone() else {
@@ -771,11 +799,13 @@ impl<'a> Graph<'a> {
                 continue;
             }
             for (value, guard) in self.outgoing(id, &live)? {
-                self.charge(self.values[value].len() + 1)?;
+                let work = self.values[value]
+                    .iter()
+                    .fold(1usize, |work, origin| work.saturating_add(origin.weight()));
+                self.charge(work)?;
                 let guard = self.guards.and(guard, *reachable);
                 for origin in &self.values[value] {
-                    if let Source::Local(source) = &origin.source
-                        && Self::overlap(&place, source)
+                    if Self::overlap(&place, &origin.source)
                         && self.guards.overlap(guard, origin.guard)
                     {
                         return Err(Diagnostic::new(
@@ -793,6 +823,55 @@ impl<'a> Graph<'a> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    pub(crate) fn missing_reborrow_snapshots_require_proven_unreachability() {
+        for source in [
+            "a:[1,2];|false|{r:&a[1]}",
+            "a:[1,2];x:true||{r:&a[1];->true}",
+            "a:[1,2];x:false&&{r:&a[1];->true}",
+            "a:=[1,2];|false|{r:&a[{a=[3,4];->99}]}",
+            "a:{->value:1};p:&a;|false|{r:&p.value}",
+        ] {
+            accepts(source);
+        }
+        rejects("a:=[1,2];|true|{r:&a[1];a=[3,4];value:*r}", "E302");
+        let program = crate::compile("a:[1,2];r:&a[1]").unwrap();
+        let error = super::Graph::new(
+            &program,
+            &super::Facts::default(),
+            &super::Proofs::default(),
+            &mut super::Flow::new(),
+        )
+        .check(&program.body, &[])
+        .unwrap_err();
+        assert_eq!(error.code, "B001");
+        assert!(error.message.contains("missing shared reborrow proof"));
+    }
+
+    #[test]
+    pub(crate) fn checked_element_borrows_keep_parent_and_inherited_loans_live() {
+        for source in [
+            "a:=[1,2];r:&a[1];value:*r;a=[3,4]",
+            "a:=[1,2];r:&a[1];copy:&*r;value:*copy;a=[3,4]",
+            "a:=[1,2];'loop{r:&a[1];value:*r;a=[3,4]}",
+            "d:@\"debug\";a:=[1,2];r:&a[{a=[3,4];d.panic(\"stop\")}]",
+            "a:=[1,2];'out{r:&a[{a=[3,4];'out.leave()}]}",
+            "first<&int32>:(p<&int32[2]>,other<&string>){->&p[1]};a:=[1,2];other:=\"x\";r:first(&a,&other);value:*r;other=\"y\";a=[3,4]",
+        ] {
+            accepts(source);
+        }
+        for source in [
+            "a:=[1,2];r:&a[1];a=[3,4];value:*r",
+            "a:=[1,2];r:&a[{a=[3,4];->1}]",
+            "a:=[1,2];&a[{a=[3,4];->1}]",
+            "a:=[[1,2],[3,4]];r:&a[1][{a=[[5,6],[7,8]];->1}]",
+            "a:=[1,2];r:&a[1];same:r==&a[{a=[3,4];->2}]",
+            "first<&int32>:(p<&int32[2]>,other<&string>){->&p[1]};a:[1,2];other:=\"x\";r:first(&a,&other);other=\"y\";value:*r",
+        ] {
+            rejects(source, "E302");
+        }
+    }
+
     pub(crate) fn accepts(source: &str) {
         let result = crate::compile(source);
         assert!(result.is_ok(), "{source}: {result:?}");

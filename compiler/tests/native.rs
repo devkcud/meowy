@@ -2332,7 +2332,6 @@ pub fn list_borrow_conflicts_and_unavailable_operations_stay_explicit() {
         ("values<uint8[65537]>:[]", "B001"),
         ("values:[\"name\":1]", "B001"),
         ("owner:1;values:[&owner]", "B001"),
-        ("values:[1];view:&values[1]", "B001"),
         ("values:=[1];values[1]=2", "B001"),
         ("values:[1];slice:values.slice()", "B001"),
         ("values:[1];removed:values.remove(1)", "B001"),

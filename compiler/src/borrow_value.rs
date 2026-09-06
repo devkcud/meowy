@@ -13,6 +13,12 @@ pub(crate) enum Step {
     Variant(usize),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Projection {
+    Field(usize),
+    Element,
+}
+
 #[derive(Clone)]
 pub(crate) struct Origin {
     pub(crate) component: Path,
@@ -22,20 +28,34 @@ pub(crate) struct Origin {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Source {
-    Local(Place),
+    Local {
+        id: LocalId,
+        fields: Vec<Projection>,
+    },
     Input {
         id: LocalId,
         component: Path,
-        fields: Vec<usize>,
+        fields: Vec<Projection>,
     },
 }
 
 impl Source {
-    pub(crate) fn project(&self, path: &[usize]) -> Self {
+    pub(crate) fn local(place: &Place) -> Self {
+        Self::Local {
+            id: place.root,
+            fields: place
+                .fields
+                .iter()
+                .copied()
+                .map(Projection::Field)
+                .collect(),
+        }
+    }
+
+    pub(crate) fn project(&self, path: &[Projection]) -> Self {
         let mut source = self.clone();
         let fields = match &mut source {
-            Self::Local(place) => &mut place.fields,
-            Self::Input { fields, .. } => fields,
+            Self::Local { fields, .. } | Self::Input { fields, .. } => fields,
         };
         fields.extend_from_slice(path);
         source
@@ -46,7 +66,7 @@ impl Origin {
     pub(crate) fn weight(&self) -> usize {
         1 + self.component.len()
             + match &self.source {
-                Source::Local(place) => place.fields.len(),
+                Source::Local { fields, .. } => fields.len(),
                 Source::Input {
                     component, fields, ..
                 } => component.len() + fields.len(),

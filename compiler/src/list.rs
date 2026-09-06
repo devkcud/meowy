@@ -389,6 +389,28 @@ impl Checker {
         let ty = *element.clone();
         let capacity = *capacity;
         let length = self.list_length(&value);
+        let index = self.list_position(index, length, capacity)?;
+        let ty = if index.ty == Type::Never {
+            Type::Never
+        } else {
+            ty
+        };
+        Ok(hir::Expr {
+            kind: hir::ExprKind::ListIndex {
+                value: Box::new(value),
+                index: Box::new(index),
+            },
+            ty,
+            span,
+        })
+    }
+
+    pub(crate) fn list_position(
+        &mut self,
+        index: &ast::Expr,
+        length: Option<usize>,
+        capacity: usize,
+    ) -> Result<hir::Expr> {
         let index = self.expr(index, None)?;
         if index.ty == Type::String {
             return Err(Diagnostic::unsupported(
@@ -418,19 +440,95 @@ impl Checker {
                 index.span,
             ));
         }
+        Ok(index)
+    }
+
+    pub(crate) fn element_borrow(
+        &mut self,
+        value: &ast::Expr,
+        index: &ast::Expr,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        if !self.flow.spend(
+            value
+                .span
+                .end
+                .saturating_sub(value.span.start)
+                .saturating_add(1),
+        ) {
+            return Err(Diagnostic::unsupported(
+                "list element place budget exhausted",
+                span,
+            ));
+        }
+        let mut form = value;
+        while let ExprKind::Group(value) = &form.kind {
+            form = value;
+        }
+        let hint = self.hint(value);
+        let place = matches!(
+            form.kind,
+            ExprKind::Name(_) | ExprKind::Field { .. } | ExprKind::Index { .. }
+        ) || matches!(&form.kind, ExprKind::Unary { op, .. } if op == "*");
+        let value = if place && !matches!(hint, Some(Type::Reference(_) | Type::Never)) {
+            self.borrowed(value, value.span)?
+        } else {
+            self.expr(value, None)?
+        };
+        if value.ty == Type::Never {
+            return Ok(value);
+        }
+        let Type::Reference(target) = &value.ty else {
+            return Err(Diagnostic::unsupported(
+                "borrowing elements of temporary storage",
+                span,
+            ));
+        };
+        crate::borrow_contract::type_weight(target, &mut self.flow, span)?;
+        let Type::List { element, capacity } = target.as_ref() else {
+            return Err(Diagnostic::unsupported(
+                "element borrows outside bounded lists",
+                span,
+            ));
+        };
+        if element.has_reference() {
+            return Err(Diagnostic::unsupported(
+                "borrowing reference-bearing list elements",
+                span,
+            ));
+        }
+        let ty = Type::Reference(element.clone());
+        let capacity = *capacity;
+        let length = self.borrowed_list_length(&value);
+        let index = self.list_position(index, length, capacity)?;
         let ty = if index.ty == Type::Never {
             Type::Never
         } else {
             ty
         };
+        let site = self.reborrows;
+        self.reborrows += 1;
         Ok(hir::Expr {
-            kind: hir::ExprKind::ListIndex {
+            kind: hir::ExprKind::ElementBorrow {
+                site,
                 value: Box::new(value),
                 index: Box::new(index),
             },
             ty,
             span,
         })
+    }
+
+    pub(crate) fn borrowed_list_length(&self, value: &hir::Expr) -> Option<usize> {
+        match &value.kind {
+            hir::ExprKind::Borrow(place) if place.fields.is_empty() => {
+                self.lengths.get(&place.root).map(|fact| fact.length)
+            }
+            hir::ExprKind::Reborrow { value, fields, .. } if fields.is_empty() => {
+                self.borrowed_list_length(value)
+            }
+            _ => None,
+        }
     }
 
     pub(crate) fn list_method(
@@ -505,6 +603,39 @@ impl Checker {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    pub(crate) fn element_places_share_position_checks_and_reject_temporary_owners() {
+        for source in [
+            "a:[1,2];r:&a[1];value:*r",
+            "a:[[1,2],[3,4]];r:&a[2][1];value:*r",
+            "a:[{->value:1},{->value:2}];r:&a[1].value;value:*r",
+            "a:[[1,2],[3,4]];r:&({->&a})[2][1];value:*r",
+            "a:[1,2];p:&a;r:&(*p)[1];value:*r",
+            "a:[1,2];holder:{->view:&a};r:&holder.view[1];value:*r",
+            "get<&int32>:(a<&int32[0]>,i<int32>){->&a[i]}",
+        ] {
+            let result = crate::compile(source);
+            assert!(result.is_ok(), "{source}: {result:?}");
+        }
+        for source in [
+            "a:[1,2];r:&a[0]",
+            "a:[1,2];r:&a[-1]",
+            "a<int32[3]>:[1];r:&a[2]",
+            "a<int32[0]>:[];r:&a[1]",
+        ] {
+            rejects(source, "E101");
+        }
+        for source in [
+            "r:&[1,2][1]",
+            "make<int32[2]>:(){->[1,2]};r:&make()[1]",
+            "a:[1,2];r:&a<int32[2]>[1]",
+            "a:[1,2];r:&!a[1]",
+        ] {
+            rejects(source, "B001");
+        }
+        rejects("a:[1,2];r:&a[true]", "E222");
+    }
+
     pub(crate) fn rejects(source: &str, code: &str) {
         let errors = crate::compile(source).unwrap_err();
         assert_eq!(errors[0].code, code, "{source}: {errors:?}");
@@ -539,6 +670,6 @@ mod tests {
         rejects("a:1;values:[&a]", "B001");
         rejects("values:[\"name\":1]", "B001");
         rejects("d:@\"debug\";values:[1];d.print(values)", "B001");
-        rejects("values:[1];view:&values[1]", "B001");
+        rejects("values:[1];view:&!values[1]", "B001");
     }
 }

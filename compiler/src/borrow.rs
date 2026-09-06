@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::Span;
-pub(crate) use crate::borrow_value::{Origin, Path, Source, State, Step};
+pub(crate) use crate::borrow_value::{Origin, Path, Projection, Source, State, Step};
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow as Guards, Guard, TRUE};
 use crate::hir::{
@@ -222,7 +222,7 @@ impl Checker<'_> {
 
     pub(crate) fn live(&self, source: &Source, span: Span) -> Result<Option<&Storage>> {
         match source {
-            Source::Local(place) => self.locals.get(&place.root).map(Some).ok_or_else(|| {
+            Source::Local { id, .. } => self.locals.get(id).map(Some).ok_or_else(|| {
                 Diagnostic::new("E303", "borrowed storage has ended before this use", span)
             }),
             Source::Input {
@@ -658,25 +658,44 @@ impl Checker<'_> {
                 State {
                     origins: vec![Origin {
                         component: Vec::new(),
-                        source: Source::Local(place.clone()),
+                        source: Source::local(place),
                         guard: TRUE,
                     }],
                     ..State::default()
                 }
             }
-            ExprKind::Reborrow {
-                site,
-                value,
-                fields,
-            } => {
+            ExprKind::Reborrow { site, value, .. }
+            | ExprKind::ElementBorrow { site, value, .. } => {
                 let result = self.expression(value)?;
                 flow = result.flow;
+                let fields = match &expr.kind {
+                    ExprKind::Reborrow { fields, .. } => {
+                        if !self.guards.spend(fields.len() + 1) {
+                            return Err(State::budget(expr.span));
+                        }
+                        fields
+                            .iter()
+                            .copied()
+                            .map(Projection::Field)
+                            .collect::<Vec<_>>()
+                    }
+                    ExprKind::ElementBorrow { index, .. } => {
+                        if flow.next {
+                            flow.append(self.expression(index)?.flow);
+                        }
+                        vec![Projection::Element]
+                    }
+                    _ => unreachable!(),
+                };
                 let Type::Reference(ty) = &value.ty else {
                     return Err(Self::unsupported(expr.span));
                 };
-                let target = crate::borrow_contract::projected_type(ty, fields)
+                let target = crate::borrow_contract::projected_type(ty, &fields)
                     .ok_or_else(|| Self::unsupported(expr.span))?;
-                if ty.has_reference() || expr.ty != Type::Reference(Box::new(target.clone())) {
+                if ty.has_reference()
+                    || (expr.ty != Type::Never
+                        && expr.ty != Type::Reference(Box::new(target.clone())))
+                {
                     return Err(Self::unsupported(expr.span));
                 }
                 let mut state = result.state;
@@ -687,7 +706,7 @@ impl Checker<'_> {
                     return Err(State::budget(expr.span));
                 }
                 for origin in &mut state.origins {
-                    origin.source = origin.source.project(fields);
+                    origin.source = origin.source.project(&fields);
                 }
                 self.reserve_origins(state.weight() + 1, expr.span)?;
                 self.facts.reborrows.insert(*site, state.clone());

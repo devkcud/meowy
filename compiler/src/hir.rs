@@ -220,6 +220,11 @@ pub enum ExprKind {
         value: Box<Expr>,
         fields: Vec<usize>,
     },
+    ElementBorrow {
+        site: ReborrowId,
+        value: Box<Expr>,
+        index: Box<Expr>,
+    },
     Deref(Box<Expr>),
     Unary {
         op: String,
