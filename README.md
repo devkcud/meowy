@@ -70,4 +70,4 @@ The [worked programs](docs/programs/README.md) put these rules together. The
 - [Vim and Neovim support](editor/nvim/README.md) provides syntax highlighting,
   file detection, and buffer settings.
 
-Inspired by Smalltalk, OCaml, Go, and Lisp.
+Inspired by Smalltalk, OCaml, Rust, Go, and Lisp.
