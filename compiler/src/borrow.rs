@@ -7,17 +7,25 @@ use crate::hir::{Block, BlockId, EmitId, Expr, ExprKind, LocalId, Place, Program
 
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) const MAX_ORIGINS: usize = 4_096;
+pub(crate) const MAX_FACT_ORIGINS: usize = 262_144;
 
 #[derive(Default)]
 pub(crate) struct Proofs {
     pub(crate) completions: BTreeMap<BlockId, Guard>,
     pub(crate) emissions: BTreeMap<EmitId, Guard>,
+    pub(crate) conditions: BTreeMap<(usize, usize), Guard>,
 }
 
 #[derive(Clone)]
 pub(crate) struct Origin {
     pub(crate) place: Place,
     pub(crate) guard: Guard,
+}
+
+#[derive(Default)]
+pub(crate) struct Facts {
+    pub(crate) locals: BTreeMap<LocalId, Vec<Origin>>,
+    pub(crate) blocks: BTreeMap<BlockId, Vec<Origin>>,
 }
 
 #[derive(Clone)]
@@ -70,13 +78,15 @@ pub(crate) struct Checker<'a> {
     pub(crate) types: BTreeMap<BlockId, Type>,
     pub(crate) results: BTreeMap<BlockId, Vec<Origin>>,
     pub(crate) scopes: Vec<Vec<LocalId>>,
+    pub(crate) facts: Facts,
+    pub(crate) origins: usize,
 }
 
 pub(crate) fn check(
     program: &Program,
     guards: &mut Guards,
     proofs: &Proofs,
-) -> std::result::Result<(), Vec<Diagnostic>> {
+) -> std::result::Result<Facts, Vec<Diagnostic>> {
     let mut checker = Checker {
         program,
         guards,
@@ -86,6 +96,8 @@ pub(crate) fn check(
         types: BTreeMap::new(),
         results: BTreeMap::new(),
         scopes: Vec::new(),
+        facts: Facts::default(),
+        origins: 0,
     };
     let result = (|| {
         checker.block(&program.body)?;
@@ -121,7 +133,7 @@ pub(crate) fn check(
             Span { start: 0, end: 0 },
         )])
     } else {
-        result.map_err(|error| vec![error])
+        result.map(|()| checker.facts).map_err(|error| vec![error])
     }
 }
 
@@ -136,6 +148,17 @@ impl Checker<'_> {
         }
     }
 
+    pub(crate) fn reserve_origins(&mut self, count: usize, span: Span) -> Result<()> {
+        if self.origins + count > MAX_FACT_ORIGINS {
+            return Err(Diagnostic::unsupported(
+                "borrow-origin fact budget exhausted",
+                span,
+            ));
+        }
+        self.origins += count;
+        Ok(())
+    }
+
     pub(crate) fn bind(&mut self, id: LocalId, origins: Vec<Origin>, span: Span) -> Result<()> {
         let ty = self
             .program
@@ -147,13 +170,17 @@ impl Checker<'_> {
         {
             return Err(Self::unsupported(span));
         }
+        self.reserve_origins(origins.len(), span)?;
         self.locals.insert(
             id,
             Storage {
                 block: *self.blocks.last().expect("storage block"),
-                origins,
+                origins: origins.clone(),
             },
         );
+        if !origins.is_empty() {
+            self.facts.locals.insert(id, origins);
+        }
         self.scopes.last_mut().expect("storage scope").push(id);
         Ok(())
     }
@@ -250,6 +277,10 @@ impl Checker<'_> {
             .copied()
             .ok_or_else(|| Self::unsupported(Span { start: 0, end: 0 }))?;
         let origins = self.results.remove(&block.id).expect("result origins");
+        if !origins.is_empty() {
+            self.reserve_origins(origins.len(), Span { start: 0, end: 0 })?;
+            self.facts.blocks.insert(block.id, origins.clone());
+        }
         self.close_scope();
         self.blocks.pop();
         self.types.remove(&block.id);
@@ -570,7 +601,6 @@ mod tests {
             "a:1;r:{->field:&a}",
             "a:1;flag:=true;r:{|flag|->&a}",
             "a:1;r:=&a",
-            "a:=1;r:&a",
             "a:=1;r:&!a",
             "r:&(1+2)",
             "a:1;r:{->&a};s:&r",

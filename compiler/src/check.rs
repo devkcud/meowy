@@ -102,7 +102,9 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
                 functions: checker.functions.into_iter().flatten().collect(),
                 locals: checker.locals,
             };
-            crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
+            checker.proofs.conditions = checker.guards;
+            let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
+            crate::loans::check(&program, &facts, &checker.proofs, &mut checker.flow)?;
             Ok(program)
         }
         Err(error) => Err(vec![if checker.flow.exceeded() {
@@ -1017,9 +1019,7 @@ impl Checker {
                     ));
                 }
                 let id = self.local(ty.clone());
-                if !*mutable {
-                    self.places.insert(id);
-                }
+                self.places.insert(id);
                 let constant = if *mutable {
                     None
                 } else {
@@ -1798,18 +1798,15 @@ impl Checker {
         match &expr.kind {
             ExprKind::Group(value) => self.address(value),
             ExprKind::Name(name) => {
-                let Value::Local {
-                    id, ty, mutable, ..
-                } = self.value(name, expr.span)?
-                else {
+                let Value::Local { id, ty, .. } = self.value(name, expr.span)? else {
                     return Err(Diagnostic::unsupported(
                         "borrowing temporary or intrinsic values",
                         expr.span,
                     ));
                 };
-                if mutable || !self.places.contains(&id) {
+                if !self.places.contains(&id) {
                     return Err(Diagnostic::unsupported(
-                        "borrowing mutable, parameter, receiver or emitted storage",
+                        "borrowing parameter, receiver or emitted storage",
                         expr.span,
                     ));
                 }
@@ -2110,7 +2107,11 @@ impl Checker {
             left = Self::project(left);
             right = Self::project(right);
         }
-        if left.ty != right.ty {
+        if left.ty != right.ty
+            && !(boolean
+                && matches!(left.ty, Type::Bool | Type::Never)
+                && matches!(right.ty, Type::Bool | Type::Never))
+        {
             let numeric = matches!(left.ty, Type::Int { .. } | Type::Float { .. })
                 && matches!(right.ty, Type::Int { .. } | Type::Float { .. });
             return Err(Self::error(
@@ -2125,7 +2126,7 @@ impl Checker {
         let valid = match op {
             "+" | "-" | "*" | "/" => matches!(left.ty, Type::Int { .. } | Type::Float { .. }),
             "%" | "&" | "|" | "^" => matches!(left.ty, Type::Int { .. }),
-            "&&" | "||" => left.ty == Type::Bool,
+            "&&" | "||" => matches!(left.ty, Type::Bool | Type::Never),
             "<" | ">" | "<=" | ">=" => matches!(
                 left.ty,
                 Type::Int { .. } | Type::Float { .. } | Type::String
@@ -2569,7 +2570,6 @@ mod tests {
     #[test]
     pub(crate) fn reference_capability_boundaries_are_explicit() {
         for source in [
-            "x:=1;r:&x",
             "x:1;r:=&x",
             "x:=1;r:&!x",
             "r:&(1+2)",

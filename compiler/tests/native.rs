@@ -642,7 +642,7 @@ pub fn shared_reference_scope_checks_run_before_native_lowering() {
     for (source, code) in [
         ("view:{owner:1;->&owner}", "E303"),
         ("bad:(){owner:1;ref:&owner;alias:ref;->alias}", "E303"),
-        ("owner:=1;view:&owner", "B001"),
+        ("owner:=1;view:&!owner", "B001"),
         ("view:&(1+2)", "B001"),
         ("owner:1;view:&owner;view.{->*self}", "B001"),
     ] {

@@ -156,7 +156,9 @@ impl<'a> Generator<'a> {
                 ));
             }
             let value = self.block(&function.body)?;
-            self.line(format!("ret {} {value}", ir_type(&function.result)));
+            if !self.ended {
+                self.line(format!("ret {} {value}", ir_type(&function.result)));
+            }
             self.finish(format!(
                 "define internal {} @meowy_fn_{}({})",
                 ir_type(&function.result),
@@ -166,7 +168,9 @@ impl<'a> Generator<'a> {
         }
         self.begin();
         self.block(&self.program.body)?;
-        self.line("ret i32 0".into());
+        if !self.ended {
+            self.line("ret i32 0".into());
+        }
         self.finish("define i32 @main()".into());
         let runtime = [
             "declare void @meowy_write_v1(i32, ptr, i64)",
@@ -444,6 +448,11 @@ impl<'a> Generator<'a> {
         }
         self.label(&end);
         self.blocks.remove(&block.id);
+        if block.ty == Type::Never {
+            self.line("unreachable".into());
+            self.ended = true;
+            return Ok("undef".into());
+        }
         Ok(self.value(format!("load {}, ptr {slot}", ir_type(&block.ty))))
     }
 
