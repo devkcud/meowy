@@ -15,6 +15,7 @@ VERSION = "22.1.8"
 CASES = 14
 STACK_CASES = 10
 CONTEXT_CASES = 10
+SCHEDULER_CASES = 11
 
 
 def invoke(args, timeout=60, env=None):
@@ -40,11 +41,11 @@ def require(result, code=0):
                            f"{result.stdout}{result.stderr}")
 
 
-def check_fatal(result, panicked):
+def check_fatal(result, panicked, operation="newer"):
     require(result, -signal.SIGABRT)
     original = "panic P006: body failed" if panicked else "complete"
     expected = ("release-trigger\npanic[P008]: panic during cleanup\n"
-                f"original: {original}\ncleanup: newer\nsecond: P006: release failed\n")
+                f"original: {original}\ncleanup: {operation}\nsecond: P006: release failed\n")
     if result.stdout or result.stderr != expected:
         raise RuntimeError(f"fatal cleanup evidence differs:\n{result.stdout}{result.stderr}")
 
@@ -159,13 +160,29 @@ def check(clang, directory, sanitizers=True):
             check_asan_lifetime(invoke([str(context), "--asan-use-after-return"], env=env))
         print(f"PASS runtime contexts: {name}; {CONTEXT_CASES} cases and fatal resumed cleanup" +
               ("; returned fiber local is detected by ASan" if name == "sanitized" else ""), flush=True)
+        print(f"CHECK runtime scheduler: {name}", flush=True)
+        scheduler = directory / f"scheduler-{name}"
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-fcf-protection=none", "-fstack-protector-strong",
+                        "-pthread", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/stack_memory.cpp"),
+                        str(ROOT / "src/context.cpp"), str(ROOT / "src/scheduler.cpp"),
+                        str(ROOT / "src/task_policy.cpp"), str(ROOT / "tests/scheduler.cpp"),
+                        "-Wl,--wrap=mmap,--wrap=mprotect,--wrap=munmap", *objects, "-o", str(scheduler)]))
+        check_cases(invoke([str(scheduler)], env=env), SCHEDULER_CASES, "scheduler")
+        admission = invoke([str(scheduler), "--os-admission-failure"], env=env)
+        require(admission)
+        if admission.stderr or admission.stdout != "PASS scheduler kernel refusal: ENOMEM, no body, joined failure\n":
+            raise RuntimeError(f"scheduler admission evidence differs:\n{admission.stdout}{admission.stderr}")
+        check_fatal(invoke([str(scheduler), "--fatal-task-cleanup"], env=env), True, "task cleanup")
+        print(f"PASS runtime scheduler: {name}; {SCHEDULER_CASES} cases, kernel refusal and fatal cleanup", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
-    print("Bounded Linux x86-64 context prototype only; scheduler, automatic cancellation/join and DWARF unwinding remain pending.")
+    print("Bounded single-worker prototype only; structured cancellation/join, compiler integration and DWARF unwinding remain pending.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build and check native cleanup, guarded stacks and pinned contexts.")
+    parser = argparse.ArgumentParser(description="Build and check native cleanup, guarded stacks, pinned contexts and bounded scheduling.")
     parser.add_argument("--clang", default="/usr/bin/clang++", help=f"Clang {VERSION} executable")
     parser.add_argument("--build-dir", type=Path, help="Keep binaries in this directory; default uses temporary storage")
     parser.add_argument("--no-sanitizers", action="store_true", help="Run debug/release only; explicitly omit sanitizer validation")

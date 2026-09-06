@@ -33,7 +33,7 @@ def plan(editor=None, compiler=False, strict=False, runtime=False):
     if runtime:
         checks.extend([
             Check("runtime harness regressions", python + ("-m", "unittest", "discover", "-s", "runtime/tests", "-p", "test_*.py")),
-            Check("native cleanup, stacks and contexts", python + ("runtime/check.py",)),
+            Check("native cleanup, stacks, contexts and scheduling", python + ("runtime/check.py",)),
         ])
     if compiler:
         cargo = ("--locked", "--manifest-path", "compiler/Cargo.toml", "--target", TARGET, "--target-dir", "compiler/target")
@@ -75,7 +75,7 @@ def main():
     parser = argparse.ArgumentParser(description="Verify repository contracts; compiler execution and editor runtimes are opt-in.")
     parser.add_argument("--editor", choices=("vim", "nvim", "both"))
     parser.add_argument("--compiler", action="store_true")
-    parser.add_argument("--runtime", action="store_true", help="Check native cleanup, guarded stacks and contexts in debug, release and sanitizer builds.")
+    parser.add_argument("--runtime", action="store_true", help="Check native cleanup, guarded stacks, contexts and bounded scheduling in debug, release and sanitizer builds.")
     parser.add_argument("--strict", action="store_true", help="Require every compiler conformance case; requires --compiler or --all.")
     parser.add_argument("--all", action="store_true", help="Include editor, compiler and native runtime verification.")
     parser.add_argument("--list", action="store_true", help="Print selected commands without running them.")
@@ -101,7 +101,7 @@ def main():
     else:
         print("Scope: repository contracts and full reference catalog execution.", flush=True)
     if runtime:
-        print("Native cleanup, guarded stacks and context checks are selected; scheduling, cancellation and DWARF unwinding remain unqualified.", flush=True)
+        print("Native cleanup, guarded stacks, contexts and bounded scheduling are selected; structured cancellation/join and DWARF unwinding remain unqualified.", flush=True)
     if not editor:
         print("Editor runtimes are not selected; use --editor both to include them.", flush=True)
     for check in checks:

@@ -1,7 +1,7 @@
 # Native runtime prototypes
 
 This directory exercises explicit cleanup, guarded stack allocation and pinned
-native context switching independently of the compiler. It uses C++20 and
+native context switching with bounded scheduling independently of the compiler. It uses C++20 and
 Clang 22.1.8 with exceptions and RTTI disabled. The
 compiler still links its existing scalar runtime; this prototype adds no Meowy
 syntax or runtime symbols to generated programs.
@@ -17,6 +17,8 @@ plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
 ASan stack-use-after-return report for a deliberately expired fiber local.
+Each profile also runs 11 scheduler cases, a real admission-refusal subprocess
+and a fatal task-cleanup subprocess.
 Fatal cases require `SIGABRT` and exact P008 evidence, including the initial exit
 cause and failing cleanup; an arbitrary crash cannot pass. Core dumps are disabled
 in those children. Timeouts kill and reap the subprocess group.
@@ -35,6 +37,70 @@ omits sanitizer checks. Missing tools, sanitizer failures and unsupported execut
 environments fail the selected checks. LeakSanitizer requires an environment
 without ptrace-based sandbox supervision; run the normal command with the required
 environment access when that restriction applies.
+
+## Bounded worker scheduler
+
+[include/meowy/scheduler.hpp](include/meowy/scheduler.hpp) adds one explicitly
+driven worker over the pinned context wrapper. This is an experimental runtime
+API; it does not implement the complete Meowy task or group contract.
+
+- Construct `Scheduler` on its owning worker with a caller-owned `TaskSlot` array
+  and fixed per-context usable stack bytes. The array is also the bounded runnable
+  queue: selection scans runnable slot states without another allocation. The
+  array must remain at a stable address and must not overlap another live
+  scheduler's storage. It must outlive the scheduler and every pending ticket.
+- `submit(body, data, cleanup)` reserves a vacant slot and creates a guarded
+  context without running either callback. Full capacity returns `full` with no
+  ticket. Both queued and settled-but-unjoined slots count against capacity.
+  Context creation failure returns `context_failed` **with a valid settled ticket**;
+  inspect and join that ticket to consume its `spawn_failed` result and reclaim
+  any retained mapping from a failed rollback. No body or cleanup runs on failed
+  admission; the caller remains responsible for its data and resources.
+- Callback type is `Panic (Task &, void *) noexcept`; a zero code is normal
+  completion. `data` is borrowed caller-owned storage, not an automatically copied
+  or moved capture. The temporary `Task` capability cannot be copied or outlive
+  its callback execution. It exposes explicit `yield()` within body/cleanup calls.
+  All borrowed data and result/panic text must outlive their use, including later
+  outcome inspection or use after join.
+- The body executes first; its optional cleanup executes on the same context
+  before the outcome becomes settled. Cleanup may yield, retaining the occupied
+  slot and unpublished outcome until it finishes. Cleanup receives the same
+  caller-owned data, and must not reference body-local storage whose function has
+  already returned. Owners local to a C++ body need explicit cleanup inside that
+  body before return. Compiler-generated Meowy ownership edges are still pending.
+- A body panic result becomes `panicked` only after cleanup. A panic returned from
+  cleanup takes the existing fatal P008 path with the body cause and cleanup
+  operation. The scheduler does not infer panic from host exceptions or crashes.
+- `pump(limit)` resumes at most `limit` contexts across yield/completion boundaries.
+  The result reports actual resumes and remaining runnable slots. This bounds
+  transitions, not CPU time: a body or cleanup that never yields can block the
+  worker. There is no preemption, deadline or background worker thread.
+- The current [selection policy](src/task_policy.cpp) scans from a rotating cursor,
+  choosing round-robin among runnable slots. Completed slots are skipped. This
+  provides the tested prototype behavior; language programs gain no scheduling
+  order or fairness guarantee from it.
+- `inspect(ticket)` reports an unpublished `pending` outcome until settlement.
+  `join(ticket)` is a nonblocking, settled-only operation, not Meowy's waiting
+  `<<` operator. It releases context storage, returns the outcome and consumes
+  the ticket exactly once. A release failure preserves the settled slot and
+  ticket for retry; capacity is not returned before successful release.
+- Tickets contain scheduler identity, slot index and a monotonic generation.
+  Stale, zero-generation and foreign-scheduler tickets reject. Generations never
+  wrap; admission returns `full` when their range is exhausted. Tickets must not
+  survive scheduler destruction/reconstruction, even at the same address.
+- Every scheduler operation stays on its constructor's worker. That worker must
+  remain alive until every ticket is joined. Callback attempts to reenter submit,
+  inspect, pump or join are rejected. No locks are held while executing callbacks;
+  caller synchronization and exclusive storage ownership remain prerequisites.
+  Destruction does not automatically drain, cancel or join pending work.
+
+Tests cover bounded round-robin progress, empty/wrapped selection, pending cleanup,
+capacity through settlement, stale/foreign tickets, worker and reentry rejection,
+admission failures and release retry. Fault-injected rollback failure keeps its
+mapping through a failed join; a kernel `RLIMIT_AS` refusal verifies a joined
+`spawn_failed` outcome without running callbacks. Full child submission, scoped
+groups, waiting joins, transferred captures, automatic cancellation, timers,
+channels and a multi-worker executor are not implemented.
 
 ## Pinned context contract
 
@@ -95,8 +161,9 @@ An explicit cancellation fixture keeps a parent local alive while a borrowing
 context suspends, observes a caller-set cancellation flag, and runs cleanup that
 itself yields before finishing. Release remains rejected until completion. This
 proves that the current cleanup protocol and context switches compose in that
-bounded scenario; there is still no task scheduler, automatic cancellation request,
-join, child admission or task-root panic handler.
+bounded scenario. The scheduler above adds explicit worker pumping and settled
+joins; automatic cancellation requests, structured child admission and task-root
+panic unwinding remain pending.
 
 ## Guarded stack allocation contract
 
@@ -128,8 +195,9 @@ Standalone allocation tests do not execute a context on the mapping.
   release, every borrower and future executing or suspended context must have
   finished using the mapping. The allocator cannot establish those lifetimes.
 - Allocation uses only the explicitly requested system mapping. It never promotes
-  arbitrary owners or extends a borrow. There is no executor-wide admission count,
-  allocator selection, stack pool, scheduler or thread synchronization yet.
+  arbitrary owners or extends a borrow. `StackMemory` supplies no admission counter,
+  allocator selection, stack pool or thread synchronization. The scheduler bounds
+  admission separately through its caller-owned slot array.
 
 Mappings reserve virtual address space; success does not guarantee future physical
 memory availability. Guard pages cannot guarantee detection of an access that
@@ -225,8 +293,9 @@ the actual stack/unwind implementation plan.
 This is a bounded runtime experiment on the current Linux x86-64 host. The pinned
 context wrapper, guarded allocation and explicit cleanup have native and sanitizer
 coverage. It does not qualify a full task runtime, native stack unwinding or the
-documented v0.0.1 release. There is no scheduler, automatic cancellation, join,
-timer or channel.
+documented v0.0.1 release. The bounded scheduler supplies one worker and settled-only
+joins; there is no structured child tree, waiting join, automatic cancellation,
+timer, channel or multi-worker executor.
 There is no LLVM landing pad, Meowy personality function or pinned unwind library.
 Panic codes/messages are borrowed test inputs; source spans, task identity and
 diagnostic attachment are absent. Cancellation is an explicit cleanup edge only.
@@ -235,9 +304,9 @@ Nothing promotes owners or borrows into arbitrary heap storage.
 1. Design the compiler's generated cleanup edges and initialized-slot metadata
    alongside moves and partial initialization. Decide whether the experimental
    ordered reservation restriction should survive that design.
-2. Build bounded scheduler admission and worker-owned runnable queues over the
-   context wrapper. Keep context release behind terminal cleanup and structured
-   child joins; preserve the current worker and sanitizer invariants.
+2. Add structured child admission, waiting joins and outcome/capture ownership to
+   the bounded scheduler. Keep context release behind terminal cleanup and child
+   completion; preserve current worker, admission and sanitizer invariants.
 3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.
 4. Exercise a suspended child borrowing a parent local, cancellation while joining,

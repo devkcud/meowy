@@ -2,9 +2,9 @@
 
 - Read [README.md](README.md), the root [STATUS.md](../STATUS.md),
   [COMPILER.md](../COMPILER.md) and the relevant language reference before edits.
-- The current code prototypes cleanup, guarded allocation and pinned native context
-  switching. Do not describe it as a complete task runtime, scheduler, compiler
-  integration or qualified DWARF unwinding.
+- The current code prototypes cleanup, guarded allocation, pinned contexts and a
+  bounded single-worker scheduler. Do not describe it as a complete task runtime,
+  structured cancellation/join, compiler integration or qualified DWARF unwinding.
 - Keep storage bounded and caller-owned. Document ownership, failure, suspension
   and unwind behavior for every API. Never silently allocate to extend a borrow.
 - Use explicit cleanup edges and initialized-state tracking. Host destructors or
@@ -18,6 +18,9 @@
 - Context transitions must preserve worker identity, live stack ownership and ASan
   fiber-hook ordering. Never release suspended storage or silently unwind through
   host continuation destructors. Keep transition instrumentation exclusions narrow.
+- Scheduler slots remain occupied through cleanup and settlement until successful
+  join/release. Failed admission with a retained mapping must remain reclaimable;
+  stale tickets, callback reentry and foreign-worker access must reject.
 - Run `python3 -B runtime/check.py` and the runtime Python regressions after behavior
   changes. Keep static verification distinct from native and sanitizer evidence.
 - Send each logical step's findings, validation, blockers and next steps to the

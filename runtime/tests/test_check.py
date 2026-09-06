@@ -112,6 +112,15 @@ class CheckTests(unittest.TestCase):
                                              "ERROR: AddressSanitizer: stack-use-after-return\n")
         check.check_asan_lifetime(result)
 
+    def test_fatal_scheduler_cleanup_requires_the_expected_operation(self):
+        result = subprocess.CompletedProcess(["scheduler"], -signal.SIGABRT, "",
+                                             "release-trigger\npanic[P008]: panic during cleanup\n"
+                                             "original: panic P006: body failed\ncleanup: task cleanup\n"
+                                             "second: P006: release failed\n")
+        check.check_fatal(result, True, "task cleanup")
+        with self.assertRaises(RuntimeError):
+            check.check_fatal(result, True)
+
 
 if __name__ == "__main__":
     unittest.main()
