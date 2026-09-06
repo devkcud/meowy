@@ -71,7 +71,7 @@ pub(crate) fn ir_type(ty: &Type) -> String {
         Type::Reference(_) => "ptr".into(),
         Type::Record { primary, fields } => {
             let mut types = vec![ir_type(primary)];
-            types.extend(fields.iter().map(|(_, ty)| ir_type(ty)));
+            types.extend(fields.iter().map(|field| ir_type(&field.ty)));
             format!("{{ {} }}", types.join(", "))
         }
         Type::Union(types) => format!("{{ i32, [{} x i64] }}", union_words(types)),
@@ -300,6 +300,9 @@ impl<'a> Generator<'a> {
                 } => {
                     self.set_element(*id, path, value)?;
                 }
+                Stmt::SetField { place, value, .. } => {
+                    self.set_field(place, value)?;
+                }
                 Stmt::Emit {
                     target,
                     field,
@@ -319,7 +322,8 @@ impl<'a> Generator<'a> {
                     let (index, slot) = match &destination.ty {
                         Type::Record { primary, fields } => {
                             let index = if let Some(field) = field {
-                                let Some(index) = fields.iter().position(|(name, _)| name == field)
+                                let Some(index) =
+                                    fields.iter().position(|slot| &slot.name == field)
                                 else {
                                     continue;
                                 };
@@ -330,7 +334,7 @@ impl<'a> Generator<'a> {
                             let slot = if index == 0 {
                                 primary.as_ref()
                             } else {
-                                &fields[index - 1].1
+                                &fields[index - 1].ty
                             };
                             (Some(index), slot)
                         }
@@ -456,7 +460,7 @@ impl<'a> Generator<'a> {
                     let Type::Record { fields, .. } = ty else {
                         return Err("reborrow projection requires a concrete record".into());
                     };
-                    let field = &fields.get(*index).ok_or("missing reborrow field")?.1;
+                    let field = &fields.get(*index).ok_or("missing reborrow field")?.ty;
                     ptr = self.value(format!(
                         "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
                         ir_type(ty),

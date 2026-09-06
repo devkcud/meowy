@@ -338,7 +338,7 @@ impl State {
             match ty {
                 Type::Record { primary, fields } => {
                     for (index, ty) in std::iter::once(primary.as_ref())
-                        .chain(fields.iter().map(|(_, ty)| ty))
+                        .chain(fields.iter().map(|field| &field.ty))
                         .enumerate()
                     {
                         let mut path = path.clone();

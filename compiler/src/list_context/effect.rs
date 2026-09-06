@@ -34,7 +34,6 @@ impl Checker {
                 StmtKind::Emit {
                     label: None,
                     ty: None,
-                    mutable: false,
                     ..
                 } => {
                     start.get_or_insert(index);

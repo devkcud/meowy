@@ -77,6 +77,17 @@ impl<'a> Graph<'a> {
                         ..Node::default()
                     })?;
                 }
+                Stmt::SetField { place, value, span } => {
+                    let result = self.expression(value)?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    self.append(Node {
+                        uses: result.into_values().collect(),
+                        write: Some((place.clone(), *span)),
+                        ..Node::default()
+                    })?;
+                }
                 Stmt::SetElement {
                     id,
                     path,

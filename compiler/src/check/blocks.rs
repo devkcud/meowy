@@ -139,23 +139,29 @@ impl Checker {
             if !self.flow.implies(self.reach, initialized) {
                 types.push(Type::Null);
             }
-            slots.insert(name.clone(), (Type::union(types), initialized));
+            slots.insert(
+                name.clone(),
+                (Type::union(types), initialized, mutable.unwrap_or(false)),
+            );
         }
         let constructor =
             expected.is_some_and(Self::record_union) && slots.keys().any(Option::is_some);
         if let Some(expected) = expected.filter(|_| !frame.partial && !constructor) {
-            let required: Vec<(Option<String>, Type)> = match expected {
-                Type::Record { primary, fields } => std::iter::once((None, *primary.clone()))
-                    .chain(
-                        fields
-                            .iter()
-                            .map(|(name, ty)| (Some(name.clone()), ty.clone())),
-                    )
-                    .collect(),
-                ty => vec![(None, ty.clone())],
+            let required: Vec<(Option<String>, Type, bool)> = match expected {
+                Type::Record { primary, fields } => {
+                    std::iter::once((None, *primary.clone(), false))
+                        .chain(fields.iter().map(|field| {
+                            (Some(field.name.clone()), field.ty.clone(), field.mutable)
+                        }))
+                        .collect()
+                }
+                ty => vec![(None, ty.clone(), false)],
             };
-            for (name, ty) in required {
-                let initialized = slots.get(&name).map(|(_, guard)| *guard).unwrap_or(FALSE);
+            for (name, ty, mutable) in required {
+                let initialized = slots
+                    .get(&name)
+                    .map(|(_, guard, _)| *guard)
+                    .unwrap_or(FALSE);
                 if !ty.accepts(&Type::Null) && !self.flow.implies(self.reach, initialized) {
                     return Err(Self::error(
                         "E204",
@@ -168,7 +174,17 @@ impl Checker {
                         span,
                     ));
                 }
-                let actual = slots.get(&name).map(|(ty, _)| ty).unwrap_or(&Type::Null);
+                if slots
+                    .get(&name)
+                    .is_some_and(|(_, _, value)| *value != mutable)
+                {
+                    return Err(Self::error(
+                        "E206",
+                        "result field mutability differs from its declaration",
+                        span,
+                    ));
+                }
+                let actual = slots.get(&name).map(|(ty, _, _)| ty).unwrap_or(&Type::Null);
                 if !ty.accepts(actual) {
                     return Err(Self::error(
                         "E207",
@@ -179,10 +195,15 @@ impl Checker {
             }
             return Ok(expected.clone());
         }
-        let primary = slots.remove(&None).map(|(ty, _)| ty).unwrap_or(Type::Null);
+        let primary = slots
+            .remove(&None)
+            .map(|(ty, _, _)| ty)
+            .unwrap_or(Type::Null);
         let fields: Vec<_> = slots
             .into_iter()
-            .filter_map(|(name, (ty, _))| name.map(|name| (name, ty)))
+            .filter_map(|(name, (ty, _, mutable))| {
+                name.map(|name| hir::Field { name, ty, mutable })
+            })
             .collect();
         let actual = if fields.is_empty() {
             primary
@@ -227,17 +248,19 @@ impl Checker {
             return false;
         };
         primary.accepts(value)
-            && values.iter().all(|(name, ty)| {
-                fields
-                    .iter()
-                    .any(|(field, expected)| field == name && expected.accepts(ty))
+            && values.iter().all(|value| {
+                fields.iter().any(|field| {
+                    field.name == value.name
+                        && field.mutable == value.mutable
+                        && field.ty.accepts(&value.ty)
+                })
             })
-            && fields.iter().all(|(name, ty)| {
-                values.iter().any(|(field, _)| field == name) || ty.accepts(&Type::Null)
+            && fields.iter().all(|field| {
+                values.iter().any(|value| field.name == value.name) || field.ty.accepts(&Type::Null)
             })
     }
 
-    pub(crate) fn union_slot(ty: &Type, name: Option<&str>) -> Option<Type> {
+    pub(crate) fn union_slot(ty: &Type, name: Option<&str>, mutable: bool) -> Option<Type> {
         let mut types = Vec::new();
         if name.is_none() {
             types.extend(ty.members().iter().cloned());
@@ -248,8 +271,8 @@ impl Checker {
                     types.extend(
                         fields
                             .iter()
-                            .filter(|(field, _)| field == name)
-                            .map(|(_, ty)| ty.clone()),
+                            .filter(|field| field.name == name && field.mutable == mutable)
+                            .map(|field| field.ty.clone()),
                     );
                 } else {
                     types.push(*primary.clone());

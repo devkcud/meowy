@@ -237,14 +237,14 @@ impl Checker {
                         expr.span,
                     ));
                 };
-                let (index, (_, ty)) = fields
+                let (index, field) = fields
                     .iter()
                     .enumerate()
-                    .find(|(_, (field, _))| field == name)
+                    .find(|(_, field)| &field.name == name)
                     .ok_or_else(|| {
                         Self::error("E201", format!("unknown record field `{name}`"), expr.span)
                     })?;
-                let ty = ty.clone();
+                let ty = field.ty.clone();
                 return Ok(self.narrow(hir::Expr {
                     kind: hir::ExprKind::Field {
                         value: Box::new(value),
@@ -380,8 +380,8 @@ impl Checker {
                 if let Some(Type::Record { fields, .. }) = ty {
                     let ty = fields
                         .into_iter()
-                        .find(|(field, _)| field == name)
-                        .map(|(_, ty)| ty)?;
+                        .find(|field| &field.name == name)
+                        .map(|field| field.ty)?;
                     if let Some(place) = self.ast_place(expr) {
                         Some(self.refined(place, &ty))
                     } else {

@@ -9,8 +9,8 @@ pub(crate) fn slot<'a>(ty: &'a Type, field: &Option<String>) -> Option<(Path, &'
         (Type::Record { fields, .. }, Some(name)) => fields
             .iter()
             .enumerate()
-            .find(|(_, (field, _))| field == name)
-            .map(|(index, (_, ty))| (vec![Step::Slot(index + 1)], ty)),
+            .find(|(_, field)| &field.name == name)
+            .map(|(index, field)| (vec![Step::Slot(index + 1)], &field.ty)),
         (ty, None) => Some((Vec::new(), ty)),
         _ => None,
     }

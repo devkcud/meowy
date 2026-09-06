@@ -1,3 +1,5 @@
+mod fields;
+
 pub(crate) fn accepts(source: &str) {
     if let Err(errors) = crate::compile(source) {
         panic!("{source}\n{errors:?}");

@@ -1,7 +1,7 @@
 use super::{Checker, Constant, Result, Spec, Value};
 use crate::ast::{self, ExprKind, Span, TypeKind};
 use crate::diagnostic::Diagnostic;
-use crate::hir::Type;
+use crate::hir::{self, Type};
 use std::collections::BTreeMap;
 
 impl Checker {
@@ -131,10 +131,24 @@ impl Checker {
                     .unwrap_or(Type::Null);
                 let mut result = BTreeMap::new();
                 for (name, ty, mutable) in fields {
-                    if *mutable {
-                        return Err(Diagnostic::unsupported("mutable record fields", expr.span));
+                    let ty = self.ty(ty)?;
+                    if *mutable && ty.has_reference() {
+                        return Err(Diagnostic::unsupported(
+                            "mutable reference-bearing record fields",
+                            expr.span,
+                        ));
                     }
-                    if result.insert(name.clone(), self.ty(ty)?).is_some() {
+                    if result
+                        .insert(
+                            name.clone(),
+                            hir::Field {
+                                name: name.clone(),
+                                ty,
+                                mutable: *mutable,
+                            },
+                        )
+                        .is_some()
+                    {
                         return Err(Self::error(
                             "E206",
                             format!("duplicate record field `{name}`"),
@@ -150,7 +164,7 @@ impl Checker {
                 }
                 let ty = Type::Record {
                     primary: Box::new(primary),
-                    fields: result.into_iter().collect(),
+                    fields: result.into_values().collect(),
                 };
                 Ok(Spec::Data(ty))
             }

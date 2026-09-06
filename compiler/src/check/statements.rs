@@ -112,6 +112,9 @@ impl Checker {
                 if matches!(form.kind, ExprKind::Index { .. }) {
                     return Ok(vec![self.set_element(target, value)?]);
                 }
+                if matches!(form.kind, ExprKind::Field { .. }) {
+                    return Ok(vec![self.set_field(target, value)?]);
+                }
                 let ExprKind::Name(name) = &target.kind else {
                     return Err(Diagnostic::unsupported(
                         "assignment through fields or references",
@@ -132,6 +135,12 @@ impl Checker {
                     return Err(Self::error(
                         "E305",
                         format!("binding `{name}` is immutable"),
+                        target.span,
+                    ));
+                }
+                if !self.places.contains(&id) {
+                    return Err(Diagnostic::unsupported(
+                        "assignment to emitted result bindings",
                         target.span,
                     ));
                 }
@@ -260,8 +269,8 @@ impl Checker {
         value: &ast::Expr,
         span: Span,
     ) -> Result<Vec<hir::Stmt>> {
-        if mutable {
-            return Err(Diagnostic::unsupported("mutable emitted fields", span));
+        if mutable && name.is_none() {
+            return Err(Diagnostic::unsupported("mutable primary emissions", span));
         }
         let target = match label {
             Some(name) => self.label(name, span)?,
@@ -283,13 +292,13 @@ impl Checker {
             None
         };
         let expected = match (&frame.expected, name) {
-            (Some(ty), name) if Self::record_union(ty) => Self::union_slot(ty, name),
+            (Some(ty), name) if Self::record_union(ty) => Self::union_slot(ty, name, mutable),
             (Some(Type::Record { primary, .. }), None) => Some(*primary.clone()),
             (Some(Type::Record { fields, .. }), Some(name)) => Some(
                 fields
                     .iter()
-                    .find(|(field, _)| field == name)
-                    .map(|(_, ty)| ty.clone())
+                    .find(|field| field.name == name)
+                    .map(|field| field.ty.clone())
                     .ok_or_else(|| {
                         Self::error(
                             "E207",
@@ -332,6 +341,12 @@ impl Checker {
         if value.ty == Type::Never {
             return Ok(vec![hir::Stmt::Expr(value)]);
         }
+        if mutable && value.ty.has_reference() {
+            return Err(Diagnostic::unsupported(
+                "mutable reference-bearing record fields",
+                span,
+            ));
+        }
         let mut stmts = Vec::new();
         if name.is_none()
             && matches!(value.ty, Type::Record { .. })
@@ -358,17 +373,24 @@ impl Checker {
                     span,
                 },
             ));
-            for (index, (field, ty)) in fields.into_iter().enumerate() {
-                self.write_slot(target, Some(field.clone()), ty.clone(), mutable, None, span)?;
+            for (index, field) in fields.into_iter().enumerate() {
+                self.write_slot(
+                    target,
+                    Some(field.name.clone()),
+                    field.ty.clone(),
+                    field.mutable,
+                    None,
+                    span,
+                )?;
                 stmts.push(self.emission(
                     target,
-                    Some(field),
+                    Some(field.name),
                     hir::Expr {
                         kind: hir::ExprKind::Field {
                             value: Box::new(local.clone()),
                             index,
                         },
-                        ty,
+                        ty: field.ty,
                         span,
                     },
                 ));
@@ -389,9 +411,9 @@ impl Checker {
                 Value::Local {
                     id,
                     ty: ty.clone(),
-                    mutable: false,
+                    mutable,
                     owner: self.owner,
-                    constant: self.constant(&value),
+                    constant: if mutable { None } else { self.constant(&value) },
                 },
                 span,
             )?;
@@ -456,11 +478,23 @@ impl Checker {
             (Some(Type::Record { primary, .. }), None) => Some(primary.as_ref()),
             (Some(Type::Record { fields, .. }), Some(name)) => fields
                 .iter()
-                .find(|(field, _)| field == name)
-                .map(|(_, ty)| ty),
+                .find(|field| &field.name == name)
+                .map(|field| &field.ty),
             (Some(ty), None) => Some(ty),
             _ => None,
         };
+        if let (Some(Type::Record { fields, .. }), Some(name)) = (&frame.expected, &name)
+            && fields
+                .iter()
+                .find(|field| &field.name == name)
+                .is_some_and(|field| field.mutable != mutable)
+        {
+            return Err(Self::error(
+                "E206",
+                "result field mutability differs from its declaration",
+                span,
+            ));
+        }
         if let Some(expected) = expected
             && !expected.accepts(&ty)
             && !frame.expected.as_ref().is_some_and(Self::record_union)

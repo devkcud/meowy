@@ -1,6 +1,7 @@
 mod aggregates;
 mod assignments;
 mod bridge;
+mod fields;
 mod lists;
 mod nested_assignments;
 mod references;
@@ -8,7 +9,7 @@ mod scalars;
 
 use super::*;
 use crate::ast::Span;
-use crate::hir::{IndexStep, Place};
+use crate::hir::{Field, IndexStep, Place};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -196,7 +197,11 @@ pub(crate) fn type_test(value: Expr, ty: Type) -> Expr {
 pub(crate) fn record(id: usize, primary: Expr, field: Expr) -> Expr {
     let ty = Type::Record {
         primary: Box::new(primary.ty.clone()),
-        fields: vec![("field".into(), field.ty.clone())],
+        fields: vec![Field {
+            name: "field".into(),
+            ty: field.ty.clone(),
+            mutable: false,
+        }],
     };
     expr(
         ExprKind::Block(Block {

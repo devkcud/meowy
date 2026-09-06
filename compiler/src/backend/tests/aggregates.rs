@@ -103,7 +103,11 @@ pub(crate) fn inferred_union_emissions_and_nullable_defaults_execute() {
     let ty = Type::union([Type::Null, Type::String]);
     let shape = Type::Record {
         primary: Box::new(ty.clone()),
-        fields: vec![("name".into(), ty.clone())],
+        fields: vec![Field {
+            name: "name".into(),
+            ty: ty.clone(),
+            mutable: false,
+        }],
     };
     let value = |id, present| {
         expr(
@@ -173,7 +177,11 @@ pub(crate) fn union_storage_and_restart_defaults_execute() {
     let ty = Type::union([Type::Null, Type::String]);
     let shape = Type::Record {
         primary: Box::new(Type::Null),
-        fields: vec![("name".into(), ty.clone())],
+        fields: vec![Field {
+            name: "name".into(),
+            ty: ty.clone(),
+            mutable: false,
+        }],
     };
     let block = expr(
         ExprKind::Block(Block {

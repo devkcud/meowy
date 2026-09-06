@@ -108,14 +108,14 @@ impl Checker<'_> {
             match ty {
                 Type::Record { primary, fields } => {
                     for (index, ty) in std::iter::once(primary.as_ref())
-                        .chain(fields.iter().map(|(_, ty)| ty))
+                        .chain(fields.iter().map(|field| &field.ty))
                         .enumerate()
                     {
                         let mut nested = path.clone();
                         nested.push(Step::Slot(index));
                         let mut names = names.clone();
                         if index != 0 {
-                            names.push(fields[index - 1].0.clone());
+                            names.push(fields[index - 1].name.clone());
                         }
                         pending.push((ty, nested, names, present));
                         if pending.len() > MAX_ORIGINS {
@@ -192,7 +192,7 @@ impl Checker<'_> {
                 }
                 Type::Record { primary, fields } => {
                     for (index, ty) in std::iter::once(primary.as_ref())
-                        .chain(fields.iter().map(|(_, ty)| ty))
+                        .chain(fields.iter().map(|field| &field.ty))
                         .enumerate()
                     {
                         let mut path = path.clone();

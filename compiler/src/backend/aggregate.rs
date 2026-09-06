@@ -1,5 +1,5 @@
 use super::{Generator, ir_type, union_words};
-use crate::hir::{Place, Type};
+use crate::hir::{Expr, Place, Type};
 
 impl<'a> Generator<'a> {
     pub(crate) fn place(&mut self, place: &Place) -> Result<(String, Type), String> {
@@ -18,7 +18,7 @@ impl<'a> Generator<'a> {
             let field = fields
                 .get(*index)
                 .ok_or_else(|| format!("missing storage field {index}"))?
-                .1
+                .ty
                 .clone();
             ptr = self.value(format!(
                 "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
@@ -30,10 +30,24 @@ impl<'a> Generator<'a> {
         Ok((ptr, ty))
     }
 
+    pub(crate) fn set_field(&mut self, place: &Place, value: &Expr) -> Result<(), String> {
+        if place.fields.is_empty() {
+            return Err("field assignment requires a named field path".into());
+        }
+        let (ptr, ty) = self.place(place)?;
+        let result = self.expression(value)?;
+        if self.ended {
+            return Ok(());
+        }
+        let result = self.coerce(&value.ty, &ty, &result)?;
+        self.store_value(&ty, &result, &ptr);
+        Ok(())
+    }
+
     pub(crate) fn store_value(&mut self, ty: &Type, value: &str, ptr: &str) {
         let fields = match ty {
             Type::Record { primary, fields } => std::iter::once(primary.as_ref())
-                .chain(fields.iter().map(|(_, ty)| ty))
+                .chain(fields.iter().map(|field| &field.ty))
                 .cloned()
                 .collect::<Vec<_>>(),
             _ => Vec::new(),
@@ -220,7 +234,7 @@ impl<'a> Generator<'a> {
             Type::List { element, .. } => self.list_equal(ty, element, left, right),
             Type::Record { primary, fields } => {
                 let types =
-                    std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty));
+                    std::iter::once(primary.as_ref()).chain(fields.iter().map(|field| &field.ty));
                 let mut result = "true".to_owned();
                 for (index, field) in types.enumerate() {
                     let a = self.value(format!("extractvalue {} {left}, {index}", ir_type(ty)));

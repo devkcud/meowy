@@ -1,4 +1,6 @@
-use super::{Checker, Constant, Place, Value};
+use super::{Checker, Constant, Place, Result, Value};
+use crate::ast::Span;
+use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Guard, TRUE};
 use crate::hir::{self, Type};
 
@@ -6,6 +8,28 @@ impl Checker {
     pub(crate) fn forget(&mut self, id: usize) {
         self.tags.retain(|((root, _), _), _| *root != id);
         self.bools.retain(|(root, _), _| *root != id);
+    }
+
+    pub(crate) fn forget_field(&mut self, id: usize, fields: &[String], span: Span) -> Result<()> {
+        let width = fields
+            .iter()
+            .fold(1usize, |width, name| width.saturating_add(name.len()));
+        if !self
+            .flow
+            .spend((self.tags.len() + self.bools.len()).saturating_mul(width))
+        {
+            return Err(Diagnostic::unsupported(
+                "field refinement budget exhausted",
+                span,
+            ));
+        }
+        self.tags.retain(|((root, path), _), _| {
+            *root != id || !(path.starts_with(fields) || fields.starts_with(path))
+        });
+        self.bools.retain(|(root, path), _| {
+            *root != id || !(path.starts_with(fields) || fields.starts_with(path))
+        });
+        Ok(())
     }
 
     pub(crate) fn forget_mutable(&mut self) {
@@ -34,7 +58,7 @@ impl Checker {
                     return None;
                 };
                 let mut place = Self::place(value)?;
-                place.1.push(fields[*index].0.clone());
+                place.1.push(fields[*index].name.clone());
                 Some(place)
             }
             _ => None,

@@ -1,6 +1,7 @@
 mod blocks;
 mod expressions;
 mod functions;
+mod mutation;
 mod names;
 mod references;
 mod refinement;

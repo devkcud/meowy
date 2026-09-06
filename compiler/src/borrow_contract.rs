@@ -29,7 +29,7 @@ pub(crate) fn leaves<'a>(
             }),
             Type::Record { primary, fields } => {
                 for (index, ty) in std::iter::once(primary.as_ref())
-                    .chain(fields.iter().map(|(_, ty)| ty))
+                    .chain(fields.iter().map(|field| &field.ty))
                     .enumerate()
                 {
                     if ty.has_reference() {
@@ -85,7 +85,7 @@ pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a 
     for step in path {
         ty = match (step, ty) {
             (Step::Slot(0), Type::Record { primary, .. }) => primary,
-            (Step::Slot(index), Type::Record { fields, .. }) => &fields.get(index - 1)?.1,
+            (Step::Slot(index), Type::Record { fields, .. }) => &fields.get(index - 1)?.ty,
             (Step::Variant(index), Type::Union(members)) => members.get(*index)?,
             _ => return None,
         };
@@ -96,7 +96,7 @@ pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a 
 pub(crate) fn projected_type<'a>(mut ty: &'a Type, path: &[Projection]) -> Option<&'a Type> {
     for step in path {
         ty = match (step, ty) {
-            (Projection::Field(index), Type::Record { fields, .. }) => &fields.get(*index)?.1,
+            (Projection::Field(index), Type::Record { fields, .. }) => &fields.get(*index)?.ty,
             (Projection::Element, Type::List { element, .. }) => element,
             _ => return None,
         };
@@ -140,8 +140,8 @@ pub(crate) fn projections(
         };
         match ty {
             Type::Record { fields, .. } => {
-                for (index, (_, field)) in fields.iter().enumerate() {
-                    push(Projection::Field(index), field)?;
+                for (index, field) in fields.iter().enumerate() {
+                    push(Projection::Field(index), &field.ty)?;
                 }
             }
             Type::List { element, .. } => push(Projection::Element, element.as_ref())?,
@@ -163,11 +163,11 @@ pub(crate) fn type_weight(ty: &Type, flow: &mut Flow, span: Span) -> Result<usiz
             Type::Reference(ty) | Type::List { element: ty, .. } => pending.push(ty),
             Type::Record { primary, fields } => {
                 pending.push(primary);
-                for (_, ty) in fields {
+                for field in fields {
                     if pending.len() == MAX_PARTS || !flow.spend(1) {
                         return Err(State::budget(span));
                     }
-                    pending.push(ty);
+                    pending.push(&field.ty);
                 }
             }
             Type::Union(members) => {

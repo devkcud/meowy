@@ -8,6 +8,13 @@ pub type CallId = usize;
 pub type ReborrowId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Field {
+    pub name: String,
+    pub ty: Type,
+    pub mutable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
     Null,
     Never,
@@ -27,7 +34,7 @@ pub enum Type {
     Reference(Box<Type>),
     Record {
         primary: Box<Type>,
-        fields: Vec<(String, Type)>,
+        fields: Vec<Field>,
     },
     Union(Vec<Type>),
 }
@@ -46,7 +53,9 @@ impl Type {
             Type::Record { primary, fields } => {
                 let mut size = 0usize;
                 let mut align = 1;
-                for ty in std::iter::once(primary.as_ref()).chain(fields.iter().map(|(_, ty)| ty)) {
+                for ty in
+                    std::iter::once(primary.as_ref()).chain(fields.iter().map(|field| &field.ty))
+                {
                     let (part, boundary) = ty.layout()?;
                     size = size.checked_next_multiple_of(boundary)?.checked_add(part)?;
                     align = align.max(boundary);
@@ -75,7 +84,7 @@ impl Type {
             Self::List { element, .. } => element.has_reference(),
             Self::Reference(_) => true,
             Self::Record { primary, fields } => {
-                primary.has_reference() || fields.iter().any(|(_, ty)| ty.has_reference())
+                primary.has_reference() || fields.iter().any(|field| field.ty.has_reference())
             }
             Self::Union(types) => types.iter().any(Self::has_reference),
             _ => false,
@@ -169,6 +178,11 @@ pub enum Stmt {
     Assign {
         id: LocalId,
         value: Expr,
+    },
+    SetField {
+        place: Place,
+        value: Expr,
+        span: Span,
     },
     SetElement {
         id: LocalId,

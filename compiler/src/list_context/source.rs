@@ -7,6 +7,92 @@ use crate::hir::Type;
 use super::Fit;
 
 impl Checker {
+    pub(crate) fn list_shadowed(&mut self, value: &ast::Expr, names: &[&str]) -> Result<bool> {
+        if names.is_empty() {
+            return Ok(false);
+        }
+        let mut pending = vec![value];
+        while let Some(value) = pending.pop() {
+            if pending.len() + 2 > super::MAX_SCALAR_NODES || !self.flow.spend(1) {
+                return Err(Diagnostic::unsupported(
+                    "record probe scope budget exhausted",
+                    value.span,
+                ));
+            }
+            match &value.kind {
+                ExprKind::Name(name) => {
+                    if !self.flow.spend(names.len().saturating_mul(name.len() + 1)) {
+                        return Err(Diagnostic::unsupported(
+                            "record probe scope budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    if names.contains(&name.as_str()) {
+                        return Ok(true);
+                    }
+                }
+                ExprKind::Int(_) | ExprKind::Float(_) => {}
+                ExprKind::String(parts)
+                    if parts
+                        .iter()
+                        .all(|part| matches!(part, ast::StringPart::Text(_))) => {}
+                ExprKind::Group(value)
+                | ExprKind::Unary { value, .. }
+                | ExprKind::Field { value, .. } => pending.push(value),
+                ExprKind::Binary { left, right, .. } => {
+                    pending.push(left);
+                    pending.push(right);
+                }
+                ExprKind::Index { value, index } => {
+                    pending.push(value);
+                    pending.push(index);
+                }
+                ExprKind::List(values) => {
+                    if pending.len().saturating_add(values.len()) > super::MAX_SCALAR_NODES
+                        || !self.flow.spend(values.len())
+                    {
+                        return Err(Diagnostic::unsupported(
+                            "record probe scope budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    pending.extend(values);
+                }
+                ExprKind::Call { callee, args } => {
+                    if pending.len().saturating_add(args.len()).saturating_add(1)
+                        > super::MAX_SCALAR_NODES
+                        || !self.flow.spend(args.len() + 1)
+                    {
+                        return Err(Diagnostic::unsupported(
+                            "record probe scope budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    pending.push(callee);
+                    pending.extend(args);
+                }
+                ExprKind::Block(block) if block.label.is_none() => {
+                    if pending.len().saturating_add(block.stmts.len()) > super::MAX_SCALAR_NODES
+                        || !self.flow.spend(block.stmts.len())
+                    {
+                        return Err(Diagnostic::unsupported(
+                            "record probe scope budget exhausted",
+                            value.span,
+                        ));
+                    }
+                    for stmt in &block.stmts {
+                        let StmtKind::Emit { value, .. } = &stmt.kind else {
+                            return Ok(true);
+                        };
+                        pending.push(value);
+                    }
+                }
+                _ => return Ok(true),
+            }
+        }
+        Ok(false)
+    }
+
     pub(crate) fn list_assigns(expected: &Type, actual: &Type) -> bool {
         expected.accepts(actual)
             || matches!(actual, Type::Record { primary, .. }
@@ -78,12 +164,12 @@ impl Checker {
                 let Some(Type::Record { fields, .. }) = ty else {
                     return (None, work.saturating_add(1));
                 };
-                if let Some((index, (_, ty))) = fields
+                if let Some((index, field)) = fields
                     .iter()
                     .enumerate()
-                    .find(|(_, (field, _))| field == name)
+                    .find(|(_, field)| &field.name == name)
                 {
-                    (Some(ty), work.saturating_add(index + 1))
+                    (Some(&field.ty), work.saturating_add(index + 1))
                 } else {
                     (None, work.saturating_add(fields.len()))
                 }
@@ -237,7 +323,7 @@ impl Checker {
                 label: None,
                 name,
                 ty: None,
-                mutable: false,
+                mutable,
                 value,
             } = &stmt.kind
             else {
@@ -249,7 +335,11 @@ impl Checker {
                     stmt.span,
                 ));
             }
-            if fields.iter().any(|(field, _)| field == &name.as_deref()) {
+            if fields.iter().any(|(field, _, _)| field == &name.as_deref()) {
+                return Ok(Fit::Unknown);
+            }
+            let names: Vec<_> = fields.iter().filter_map(|(name, _, _)| *name).collect();
+            if self.list_shadowed(value, &names)? {
                 return Ok(Fit::Unknown);
             }
             if name.is_none()
@@ -260,7 +350,10 @@ impl Checker {
             {
                 return Ok(Fit::Unknown);
             }
-            fields.push((name.as_deref(), value));
+            if *mutable && name.is_none() {
+                return Ok(Fit::Unknown);
+            }
+            fields.push((name.as_deref(), value, *mutable));
         }
         let mut choices = Vec::new();
         for ty in expected.members() {
@@ -279,34 +372,40 @@ impl Checker {
                         block.span,
                     ));
                 }
-                for (name, value) in &fields {
+                for (name, value, mutable) in &fields {
                     let slot = if let Some(name) = name {
-                        members
-                            .iter()
-                            .find_map(|(field, ty)| (field == name).then_some(ty))
+                        members.iter().find_map(|field| {
+                            (&field.name == name).then_some((&field.ty, field.mutable))
+                        })
                     } else {
-                        Some(primary.as_ref())
+                        Some((primary.as_ref(), false))
                     };
-                    fit = fit.and(if let Some(slot) = slot {
-                        self.list_probe(value, slot, reach)?
+                    fit = fit.and(if let Some((slot, expected)) = slot {
+                        if expected != *mutable {
+                            Fit::No
+                        } else {
+                            self.list_probe(value, slot, reach)?
+                        }
                     } else {
                         Fit::No
                     });
                 }
-                if !fields.iter().any(|(name, _)| name.is_none()) && !primary.accepts(&Type::Null) {
+                if !fields.iter().any(|(name, _, _)| name.is_none())
+                    && !primary.accepts(&Type::Null)
+                {
                     fit = Fit::No;
                 }
-                if members.iter().any(|(name, ty)| {
-                    !ty.accepts(&Type::Null)
+                if members.iter().any(|member| {
+                    !member.ty.accepts(&Type::Null)
                         && !fields
                             .iter()
-                            .any(|(field, _)| *field == Some(name.as_str()))
+                            .any(|(field, _, _)| *field == Some(member.name.as_str()))
                 }) {
                     fit = Fit::No;
                 }
-            } else if fields.iter().any(|(name, _)| name.is_some()) {
+            } else if fields.iter().any(|(name, _, _)| name.is_some()) {
                 fit = Fit::No;
-            } else if let Some((_, value)) = fields.first() {
+            } else if let Some((_, value, _)) = fields.first() {
                 fit = self.list_probe(value, ty, reach)?;
             } else if !ty.accepts(&Type::Null) {
                 fit = Fit::No;

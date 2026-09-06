@@ -203,6 +203,40 @@ implementation boundary; it does not change language rules.
   existing work/storage budgets. Many matching fields multiplied by returned
   reference components reject with B001 before unbounded contract expansion.
 
+## Mutable record fields
+
+- HIR `Field { name, ty, mutable }` keeps named-field mutability in normalized
+  shape equality, ordering and union membership. LLVM payload order/layout is
+  unchanged. Inferred, annotated and forwarded records retain each field's own
+  flag; forwarding never stamps the outer emission flag onto nested fields.
+  Branch or expected-slot mutability conflicts report E206. Whole incompatible
+  record assignment keeps E207, and nullable omissions inherit declared flags.
+- `owner.child.field = rhs` addresses ordinary mutable reference-free Copy local
+  storage. Every crossed named field must be mutable; an immutable root/path is
+  E305. Shared-reference, temporary, emitted-name and union-payload targets remain
+  B001. A field may hold any currently supported Copy value, including a whole
+  list or record, but mixed field/index write paths are not yet enabled.
+- `SetField` retains the static physical place and target span. RHS evaluates
+  once before the selected store. These fixed typed offsets remain valid across
+  same-shape Copy owner replacement inside RHS, so no list-style reservation is
+  needed. Nonreturning RHS forms no later access. Final-use RHS shared reads can
+  finish; surviving overlapping field/ancestor loans report E302, while proven
+  siblings remain disjoint. Function all-input bounds keep their existing scope.
+- Only target and overlapping ancestor/descendant refinement domains are forgotten
+  after RHS checking. Unrelated sibling predicates and immutable copied values
+  remain valid. Path lookup, bounded depth and refinement scans consume shared
+  work budgets; path collection checks its 256-field limit before each push.
+- Mutable named emissions create the correct completed field shape, but their
+  in-block name is still a copied local feeding the result slot. Direct mutation
+  of that name or its field path remains B001 until result-slot aliasing exists.
+  Reads keep existing copy behavior. Mutable primary emissions and mutable fields
+  whose subtree carries references also remain B001; no exclusive reference or
+  mutable reference carrier capability is implied by this metadata.
+- List candidate probes compare mutable flags and keep later emitted-name
+  dependencies unresolved instead of reading a same-named outer binding. A known
+  context permits ordinary once-only checking; unresolved scope-dependent choices
+  remain B001.
+
 ## Control-flow and last use
 
 - The `src/loans.rs` entrypoint and `src/loans/` modules build a separate graph
@@ -293,7 +327,7 @@ implementation boundary; it does not change language rules.
   identities. Retained HIR keeps source order and ordinary assignment coercions.
 - An unlabeled effectful result block may check a context-independent prefix of
   bindings, assignments and expression statements once in its ordinary live frame.
-  A terminal suffix of unconditional, unannotated immutable emissions is then
+  A terminal suffix of unconditional, unannotated emissions is then
   checked against candidate element types using the prefix's actual reach. A
   unique candidate supplies that same frame's expected type before suffix checking
   and normal block finalization. The prefix is never replayed or deferred past a
@@ -429,10 +463,9 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Define mutable record-field shapes/types before extending initialized assignment
-   targets through fields; current fields remain immutable. Preserve each bounds
-   phase, storage reservation and exact evaluation order. Add exclusive references,
-   slice/alias metadata and non-Copy element state separately.
+7. Combine checked list paths with mutable named fields only after preserving every
+   owning boundary, bounds phase, reservation and evaluation order. Add result-slot
+   aliasing, exclusive references, slice/alias metadata and non-Copy state separately.
 
 ## Verification
 

@@ -120,7 +120,7 @@ pub(crate) fn element_references_preserve_owner_identity_and_nested_offsets() {
             value: Box::new(element_ref(inner, integer(1, 32, false))),
             fields: vec![0],
         },
-        Type::Reference(Box::new(fields[0].1.clone())),
+        Type::Reference(Box::new(fields[0].ty.clone())),
     );
     let inner = element_ref(inner, integer(2, 64, false));
     let parts = separated(vec![

@@ -21,7 +21,11 @@ impl Checker<'_> {
         let mut state = self.results.remove(&block.id).expect("result state");
         let slots: Vec<_> = match &block.ty {
             Type::Record { primary, fields } => std::iter::once((None, primary.as_ref()))
-                .chain(fields.iter().map(|(name, ty)| (Some(name.clone()), ty)))
+                .chain(
+                    fields
+                        .iter()
+                        .map(|field| (Some(field.name.clone()), &field.ty)),
+                )
                 .collect(),
             ty => vec![(None, ty)],
         };
@@ -87,6 +91,39 @@ impl Checker<'_> {
                             || self.program.locals[*id].has_reference())
                     {
                         return Err(Self::unsupported(value.span));
+                    }
+                    result.flow
+                }
+                Stmt::SetField { place, value, span } => {
+                    if !self.locals.contains_key(&place.root)
+                        || !self.proofs.mutable.contains(&place.root)
+                    {
+                        return Err(Self::unsupported(*span));
+                    }
+                    let mut ty = &self.program.locals[place.root];
+                    if ty.has_reference() || place.fields.is_empty() {
+                        return Err(Self::unsupported(*span));
+                    }
+                    for index in &place.fields {
+                        if !self.guards.spend(1) {
+                            return Err(State::budget(*span));
+                        }
+                        let Type::Record { fields, .. } = ty else {
+                            return Err(Self::unsupported(*span));
+                        };
+                        let field = fields
+                            .get(*index)
+                            .filter(|field| field.mutable)
+                            .ok_or_else(|| Self::unsupported(*span))?;
+                        ty = &field.ty;
+                    }
+                    let result = self.expression(value)?;
+                    if result.flow.next
+                        && (!result.state.origins.is_empty()
+                            || !result.state.bounds.is_empty()
+                            || value.ty != *ty)
+                    {
+                        return Err(Self::unsupported(*span));
                     }
                     result.flow
                 }

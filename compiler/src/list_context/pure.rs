@@ -40,7 +40,6 @@ impl Checker {
                     let StmtKind::Emit {
                         label: None,
                         ty: None,
-                        mutable: false,
                         value,
                         ..
                     } = &stmt.kind
@@ -108,8 +107,8 @@ impl Checker {
                             label: None,
                             name,
                             ty: None,
-                            mutable: false,
                             value,
+                            ..
                         } = &stmt.kind
                         else {
                             return Ok(None);

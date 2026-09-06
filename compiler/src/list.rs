@@ -76,14 +76,14 @@ impl Checker {
                 }
                 Type::Record { primary, fields } => {
                     pending.push(primary);
-                    for (_, ty) in fields {
+                    for field in fields {
                         if pending.len() >= 4096 {
                             return Err(Diagnostic::unsupported(
                                 "list type budget exhausted",
                                 span,
                             ));
                         }
-                        pending.push(ty);
+                        pending.push(&field.ty);
                     }
                 }
                 Type::Union(members) => {

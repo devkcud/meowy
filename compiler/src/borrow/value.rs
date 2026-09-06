@@ -23,7 +23,7 @@ impl Checker<'_> {
                     ty = &fields
                         .get(*index)
                         .ok_or_else(|| Self::unsupported(expr.span))?
-                        .1;
+                        .ty;
                 }
                 if ty.has_reference() || expr.ty != Type::Reference(Box::new(ty.clone())) {
                     return Err(Self::unsupported(expr.span));

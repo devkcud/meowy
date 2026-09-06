@@ -86,8 +86,8 @@ impl Checker {
             let (index, ty) = fields
                 .iter()
                 .enumerate()
-                .find(|(_, (field, _))| *field == name)
-                .map(|(index, (_, ty))| (index, ty.clone()))
+                .find(|(_, field)| field.name == name)
+                .map(|(index, field)| (index, field.ty.clone()))
                 .ok_or_else(|| {
                     Self::error("E201", format!("unknown record field `{name}`"), span)
                 })?;
@@ -121,15 +121,15 @@ impl Checker {
                     span,
                 ));
             };
-            let (index, (_, field)) = fields
+            let (index, field) = fields
                 .iter()
                 .enumerate()
-                .find(|(_, (field, _))| *field == name)
+                .find(|(_, field)| field.name == name)
                 .ok_or_else(|| {
                     Self::error("E201", format!("unknown record field `{name}`"), span)
                 })?;
             path.push(index);
-            ty = field;
+            ty = &field.ty;
         }
         let ty = Type::Reference(Box::new(ty.clone()));
         let site = self.reborrows;
@@ -183,15 +183,15 @@ impl Checker {
                         expr.span,
                     ));
                 };
-                let (index, (_, ty)) = fields
+                let (index, field) = fields
                     .into_iter()
                     .enumerate()
-                    .find(|(_, (field, _))| field == name)
+                    .find(|(_, field)| &field.name == name)
                     .ok_or_else(|| {
                         Self::error("E201", format!("unknown record field `{name}`"), expr.span)
                     })?;
                 place.fields.push(index);
-                Ok((place, ty))
+                Ok((place, field.ty))
             }
             _ => Err(Diagnostic::unsupported(
                 "borrowing temporary or projected storage",
