@@ -1,0 +1,17 @@
+debug : @"debug"
+<Record> : <{ value<int32>; nested<{ count<int32> }> }>
+
+identity<&Record> : (value<&Record>) { -> &*value }
+field<&int32> : (value<&Record>) { -> &value.nested.count }
+
+owner<Record> := { -> value : 41; -> nested : { -> count : 7 } }
+whole : &owner
+same : &*whole
+view : &same.value
+debug.print(view == &owner.value)
+debug.print(*view)
+leaf : field(identity(&owner))
+debug.print(*leaf)
+owner = { -> value : 42; -> nested : { -> count : 8 } }
+debug.print(owner.value)
+debug.print(owner.nested.count)

@@ -5,7 +5,7 @@ It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to ordinary local storage, including guarded
 block results, immutable records and unions carrying references, direct-function
-borrow contracts, and last-use checks for mutable owners. It is not the complete
+borrow contracts, shared reborrows, and last-use checks for mutable owners. It is not the complete
 v0.0.1 language.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
@@ -26,6 +26,7 @@ compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
 compiler/target/debug/meowy run compiler/examples/optional-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-functions.mwy
+compiler/target/debug/meowy run compiler/examples/reborrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -46,6 +47,8 @@ The [optional borrows example](examples/optional-borrows.mwy) narrows nullable
 reference fields and unions of different reference types before dereferencing.
 The [function borrows example](examples/borrow-functions.mwy) returns borrowed
 views through direct calls and releases their input loans after the final use.
+The [reborrows example](examples/reborrows.mwy) takes references to original
+record fields through shared references and returns them through functions.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -92,6 +95,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
   reference payloads. Copies and equality still consume every active reference.
+- Shared reborrows of reference-free referents: `&*view`, `&view.field` and nested
+  parenthesized paths. Reference-valued calls/blocks evaluate once. Derived
+  function results retain all active input lifetime bounds. Union payload addresses,
+  reference-bearing pointees and exclusive reborrows remain unavailable.
 - Direct functions, explicit-result recursion, strict mutual-forward groups,
   conditional matchers, and named-scope `leave`/`restart`, including scoped aliases.
 - Shared-reference function inputs and results, including immutable record/union
