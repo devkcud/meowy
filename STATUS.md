@@ -7,38 +7,40 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `d3e6b12` unifies field/list assignment as SetPath with ordered Field
-  and Index steps. Paths such as `holder.items[i].value` and `rows[i].items[j]`
-  work on ordinary mutable reference-free Copy locals. Every crossed field must
-  be mutable, and each selected list supplies its own initialized length.
-- Indices are captured and bounds-checked once from root to leaf before later
-  effects; P001 identifies the failing indexed prefix. Only the selected payload
-  is stored. Bounds failure and nonreturning operands skip every later phase.
-- Static fields before the first index identify the protected whole-collection
-  region. Holder siblings outside it can be disjoint; retained views anywhere
-  within it conservatively conflict. Each returning index and the final store use
-  the reservation. Pure-field paths preserve same-type RHS owner replacement.
-- Coverage/example: `4f6f2d2` adds seven native groups and
-  `compiler/examples/mixed-writes.mwy`. Six library groups cover typed paths,
-  regions, layouts, bounds, captured indices and early exits. Existing field/list
-  write fixtures use the shared representation; obsolete boundary rows are updated.
-- All 14 combined checks pass: 293 Rust tests, 35 Python tests, 859 local links,
+- Compiler: `554fa6c` adds SlotAlias after mutable named initialization. Later reads,
+  direct assignment and mixed SetPath writes use the actual result field cell;
+  returned records observe the updates and ordinary copies remain independent.
+  Initializers still execute once. Wider final slot types convert to/from the
+  lexical alias type, with concrete union payload addresses for aggregate paths.
+- Checker validation requires a compatible concrete mutable result field or proves
+  the emission cannot contribute to completion. Discarded aliases retain valid
+  initialized local cells for their remaining effects. Named outer targets, optional
+  fields, own-target restart and inner-loop updates are covered.
+- Alias identities are canonical per target field for write conflicts and predicate
+  invalidation. Mutable facts seed unknown alias activity before origin analysis;
+  stale initializer tags cannot erase loans, and unrelated reference fields keep
+  their origins. Borrowing emitted storage remains B001.
+- Coverage/example: `fda4a67` adds eight native groups and
+  `compiler/examples/emitted-slots.mwy`. Nine library groups cover metadata budgets,
+  mutable facts, cells, conversions, defaults, restart and discarded paths. Function
+  return lowering now converts concrete bodies to their declared record unions.
+- All 14 combined checks pass: 310 Rust tests, 35 Python tests, 860 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs mixed-writes with exact output. Twelve independent
-  review cases pass. No active workers, unfinished code or failing checks remain.
-  Modular source organization and the runtime ABI are preserved.
-- Shared-reference/temporary/emitted roots, mutable primary slots, mutable
-  reference-bearing fields, source-level exclusive references and owned cleanup
-  remain outside this bootstrap. Next is real result-slot aliasing for mutable
-  emitted names, followed by runtime/module/library and release work.
+- The optimized compiler runs emitted-slots with exact output. Independent checks
+  and lifecycle executions pass. No active workers, unfinished code or failing
+  checks remain. New helpers follow the existing modular source organization.
+- Emitted borrows, shared-reference/temporary write roots, mutable reference-bearing
+  fields, source-level exclusive references, owned cleanup and full release
+  qualification remain open. Next is an explicit lifetime model for borrowed result
+  storage, followed by runtime/module/library work.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Unified mixed checked write paths and modular analyses | Result-slot aliases, exclusive ownership and cleanup |
+| Compiler | Mutable result-slot aliases and unified checked write paths | Result-storage borrows, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,13 +50,14 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Give mutable emitted names real result-slot aliases before permitting their
-   assignment. Model construction order, enclosing labels, leave/restart and result
-   publication in HIR/checker/backend/loans; verify read-after-write inside the
-   block and the final returned field, not just a detached local copy.
-2. Preserve or improve region precision only with explicit alias/lifetime proof.
-   Keep shared-reference/temporary roots and reference-bearing mutation closed
-   until source-level exclusive references, initialization and cleanup are modeled.
+1. Model borrowing emitted storage with explicit target-block/slot ownership rather
+   than the alias name's lexical lifetime. Coordinate references, origin validation
+   and canonical loan regions; test nested aliases, scope exit/restart and rejection
+   of references escaping result publication. Keep B001 until storage lifetime is proved.
+2. Preserve first-collection conflict rules and precise slot identity while adding
+   capabilities. Shared-reference/temporary write roots, mutable reference-bearing
+   fields and source-level exclusive references need explicit initialization and
+   cleanup models before being enabled.
 3. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

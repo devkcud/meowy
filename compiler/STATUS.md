@@ -1,8 +1,8 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Unified mixed checked write paths pass the final gate.
+Updated: 2026-09-06. Mutable emitted result-slot aliases pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `d3e6b12`; native coverage/example: `4f6f2d2`.
+Implementation: `554fa6c`; native coverage/example: `fda4a67`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
@@ -11,16 +11,16 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: one SetPath representation handles static field, nested list and mixed
-field/index assignments on ordinary mutable reference-free Copy locals. Every field
-retains its mutable gate; each index checks its selected list's initialized length
-before later steps/RHS. The final store writes only the selected payload.
+Completed: mutable named emissions register SlotAlias after once-only Bind+Emit
+initialization. Reads, direct assignment and mixed SetPath writes then address live
+result field cells, preserving the updated returned value. Compatible wider slot
+types convert to/from the lexical local type; aggregate paths use exact member
+payload addresses. Proved discarded aliases retain valid initialized local cells.
 
-The first indexed collection defines the reservation, write-conflict and predicate
-invalidation region. Static holder siblings remain disjoint, while paths within that
-collection conservatively overlap. Pure-field RHS replacement is preserved. Shared
-reference/temporary/emitted roots, mutable reference-bearing fields, exclusive
-references, owned cleanup, modules and full release qualification remain open.
+Named outer targets, optional fields, restart and mutable result activity are
+checked. Same-slot aliases share canonical write/refinement identity. Emitted
+addresses remain B001, as do mutable reference-bearing fields and source-level
+exclusive references. Owned cleanup, modules and release qualification remain open.
 
 ## Resume here
 
@@ -46,15 +46,15 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 31 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 25 loan, 9 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 33 focused backend tests |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 34 checker, 18 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 26 loan, 9 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 38 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 140 native groups, 4 harness tests and 23 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 148 native groups, 4 harness tests and 24 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
-under `src/check/`. `src/backend/` separates aggregate, list, arithmetic and output
-lowering plus focused tests. `src/list_context/` separates candidate orchestration,
+under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
+and storage lowering plus focused tests. `src/list_context/` separates orchestration,
 effectful blocks and isolated probes. Consult each root module for declarations;
 preserve these responsibility boundaries during feature work. `src/parser/`
 separates statements, expressions, types, strings and tree bounds. `src/borrow/`
@@ -97,8 +97,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   whole-record equality. Primary record forwarding retains each named field flag.
 - SetPath carries a mutable local root, ordered WriteStep::Field/Index path, RHS
   and final target span. It replaces separate field/list write representations.
-  `check/mutation.rs` checks ordinary reference-free Copy storage and every mutable
-  field gate; immutable roots/fields are E305. No source &! reference is created.
+  `check/mutation.rs` checks reference-free Copy locals or emitted aliases and
+  every mutable field gate; immutable roots/fields are E305. No source &! reference is created.
 - With indices, static fields before the first index define a precise Place naming
   the whole first collection. That region drives reservations, final write conflicts
   and predicate invalidation. Holder siblings outside it can be disjoint; all views
@@ -109,9 +109,25 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   siblings. RHS completes before the final exclusive store; final-use shared reads
   are allowed. Field and indexed writes never write back an old aggregate snapshot.
 - Mutable field types/subtrees containing references and mutable primary emissions
-  remain B001. Mutable emitted names are readable local copies, but assignments to
-  them or their fields stay B001 until result-slot aliases exist. No origin-bearing
-  mutable carrier can reach these new writes.
+  remain B001. No origin-bearing mutable carrier can reach these new writes.
+- SlotAlias follows the initializer Bind+Emit and maps a mutable local ID to its
+  target block and field. `check/aliases.rs` validates a compatible concrete mutable
+  field, or requires the emission/target-completion guard intersection to be false.
+  Alias IDs remain outside ordinary addressable places, so emitted borrows stay B001.
+- `backend/storage.rs` resolves whole-cell reads/stores with final-slot/local type
+  conversion, and matching concrete union payloads for SetPath addresses. Actual
+  result cells remain the backing storage for compatible retained aliases; only
+  proved discarded destinations keep the initialized temporary cell. Backend Bind
+  clears old alias metadata, and each generated function starts with an empty map.
+- Mutable alias IDs enter proofs before origin traversal. Their ref-free activity
+  becomes unknown from initialization, preventing stale union/record tags from
+  suppressing a real loan while preserving other immutable reference components.
+  Alias length caches stay unset. IDs sharing a target field use one canonical
+  write/reservation root and share predicate invalidation; value copies stay separate.
+- Alias metadata, names, type walks and canonical lookup/invalidation use shared
+  bounded work, with a 65,536-entry metadata ceiling. Slot initialization still
+  obeys E204/E205/E206; assignment does not become a second emission. Restart resets
+  target cells, while an inner restart can update an already-initialized outer slot.
 - Pure/list context probes retain field flags and treat earlier emitted-name reads
   as Unknown/B001; they never use a same-named outer binding to choose a false type.
   Explicit annotations still use ordinary lexical checking.
@@ -190,7 +206,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Derived-reference snapshots are keyed by unique sites. Missing snapshots are
   recorded at their consumption node and validated after reach analysis. Known-dead
   paths do not invent origins; reachable gaps remain B001. All path/snapshot/conflict
-  work stays charged. Exclusive borrows, slices, aliases, removal,
+  work stays charged. Exclusive borrows, slices, named list aliases, removal,
   reference-bearing/owned elements and list formatting remain unsupported.
 - Each WriteStep::Index retains its actual indexed-prefix span. Backend traversal
   loads the selected list's own initialized length before evaluating that index,
@@ -279,8 +295,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   unreachable and end the builder continuation. These text failures exit status 1;
   recovery, source identities, structured evidence and replay remain pending.
 - Do not infer a block constant from its last emission: earlier paths may leave.
-  Named blocks conservatively forget mutable proofs; restart writes into surviving
-  outer result slots are B001. Loan loop fixed points exist; broader ownership and
+  Named blocks conservatively forget mutable proofs. Restart after a new emission
+  into a surviving enclosing result remains B001; updates to an already initialized
+  outer alias are supported. Loan loop fixed points exist; broader ownership and
   emission-flow fixed points remain pending.
 - Parser descent and AST depth are capped at 256 before recursive passes. A prior
   65,536-parameter source timed out after 60 seconds. Broad frontend scaling, full
@@ -324,23 +341,24 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 153 library and 140 native groups pass. New coverage adds 1 checker, 1 loan,
-  4 backend and 7 native groups. Clippy `-D warnings` and formatting pass. The
-  optimized compiler builds/runs `examples/mixed-writes.mwy` in release with exact
-  stdout `1\n8\n2\n21\n` and empty stderr.
-- Native coverage includes alternating field/index targets, nested record/list
-  payloads, copied values, initialized lengths, holder siblings, first-collection
-  overlap, final-use reads, captured indices, prefix diagnostics and early exits.
-  Updated legacy boundaries require E305 for immutable paths and accept supported
-  mixed paths; reference/temporary/emitted roots remain explicitly B001.
-- All 33 backend groups pass, including 22 new debug/release executions for padded
-  layouts, each selected header, prefix spans with trailing fields, skipped later
-  effects, captured indices and preserved pure-field RHS owner replacement.
-- Two new semantic groups, all six existing list groups and 12 independent review
-  cases pass. Existing all-input bounds, path budgets, source mutability, Never
-  phase consumption and region invalidation remain intact. No blocker was found.
+- Rust: 162 library and 148 native groups pass. New coverage adds 3 checker, 1 loan,
+  5 backend and 8 native groups. Clippy `-D warnings` and formatting pass. The
+  optimized compiler builds/runs `examples/emitted-slots.mwy` in release with exact
+  stdout `init\n1\n2\n2\n9\n` and empty stderr.
+- Native coverage includes shared returned storage, independent copies, mixed paths,
+  int/string widened slots, nullable record payloads, named targets, own/inner
+  restarts, discarded/incompatible destinations, stale activity/origin rejection,
+  alias-borrow boundaries, runtime-width P002 and once-only P006 effects.
+- All 38 backend groups pass, including 38 new debug/release executions for result
+  cells, conversions, defaults, restart, discard and function returns. A reproduced
+  B002 for concrete aliased bodies in declared record-union functions was fixed by
+  applying existing body-to-result coercion before ret; its exact source passes both
+  profiles. No new runtime ABI or dependency was introduced.
+- Four semantic/budget groups pass, including a source alias-metadata work limit.
+  Independent review passed five origin/boundary checks and four lifecycle programs
+  in both profiles (eight executions), with no remaining blocker.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 859 local links; schemas/catalog and Vim/Neovim pass.
+  checks 860 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime sources/ABI are unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with fatal,
   truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and the expired
@@ -355,15 +373,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Replace detached mutable emitted-name copies with genuine result-slot aliases.
-   Coordinate HIR, `check/blocks.rs`, `check/statements.rs`, backend destinations and
-   loans so reads/writes inside the block and its returned fields share storage.
-   Test named enclosing emissions, leave/restart, optional slots, RHS effects and
-   access lifetimes; retain B001 until slot identity and initialization are proved.
-2. Preserve first-collection conflicts unless finer indexed disjointness is proved.
-   Shared-reference/temporary roots, mutable reference-bearing fields and source
+1. Model result-slot borrow origins and lifetime in `check/references.rs`, `borrow/`
+   and `loans/` before allowing emitted addresses. The owner is the target block/slot,
+   not merely the alias's declaration scope. Test nested alias reads, wider payloads,
+   discarded backing, restart invalidation and rejection of references escaping
+   result publication; keep B001 where the storage lifetime is still unproved.
+2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
+   Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup
-   models before expanding the writable-place surface.
+   models before enabling new writes.
 3. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.

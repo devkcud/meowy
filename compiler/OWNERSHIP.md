@@ -13,7 +13,7 @@ implementation boundary; it does not change language rules.
   Equality compares addresses; dereference copies the supported copyable referent.
 - Eligible roots include ordinary locals, reference-free by-value parameters and
   dispatch receiver copies. Parameter/self addresses refer to their local storage,
-  not an original caller value. Named emitted bindings remain separate work.
+  not an original caller value. Borrowing emitted storage remains separate work.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
   unreachable writes. Private tables associate those IDs and block IDs with the
@@ -250,8 +250,9 @@ implementation boundary; it does not change language rules.
   the original emission is proved disjoint from target completion. The initialized
   local cell then represents that discarded partial slot until leave/restart/exit.
   A retained unsupported destination is B001. Named outer emissions resolve the
-  target frame rather than the alias's local declaration scope; restart reinitializes
-  the target and aliases cannot outlive their lexical/target scope.
+  target frame rather than the alias's local declaration scope. Restarting the target
+  block reinitializes its cells; inner restarts preserve initialized outer slots.
+  Aliases cannot outlive their lexical/target scope.
 - Aliases stay outside ordinary addressable places, so `&name`, field/element
   borrowing through a name, exclusive references and reference-bearing mutable
   fields remain B001. Writability does not manufacture a borrowable lifetime.
@@ -443,8 +444,9 @@ implementation boundary; it does not change language rules.
   direct-function all-input dependency.
 - `holder.rows[first].items[next] = rhs` replaces initialized storage through
   concrete list and mutable field layers of a mutable reference-free Copy local
-  or emitted slot alias. Parentheses around path prefixes are allowed; shared-reference
-  targets, union-payload projections and temporary owners remain B001.
+  or emitted slot alias. Parentheses around path prefixes are allowed. Writes through
+  shared-reference targets, narrowed union-typed roots and temporary owners remain
+  B001; a concrete alias may still address its payload in a wider final slot.
   Immutable list bindings report E305. This adds no source exclusive-reference
   value or `&!` semantics; the final store requires exclusive collection access.
 - `SetPath` replaces separate field/element assignment nodes. It retains the local
@@ -480,7 +482,7 @@ implementation boundary; it does not change language rules.
   parser depth bounds also apply. Root types are charged once and consumed layer
   by layer, avoiding repeated suffix copies. Every target/typed/CFG step is charged,
   independently of list capacities.
-- Exclusive references, slices, aliases, removal, reference-bearing/owned elements
+- Exclusive references, slices, named list aliases, removal, reference-bearing/owned elements
   and list formatting remain B001.
 
 ## Next analysis stages

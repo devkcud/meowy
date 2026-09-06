@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Mutable emitted-slot handoff
+
+- State: Result-slot aliases are complete in 554fa6c, with native/example/README evidence in fda4a67. Reads and writes share returned field storage, wider slots convert correctly, and proved discarded destinations retain initialized backing. Source work and reviews are complete. Handoffs distinguish emitted writes from unsupported emitted borrows and new outer emissions from supported alias updates across inner restarts.
+- Validation: All 14 combined checks pass: 162 library and 148 native Rust tests, 35 Python tests, formatting, Clippy, build, runtime debug/release/sanitizers, editors and conformance. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. The optimized emitted-slots example has exact output. All 860 local links pass, prior log history is preserved exactly, and Git whitespace passes.
+- Blockers: No unfinished source work or failing checks; emitted borrows, exclusive ownership/cleanup, modules and full release qualification remain open.
+- Next steps: Commit this handoff and verify clean Git state. Then model target-block/result-slot ownership in check/references.rs, borrow/ and loans/ before emitted borrows; verify nested aliases, wider payloads, discarded backing, restart invalidation and escaping-reference rejection. Keep root runtime/library/tooling work visible.
+
+### 2026-09-06 — Emitted-slot native coverage commit
+
+- State: Committed eight native groups, the emitted-slots example and README as fda4a67. Implementation is 554fa6c. Source work and reviews are complete; only the final handoff commit remains.
+- Validation: All 14 combined checks pass with 310 Rust and 35 Python tests. The optimized compiler builds and runs the example with exact output. Both focused commits passed cached whitespace checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current root/compiler STATUS with final commit identities and evidence, retain all prior step-log history, check links and whitespace, then commit the handoff and confirm a clean tree. Next implementation: explicit target-slot ownership before emitted-storage borrows.
+
+### 2026-09-06 — Emitted-slot implementation commit
+
+- State: Committed result-slot alias HIR, semantic/loan validation, native storage lowering, focused library coverage and obsolete boundary removals as 554fa6c. Native/example/README evidence remains unstaged for the next focused commit.
+- Validation: Cached whitespace and staged scope checks pass. All 14 combined checks and the optimized exact-output smoke passed before committing; no source changes followed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Stage and commit emitted-slot native tests, example and README; finalize both current handoffs with concrete ownership next steps and preserved historical logs.
+
+### 2026-09-06 — Emitted-slot optimized smoke and commit split
+
+- State: Optimized emitted-slots build and execution passed. Implementation and obsolete boundary removals are staged; native/example/README evidence and final handoffs remain separate.
+- Validation: Release compiler built successfully; release-profile example exited 0 with exact `init\n1\n2\n2\n9\n` stdout and empty stderr. The final all-14 combined gate remains valid.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit staged alias implementation, commit native/example evidence separately, then refresh current STATUS snapshots and verify links, preserved logs and clean Git state.
+
+### 2026-09-06 — Emitted-slot alias combined gate
+
+- State: Mutable emitted-slot aliases, widened/discarded storage handling, canonical loan identities and unknown result activity pass the complete gate. The concrete-body-to-declared-union function return conversion also passes. All source workers and independent reviews are finished; no implementation fixes remain.
+- Validation: All 14 checks pass: 162 library and 148 native Rust tests, 35 Python tests, 860 local links, editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime debug/release/sanitized suites pass unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Build/run the optimized emitted-slots example, stage implementation with obsolete emitted-name boundary removals, commit native/example/README evidence separately, then finalize current handoffs and verify clean Git state.
+
+### 2026-09-06 — Emitted-slot alias source freeze
+
+- State: Mutable emitted-name aliases and all storage consumers are complete. Initializers run once; compatible live fields share actual cells, widened storage converts safely, and discarded destinations use only frontend-proved initialized local backing. Canonical slot identities and unknown mutable activity protect loans and predicates. Backend return coercion now supports explicit record-union function signatures.
+- Validation: All eight native emitted-slot groups pass, including new P002/P006 and declared-union return cases. Nine focused alias groups (four semantic/budget plus five backend), all 38 backend groups (38 new profile executions), five independent checks and four programs in both profiles pass. Final Clippy/format/whitespace pass; no active source workers or pending fixes remain.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the full repository/runtime/compiler gate, build/run the optimized emitted-slots example, then split implementation/legacy boundaries, native evidence and final handoff commits.
+
+### 2026-09-06 — Alias lifecycle and return conversion review
+
+- State: Seven native alias groups and the independent lifecycle/origin probes pass. Compatible actual slots, widened/optional payloads, discarded-cell fallback and mutable result activity behave correctly. A declared record-union function result exposed an existing backend return mismatch: concrete body SSA was returned without coercion to the declared union. The backend is adding the existing conversion before ret, with native regression coverage.
+- Validation: Native emitted_slots:: passed 7 groups in both profiles. Independent review passed 5 origin/boundary checks and 4 lifecycle programs in debug/release (8 executions). Backend passed its five new alias groups and reproduced the return mismatch as B002; final full backend/gate results await the fix.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify declared-union function returns and final alias-state/source-budget tests, update ownership/README boundaries, then run all checks and the optimized example before split commits.
+
+### 2026-09-06 — Emitted-slot native integration
+
+- State: All seven new native alias groups pass: reads/writes reach returned fields, copies stay independent, mixed paths work through live slot payloads, widened/optional destinations convert correctly, named/own/inner exits preserve storage, and discarded fields keep valid cells for their effects. Legacy emitted-name B001 rows are removed where now supported.
+- Validation: Filtered native emitted_slots:: run: 7 passed, 0 failed in debug/release. Three new semantic groups and five new backend groups pass; full backend/metadata-budget checks and independent review are ongoing. Backend is investigating an explicit record-union function return edge exposed by concrete aliased bodies.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any actual return-type or review finding, complete focused storage/activity evidence, update documentation, then run the combined gate and optimized example before split commits.
+
+### 2026-09-06 — Emitted-slot alias acceptance cases
+
+- State: The agreed representation preserves initializer Bind+Emit once, then registers SlotAlias for subsequent reads/Assign/SetPath. Compatible retained record fields use actual storage with lexical/final type conversion; discarded aliases need proved temporary backing. Mutable alias proofs seed unknown activity without erasing other reference components, and emitted addresses remain B001. Added seven native groups and an example.
+- Validation: Tests cover actual returned values, copies, aggregate/mixed writes, widened/nullable slots, named targets, own/inner restarts, discarded slots and stale variant/origin rejection. Evidence is written but awaits backend integration. Reference rules require explicit named outer emissions in branch blocks; fixtures use those labels.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish alias storage helpers and checker/analysis invariants, run focused native/unit/lifecycle probes, resolve actual integration failures, then run complete gates and split commits.
+
+### 2026-09-06 — Mutable emitted-slot alias design
+
+- State: Mutable emitted names backed by live result storage are active. Reads, direct assignment and checked paths must update the returned field, with initializer-once behavior and correct named scope/leave/restart handling. Frontend/ownership and backend work are delegated with independent review; root owns native evidence and both handoffs. Reference-bearing mutation and unproved emitted borrows remain explicit boundaries.
+- Validation: Tree starts clean at b5b6aea. Read existing Bind-to-Emit copying, backend block destinations and reference construction/lifetime contracts. Final slot type/shape, discarded emissions and aliases of the same slot need a bounded sound representation before writes are enabled.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on alias HIR and final-slot validation, implement ordinary read/write consumers and scope handling, add native construction/exit/storage evidence, then run focused/full gates and split commits.
+
 ### 2026-09-06 — Unified mixed-write handoff
 
 - State: Mixed checked paths are complete in d3e6b12, with native/example/README evidence in 4f6f2d2. SetPath replaces duplicate field/list statements and lowering; mutable gates, ordered bounds, captured indices and first-collection regions are preserved. All workers are finished, no unfinished code or failing checks remain, and the modular structure is retained.

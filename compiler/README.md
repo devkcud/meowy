@@ -111,7 +111,7 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   operations, comparisons, and short-circuit boolean operators.
   Unary operators keep their operand type before the result enters an expected
   union, preserving checked widths and boolean operations.
-- Blocks with primary and immutable named emissions, record composition,
+- Blocks with primary and named emissions, record composition,
   scalar-primary projection, dispatch, and duplicate/uninitialized slot checks.
 - Normalized scalar/record unions, nullable field and primary defaults, and
   conversions between compatible union sets without numeric widening.
