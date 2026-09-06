@@ -6,6 +6,139 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Complete function-contract and child-wait handoff
+
+- Completed: compiler contracts are 3acfc97, native example/coverage is cb04d32, and child-wait runtime/tooling is 7b9dc05. Current STATUS files contain supported behavior, capability boundaries, exact evidence and ordered next steps; prior checkpoints are preserved.
+- Validation: All 14 combined checks pass: 154 Rust tests, 33 Python regressions, 845 links and every runtime debug/release/sanitizer profile. The optimized example has exact stdout, and all 384 release oracle cases pass (216 accepted, 168 E302). Final tracker links and whitespace pass.
+- Blockers: none for this milestone. Conformance remains 9 passed, 14 unsupported, 0 failed. Reborrows, exclusive ownership, generated cleanup, owned capture/result storage, automatic joins/cancellation and DWARF remain pending.
+- Next steps: extend reference-source contracts before enabling reborrows/static/intrinsic origins; add read/move/initialization/cleanup edges; generate scope-exit joins while locals live; implement cancellation/unwinding and continue module/library work. Keep STATUS current with a checkpoint after each logical step.
+
+### 2026-09-06 — Refresh function-contract and child-wait handoff
+
+- State: Current snapshots now identify compiler 3acfc97, native coverage cb04d32 and runtime/tooling 7b9dc05. Completed function/child-wait priorities were replaced by reborrows, new reference sources, ownership cleanup and automatic scope-exit joins/cancellation. Prior checkpoints remain intact.
+- Validation: All 14 combined checks, optimized borrow-functions output and all 384 release oracle cases pass. Final tracker link/whitespace verification is next.
+- Blockers: none for the completed milestone; full-language, automatic cleanup and unwind integration remain pending.
+- Next steps: Verify the final tracker links/whitespace, commit the handoff, then resume the ordered source-contract, ownership and runtime work in STATUS.
+
+### 2026-09-06 — Commit function-borrow native coverage
+
+- State: Native function-borrow coverage, borrow-functions.mwy and compiler usage docs are committed after compiler 3acfc97 and runtime 7b9dc05. They cover inference/recursion, temporary carriers, nullable results, transitive bounds, scalar-only release and E302/E303 boundaries. Only handoff files remain.
+- Validation: All 54 native groups pass in both profiles. The optimized example and 384-case release contract oracle pass, as do staged whitespace checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current root/compiler STATUS with the three implementation commits, completed evidence and ordered reborrow/cleanup/automatic-join work; validate links and whitespace, then commit the handoff.
+
+### 2026-09-06 — Commit direct-function contract implementation
+
+- State: Compiler direct-function contracts, symbolic parameter sources, separate lifetime bounds, call-site proofs, resource limits and ownership design are committed as 3acfc97. The existing capability tests now cover carrier address-taking and mutable reference storage. Runtime child waits are 7b9dc05.
+- Validation: All 14 combined checks, optimized example, 384 release oracle cases and staged whitespace checks pass. Only new native/example/usage coverage and current tracker handoff remain uncommitted.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the function-borrow native coverage and example, then update both STATUS snapshots with final commits, exact evidence and next ownership/runtime work before the documentation commit.
+
+### 2026-09-06 — Pass the final release contract oracle and prepare coherent commits
+
+- State: The optimized function oracle passes all 384 cases on a private release snapshot. Source, native behavior and runtime review are complete with no remaining blocker. Root prepared the compiler slice with only the two existing unsupported-boundary corrections and their formatter-compatible layout; new native coverage stays separate.
+- Validation: Release oracle: 216 accepted, 168 expected E302, zero conservative or unexpected results. Optimized example output, all 14 combined checks and whitespace checks pass. Runtime is already committed as 7b9dc05.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit compiler contracts and their existing boundary updates, then native coverage/example, then refresh and commit both current STATUS snapshots and step logs with precise remaining work.
+
+### 2026-09-06 — Verify optimized function borrow execution
+
+- State: The optimized compiler builds and runs borrow-functions.mwy with exact output. Final source review and the combined gate are green. Runtime child waits are committed as 7b9dc05; root is preparing compiler and native coverage slices while the reviewer audits the final release snapshot.
+- Validation: All 14 checks pass: 154 Rust tests, 33 Python tests and 845 links plus runtime profiles. Release example stdout is 11, 22, 12, 23, 12, 24 on separate lines with empty stderr. The final 384-case release oracle is running.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Confirm the optimized oracle result, commit compiler implementation with existing capability-boundary corrections, then native example/coverage and refreshed root/compiler STATUS snapshots and logs.
+
+### 2026-09-06 — Pass the combined function-contract and child-wait gate
+
+- State: All 14 repository checks pass with direct-function borrow contracts and explicit child waits integrated. No source edits or failing checks remain. Root is building the optimized compiler before final commit slices; automatic cleanup/cancellation and full language support remain pending.
+- Validation: 100 library plus 54 native Rust groups, 33 Python regressions, 845 links, schemas/catalog, editors, formatting/Clippy/build and conformance pass. Runtime debug/release/ASan/UBSan/LSan pass 18 scheduler groups and all exact fatal/guard/admission probes. Conformance remains 9 passed, 14 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify borrow-functions with the optimized compiler and exact stdout, rerun the 384-case contract oracle on its completed binary, then commit compiler implementation, native example/coverage and refreshed STATUS handoffs separately.
+
+### 2026-09-06 — Complete function contract implementation and start the full gate
+
+- State: Compiler function contracts are complete: symbolic Local/Input sources, separate conservative bounds, call snapshots, scoped normal-return proofs and bounded source/type expansion. Runtime explicit child joins are committed as 7b9dc05. All workers have finished source edits and root is running final integration.
+- Validation: All 100 library and 54 native groups pass; formatting, all-target Clippy and whitespace checks pass. The 384-case oracle, 12 directed semantic checks and 10 extra native runs are green. Runtime profiles and Python checks are green independently.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 repository checks, then build the optimized compiler and borrow-functions example, rerun the function oracle on its stable binary, and commit compiler implementation, native coverage and the current handoff separately.
+
+### 2026-09-06 — Pass the independent function contract oracle and directed probes
+
+- State: The independent function oracle passes on a private compiler snapshot, and all directed lifetime/divergence/argument-control probes match the reference. Function calls retain active all-input bounds without retaining absent inputs or scalar-only results. Loan source integration is complete with no outstanding review issue.
+- Validation: Oracle: 216 accepts, 168 expected E302, zero conservative or unexpected results across 384 cases. Twelve directed checks pass, including E303 ignored-input escape, unproductive recursion, branch-isolated divergence, invalid uncalled bodies and safe leave/panic arguments. All 19 loan groups pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the compiler owner documentation/resource handoff, execute accepted directed programs in both profiles, then run final formatting/Clippy and the complete repository gate before optimized example/oracle and focused compiler commits.
+
+### 2026-09-06 — Pass all native function contract groups
+
+- State: All 54 native groups pass with direct-function borrow contracts: identity, inference, aliases, recursion/forward groups, record/union carriers, nullable output, scalar-only release, transitive all-input loans and local/ignored-input escapes. A fresh standalone compiler build is ready for independent audit.
+- Validation: Native execution/rejection checks pass in debug/release, including the new borrow-functions example. Source/library, resource and independent oracle review are continuing; runtime 7b9dc05 remains qualified.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the 384-case oracle on a private binary snapshot and directed lifetime/divergence/argument-order probes, finish source/resource tests and docs, then run formatting/Clippy and all 14 repository checks.
+
+### 2026-09-06 — Compile direct-function borrow contracts and call liveness
+
+- State: Function source and CFG interfaces now compile. Symbolic parameter origins, separate all-input/transitive bounds, call-site snapshots and entered-guard continuation proofs are integrated. Type-comparison fanout is bounded during expansion. Root is running all 54 native groups while workers run focused source tests.
+- Validation: Compilation passes; native and source function behavior are now being validated. Runtime child waits remain independently committed and qualified as 7b9dc05. The 384-case oracle is prepared with expected 216 accepts and 168 E302 results.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any native/source regressions, build a stable compiler snapshot for the oracle and directed E303/divergence/argument-order audit, then complete docs and full repository verification.
+
+### 2026-09-06 — Exercise inferred and mutually recursive borrow signatures
+
+- State: Root extended native coverage with inferred reference result types and strict forward groups that return shared references through mutual recursion. Runtime child waits are committed as 7b9dc05. Compiler value/source interfaces and CFG calls are being adapted in parallel.
+- Validation: Baseline tests pass; new function groups have not yet run because borrow analysis is incomplete. Tests follow the existing forward signature syntax and named early-exit rules, without changing reference fixtures.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish signature-based call substitution and symbolic parameter entry, then run native identity/recursion/carrier tests and all-input E302/E303 cases; execute the independent oracle before the combined gate.
+
+### 2026-09-06 — Document function contract scope while call analysis is integrated
+
+- State: Runtime child waits are committed as 7b9dc05. Compiler README now describes the intended direct-function borrow contract, the new example and all-input retention versus scalar-only release. Actual source origins remain distinct from conservative lifetime dependencies; full call analysis is still being completed.
+- Validation: Baseline compiler checks and committed runtime profiles pass. New function execution is unverified; no implicit borrowing, exclusive access, mutable carriers, captures or indirect calls are being enabled by the documentation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish the origin/bound and call-site integration, then run the 54 native groups, independent call oracle and focused local-escape/recursive/argument-order checks before final verification and commits.
+
+### 2026-09-06 — Commit explicit parent-owned child waits
+
+- State: The independently validated runtime/tooling slice is committed: active parents can spawn and wait for direct children, waiting yields the worker, release retries preserve ownership, and missing joins fail before expired parent storage can be reused. Compiler origin/bound and CFG call integration continue in separate files.
+- Validation: All runtime debug/release/sanitizer profiles pass, including 18 scheduler groups and exact missing-join probes. Thirteen runtime and 16 tooling Python regressions pass; staged whitespace checks pass. Compiler contract execution is still pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish compiler function contracts and call liveness, run all 54 native groups and the 384-case oracle, then perform the combined gate and optimized example before compiler/coverage/handoff commits.
+
+### 2026-09-06 — Qualify explicit child joins and hand off call liveness
+
+- State: Runtime explicit child admission and waiting joins are complete: exact parent ownership, waiting-ticket wakeups, retained release failures and missing-join protocol checks are documented. The runtime worker now owns compiler/loans.rs call-contract integration while the compiler owner adapts source origins/bounds.
+- Validation: All runtime profiles pass 18 scheduler groups plus exact kernel/fatal/unjoined-child probes and prior cleanup/stack/context checks. Thirteen runtime and 16 tooling Python tests pass; 844 local links and runtime whitespace pass. Compiler contract code has temporary interface errors and is not yet build-qualified.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the independently validated runtime/tooling slice; finish symbolic input/call snapshots and CFG bounds, then run all 54 native groups and the planned 384-case call-contract oracle plus directed E303/recursion tests.
+
+### 2026-09-06 — Pass child-wait debug and release profiles
+
+- State: Runtime child admission/waiting joins pass debug/release, including nested parent-local borrows, cleanup-local joins, owner checks and retained release failures. Root added transitive function-bound cases so forwarding a returned view or selecting one field of an input carrier cannot drop ignored input dependencies.
+- Validation: All 18 scheduler groups, exact unjoined-child protocol probes and prior runtime suites pass in debug/release; 13 runtime Python regressions pass. One initializer compile failure was corrected before these passes. Sanitizers and compiler contract execution remain pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish runtime sanitizer/docs checks; land Local/Input sources, State bounds and call IDs, then delegate CFG call integration and run native function/escape/liveness cases on a fresh compiler.
+
+### 2026-09-06 — Cover nullable call results and independent call bounds
+
+- State: Root added nullable/reference-union result coverage, zero-input null returns, scalar extraction before a short-lived ignored input ends, and independent calls whose projected fields keep separate dependencies. Native coverage now has 54 groups pending the function implementation. Runtime has 18 scheduler groups plus private unjoined-child fatal probes ready for validation.
+- Validation: Baseline 90 library and 46 native groups pass. New function cases and child-wait profiles are not yet qualified. The reviewer confirms separate typed origins and all-input bounds are required; absent inputs contribute no loan.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete call snapshots and parameter origin validation, preserve nullable output activity and scalar-only releases, then run native function and structured-wait checks with exact fatal/ASan evidence.
+
+### 2026-09-06 — Specify function contract execution and child waiting boundaries
+
+- State: Root added borrow-functions.mwy and six native groups for pointer identity, aliases, scalar-return final use, temporary reference carriers, recursion, all-input E302 retention and E303 escapes through ignored inputs. Compiler design separates actual Local/Input sources from conservative State bounds. Runtime child waiting states are implemented and tests are being added.
+- Validation: Baseline 90 library and 46 native groups pass. New compiler cases await implementation. Runtime will require explicit child joins before C++ body/cleanup locals expire; returning with outstanding children will fail with a private protocol diagnostic rather than misuse a language panic code.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement symbolic parameters, signature-based caller substitution and call-site snapshots, then integrate CFG result bounds; verify waiting parents yield workers, only owners join children, and release failures retain child ownership.
+
+### 2026-09-06 — Begin function borrow contracts and child joins
+
+- State: The checkout is clean at c008a9c. Compiler work targets verified direct-function shared-borrow contracts and caller-origin substitution with the documented all-input lifetime bound. Runtime work targets bounded child admission and waiting joins on one worker. Root owns native examples/coverage and both trackers; independent review audits contract soundness.
+- Validation: The previous milestone passed all 14 repository checks. New function/child behavior is not yet implemented or validated. Exclusive loans, captures, indirect calls, generated cleanup and DWARF remain separate work.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define symbolic input origins versus conservative lifetime bounds, implement verified calls/results, design bounded parent-child waiting states, and add accepted/E302/E303 plus one-worker child-borrow execution coverage.
+
 ### 2026-09-06 — Complete reference-union and scheduler handoff
 
 - Completed: compiler implementation is 75785b7, native example/coverage is 4ef3268, and runtime/tooling is d3e41aa. Both current STATUS files record exact behavior, remaining gaps, validation and ordered continuation work; prior checkpoints remain preserved.

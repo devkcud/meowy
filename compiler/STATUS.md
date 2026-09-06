@@ -1,25 +1,26 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Reference unions and bounded runtime scheduling pass.
+Updated: 2026-09-06. Direct-function borrow contracts and explicit child waits pass.
 Full v0.0.1 remains incomplete. No active workers, incomplete code or failing checks remain.
-Implementation: `75785b7`; native coverage/example: `4ef3268`; runtime/tooling: `d3e41aa`.
+Implementation: `3acfc97`; native coverage/example: `cb04d32`; runtime/tooling: `7b9dc05`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: immutable records and unions carry shared references with guarded
-component origins and backwards liveness. Active variants control retained E303
-escapes and overlapping E302 writes; absent payloads carry no loan. Injection,
-extraction and retagging preserve origins by member type. Tag predicates avoid
-payload reads while retaining construction effects. Record constructors select
-one compatible union member with contextual widths and nullable defaults.
-Union equality still requires the same normalized union type.
-Next: function borrow contracts, exclusive access and generated cleanup. The
-independent runtime now has bounded scheduling and settled-only explicit join;
-generated programs still use the scalar runtime. Structured child lifetimes,
-waiting joins, cancellation and DWARF remain separate work.
-The language reference is authoritative. Do not change fixtures to make tests pass.
+Completed: direct function inputs and results carry shared references and immutable
+record/union carriers. Actual Local/Input origins are separate from conservative
+all-input lifetime bounds. Returned views preserve ignored and transitive input
+loans; scalar-only projections and inactive payloads do not. Every function body
+is checked independently; E303 rejects local/dependency escapes and E302 rejects
+caller writes before the returned view's final use. Inference, recursion, aliases
+and strict forward groups work with the same contract.
+Next: reborrows, exclusive access, moves and generated cleanup. The independent
+runtime now admits parent-owned children and waits by yielding the worker. Its
+callbacks must explicitly join while borrowed locals live; automatic scope-exit
+joining, cancellation, owned capture/result transfer and DWARF remain pending.
+Generated programs still use the scalar runtime. The reference is authoritative;
+do not change fixtures or infer narrower ordinary-function contracts from a body.
 
 ## Resume here
 
@@ -44,10 +45,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/flow.rs` | Reference unions, narrowing and contextual record composition; 24 checker and 5 guard tests |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Active variants, scoped proofs, E303 escapes and E302 liveness; 14 origin, 15 loan and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/loans.rs`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 14 origin, 19 loan, 6 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including records, references and tagged unions; 14 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/`, `examples/`, `README.md` | 46 native groups, 4 harness tests and 10 runnable examples |
+| Tests and examples | `tests/`, `examples/`, `README.md` | 54 native groups, 4 harness tests and 11 runnable examples |
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -65,7 +66,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Function borrow contracts, exclusive borrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Reborrows, static/intrinsic sources, exclusive borrows, reassignment, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Bounded lists, arrays, slices, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -79,9 +80,23 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Known limits to preserve
 
 - Shared borrow roots are ordinary immutable/mutable locals and concrete record
-  fields. Parameter/receiver/emission places, temporary owners, exclusive loans,
-  mutable reference carriers, carrier-address/reborrow operations and reference
-  signatures remain B001. See `OWNERSHIP.md` for the remaining analysis stages.
+  fields. Taking parameter/receiver/emission storage addresses, temporary owners,
+  exclusive loans, mutable carriers and carrier-address/reborrow operations remain
+  B001. Direct signatures carry references; see `OWNERSHIP.md` for the boundary.
+- Function input leaves use symbolic Input sources, distinct from the parameter's
+  stack copy. Calls substitute type-compatible possible pointer origins and attach
+  every active input origin/transitive bound to each returned reference leaf.
+  Ignored heterogeneous inputs still constrain lifetime and caller writes. Scalar
+  results and scalar-only projections release these loans after consumption.
+- Contract facts use unique call-site IDs and entered guards captured after argument
+  evaluation. Call arguments remain live together until consumed; an early argument
+  exit skips the call. Result proofs apply only on the returning edge. Every body,
+  including uncalled and recursive definitions, must prove its own return sources.
+- Under the current capabilities, a reference result needs an active compatible
+  borrowed input; otherwise that reference path cannot return. Nullable results may
+  still return null. Extend this rule before adding static safe-reference sources,
+  reborrows or reference-producing intrinsic contracts. Existing string values are
+  literal-backed static views, not local storage dependencies merely by value.
 - Every active retained reference component must outlive its receiving block,
   even when a later consumer ignores it. A safe-field projection may leave a local
   carrier; returning the whole carrier validates all active references. Discarded
@@ -127,12 +142,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   source bytes into owned LLVM storage. Compiler binaries embed the scalar runtime
   archive but require installed LLVM and exact native-tool paths. Generated output
   is separate from the Rust compiler and LLVM libraries.
-- `../runtime/` has bounded cleanup, guarded contexts and a single-worker scheduler.
-  Fixed slots stay occupied until explicit settled-only join succeeds, including
-  failed admission with retained memory. Cleanup can yield before settlement.
-  Callback data and panic text are borrowed; pump limits transitions, not CPU time.
-  There is no structured child tree, waiting join, capture ownership transfer,
-  automatic cancellation, Meowy personality, landing pads or compiler integration.
+- `../runtime/` has bounded cleanup, guarded contexts and explicit parent-owned
+  child admission/waiting joins on one worker. Only the active parent can consume
+  child tickets; root joins stay nonblocking. Release failures retain ownership.
+  Body/cleanup callbacks must join before borrowed locals expire, or a private fatal
+  protocol error stops execution. Automatic scope-exit joining/cancellation, owned
+  capture/result storage, Meowy personality, landing pads and integration are pending.
+  Callback data and panic text are borrowed; pump bounds transitions, not CPU time.
 - Timeout supervision kills/reaps the entire compiler/application process group.
   B001 cannot hide a later fault or count as an expected language rejection.
 
@@ -140,39 +156,35 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 - Final `python3 -B tools/verify.py --all`: all 14 selected checks pass outside
   ptrace supervision. The gate pins the Cargo target/output and freshly built compiler.
-- Rust: 90 library and 46 native groups pass, including both output profiles.
+- Rust: 100 library and 54 native groups pass, including both output profiles.
   All-target Clippy with `-D warnings` and `cargo fmt --check` pass.
-- Python: 16 tooling, 12 runtime and 4 compiler-harness regressions pass. Local
-  documentation validation checks 844 links; schemas/catalog and Vim/Neovim pass.
+- Python: 16 tooling, 13 runtime and 4 compiler-harness regressions pass. Local
+  documentation validation checks 845 links; schemas/catalog and Vim/Neovim pass.
 - Runtime per debug/release/sanitized profile: 14 cleanup cases plus 2 fatal probes;
   10 stack cases plus kernel ENOMEM and 2 guard faults; 10 context cases plus fatal
-  resumed cleanup; 11 scheduler cases plus kernel admission refusal and fatal task
-  cleanup. ASan/UBSan/LSan normal runs pass. The expired fiber local produces the
-  required ASan stack-use-after-return diagnostic. Structured child joins and
-  task-overflow recovery remain unqualified.
+  resumed cleanup; 18 scheduler cases plus admission refusal, fatal task cleanup
+  and exact body/cleanup unjoined-child probes. ASan/UBSan/LSan normal runs pass;
+  expired fiber locals produce the required ASan diagnosis. Automatic scope-exit
+  joins/cancellation and task-overflow recovery remain unqualified.
 - Conformance: 9 passed, 14 unsupported, 0 failed in debug/release. Passed cases:
   `compact_min`, `minimum_parenthesized`, `invalid_separator`, `forward_group`,
   `forward_interrupted`, `conditional_field`, `scalar_projection`, `function_equality`,
   `reference_identity`. This is not full conformance.
-- The final optimized compiler passes all 588 independent union oracle cases:
-  356 accepted, 232 E302, zero conservative or unexpected results. Ten directed
-  lifetime/restart probes and eight additional native debug/release runs passed
-  on the preceding snapshot. Committed source/native tests retain the behavior
-  coverage; temporary oracle/provenance files are supplemental evidence.
-- The optimized compiler builds `examples/optional-borrows.mwy` in release and its
-  executable prints exactly `7
-8
-missing
-8
-42
-text
-` with empty stderr.
-- Native constructor checks verify int64 fields/primaries, uint8 limits, nullable
-  reference defaults and discarded named fields. Source regressions retain E222
-  for mismatched union equality types. Reference fixtures were not changed.
-- Resource review verified bounded wide-tag expansion, deep path work, growing
-  merges and saturated counters. Source tests reject oversized tag domains and
-  repeated inactive-payload copies with B001; lexical assumptions are cached.
+- The final optimized compiler passes all 384 independent contract oracle cases:
+  216 accepted, 168 E302, zero conservative or unexpected results. Twelve directed
+  lifetime/divergence/argument-control probes and ten additional native runs passed
+  on the preceding debug snapshot. Temporary oracle/provenance files supplement
+  committed source and native regressions; they are not required to resume work.
+- The optimized compiler builds `examples/borrow-functions.mwy` in release with
+  empty stderr and exact stdout `11\n22\n12\n23\n12\n24\n`.
+- Native tests cover inferred and recursive/forward signatures, aliases, temporary
+  carriers, nullable returns, independent calls, scalar projections, all-input and
+  transitive E302 bounds, and E303 local/ignored-input escapes. Reference fixtures
+  were not changed. Every body is checked even when no call reaches it.
+- Contract resource tests reject many-input/many-result expansion and oversized
+  reference targets with B001. Origins and bounds both count toward snapshot/CFG
+  budgets; type walks check each frontier push. Missing reachable call snapshots
+  are B001 rather than invented empty results.
 - Existing coverage retains 10,000 deterministic malformed/Unicode parser inputs,
   depth/budget stress, bounded backend FFI, integer boundaries, short circuiting,
   tagged unions, nullable records and `/dev/full`. These are bounded regressions.
@@ -184,22 +196,21 @@ text
 
 ## Next steps
 
-1. Define function input/result borrow contracts in `OWNERSHIP.md`, `src/check.rs`
-   and origin analysis. Apply the documented conservative all-input lifetime bound
-   and substitute caller origins, preserving components/variants. Verify accepted
-   nested returns, E303 escapes and E302 caller writes before enabling reference
-   signatures or parameter/receiver borrow roots.
-2. Extend `src/loans.rs` with explicit reads, reborrows, moves, initialization and
-   cleanup edges before exclusive loans, reference reassignment or owned collections.
-   Improve predicate/loop precision while preserving B001 bounds. Test final-use
-   access, read/write conflicts, temporary-owner rejection and exact-once cleanup.
+1. Extend `src/borrow_contract.rs`, source identities and CFG proofs for reborrows,
+   static safe references and verified intrinsic contracts before enabling those
+   capabilities. Replace the current no-compatible-input return assumption where
+   necessary. Verify actual origins, all-input bounds, E303 escapes and E302 writes.
+2. Add explicit reads, moves, initialized-slot tracking and cleanup edges to
+   `src/loans.rs` before exclusive loans, reference reassignment or owned collections.
+   Preserve reset/resource bounds and improve predicate precision. Verify final-use
+   access, read/write conflicts, temporary-owner lifetime and exact-once cleanup.
 3. Add required evaluation, effects, logical budgets and constrained specialization,
    then enable the type-helper, compile-effect/budget and callable fixtures.
-4. Extend `../runtime/` scheduler with bounded child admission, waiting joins and
-   capture/result ownership. Add cooperative cancellation before parent storage
-   release, then pinned unwind support, Meowy personality and landing pads. Verify
-   a suspended child borrowing a parent local and cleanup that waits before releasing
-   that local; preserve interleaved partial-result/local cleanup order.
+4. Add owned capture/result storage and generated scope-exit joins over `../runtime/`
+   parent/child ownership while parent locals still live. Add cooperative cancellation
+   and pinned unwind support, Meowy personality and landing pads. Verify cancellation
+   while joining, child failures during cleanup and interleaved partial-result/local
+   cleanup order. Do not substitute host destructors for Meowy cleanup semantics.
 5. Implement the project/module graph for native adapters and real Meowy library
    sources, then tools/artifacts and distribution qualification from the table above.
 6. Keep the combined gate green and expand the conformance harness REQUIRED set only
