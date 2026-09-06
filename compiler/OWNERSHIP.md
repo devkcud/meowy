@@ -265,10 +265,25 @@ implementation boundary; it does not change language rules.
   expressions are checked once in source order and the emitted operands retain
   that order. No union, numeric promotion or record-primary projection reconciles
   inferred elements. Empty literals need an expected element type.
-- A single expected list type supplies element type and capacity. Multiple-list
-  union literal contexts remain B001; bind an explicitly typed list first, then
-  inject that value into the union. This avoids claiming ambiguity when candidate
-  inference has not yet proved it.
+- Expected list alternatives are filtered by capacity, scalar representability,
+  concrete element types and fresh list/record literal shapes. Probes never check
+  expression effects or change flow proofs. Raw declared source types keep probes
+  conservative when later effects can invalidate a narrowing fact.
+- A unique candidate supplies element type and capacity. Otherwise pure contextual
+  literals may be deferred while typed expressions are checked once in source
+  order. Retained HIR is coerced with ordinary assignment rules after selection;
+  its runtime order stays unchanged. No candidate replays a live checker state.
+- Multiple proved candidates report E207, as does no element-compatible candidate;
+  when every capacity is too small, E103 applies. There is no smallest-capacity or
+  default-width preference. Single-candidate literal failures retain their existing
+  codes. Context-dependent effects or nested constraints that remain unresolved
+  report B001 and need an explicit annotation. Selection caps alternatives at 256
+  and charges source/type probe work against the shared analysis budget.
+  Probes borrow declared type descriptions instead of cloning them per candidate;
+  actual-type walks, failed field searches and record-shape scans also consume work.
+- Unary operators use the operand's type or a unique literal context before
+  assignment injects their result into a union. Expected unions do not turn a
+  scalar operand into a union before applying `!`, `-` or `~`.
 - Extents use existing checked scalar expression/constant rules. Typed width
   overflow remains E107, mixed widths remain E213, and negative or nonconstant
   extents are E104. Required extent checks run even on dead runtime paths. Effectful

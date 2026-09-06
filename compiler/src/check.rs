@@ -1568,9 +1568,21 @@ impl Checker {
             self.reach = FALSE;
             return Ok(value);
         }
-        if let Some(expected) = expected
-            && value.ty != *expected
-        {
+        match expected {
+            Some(expected) => Self::expected_value(value, expected, expr.span),
+            None => Ok(value),
+        }
+    }
+
+    pub(crate) fn expected_value(
+        value: hir::Expr,
+        expected: &Type,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        if value.ty == Type::Never {
+            return Ok(value);
+        }
+        if value.ty != *expected {
             if expected.accepts(&value.ty) {
                 return Ok(Self::coerce(value, expected.clone()));
             }
@@ -1582,7 +1594,7 @@ impl Checker {
                 return Ok(Self::coerce(
                     hir::Expr {
                         ty,
-                        span: expr.span,
+                        span,
                         kind: hir::ExprKind::Primary(Box::new(value)),
                     },
                     expected.clone(),
@@ -1591,7 +1603,7 @@ impl Checker {
             return Err(Self::error(
                 "E207",
                 format!("expected {expected:?}, found {:?}", value.ty),
-                expr.span,
+                span,
             ));
         }
         Ok(value)
@@ -1619,30 +1631,7 @@ impl Checker {
     ) -> Result<hir::Expr> {
         let (kind, ty) = match &expr.kind {
             ExprKind::Int(text) => return self.integer(text, false, expected, expr.span),
-            ExprKind::Float(text) => {
-                let context = Self::numeric_context(expected, false, expr.span)?;
-                let ty = match context.as_ref() {
-                    Some(Type::Float { bits }) => Type::Float { bits: *bits },
-                    _ => Type::Float { bits: 64 },
-                };
-                let text = text.replace('_', "");
-                let value: f64 = if ty == (Type::Float { bits: 32 }) {
-                    text.parse::<f32>().map(f64::from)
-                } else {
-                    text.parse::<f64>()
-                }
-                .map_err(|_| {
-                    Self::error("E216", "floating literal is not representable", expr.span)
-                })?;
-                if !value.is_finite() {
-                    return Err(Self::error(
-                        "E216",
-                        format!("floating literal overflows {ty:?}"),
-                        expr.span,
-                    ));
-                }
-                (hir::ExprKind::Float(value), ty)
-            }
+            ExprKind::Float(text) => return Self::floating(text, expected, expr.span),
             ExprKind::String(parts) => {
                 let mut text = String::new();
                 for part in parts {
@@ -2117,6 +2106,33 @@ impl Checker {
             ));
         }
         Ok(types.into_iter().next())
+    }
+
+    pub(crate) fn floating(text: &str, expected: Option<&Type>, span: Span) -> Result<hir::Expr> {
+        let context = Self::numeric_context(expected, false, span)?;
+        let ty = match context.as_ref() {
+            Some(Type::Float { bits }) => Type::Float { bits: *bits },
+            _ => Type::Float { bits: 64 },
+        };
+        let text = text.replace('_', "");
+        let value: f64 = if ty == (Type::Float { bits: 32 }) {
+            text.parse::<f32>().map(f64::from)
+        } else {
+            text.parse::<f64>()
+        }
+        .map_err(|_| Self::error("E216", "floating literal is not representable", span))?;
+        if !value.is_finite() {
+            return Err(Self::error(
+                "E216",
+                format!("floating literal overflows {ty:?}"),
+                span,
+            ));
+        }
+        Ok(hir::Expr {
+            kind: hir::ExprKind::Float(value),
+            ty,
+            span,
+        })
     }
 
     pub(crate) fn integer(

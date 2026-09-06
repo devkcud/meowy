@@ -152,10 +152,7 @@ impl Checker {
             .filter(|ty| matches!(ty, Type::List { .. }))
             .collect();
         if contexts.len() > 1 {
-            return Err(Diagnostic::unsupported(
-                "literal inference across multiple expected list types; bind a typed list first",
-                span,
-            ));
+            return self.list_union(values, &contexts, span);
         }
         if let Some(Type::List { element, capacity }) = contexts.first().copied() {
             if values.len() > *capacity {
@@ -532,7 +529,7 @@ mod tests {
         rejects("byte<uint8>:1;values:[byte,1+1]", "E207");
         rejects("byte<uint8>:1;values:[byte,{->2}]", "E207");
         rejects("record:{->1;->tag:true};values:[record,2]", "E207");
-        rejects("values<int32[1]><string[1]>:[1]", "B001");
+        assert!(crate::compile("values<int32[1]><string[1]>:[1]").is_ok());
     }
 
     #[test]

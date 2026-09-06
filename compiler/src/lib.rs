@@ -10,6 +10,7 @@ pub(crate) mod flow;
 pub mod hir;
 pub mod lexer;
 pub(crate) mod list;
+pub(crate) mod list_context;
 pub(crate) mod loans;
 pub mod parser;
 
