@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::{self, ExprKind, Span, StmtKind, TypeKind};
 use crate::diagnostic::Diagnostic;
@@ -86,6 +86,7 @@ pub(crate) struct Checker {
     pub(crate) writes: usize,
     pub(crate) functions: Vec<Option<hir::Function>>,
     pub(crate) locals: Vec<Type>,
+    pub(crate) places: BTreeSet<usize>,
     pub(crate) constants: BTreeMap<usize, Constant>,
     pub(crate) block: usize,
     pub(crate) owner: usize,
@@ -94,11 +95,15 @@ pub(crate) struct Checker {
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
     let mut checker = Checker::new();
     match checker.block(block, None, None) {
-        Ok(body) => Ok(hir::Program {
-            body,
-            functions: checker.functions.into_iter().flatten().collect(),
-            locals: checker.locals,
-        }),
+        Ok(body) => {
+            let program = hir::Program {
+                body,
+                functions: checker.functions.into_iter().flatten().collect(),
+                locals: checker.locals,
+            };
+            crate::borrow::check(&program)?;
+            Ok(program)
+        }
         Err(error) => Err(vec![if checker.flow.exceeded() {
             Diagnostic::unsupported("control-flow proof budget exhausted", block.span)
         } else {
@@ -138,6 +143,7 @@ impl Checker {
             writes: 0,
             functions: Vec::new(),
             locals: Vec::new(),
+            places: BTreeSet::new(),
             constants: BTreeMap::new(),
             block: 0,
             owner: 0,
@@ -256,10 +262,20 @@ impl Checker {
                         }
                     })
             }
-            TypeKind::Function { params, result } => Ok(Spec::Function {
-                params: params.iter().map(|ty| self.ty(ty)).collect::<Result<_>>()?,
-                result: self.ty(result)?,
-            }),
+            TypeKind::Function { params, result } => {
+                let params = params
+                    .iter()
+                    .map(|ty| self.ty(ty))
+                    .collect::<Result<Vec<_>>>()?;
+                let result = self.ty(result)?;
+                if result.has_reference() || params.iter().any(Type::has_reference) {
+                    return Err(Diagnostic::unsupported(
+                        "function borrow contracts",
+                        expr.span,
+                    ));
+                }
+                Ok(Spec::Function { params, result })
+            }
             TypeKind::Record { primary, fields } => {
                 let primary = primary
                     .as_ref()
@@ -285,10 +301,17 @@ impl Checker {
                         expr.span,
                     ));
                 }
-                Ok(Spec::Data(Type::Record {
+                let ty = Type::Record {
                     primary: Box::new(primary),
                     fields: result.into_iter().collect(),
-                }))
+                };
+                if ty.has_reference() {
+                    return Err(Diagnostic::unsupported(
+                        "reference-carrying records",
+                        expr.span,
+                    ));
+                }
+                Ok(Spec::Data(ty))
             }
             TypeKind::Computed(value) => Ok(Spec::Data(self.type_value(value)?)),
             TypeKind::Union(types) => {
@@ -296,13 +319,29 @@ impl Checker {
                     .iter()
                     .map(|ty| self.ty(ty))
                     .collect::<Result<Vec<_>>>()?;
+                if types.iter().any(Type::has_reference) {
+                    return Err(Diagnostic::unsupported(
+                        "reference-carrying unions",
+                        expr.span,
+                    ));
+                }
                 Ok(Spec::Data(Type::union(types)))
             }
             TypeKind::List { .. } => {
                 Err(Diagnostic::unsupported("list and slice types", expr.span))
             }
-            TypeKind::Reference { .. } => {
-                Err(Diagnostic::unsupported("reference types", expr.span))
+            TypeKind::Reference { value, mutable } => {
+                if *mutable {
+                    return Err(Diagnostic::unsupported(
+                        "exclusive reference types",
+                        expr.span,
+                    ));
+                }
+                let ty = self.ty(value)?;
+                if ty.has_reference() {
+                    return Err(Diagnostic::unsupported("nested reference types", expr.span));
+                }
+                Ok(Spec::Data(Type::Reference(Box::new(ty))))
             }
             TypeKind::Unsupported(feature) => Err(Diagnostic::unsupported(feature, expr.span)),
         }
@@ -866,6 +905,12 @@ impl Checker {
         body: &ast::Block,
         result: Option<Type>,
     ) -> Result<Type> {
+        if result.as_ref().is_some_and(Type::has_reference) {
+            return Err(Diagnostic::unsupported(
+                "function borrow contracts",
+                body.span,
+            ));
+        }
         let reach = std::mem::replace(&mut self.reach, TRUE);
         let owner = self.owner;
         self.owner = id + 1;
@@ -873,6 +918,12 @@ impl Checker {
         let mut ids = Vec::new();
         for param in params {
             let ty = self.ty(&param.ty)?;
+            if ty.has_reference() {
+                return Err(Diagnostic::unsupported(
+                    "function borrow contracts",
+                    param.span,
+                ));
+            }
             let id = self.local(ty.clone());
             self.declare(
                 &param.name,
@@ -956,7 +1007,16 @@ impl Checker {
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
                 let value = self.expr(value, expected.as_ref())?;
                 let ty = expected.unwrap_or_else(|| value.ty.clone());
+                if *mutable && ty.has_reference() {
+                    return Err(Diagnostic::unsupported(
+                        "mutable reference bindings",
+                        stmt.span,
+                    ));
+                }
                 let id = self.local(ty.clone());
+                if !*mutable {
+                    self.places.insert(id);
+                }
                 let constant = if *mutable {
                     None
                 } else {
@@ -1521,7 +1581,30 @@ impl Checker {
                 {
                     return self.integer(text, true, expected, expr.span);
                 }
-                if ["&", "&!", "*", ">>", "<<"].contains(&op.as_str()) {
+                if op == "&" {
+                    let (place, ty) = self.address(value)?;
+                    return Ok(hir::Expr {
+                        kind: hir::ExprKind::Borrow(place),
+                        ty: Type::Reference(Box::new(ty)),
+                        span: expr.span,
+                    });
+                }
+                if op == "*" {
+                    let value = self.expr(value, None)?;
+                    let Type::Reference(ty) = &value.ty else {
+                        return Err(Self::error(
+                            "E222",
+                            "dereference requires a safe reference",
+                            expr.span,
+                        ));
+                    };
+                    return Ok(hir::Expr {
+                        ty: *ty.clone(),
+                        kind: hir::ExprKind::Deref(Box::new(value)),
+                        span: expr.span,
+                    });
+                }
+                if ["&!", ">>", "<<"].contains(&op.as_str()) {
                     return Err(Diagnostic::unsupported(format!("unary `{op}`"), expr.span));
                 }
                 let mut value = self.expr(value, expected)?;
@@ -1577,6 +1660,12 @@ impl Checker {
             } => return self.call(callee, args, Some(value), expr.span),
             ExprKind::DispatchBlock { value, block } => {
                 let value = self.expr(value, None)?;
+                if value.ty.has_reference() {
+                    return Err(Diagnostic::unsupported(
+                        "reference dispatch receivers",
+                        expr.span,
+                    ));
+                }
                 let block = self.block(block, expected.cloned(), Some(value))?;
                 let ty = block.ty.clone();
                 (hir::ExprKind::Block(block), ty)
@@ -1596,7 +1685,14 @@ impl Checker {
                         )),
                     };
                 }
-                let value = self.expr(value, None)?;
+                let mut value = self.expr(value, None)?;
+                if let Type::Reference(ty) = &value.ty {
+                    value = hir::Expr {
+                        ty: *ty.clone(),
+                        span: value.span,
+                        kind: hir::ExprKind::Deref(Box::new(value)),
+                    };
+                }
                 let Type::Record { fields, .. } = &value.ty else {
                     return Err(Self::error(
                         "E201",
@@ -1681,6 +1777,64 @@ impl Checker {
             ty,
             span: expr.span,
         })
+    }
+
+    pub(crate) fn address(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
+        match &expr.kind {
+            ExprKind::Group(value) => self.address(value),
+            ExprKind::Name(name) => {
+                let Value::Local {
+                    id, ty, mutable, ..
+                } = self.value(name, expr.span)?
+                else {
+                    return Err(Diagnostic::unsupported(
+                        "borrowing temporary or intrinsic values",
+                        expr.span,
+                    ));
+                };
+                if mutable || !self.places.contains(&id) {
+                    return Err(Diagnostic::unsupported(
+                        "borrowing mutable, parameter, receiver or emitted storage",
+                        expr.span,
+                    ));
+                }
+                if ty.has_reference() {
+                    return Err(Diagnostic::unsupported(
+                        "borrowing reference-carrying storage",
+                        expr.span,
+                    ));
+                }
+                Ok((
+                    hir::Place {
+                        root: id,
+                        fields: Vec::new(),
+                    },
+                    ty,
+                ))
+            }
+            ExprKind::Field { value, name } => {
+                let (mut place, ty) = self.address(value)?;
+                let Type::Record { fields, .. } = ty else {
+                    return Err(Diagnostic::unsupported(
+                        "borrowing fields outside concrete record storage",
+                        expr.span,
+                    ));
+                };
+                let (index, (_, ty)) = fields
+                    .into_iter()
+                    .enumerate()
+                    .find(|(_, (field, _))| field == name)
+                    .ok_or_else(|| {
+                        Self::error("E201", format!("unknown record field `{name}`"), expr.span)
+                    })?;
+                place.fields.push(index);
+                Ok((place, ty))
+            }
+            _ => Err(Diagnostic::unsupported(
+                "borrowing temporary or projected storage",
+                expr.span,
+            )),
+        }
     }
 
     pub(crate) fn numeric_context(
@@ -1810,7 +1964,16 @@ impl Checker {
                 Value::Constant(value) => Some(Self::constant_expr(value, expr.span).ty),
                 _ => None,
             },
-            ExprKind::Group(value) | ExprKind::Unary { value, .. } => self.hint(value),
+            ExprKind::Group(value) => self.hint(value),
+            ExprKind::Unary { op, value } if op == "&" => self
+                .address(value)
+                .ok()
+                .map(|(_, ty)| Type::Reference(Box::new(ty))),
+            ExprKind::Unary { op, value } if op == "*" => match self.hint(value)? {
+                Type::Reference(ty) => Some(*ty),
+                _ => None,
+            },
+            ExprKind::Unary { value, .. } => self.hint(value),
             ExprKind::Binary { left, right, op } => {
                 if ["==", "!=", "<", ">", "<=", ">=", "&&", "||"].contains(&op.as_str()) {
                     Some(Type::Bool)
@@ -1822,7 +1985,11 @@ impl Checker {
             }
             ExprKind::String(_) => Some(Type::String),
             ExprKind::Field { value, name } => {
-                if let Some(Type::Record { fields, .. }) = self.hint(value) {
+                let ty = self.hint(value).map(|ty| match ty {
+                    Type::Reference(ty) => *ty,
+                    ty => ty,
+                });
+                if let Some(Type::Record { fields, .. }) = ty {
                     let ty = fields
                         .into_iter()
                         .find(|(field, _)| field == name)
@@ -2069,6 +2236,9 @@ impl Checker {
                         span,
                     )
                 })?;
+                if result.has_reference() || params.iter().any(Type::has_reference) {
+                    return Err(Diagnostic::unsupported("function borrow contracts", span));
+                }
                 let mut values = Vec::new();
                 for (arg, ty) in args.into_iter().zip(params) {
                     values.push(self.expr(arg, Some(&ty)).map_err(|error| {
@@ -2111,7 +2281,16 @@ impl Checker {
                 }
             }
             ExprKind::Group(value) => self.format_parts(value, parts)?,
-            _ => parts.push(self.expr(expr, None)?),
+            _ => {
+                let value = self.expr(expr, None)?;
+                if value.ty.has_reference() {
+                    return Err(Diagnostic::unsupported(
+                        "reference formatting; dereference the copyable value",
+                        expr.span,
+                    ));
+                }
+                parts.push(value);
+            }
         }
         Ok(())
     }
@@ -2359,6 +2538,38 @@ mod tests {
         rejects("x:1;f<int32>:(){->x}", "B001");
         rejects("x:1;text:\"{x}\"", "B001");
         rejects("f<int32>:(){->1};x:f==f", "E222");
+    }
+
+    #[test]
+    pub(crate) fn shared_references_keep_storage_types_and_copy_values() {
+        accepts("a:1;r<&int32>:&a;s:r;v:*s;same:r==s");
+        accepts("a:{->x:1;->nested:{->y:true}};r:&a;v:r.x;s:&a.nested.y;t:*s");
+        accepts("f<int32>:(){a:9;r:&a;->*r};v:f()");
+        accepts("x<int32><null>:1;r:&x;v:*r");
+        rejects("x:1;v:*x", "E222");
+        rejects("x:1;r<&int64>:&x", "E207");
+    }
+
+    #[test]
+    pub(crate) fn reference_capability_boundaries_are_explicit() {
+        for source in [
+            "x:=1;r:&x",
+            "x:1;r:=&x",
+            "x:=1;r:&!x",
+            "r:&(1+2)",
+            "x:1;r:&x;s:&r",
+            "x:{->a:1;r:&a}",
+            "f<int32>:(x<int32>){r:&x;->*r}",
+            "f<int32>:(x<&int32>){->*x}",
+            "<R>:<{x<&int32>}>",
+            "<R>:<&int32><null>",
+            "x:1;r:&x;r.{v:*self}",
+            "x:1;r:&x;debug:@\"debug\";debug.print(r)",
+            "x:1;r:&x;s:&*r",
+            "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",
+        ] {
+            rejects(source, "B001");
+        }
     }
 
     #[test]

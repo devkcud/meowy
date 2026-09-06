@@ -1,4 +1,4 @@
-use crate::hir::{Block, BlockId, Expr, ExprKind, Program, Stmt, Type};
+use crate::hir::{Block, BlockId, Expr, ExprKind, Place, Program, Stmt, Type};
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::c_char;
 use std::path::Path;
@@ -60,6 +60,7 @@ pub(crate) fn ir_type(ty: &Type) -> String {
         Type::Float { bits: 32 } => "float".into(),
         Type::Float { .. } => "double".into(),
         Type::String => "{ ptr, i64 }".into(),
+        Type::Reference(_) => "ptr".into(),
         Type::Record { primary, fields } => {
             let mut types = vec![ir_type(primary)];
             types.extend(fields.iter().map(|(_, ty)| ir_type(ty)));
@@ -86,6 +87,7 @@ pub(crate) fn layout(ty: &Type) -> (usize, usize) {
             (size, size)
         }
         Type::String => (16, 8),
+        Type::Reference(_) => (8, 8),
         Type::Record { primary, fields } => {
             let mut size = 0usize;
             let mut align = 1usize;
@@ -247,6 +249,34 @@ impl<'a> Generator<'a> {
                 ir_type(&self.program.locals[id])
             ));
         }
+    }
+
+    pub(crate) fn place(&mut self, place: &Place) -> Result<(String, Type), String> {
+        let mut ty = self
+            .program
+            .locals
+            .get(place.root)
+            .ok_or_else(|| format!("missing storage root {}", place.root))?
+            .clone();
+        self.local(place.root);
+        let mut ptr = format!("%local{}", place.root);
+        for index in &place.fields {
+            let Type::Record { fields, .. } = &ty else {
+                return Err("storage projection requires a declared record".into());
+            };
+            let field = fields
+                .get(*index)
+                .ok_or_else(|| format!("missing storage field {index}"))?
+                .1
+                .clone();
+            ptr = self.value(format!(
+                "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
+                ir_type(&ty),
+                index + 1
+            ));
+            ty = field;
+        }
+        Ok((ptr, ty))
     }
 
     pub(crate) fn store_value(&mut self, ty: &Type, value: &str, ptr: &str) {
@@ -568,6 +598,24 @@ impl<'a> Generator<'a> {
                 let value = self.value(format!("load {}, ptr %local{id}", ir_type(stored)));
                 self.coerce(stored, &expression.ty, &value)
             }
+            ExprKind::Borrow(place) => {
+                let (ptr, stored) = self.place(place)?;
+                if expression.ty != Type::Reference(Box::new(stored)) {
+                    return Err("borrow type differs from declared storage".into());
+                }
+                Ok(ptr)
+            }
+            ExprKind::Deref(value) => {
+                let Type::Reference(stored) = &value.ty else {
+                    return Err("dereference requires a shared reference".into());
+                };
+                let ptr = self.expression(value)?;
+                if self.ended {
+                    return Ok("undef".into());
+                }
+                let value = self.value(format!("load {}, ptr {ptr}", ir_type(stored)));
+                self.coerce(stored, &expression.ty, &value)
+            }
             ExprKind::Unary { op, value } => {
                 let result = self.expression(value)?;
                 if self.ended {
@@ -826,7 +874,7 @@ impl<'a> Generator<'a> {
         match ty {
             Type::Null => Ok("true".into()),
             Type::Never => Err("cannot compare a never value".into()),
-            Type::Bool | Type::Int { .. } => {
+            Type::Bool | Type::Int { .. } | Type::Reference(_) => {
                 Ok(self.value(format!("icmp eq {} {left}, {right}", ir_type(ty))))
             }
             Type::Float { .. } => {
@@ -899,6 +947,7 @@ impl<'a> Generator<'a> {
                 self.print_value(&Type::String, &value, fd)?;
             }
             Type::Never => return Err("cannot print a never value".into()),
+            Type::Reference(_) => return Err("shared-reference formatting is unavailable".into()),
             Type::Bool => self.line(format!(
                 "call void @meowy_bool_v1(i32 {fd}, i1 zeroext {value})"
             )),
@@ -1261,6 +1310,85 @@ mod tests {
             }),
             ty,
         )
+    }
+
+    #[test]
+    pub(crate) fn shared_references_preserve_storage_identity_and_field_addresses() {
+        let ty = Type::Int {
+            bits: 32,
+            signed: true,
+        };
+        let reference = Type::Reference(Box::new(ty.clone()));
+        let borrow =
+            |root, fields| expr(ExprKind::Borrow(Place { root, fields }), reference.clone());
+        let value = record(
+            1,
+            integer(2, 8, false),
+            record(2, integer(3, 16, true), integer(7, 32, true)),
+        );
+        let shape = value.ty.clone();
+        let alias = expr(ExprKind::Local(2), reference.clone());
+        let parts = vec![
+            binary("==", alias.clone(), borrow(0, vec![]), Type::Bool),
+            binary("==", borrow(0, vec![]), borrow(1, vec![]), Type::Bool),
+            expr(ExprKind::Deref(Box::new(alias)), ty.clone()),
+            expr(ExprKind::Deref(Box::new(borrow(3, vec![0, 0]))), ty.clone()),
+            binary(
+                "==",
+                borrow(3, vec![0, 0]),
+                borrow(3, vec![0, 0]),
+                Type::Bool,
+            ),
+            expr(
+                ExprKind::Deref(Box::new(expr(
+                    ExprKind::Borrow(Place {
+                        root: 3,
+                        fields: vec![],
+                    }),
+                    Type::Reference(Box::new(shape.clone())),
+                ))),
+                shape.clone(),
+            ),
+        ];
+        let program = Program {
+            body: Block {
+                id: 0,
+                ty: Type::Null,
+                stmts: vec![
+                    Stmt::Bind {
+                        id: 0,
+                        value: integer(42, 32, true),
+                    },
+                    Stmt::Bind {
+                        id: 1,
+                        value: integer(42, 32, true),
+                    },
+                    Stmt::Bind {
+                        id: 2,
+                        value: borrow(0, vec![]),
+                    },
+                    Stmt::Bind { id: 3, value },
+                    Stmt::Expr(expr(
+                        ExprKind::Print {
+                            parts,
+                            newline: true,
+                        },
+                        Type::Null,
+                    )),
+                ],
+            },
+            functions: Vec::new(),
+            locals: vec![ty.clone(), ty, reference, shape],
+        };
+        for release in [false, true] {
+            let output = native_program(&program, release, false);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, b"truefalse427true2\n");
+        }
     }
 
     #[test]

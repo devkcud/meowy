@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod backend;
+pub(crate) mod borrow;
 pub mod check;
 pub mod diagnostic;
 pub mod driver;

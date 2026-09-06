@@ -17,6 +17,7 @@ pub enum Type {
         bits: u32,
     },
     String,
+    Reference(Box<Type>),
     Record {
         primary: Box<Type>,
         fields: Vec<(String, Type)>,
@@ -25,6 +26,17 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn has_reference(&self) -> bool {
+        match self {
+            Self::Reference(_) => true,
+            Self::Record { primary, fields } => {
+                primary.has_reference() || fields.iter().any(|(_, ty)| ty.has_reference())
+            }
+            Self::Union(types) => types.iter().any(Self::has_reference),
+            _ => false,
+        }
+    }
+
     pub fn union(types: impl IntoIterator<Item = Type>) -> Self {
         let mut members = Vec::new();
         for ty in types {
@@ -129,6 +141,12 @@ pub struct Expr {
     pub span: Span,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Place {
+    pub root: LocalId,
+    pub fields: Vec<usize>,
+}
+
 #[derive(Clone, Debug)]
 pub enum ExprKind {
     Null,
@@ -137,6 +155,8 @@ pub enum ExprKind {
     Float(f64),
     String(String),
     Local(LocalId),
+    Borrow(Place),
+    Deref(Box<Expr>),
     Unary {
         op: String,
         value: Box<Expr>,
