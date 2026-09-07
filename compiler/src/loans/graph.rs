@@ -17,6 +17,8 @@ impl<'a> Graph<'a> {
             guards,
             nodes: vec![Node::default()],
             values: Vec::new(),
+            loans: Vec::new(),
+            authority: Vec::new(),
             locals: BTreeMap::new(),
             blocks: BTreeMap::new(),
             statements: Vec::new(),

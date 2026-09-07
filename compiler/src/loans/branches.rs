@@ -153,17 +153,23 @@ impl Graph<'_> {
                         .map(|origin| origin.weight() + path.len() + 1)
                         .sum();
                     self.charge(weight)?;
-                    for mut origin in self.values[*value].clone() {
-                        origin.component = path.clone();
-                        origin.guard = self.guards.and(origin.guard, *guard);
-                        if origin.guard != FALSE {
-                            part.origins.push(origin);
+                    let value = self.values[*value].clone();
+                    for (input, output) in [
+                        (value.origins, &mut part.origins),
+                        (value.bounds, &mut part.bounds),
+                    ] {
+                        for mut origin in input {
+                            origin.component = path.clone();
+                            origin.guard = self.guards.and(origin.guard, *guard);
+                            if origin.guard != FALSE {
+                                output.push(origin);
+                            }
                         }
                     }
                 }
                 state.merge(part, self.guards, Span::default())?;
             }
-            merged.insert(id, self.bundle(state.origins)?);
+            merged.insert(id, self.bundle(super::values::Value::from(&state))?);
         }
         let mut ends = Vec::new();
         for arm in arms {
@@ -178,6 +184,7 @@ impl Graph<'_> {
                     node.defs.push(*target);
                     if let Some(source) = source.get(path) {
                         node.transfers.push((*target, *source, TRUE));
+                        self.copy_link(&mut node, *target, *source, TRUE)?;
                     }
                 }
             }

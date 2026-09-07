@@ -19,11 +19,11 @@ impl<'a> Graph<'a> {
             self.restore_versions(&header)?;
             incoming = header;
         }
-        let origins: Vec<_> = self
+        let origins = self
             .facts
             .blocks
             .get(&block.id)
-            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
+            .map(super::values::Value::from)
             .unwrap_or_default();
         let result = self.bundle(origins.clone())?;
         let value = self.bundle(origins)?;

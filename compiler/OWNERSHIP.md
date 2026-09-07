@@ -627,8 +627,8 @@ implementation boundary; it does not change language rules.
 - Indirect reads and shared acquisitions name exact immutable pointer value IDs,
   with component paths for selected pointees. They do not flatten public bounds
   into fictitious physical reads. These IDs identify snapshots, not exclusive loan
-  authority. Later authority propagation must still distinguish actual sources
-  from public lifetime dependencies and retain guarded parent alternatives.
+  authority. Shared provenance now has separate LoanIds and guarded parents as
+  described below; exclusive permission checking remains unimplemented.
 - Tag traversal maps coercions back to original storage paths and adds no payload
   demand. Static predicates on types with no stored union tag create no tag read.
   Pointer evaluation required to reach a pointee still retains its existing uses.
@@ -644,6 +644,51 @@ implementation boundary; it does not change language rules.
   regions, complementary guards, reset edges, missing evidence and resource limits.
   Exclusive modes, parent permission, forward availability and indirect writes remain
   the next stages; access metadata is not source-level `&!` support or a public artifact.
+
+## Shared authority provenance
+
+- `loans/values.rs::Value` preserves actual origins and public bounds separately
+  through facts ingestion, copies, guarded merges, headers, calls and dereferences.
+  The existing dependency iterator still visits both roles for last-use checks.
+  A public lifetime bound therefore still blocks conflicting writes with E302 but
+  never supplies an actual access region or acquisition identity.
+- `loans/authority.rs` allocates bounded, graph-local LoanIds for shared acquisitions
+  and shared input components. Ordinary value copies keep those identities; distinct
+  acquisitions remain distinct even at the same address. These are internal analysis
+  IDs, not runtime epochs, persistent source identities or public replay artifacts.
+- Metadata-only copy links propagate guarded LoanId alternatives through bindings,
+  reference replacement, projections, emissions, copied pointee contents, branch
+  joins, short circuits and exact-target Leave. They are separate from backward
+  liveness transfers and add no synthetic use. A reborrow creates its own LoanId
+  with guarded parent alternatives from the captured parent value version.
+- Parent alternatives stay fixed when a reference holder is replaced; copied shared
+  children retain their ancestry. Parent graphs are checked for cycles and invalid
+  IDs with charged work. This records provenance only: there is still no exclusive
+  mode, suspension enforcement, consuming use or forward initialized/moved state.
+- Call result ancestry is opaque because current signatures do not describe loan
+  transfer. Opacity propagates through copies and derived loans. Every reachable
+  restart body is also opaque for authority purposes, so a repeated static site
+  cannot be treated as a proved dynamic permission. Known site IDs may remain as
+  evidence alongside that opacity; they must not bypass it. Existing shared call
+  and restart behavior remains supported by the original lifetime/loan checks.
+- Access regions resolve from actual pointer origins under CFG reach. Direct regions
+  use canonical storage and lexical views; leading named-field steps join physical
+  source projections, while primary/variant paths remain explicit. Direct field
+  reads, field reads through a whole-record reference and a projected reborrow
+  resolve to matching regions. Public bounds never become physical regions, and
+  expired sources retain their terminal identity.
+- Loan records, copy edges, guarded maps, parent snapshots, normalized regions and
+  solver storage consume the existing graph-origin/work limits. Queues and parent
+  walks are bounded by the current value/loan limits. Exhaustion remains B001 before
+  publishing usable metadata. Missing physical origins are B001 in non-restarting graphs, even for opaque calls.
+  Restart-erased source/tag correlations instead leave an explicit unresolved-region
+  guard under opaque authority; those gaps cannot authorize access. Unknown ancestry
+  is represented explicitly rather than invented.
+- Fifteen graph groups cover identity through copies, separate acquisitions,
+  parent chains, holder replacement, guard/Leave/short-circuit joins, public bounds,
+  opaque calls and restarts, copied carriers, normalized fields/slots, input cells,
+  expiry and resource/cycle rejection. Exclusive references remain gated until
+  permission checks and forward availability complete the designed scalar slice.
 
 ## Inline bounded lists
 

@@ -116,7 +116,7 @@ impl<'a> Graph<'a> {
             })
     }
 
-    pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
+    pub(crate) fn build(&mut self, block: &Block, params: &[LocalId]) -> Result<()> {
         self.merging = self.facts.merging.contains(&block.id);
         for id in params {
             let proof = self
@@ -131,13 +131,21 @@ impl<'a> Graph<'a> {
                 })?
                 .proof;
             let value = self.local(*id)?;
-            self.append(Node {
-                defs: value.into_values().collect(),
+            let node = self.append(Node {
+                defs: value.values().copied().collect(),
                 ..Node::default()
             })?;
+            for value in value.into_values() {
+                self.grant(node, value, None)?;
+            }
             self.assume(proof)?;
         }
         self.block(block)?;
+        Ok(())
+    }
+
+    pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
+        self.build(block, params)?;
         let reach = self.reach()?;
         self.access_evidence(&reach)?;
         for (node, active) in &self.missing_headers {
@@ -164,6 +172,7 @@ impl<'a> Graph<'a> {
                 ));
             }
         }
+        self.solve_authority(&reach)?;
         let live = self.liveness(&reach)?;
         for (id, reachable) in reach.iter().enumerate() {
             let Some((place, span)) = self.nodes[id]
@@ -183,7 +192,7 @@ impl<'a> Graph<'a> {
                     .fold(1usize, |work, origin| work.saturating_add(origin.weight()));
                 self.charge(work)?;
                 let guard = self.guards.and(guard, *reachable);
-                for origin in &self.values[value] {
+                for origin in self.values[value].iter() {
                     if Self::overlap(&place, &origin.source)
                         && self.guards.overlap(guard, origin.guard)
                     {

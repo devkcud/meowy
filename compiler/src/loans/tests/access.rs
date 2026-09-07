@@ -5,6 +5,14 @@ use crate::loans::access::{Kind, Target};
 use crate::loans::{Graph, Path, Step};
 
 pub(crate) fn inspect(source: &str, check: impl FnOnce(&mut Graph<'_>, &[Guard])) {
+    inspect_body(source, None, check);
+}
+
+pub(crate) fn inspect_body(
+    source: &str,
+    function: Option<usize>,
+    check: impl FnOnce(&mut Graph<'_>, &[Guard]),
+) {
     let tree = crate::parser::parse(source).unwrap();
     let mut checker = crate::check::Checker::new();
     let body = checker.block(&tree, None, None).unwrap();
@@ -17,8 +25,13 @@ pub(crate) fn inspect(source: &str, check: impl FnOnce(&mut Graph<'_>, &[Guard])
     checker.proofs.tags = checker.tags;
     let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs).unwrap();
     let mut graph = Graph::new(&program, &facts, &checker.proofs, &mut checker.flow);
-    graph.merging = facts.merging.contains(&program.body.id);
-    graph.block(&program.body).unwrap();
+    let (body, params) = if let Some(id) = function {
+        let function = &program.functions[id];
+        (&function.body, function.params.as_slice())
+    } else {
+        (&program.body, &[][..])
+    };
+    graph.build(body, params).unwrap();
     let reach = graph.reach().unwrap();
     graph.access_evidence(&reach).unwrap();
     check(&mut graph, &reach);

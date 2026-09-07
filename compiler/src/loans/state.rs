@@ -1,7 +1,5 @@
 use super::branches::{Arm, Versions};
-use super::{
-    BTreeMap, BlockId, Bundle, Facts, Flow, Guard, LocalId, Origin, Program, Proofs, Span, Type,
-};
+use super::{BTreeMap, BlockId, Bundle, Facts, Flow, Guard, LocalId, Program, Proofs, Span, Type};
 
 #[derive(Clone)]
 pub(crate) struct Edge {
@@ -15,6 +13,8 @@ pub(crate) struct Node {
     pub(crate) uses: Vec<usize>,
     pub(crate) defs: Vec<usize>,
     pub(crate) transfers: Vec<(usize, usize, Guard)>,
+    pub(crate) copies: Vec<(usize, usize, Guard)>,
+    pub(crate) opaque: Vec<usize>,
     pub(crate) access: Option<super::access::Access>,
     pub(crate) next: Vec<Edge>,
 }
@@ -35,7 +35,9 @@ pub(crate) struct Graph<'a> {
     pub(crate) proofs: &'a Proofs,
     pub(crate) guards: &'a mut Flow,
     pub(crate) nodes: Vec<Node>,
-    pub(crate) values: Vec<Vec<Origin>>,
+    pub(crate) values: Vec<super::values::Value>,
+    pub(crate) loans: Vec<super::authority::Loan>,
+    pub(crate) authority: Vec<super::authority::Authority>,
     pub(crate) locals: BTreeMap<LocalId, Bundle>,
     pub(crate) blocks: BTreeMap<BlockId, Scope>,
     pub(crate) statements: Vec<crate::hir::StatementId>,

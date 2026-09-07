@@ -21,9 +21,33 @@ pub(crate) struct Access {
     pub(crate) target: Target,
     pub(crate) path: Path,
     pub(crate) span: Span,
+    pub(crate) regions: Vec<super::Origin>,
+    pub(crate) unresolved: super::Guard,
 }
 
 impl Access {
+    pub(crate) fn canonical_region(mut origin: super::Origin) -> super::Origin {
+        let fields = match &mut origin.source {
+            super::Source::Local { fields, .. }
+            | super::Source::Slot { fields, .. }
+            | super::Source::Temporary { fields, .. }
+            | super::Source::Input { fields, .. } => fields,
+            super::Source::Expired { .. } => return origin,
+        };
+        let count = origin
+            .component
+            .iter()
+            .take_while(|step| matches!(step, Step::Slot(index) if *index != 0))
+            .count();
+        for step in origin.component.drain(..count) {
+            let Step::Slot(index) = step else {
+                unreachable!()
+            };
+            fields.push(super::Projection::Field(index - 1));
+        }
+        origin
+    }
+
     pub(crate) fn weight(&self) -> usize {
         self.path.len()
             + match &self.target {
@@ -41,6 +65,83 @@ impl Access {
 }
 
 impl Graph<'_> {
+    pub(crate) fn normalize_accesses(
+        &mut self,
+        reach: &[super::Guard],
+        restart: bool,
+    ) -> Result<()> {
+        for (id, entered) in reach.iter().enumerate() {
+            self.charge(1)?;
+            if *entered == super::FALSE {
+                continue;
+            }
+            let Some(mut access) = self.nodes[id].access.take() else {
+                continue;
+            };
+            match &access.target {
+                Target::Storage { place, view } => {
+                    self.reserve_authority(place.fields.len() + access.path.len() + 5)?;
+                    let source = self.proofs.source(&Place {
+                        root: *view,
+                        fields: place.fields.clone(),
+                    });
+                    access.regions.push(Access::canonical_region(super::Origin {
+                        component: access.path.clone(),
+                        source,
+                        guard: *entered,
+                    }));
+                }
+                Target::Pointee(value) => {
+                    self.charge(self.values[*value].len() + 1)?;
+                    let mut covered = super::FALSE;
+                    for index in 0..self.values[*value].origins.len() {
+                        let origin = &self.values[*value].origins[index];
+                        let active = self.guards.and(*entered, origin.guard);
+                        if active == super::FALSE {
+                            continue;
+                        }
+                        let weight = origin.weight() + access.path.len();
+                        self.reserve_authority(weight)?;
+                        let source = self.values[*value].origins[index].source.clone();
+                        access.regions.push(Access::canonical_region(super::Origin {
+                            component: access.path.clone(),
+                            source,
+                            guard: active,
+                        }));
+                        covered = self.guards.or(covered, active);
+                    }
+                    let missing = self.guards.and(*entered, self.guards.not(covered));
+                    if missing != super::FALSE
+                        && (!restart
+                            || !self.guards.implies(missing, self.authority[*value].opaque))
+                    {
+                        return Err(super::Diagnostic::unsupported(
+                            "missing physical access origin",
+                            access.span,
+                        ));
+                    }
+                    access.unresolved = missing;
+                    let mut known = self.authority[*value].opaque;
+                    self.charge(self.authority[*value].weight())?;
+                    for guard in self.authority[*value].loans.values() {
+                        known = self.guards.or(known, *guard);
+                    }
+                    let missing = self.guards.and(*entered, self.guards.not(known));
+                    self.authority[*value].opaque =
+                        self.guards.or(self.authority[*value].opaque, missing);
+                }
+                Target::Missing => {
+                    return Err(super::Diagnostic::unsupported(
+                        "missing pointee access evidence",
+                        access.span,
+                    ));
+                }
+            }
+            self.nodes[id].access = Some(access);
+        }
+        Ok(())
+    }
+
     pub(crate) fn has_tag(&mut self, ty: &Type, path: &[Step]) -> Result<bool> {
         self.charge(path.len() + 1)?;
         let ty = crate::borrow_contract::component_type(ty, path).ok_or_else(Self::budget)?;
@@ -75,6 +176,8 @@ impl Graph<'_> {
             target,
             path: Path::new(),
             span,
+            regions: Vec::new(),
+            unresolved: super::FALSE,
         };
         let weight = access.weight() + path.len();
         self.charge(weight)?;

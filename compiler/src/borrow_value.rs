@@ -22,14 +22,14 @@ pub(crate) enum Projection {
     Element,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Origin {
     pub(crate) component: Path,
     pub(crate) source: Source,
     pub(crate) guard: Guard,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Source {
     Expired {
         id: LocalId,

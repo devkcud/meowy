@@ -4,29 +4,70 @@ use super::{
     MAX_VALUES, Node, Origin, Path, Result, Span, Step, Type,
 };
 
+#[derive(Clone, Default)]
+pub(crate) struct Value {
+    pub(crate) origins: Vec<Origin>,
+    pub(crate) bounds: Vec<Origin>,
+}
+
+impl Value {
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &Origin> {
+        self.origins.iter().chain(&self.bounds)
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.origins.len() + self.bounds.len()
+    }
+}
+
+impl From<Vec<Origin>> for Value {
+    fn from(origins: Vec<Origin>) -> Self {
+        Self {
+            origins,
+            bounds: Vec::new(),
+        }
+    }
+}
+
+impl From<&crate::borrow_value::State> for Value {
+    fn from(state: &crate::borrow_value::State) -> Self {
+        Self {
+            origins: state.origins.clone(),
+            bounds: state.bounds.clone(),
+        }
+    }
+}
+
 impl<'a> Graph<'a> {
-    pub(crate) fn value(&mut self, origins: Vec<Origin>) -> Result<usize> {
-        let weight = origins.iter().map(Origin::weight).sum::<usize>();
+    pub(crate) fn value(&mut self, value: impl Into<Value>) -> Result<usize> {
+        let value = value.into();
+        self.charge(value.len() + 1)?;
+        let weight = value.iter().map(Origin::weight).sum::<usize>();
         if self.values.len() == MAX_VALUES || self.origins + weight > MAX_ORIGINS {
             return Err(Self::budget());
         }
         self.origins += weight;
         let id = self.values.len();
-        self.values.push(origins);
+        self.values.push(value);
         Ok(id)
     }
 
-    pub(crate) fn bundle(&mut self, origins: Vec<Origin>) -> Result<Bundle> {
-        let mut groups = BTreeMap::<Path, Vec<Origin>>::new();
-        for origin in origins {
-            groups
-                .entry(origin.component.clone())
-                .or_default()
-                .push(origin);
+    pub(crate) fn bundle(&mut self, value: impl Into<Value>) -> Result<Bundle> {
+        let value = value.into();
+        let mut groups = BTreeMap::<Path, Value>::new();
+        for (origins, bound) in [(value.origins, false), (value.bounds, true)] {
+            for origin in origins {
+                let value = groups.entry(origin.component.clone()).or_default();
+                if bound {
+                    value.bounds.push(origin);
+                } else {
+                    value.origins.push(origin);
+                }
+            }
         }
         groups
             .into_iter()
-            .map(|(path, origins)| Ok((path, self.value(origins)?)))
+            .map(|(path, value)| Ok((path, self.value(value)?)))
             .collect()
     }
 
@@ -62,7 +103,7 @@ impl<'a> Graph<'a> {
             .facts
             .locals
             .get(&id)
-            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
+            .map(Value::from)
             .unwrap_or_default();
         let value = self.bundle(origins)?;
         self.locals.insert(id, value.clone());
@@ -82,18 +123,20 @@ impl<'a> Graph<'a> {
             }
         }
         let state = self.facts.calls.get(&site);
-        let origins = state
-            .map(|state| state.origins.iter().chain(&state.bounds).cloned().collect())
-            .unwrap_or_default();
+        let origins = state.map(Value::from).unwrap_or_default();
         let proof = state
             .map(|state| self.guards.and(state.present, state.proof))
             .unwrap_or(FALSE);
         let value = self.bundle(origins)?;
-        let node = self.append(Node {
+        let mut node = Node {
             uses,
             defs: value.values().copied().collect(),
             ..Node::default()
-        })?;
+        };
+        for id in value.values() {
+            self.opaque_value(&mut node, *id)?;
+        }
+        let node = self.append(node)?;
         if state.is_none() {
             self.missing_calls.push((node, span));
         }

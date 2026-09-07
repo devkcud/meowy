@@ -1,6 +1,7 @@
 mod access;
 mod active_restarts;
 mod aliases;
+mod authority;
 mod budgets;
 mod control;
 mod expired_restarts;

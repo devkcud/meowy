@@ -5,7 +5,8 @@ This is the next implementation slice after terminal restart-source expiry
 [memory rules](../docs/reference/memory.md),
 [reference conversions](../docs/reference/types.md#inference-and-assignment), and
 [ownership diagnostics](../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
-The bounded access-record foundation is implemented; the remaining design is not.
+Bounded access records and shared acquisition/ancestry metadata are implemented;
+exclusive permission and forward availability remain unimplemented.
 `&!value`, `<&!T>` and indirect assignment remain
 bootstrap capabilities gated by B001. Planned rejections below are not current
 conformance results.
@@ -88,8 +89,8 @@ guarded edge in the existing storage/work ledgers.
 Actual origins authorize access only through the corresponding loan. Public bounds
 restrict lifetime and retain their conservative dependencies; they never authorize
 writing an unrelated argument or make two references interchangeable. Keep source
-and bound roles distinct until the conflict query that needs each role. Existing
-shared bundles may still combine them for conservative liveness.
+and bound roles distinct until the conflict query that needs each role. Graph values now retain both roles separately; their dependency iterator visits
+both for conservative liveness, while access regions use only actual origins.
 
 Exclusive function inputs are initially gated. When added, symbolic Input paths
 need a real overlap/authority model; the current physical-write comparison that
@@ -102,8 +103,12 @@ Ordinary HIR Local reads, stored-tag inspections, shared acquisitions and writes
 now produce bounded CFG access records. Direct storage records keep canonical roots,
 lexical views and component paths; indirect records keep exact pointer value IDs.
 Records inherit CFG reach guards. Static predicates without a stored tag add no
-tag read. The implementation still has no authorizing loan identity, consumption or
-forward initialization model. Preserve source access evidence through future folding,
+tag read. Shared acquisitions now have graph-local LoanIds and guarded parent
+alternatives; copies preserve identity independently of value versions. Call results
+and restart bodies retain explicit opaque ancestry. Restart-erased source/tag
+correlations may also leave explicit unresolved-region guards; these cannot authorize
+access. Non-restarting accesses still require actual-origin coverage. This provenance does not yet
+implement exclusive permission, consumption or forward initialization. Preserve source access evidence through future folding,
 and distinguish accessing a reference cell from accessing its referent.
 
 | Active loan | External read/shared acquisition | External write/exclusive acquisition | Access through that loan |
@@ -267,9 +272,11 @@ session. No production source or reference conformance fixture changed.
    exact-version pointees, tag paths and shared acquisitions. Preserve shared
    diagnostics, evaluation order and demand-only transfers while extending them.
    Keep weighted metadata/work charging and reach-checked missing evidence.
-2. Add distinct bounded authority IDs and forward availability, preserving guards,
-   value versions and source/bound roles. Prove local moves, replacement, child
-   demand and exact Leave behavior before admitting source-level exclusivity.
+2. Shared LoanIds, guarded ancestry and actual-source region resolution are
+   implemented, with explicit call/restart opacity. Add permission enforcement and
+   forward availability while preserving guards, value versions and source/bound
+   roles. Prove local moves, replacement, child demand and exact Leave behavior
+   before admitting source-level exclusivity.
 3. Integrate reference mode, consuming contexts and scalar indirect stores across
    checker, origin/loan passes and backend. Reject excluded inferred forms before
    partial facts reach later phases. Keep parser grammar and runtime ABI unchanged.

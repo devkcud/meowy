@@ -26,11 +26,13 @@ impl Graph<'_> {
             }
             let shape = Shape::new(ty, self.guards, Span::default())?;
             shape.validate(state, true, self.guards, Span::default())?;
-            let origins = state.origins.iter().chain(&state.bounds).cloned().collect();
-            header.insert(*local, self.bundle(origins)?);
+            header.insert(*local, self.bundle(super::values::Value::from(state))?);
         }
         let proof = self.facts.header_inputs.get(&id);
-        let (node, missing) = self.header_transfer(incoming, &header, proof)?;
+        let (mut node, missing) = self.header_transfer(incoming, &header, proof)?;
+        for value in header.values().flat_map(|value| value.values()) {
+            self.opaque_value(&mut node, *value)?;
+        }
         let node = self.append(node)?;
         if missing != FALSE {
             self.missing_headers.push((node, missing));

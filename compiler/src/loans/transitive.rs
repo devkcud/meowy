@@ -10,6 +10,9 @@ impl Graph<'_> {
         };
         for (path, id) in source {
             self.charge(path.len() + 1)?;
+            if let Some(target) = target.get(path) {
+                self.copy_link(&mut node, *target, *id, TRUE)?;
+            }
             if path.contains(&Step::Deref) {
                 if let Some(target) = target.get(path) {
                     node.transfers.push((*target, *id, TRUE));
@@ -76,6 +79,7 @@ impl Graph<'_> {
             result.insert(path, target);
             node.defs.push(target);
             node.transfers.push((target, source, TRUE));
+            self.copy_link(&mut node, target, source, TRUE)?;
         }
         let access = self.access(
             Kind::Borrow,
@@ -84,7 +88,8 @@ impl Graph<'_> {
             span,
         )?;
         node.access = Some(access);
-        self.append(node)?;
+        let node = self.append(node)?;
+        self.grant(node, pointer, None)?;
         Ok(result)
     }
 
@@ -141,7 +146,7 @@ impl Graph<'_> {
             return Ok(Bundle::new());
         };
         self.charge(state.weight() + 1)?;
-        let result = self.bundle(state.origins.iter().chain(&state.bounds).cloned().collect())?;
+        let result = self.bundle(super::values::Value::from(state))?;
         let mut node = Node {
             uses,
             defs: result.values().copied().collect(),
@@ -162,11 +167,22 @@ impl Graph<'_> {
                         )
                     })?;
                     node.transfers.push((*target, *source, TRUE));
+                    self.copy_link(&mut node, *target, *source, TRUE)?;
                 }
             }
         }
         node.access = Some(self.pointee_access(&result, &[], Kind::Borrow, expr.span)?);
-        self.append(node)?;
+        let root = result.get(&Vec::new()).copied();
+        let parent = parent.get(&Vec::new()).copied();
+        if parent.is_none()
+            && let Some(root) = root
+        {
+            self.opaque_value(&mut node, root)?;
+        }
+        let node = self.append(node)?;
+        if let (Some(root), Some(parent)) = (root, parent) {
+            self.grant(node, root, Some(parent))?;
+        }
         Ok(Self::select(result, path))
     }
 }
