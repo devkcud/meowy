@@ -41,6 +41,7 @@ compiler/target/debug/meowy run compiler/examples/mixed-writes.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-slots.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/immutable-slots.mwy
+compiler/target/debug/meowy run compiler/examples/reference-slots.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -94,6 +95,9 @@ shared references and writes after their last use. An inner block can pass out a
 reference when its emitted owner belongs to a still-active outer result.
 The [immutable slots example](examples/immutable-slots.mwy) borrows immutable emitted
 fields and list elements while preserving constant and initialized-length facts.
+The [reference slots example](examples/reference-slots.mwy) distinguishes a borrowed
+field inside a result from a stored reference copied out of it. Each follows its
+own storage lifetime.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -155,6 +159,11 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   borrow lifetimes. Their constant, variant and initialized-length facts remain
   available. The immutable name cannot be assigned or used to write a nested field
   or element, including mutable fields inside its value; those writes report E305.
+- Immutable emitted references and reference-carrying records/unions also use actual
+  result cells. Copying a stored reference keeps its original pointee origins and
+  input bounds. Borrowing a concrete reference-free field instead follows the
+  carrier's cell lifetime and does not read unrelated reference fields. Selected
+  fields of ordinary locals and copied parameters/receivers follow the same rule.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
@@ -221,7 +230,7 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
-fields, mutable primary slots, borrows of reference-bearing emitted storage and alias
+fields, mutable primary slots, whole reference-bearing storage borrows and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
@@ -270,10 +279,11 @@ borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Mutable reference carriers,
 reference reassignment and direct reference formatting require future analysis.
-Reference-free named emissions support slot borrows; reference-bearing emitted names
-retain their copied reference origins, with their own storage still unavailable as
-a borrow root. Parameter and receiver copies may be borrowed only while their local
-storage survives. Missing origin proofs or exhausted analysis budgets produce B001.
+Named emissions use actual slot aliases. Reads and copies of stored references keep
+their pointee origins; selected reference-free field addresses borrow the carrier's
+storage. Whole carriers and reference-valued cells cannot themselves be borrowed yet.
+Parameter and receiver field addresses cannot escape their local storage. Missing
+origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
@@ -284,7 +294,7 @@ are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field
 mutability in declared construction or completing branches reports E206. Shared
 reference targets and temporary roots remain B001.
-Reference-free named emissions register an alias after initialization. Later reads
+Named emissions register an alias after initialization. Later reads
 and permitted mutable assignments resolve the actual result cell, with conversion
 between the declared local type and a wider final slot type. Matching field mutability
 is required for that backing; mixed paths address the compatible payload.

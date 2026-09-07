@@ -18,6 +18,7 @@ pub(crate) mod nested_writes;
 pub(crate) mod panics;
 pub(crate) mod reborrows;
 pub(crate) mod reference_records;
+pub(crate) mod reference_slots;
 pub(crate) mod reference_unions;
 pub(crate) mod references;
 pub(crate) mod scalars;

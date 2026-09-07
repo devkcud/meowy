@@ -91,6 +91,10 @@ pub fn examples_execute_in_both_profiles() {
             "7\n2\nready\n7\n2\n",
         ),
         (
+            include_str!("../../examples/reference-slots.mwy"),
+            "3\n7\n7\n3\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
