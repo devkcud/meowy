@@ -6,6 +6,48 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Lifecycle implementation committed and handoff finalized
+
+- Findings: Commit d72b413 contains lifecycle scopes/cells/events, exhaustive Copy classification, value-taking/inspection propagation, sparse forward availability, fifteen focused groups and ownership/design documentation. Current handoffs identify real exclusive-mode and permission integration as the next slice; all current source storage remains Copy.
+- Validation: All ten compiler checks passed on committed source: 592 Rust tests, 20 Python tests, 37 examples in both profiles, 879 links, formatting, Clippy, schemas/catalog, build and conformance 10 passed/13 unsupported/0 failed. Staged whitespace passed. The unchanged 1,000-matcher regression passes after empty-scope state elimination; limits were not raised. No production/test changes followed the gate.
+- Blockers: None for this slice. Source-level exclusive moves, permission enforcement, parent suspension and generated cleanup remain unimplemented; full v0.0.1 remains unqualified.
+- Next steps: Commit handoffs/history and verify clean Git state. Integrate exclusive mode and scalar indirect stores with lifecycle availability and guarded provenance, preserving all stated capability and runtime qualification boundaries.
+
+### 2026-09-07 — Lifecycle compiler gate passed
+
+- Findings: Explicit storage/scoped-lifetime events, taking/inspection context and demand-driven forward availability are complete. Empty scopes retain events without extra state, preserving the existing large matcher acceptance case under unchanged limits. Current source types remain Copy; real exclusive modes and permission enforcement are next.
+- Validation: All ten compiler checks pass: 592 Rust tests (334 library, 258 native), 20 Python tests, 879 links, schemas/catalog, formatting, Clippy, build and conformance 10 passed/13 unsupported/0 failed. All 37 examples execute in both profiles. Fifteen lifecycle groups include internal non-Copy transitions; these are not source-level exclusive execution. No source/test changes follow the gate.
+- Blockers: None for this slice. Runtime/editor/optimized-compiler qualification was not rerun; owned cleanup and complete v0.0.1 remain open.
+- Next steps: Commit implementation/tests/docs, record its hash in both current handoffs, preserve history and verify clean Git state. Next integrate mode-aware permissions, source moves and scalar indirect stores before opening the designed exclusive-reference slice.
+
+### 2026-09-07 — Empty-scope availability overhead removed
+
+- Findings: The first full gate passed 333 library groups but hit the work budget in the existing 1,000-independent-matcher acceptance test. Track availability only for scopes owning cells, while preserving every lifecycle event. Empty function/branch scopes no longer populate unnecessary state; storage demand and limits remain unchanged.
+- Validation: The unchanged 1,000-matcher test passes, as do all fifteen focused lifecycle groups. Added an assertion that unused-cell snapshots do not contain empty-scope state. First gate stopped before native/harness/build/conformance steps; final full rerun is next.
+- Blockers: None beyond pending complete validation.
+- Next steps: Run the full compiler gate, retain the corrected resource boundary and earlier failure history, then finalize handoffs and commits.
+
+### 2026-09-07 — Lifecycle focused proof complete
+
+- Findings: Fifteen focused groups prove real initialization versus reference definitions, returning-RHS order, Copy taking, inspection, internal non-Copy moved/reinitialized state, guarded and short-circuit joins, exact Leave, statement/slot ownership, restart, panic, ended-scope protection and bounded sparse demand. No source-level exclusive or move support is claimed.
+- Validation: All 319 existing library tests passed at integration; all fifteen new groups pass. Resource review added precharges before need-set unions/clones. Documentation now records the implemented lifecycle/availability layer and its explicit permission/cleanup limits. Full compiler validation is next.
+- Blockers: None beyond pending complete validation.
+- Next steps: Run all compiler checks on frozen implementation/tests, address any regression, refresh handoffs and commit implementation/tests/docs separately from history.
+
+### 2026-09-07 — Lifecycle and availability integrated
+
+- Findings: Added canonical storage descriptors, function/block/branch/statement scopes, Enter/End/Init/Use events and forward guarded availability driven by storage demand. Pointer inspection and reborrow operands do not take their holder; value contexts and transparent coercions retain taking intent. Copy classification is explicit and exhaustive for current HIR types.
+- Validation: All 319 existing library groups pass. Initial wiring had missing temporary-owner locals and one Rust mutable-borrow conflict; corrected before execution. No source-level move or exclusive capability was enabled. Focused tests and final resource review remain pending.
+- Blockers: None.
+- Next steps: Prove ordering, scope/control endings, reinitialization, internal non-Copy E301/E309 transitions and budgets; run all compiler checks and commit implementation/tests/docs with refreshed handoffs.
+
+### 2026-09-07 — Storage lifecycle implementation scoped
+
+- Findings: The graph has reference definitions and provenance but no physical storage availability. Add canonical cell/scope identities, returning initialization, explicit lexical/statement/control-transfer endings and value-taking versus inspection events. Solve only availability demanded by events to avoid retaining every local at every node. Source types remain Copy; consuming transitions will be proved internally before exclusive modes open.
+- Validation: Read current source/contracts and handoffs; clean tree at c6bd053. No changed-source checks yet.
+- Blockers: None. Indirect/exclusive permission enforcement, partial initialization and runtime cleanup remain later work.
+- Next steps: Implement lifecycle events and forward guarded availability, preserve shared control/effect behavior, add order/exit/move/budget tests, run compiler gates and commit cohesive changes.
+
 ### 2026-09-07 — Shared provenance committed and handoff finalized
 
 - Findings: Commit ebc8ebe contains role-preserving values, shared LoanIds, guarded copy/parent provenance, explicit opacity, actual-source region resolution, fifteen graph groups and ownership/design documentation. Both current handoffs identify storage lifecycle and forward availability as the next work. Exclusive references remain unsupported.
