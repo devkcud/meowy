@@ -40,6 +40,20 @@ pub(crate) struct Proofs {
 }
 
 impl Proofs {
+    pub(crate) fn exclusive_element_type<'a>(
+        &self,
+        program: &'a Program,
+        id: LocalId,
+    ) -> Option<&'a Type> {
+        if !self.mutable.contains(&id)
+            || self.aliases.contains_key(&id)
+            || self.temporaries.contains_key(&id)
+        {
+            return None;
+        }
+        program.locals.get(id)?.scalar_element()
+    }
+
     pub(crate) fn source(&self, place: &Place) -> Source {
         if let Some(alias) = self.aliases.get(&place.root) {
             Source::Slot {

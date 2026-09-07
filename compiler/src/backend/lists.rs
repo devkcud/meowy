@@ -57,6 +57,34 @@ impl<'a> Generator<'a> {
         Ok(self.value(format!("load {}, ptr {ptr}", ir_type(element))))
     }
 
+    pub(crate) fn exclusive_element(
+        &mut self,
+        id: usize,
+        index: &Expr,
+        result: &Type,
+        span: Span,
+    ) -> Result<String, String> {
+        if self.aliases.contains_key(&id) {
+            return Err("exclusive element aliases are unsupported".into());
+        }
+        let (ptr, list) = self.local_place(id)?;
+        let element = list
+            .scalar_element()
+            .ok_or("exclusive elements require scalar list storage")?;
+        if result != &Type::Exclusive(Box::new(element.clone()))
+            && !(result == &Type::Never && index.ty == Type::Never)
+        {
+            return Err("exclusive element result type mismatch".into());
+        }
+        let length = self.value(format!("load i64, ptr {ptr}"));
+        let position = self.expression(index)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let offset = self.list_offset(index, position, &length, span)?;
+        Ok(self.list_item(&list, &ptr, &offset))
+    }
+
     pub(crate) fn element_borrow(
         &mut self,
         value: &Expr,

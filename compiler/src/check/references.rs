@@ -64,6 +64,9 @@ impl Checker {
         if let ExprKind::Group(value) = &expr.kind {
             return self.exclusive_borrow(value, span);
         }
+        if let ExprKind::Index { value, index } = &expr.kind {
+            return self.exclusive_element(value, index, span);
+        }
         if let ExprKind::Unary { op, value } = &expr.kind
             && op == "*"
         {

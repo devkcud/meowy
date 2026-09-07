@@ -444,6 +444,74 @@ impl Checker {
         Ok(index)
     }
 
+    pub(crate) fn exclusive_element(
+        &mut self,
+        value: &ast::Expr,
+        index: &ast::Expr,
+        span: Span,
+    ) -> Result<hir::Expr> {
+        let mut root = value;
+        while let ExprKind::Group(value) = &root.kind {
+            if !self.flow.spend(1) {
+                return Err(crate::borrow_value::State::budget(span));
+            }
+            root = value;
+        }
+        let ExprKind::Name(name) = &root.kind else {
+            return Err(Diagnostic::unsupported(
+                "exclusive elements require an ordinary local list",
+                span,
+            ));
+        };
+        let Value::Local {
+            id, ty, mutable, ..
+        } = self.value(name, root.span)?
+        else {
+            return Err(Diagnostic::unsupported(
+                "exclusive elements require local storage",
+                span,
+            ));
+        };
+        if !self.places.contains(&id) || self.proofs.aliases.contains_key(&id) {
+            return Err(Diagnostic::unsupported(
+                "exclusive element aliases and temporary roots",
+                span,
+            ));
+        }
+        let Some(element) = ty.scalar_element() else {
+            return Err(Diagnostic::unsupported(
+                "exclusive elements outside scalar bounded lists",
+                span,
+            ));
+        };
+        let result = self.exclusive_type(element.clone(), span)?;
+        if !mutable {
+            return Err(Self::error(
+                "E305",
+                format!("binding `{name}` is immutable"),
+                span,
+            ));
+        }
+        let Type::List { capacity, .. } = ty else {
+            unreachable!();
+        };
+        let length = self.lengths.get(&id).map(|fact| fact.length);
+        let index = self.list_position(index, length, capacity)?;
+        let ty = if index.ty == Type::Never {
+            Type::Never
+        } else {
+            result
+        };
+        Ok(hir::Expr {
+            kind: hir::ExprKind::ExclusiveElement {
+                id,
+                index: Box::new(index),
+            },
+            ty,
+            span,
+        })
+    }
+
     pub(crate) fn element_borrow(
         &mut self,
         value: &ast::Expr,
@@ -718,7 +786,7 @@ mod tests {
         ] {
             rejects(source, "E101");
         }
-        rejects("a:[1,2];r:&!a[1]", "B001");
+        rejects("a:[1,2];r:&!a[1]", "E305");
         rejects("a:[1,2];r:&a[true]", "E222");
     }
 
@@ -756,6 +824,6 @@ mod tests {
         rejects("a:1;values:[&a]", "B001");
         rejects("values:[\"name\":1]", "B001");
         rejects("d:@\"debug\";values:[1];d.print(values)", "B001");
-        rejects("values:[1];view:&!values[1]", "B001");
+        rejects("values:[1];view:&!values[1]", "E305");
     }
 }

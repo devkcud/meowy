@@ -383,6 +383,7 @@ impl<'a> Graph<'a> {
                 )?;
                 Self::select(result, path)
             }
+            ExprKind::ExclusiveElement { .. } => Self::select(self.exclusive_element(expr)?, path),
             ExprKind::Borrow(place) => Self::select(
                 self.borrowed(
                     place,

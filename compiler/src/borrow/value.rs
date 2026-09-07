@@ -61,6 +61,30 @@ impl Checker<'_> {
                 let state = self.locals[&place.root].state.select(&path, self.guards);
                 state.borrowed(self.proofs.source(place), ty, self.guards, expr.span)?
             }
+            ExprKind::ExclusiveElement { id, index } => {
+                let element = self
+                    .proofs
+                    .exclusive_element_type(self.program, *id)
+                    .cloned()
+                    .ok_or_else(|| Self::unsupported(expr.span))?;
+                if expr.ty != Type::Exclusive(Box::new(element.clone()))
+                    && !(expr.ty == Type::Never && index.ty == Type::Never)
+                {
+                    return Err(Self::unsupported(expr.span));
+                }
+                let source = super::Source::Local {
+                    id: *id,
+                    fields: vec![Projection::Element],
+                };
+                self.live(&source, expr.span)?;
+                flow = self.expression(index)?.flow;
+                if flow.next {
+                    self.live(&source, expr.span)?;
+                    State::default().borrowed(source, &element, self.guards, expr.span)?
+                } else {
+                    State::absent()
+                }
+            }
             ExprKind::Reborrow { site, value, .. }
             | ExprKind::ElementBorrow { site, value, .. } => {
                 let result = self.expression(value)?;

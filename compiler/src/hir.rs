@@ -49,6 +49,20 @@ pub enum Type {
 }
 
 impl Type {
+    pub(crate) fn scalar_element(&self) -> Option<&Type> {
+        match self {
+            Self::List { element, .. }
+                if matches!(
+                    element.as_ref(),
+                    Self::Bool | Self::Int { .. } | Self::Float { .. }
+                ) =>
+            {
+                Some(element)
+            }
+            _ => None,
+        }
+    }
+
     pub fn pointee(&self) -> Option<&Type> {
         match self {
             Self::Reference(ty) | Self::Exclusive(ty) => Some(ty),
@@ -323,6 +337,10 @@ pub enum ExprKind {
         site: ReborrowId,
         value: Box<Expr>,
         fields: Vec<usize>,
+    },
+    ExclusiveElement {
+        id: LocalId,
+        index: Box<Expr>,
     },
     ElementBorrow {
         site: ReborrowId,
