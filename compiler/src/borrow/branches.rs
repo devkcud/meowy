@@ -31,8 +31,10 @@ impl Checker<'_> {
         }
         let mut values = Vec::new();
         for (id, value) in &self.locals {
-            if matches!(self.program.locals[*id], Type::Reference(_))
-                && self.proofs.mutable.contains(id)
+            if matches!(
+                self.program.locals[*id],
+                Type::Reference(_) | Type::Exclusive(_)
+            ) && self.proofs.mutable.contains(id)
             {
                 if !self.guards.spend(value.state.weight() + 1) {
                     return Err(State::budget(span));

@@ -127,7 +127,10 @@ impl Checker<'_> {
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next {
-                        if matches!(self.program.locals[*id], Type::Reference(_)) {
+                        if matches!(
+                            self.program.locals[*id],
+                            Type::Reference(_) | Type::Exclusive(_)
+                        ) {
                             if !self.proofs.mutable.contains(id)
                                 || self.proofs.aliases.contains_key(id)
                                 || value.ty != self.program.locals[*id]
@@ -146,6 +149,22 @@ impl Checker<'_> {
                         }
                     }
                     result.flow
+                }
+                Stmt::Store {
+                    target,
+                    value,
+                    span,
+                } => {
+                    let pointer = self.expression(target)?;
+                    let mut result = pointer.flow;
+                    if result.next {
+                        let next = self.expression(value)?;
+                        if next.flow.next {
+                            self.live_value(&pointer.state, *span)?;
+                        }
+                        result.append(next.flow);
+                    }
+                    result
                 }
                 Stmt::SetPath {
                     id,

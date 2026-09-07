@@ -1,6 +1,7 @@
 use super::access::Kind;
 use super::storage::EventKind;
 use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Source, Span, Step, TRUE};
+use crate::hir::ReferenceMode;
 
 impl Graph<'_> {
     pub(crate) fn copied(&mut self, source: &Bundle, target: &Bundle) -> Result<Node> {
@@ -36,7 +37,12 @@ impl Graph<'_> {
         Ok(result)
     }
 
-    pub(crate) fn borrowed(&mut self, place: &Place, span: Span) -> Result<Bundle> {
+    pub(crate) fn borrowed(
+        &mut self,
+        place: &Place,
+        span: Span,
+        mode: ReferenceMode,
+    ) -> Result<Bundle> {
         self.charge(place.fields.len() + 1)?;
         let path = place
             .fields
@@ -44,7 +50,7 @@ impl Graph<'_> {
             .map(|index| Step::Slot(index + 1))
             .collect::<Vec<_>>();
         let stored = Self::select(self.local(place.root)?, &path);
-        self.referenced(self.proofs.source(place), stored, Vec::new(), span)
+        self.referenced(self.proofs.source(place), stored, Vec::new(), span, mode)
     }
 
     pub(crate) fn referenced(
@@ -53,6 +59,7 @@ impl Graph<'_> {
         stored: Bundle,
         uses: Vec<usize>,
         span: Span,
+        mode: ReferenceMode,
     ) -> Result<Bundle> {
         self.charge(stored.len() + uses.len() + 1)?;
         let owner = match &source {
@@ -78,6 +85,9 @@ impl Graph<'_> {
             }
             self.event(&mut node, EventKind::Use { id, take: false }, span)?;
         }
+        if !stored.is_empty() {
+            node.barrier = Some(span);
+        }
         for (path, source) in stored {
             self.charge(
                 path.len()
@@ -102,7 +112,7 @@ impl Graph<'_> {
         )?;
         node.access = Some(access);
         let node = self.append(node)?;
-        self.grant(node, pointer, None)?;
+        self.grant_mode(node, pointer, None, mode)?;
         Ok(result)
     }
 
@@ -194,7 +204,12 @@ impl Graph<'_> {
         }
         let node = self.append(node)?;
         if let (Some(root), Some(parent)) = (root, parent) {
-            self.grant(node, root, Some(parent))?;
+            self.grant_mode(
+                node,
+                root,
+                Some(parent),
+                expr.ty.reference_mode().ok_or_else(Self::budget)?,
+            )?;
         }
         Ok(Self::select(result, path))
     }

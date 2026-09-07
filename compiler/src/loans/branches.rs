@@ -14,7 +14,10 @@ impl Graph<'_> {
         let work = self.locals.iter().fold(1usize, |work, (id, value)| {
             work.saturating_add(
                 if self.proofs.mutable.contains(id)
-                    && matches!(self.program.locals[*id], Type::Reference(_))
+                    && matches!(
+                        self.program.locals[*id],
+                        Type::Reference(_) | Type::Exclusive(_)
+                    )
                 {
                     value.keys().map(|path| path.len() + 1).sum::<usize>() + 1
                 } else {
@@ -28,7 +31,10 @@ impl Graph<'_> {
             .iter()
             .filter(|(id, _)| {
                 self.proofs.mutable.contains(id)
-                    && matches!(self.program.locals[**id], Type::Reference(_))
+                    && matches!(
+                        self.program.locals[**id],
+                        Type::Reference(_) | Type::Exclusive(_)
+                    )
             })
             .map(|(id, value)| (*id, value.clone()))
             .collect())
@@ -47,7 +53,10 @@ impl Graph<'_> {
         )?;
         self.locals.retain(|id, _| {
             !self.proofs.mutable.contains(id)
-                || !matches!(self.program.locals[*id], Type::Reference(_))
+                || !matches!(
+                    self.program.locals[*id],
+                    Type::Reference(_) | Type::Exclusive(_)
+                )
                 || versions.contains_key(id)
         });
         self.locals

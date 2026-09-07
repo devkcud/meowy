@@ -186,10 +186,8 @@ impl Checker {
             }
             TypeKind::Reference { value, mutable } => {
                 if *mutable {
-                    return Err(Diagnostic::unsupported(
-                        "exclusive reference types",
-                        expr.span,
-                    ));
+                    let ty = self.ty(value)?;
+                    return Ok(Spec::Data(self.exclusive_type(ty, expr.span)?));
                 }
                 let ty = self.ty(value)?;
                 Ok(Spec::Data(self.reference_type(ty, expr.span)?))

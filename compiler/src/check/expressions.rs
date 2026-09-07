@@ -6,10 +6,25 @@ use crate::hir::{self, Type};
 
 impl Checker {
     pub(crate) fn expr(&mut self, expr: &ast::Expr, expected: Option<&Type>) -> Result<hir::Expr> {
-        let value = self.expression(expr, expected)?;
+        let mut value = self.expression(expr, expected)?;
         if value.ty == Type::Never {
             self.reach = FALSE;
             return Ok(value);
+        }
+        if let (Some(Type::Reference(target)), Type::Exclusive(source)) = (expected, &value.ty)
+            && target == source
+        {
+            let site = self.reborrows;
+            self.reborrows += 1;
+            value = hir::Expr {
+                kind: hir::ExprKind::Reborrow {
+                    site,
+                    value: Box::new(value),
+                    fields: Vec::new(),
+                },
+                ty: expected.unwrap().clone(),
+                span: expr.span,
+            };
         }
         match expected {
             Some(expected) => Self::expected_value(value, expected, expr.span),
@@ -131,12 +146,15 @@ impl Checker {
                 if op == "&" {
                     return self.borrowed(value, expr.span);
                 }
+                if op == "&!" {
+                    return self.exclusive_borrow(value, expr.span);
+                }
                 if op == "*" {
                     let value = self.expr(value, None)?;
                     if value.ty == Type::Never {
                         return Ok(value);
                     }
-                    let Type::Reference(ty) = &value.ty else {
+                    let Some(ty) = value.ty.pointee() else {
                         return Err(Self::error(
                             "E222",
                             "dereference requires a safe reference",
@@ -144,7 +162,7 @@ impl Checker {
                         ));
                     };
                     return Ok(hir::Expr {
-                        ty: *ty.clone(),
+                        ty: ty.clone(),
                         kind: hir::ExprKind::Deref(Box::new(value)),
                         span: expr.span,
                     });
@@ -206,6 +224,12 @@ impl Checker {
             } => return self.call(callee, args, Some(value), expr.span),
             ExprKind::DispatchBlock { value, block } => {
                 let value = self.expr(value, None)?;
+                if value.ty.has_exclusive() {
+                    return Err(Diagnostic::unsupported(
+                        "exclusive dispatch receivers",
+                        expr.span,
+                    ));
+                }
                 let block = self.block(block, expected.cloned(), Some(value))?;
                 let ty = block.ty.clone();
                 (hir::ExprKind::Block(block), ty)
@@ -361,7 +385,7 @@ impl Checker {
                 .address_hint(value)
                 .map(|ty| Type::Reference(Box::new(ty))),
             ExprKind::Unary { op, value } if op == "*" => match self.hint(value)? {
-                Type::Reference(ty) => Some(*ty),
+                Type::Reference(ty) | Type::Exclusive(ty) => Some(*ty),
                 _ => None,
             },
             ExprKind::Unary { value, .. } => self.hint(value),

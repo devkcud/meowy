@@ -68,7 +68,7 @@ impl Checker {
                 return Err(Diagnostic::unsupported("list type budget exhausted", span));
             }
             match ty {
-                Type::Reference(_) | Type::Never => {
+                Type::Reference(_) | Type::Exclusive(_) | Type::Never => {
                     return Err(Diagnostic::unsupported(
                         "reference-bearing or uninhabited list elements",
                         span,

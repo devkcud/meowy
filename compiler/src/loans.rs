@@ -4,6 +4,7 @@ pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod graph;
 pub(crate) mod init;
+pub(crate) mod permissions;
 pub(crate) mod restarts;
 pub(crate) mod solve;
 pub(crate) mod state;

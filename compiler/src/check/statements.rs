@@ -79,7 +79,10 @@ impl Checker {
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
                 let value = self.expr(value, expected.as_ref())?;
                 let ty = expected.unwrap_or_else(|| value.ty.clone());
-                if *mutable && ty.has_reference() && !matches!(ty, Type::Reference(_)) {
+                if *mutable
+                    && ty.has_reference()
+                    && !matches!(ty, Type::Reference(_) | Type::Exclusive(_))
+                {
                     return Err(Diagnostic::unsupported(
                         "mutable reference bindings",
                         stmt.span,
@@ -128,6 +131,33 @@ impl Checker {
                 let mut form = target;
                 while let ExprKind::Group(value) = &form.kind {
                     form = value;
+                }
+                if let ExprKind::Unary { op, value: pointer } = &form.kind
+                    && op == "*"
+                {
+                    let target = self.expr(pointer, None)?;
+                    if target.ty.pointee().is_some_and(|ty| {
+                        !matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
+                    }) {
+                        return Err(Diagnostic::unsupported(
+                            "indirect stores outside scalar storage",
+                            form.span,
+                        ));
+                    }
+                    let Type::Exclusive(ty) = &target.ty else {
+                        return Err(Self::error(
+                            "E305",
+                            "indirect mutation requires exclusive access",
+                            form.span,
+                        ));
+                    };
+                    let value = self.expr(value, Some(ty))?;
+                    self.forget_mutable();
+                    return Ok(vec![hir::Stmt::Store {
+                        target,
+                        value,
+                        span: form.span,
+                    }]);
                 }
                 if matches!(form.kind, ExprKind::Index { .. } | ExprKind::Field { .. }) {
                     return Ok(vec![self.write_path(target, value)?]);

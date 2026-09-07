@@ -43,7 +43,7 @@ impl Checker<'_> {
         self.complete(&ty, &state, span)?;
         if !self.proofs.mutable.contains(&id) {
             self.link_tags(id, &ty, &mut state, span)?;
-        } else if !matches!(ty, Type::Reference(_)) {
+        } else if !matches!(ty, Type::Reference(_) | Type::Exclusive(_)) {
             state = State::unknown(&ty, self.guards, span)?;
         }
         self.reserve_origins(state.weight() + 1, span)?;
@@ -168,7 +168,7 @@ impl Checker<'_> {
             } if self.inputs.contains(id)
                 && crate::borrow_contract::component_type(&self.program.locals[*id], component)
                     .is_some_and(|ty| match ty {
-                        Type::Reference(ty) => {
+                        Type::Reference(ty) | Type::Exclusive(ty) => {
                             crate::borrow_contract::projected_type(ty, fields).is_some()
                         }
                         _ => false,
@@ -275,7 +275,7 @@ impl Checker<'_> {
                 return Err(State::budget(span));
             }
             match ty {
-                Type::Reference(ty) => {
+                Type::Reference(ty) | Type::Exclusive(ty) => {
                     valid.insert(path.clone());
                     if !self
                         .guards

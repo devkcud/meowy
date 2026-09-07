@@ -125,6 +125,19 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
             };
             checker.proofs.conditions = checker.guards;
             checker.proofs.tags = checker.tags;
+            for function in &program.functions {
+                if function.result.has_exclusive()
+                    || function
+                        .params
+                        .iter()
+                        .any(|id| program.locals[*id].has_exclusive())
+                {
+                    return Err(vec![Diagnostic::unsupported(
+                        "exclusive function signatures",
+                        Span::default(),
+                    )]);
+                }
+            }
             let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
             crate::loans::check(&program, &facts, &checker.proofs, &mut checker.flow)?;
             Ok(program)

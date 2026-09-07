@@ -1,4 +1,5 @@
 use super::{BTreeMap, FALSE, Graph, Guard, MAX_ORIGINS, MAX_VALUES, Node, Result, TRUE, VecDeque};
+use crate::hir::ReferenceMode;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct LoanId(pub(crate) usize);
@@ -16,6 +17,7 @@ impl Authority {
 }
 
 pub(crate) struct Loan {
+    pub(crate) mode: ReferenceMode,
     pub(crate) node: usize,
     pub(crate) value: usize,
     pub(crate) parent: Option<usize>,
@@ -57,6 +59,16 @@ impl Graph<'_> {
     }
 
     pub(crate) fn grant(&mut self, node: usize, value: usize, parent: Option<usize>) -> Result<()> {
+        self.grant_mode(node, value, parent, ReferenceMode::Shared)
+    }
+
+    pub(crate) fn grant_mode(
+        &mut self,
+        node: usize,
+        value: usize,
+        parent: Option<usize>,
+        mode: ReferenceMode,
+    ) -> Result<()> {
         if self.loans.len() >= MAX_VALUES
             || node >= self.nodes.len()
             || value >= self.values.len()
@@ -64,8 +76,9 @@ impl Graph<'_> {
         {
             return Err(Self::budget());
         }
-        self.reserve_authority(5)?;
+        self.reserve_authority(6)?;
         self.loans.push(Loan {
+            mode,
             node,
             value,
             parent,

@@ -36,7 +36,7 @@ pub(crate) fn reference_leaves<'a>(
             return Err(State::budget(span));
         }
         match ty {
-            Type::Reference(target) => {
+            Type::Reference(target) | Type::Exclusive(target) => {
                 if nested && target.has_reference() {
                     let mut inner = path.clone();
                     inner.push(Step::Deref);
@@ -111,7 +111,7 @@ pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a 
             (Step::Slot(0), Type::Record { primary, .. }) => primary,
             (Step::Slot(index), Type::Record { fields, .. }) => &fields.get(index - 1)?.ty,
             (Step::Variant(index), Type::Union(members)) => members.get(*index)?,
-            (Step::Deref, Type::Reference(target)) => target,
+            (Step::Deref, Type::Reference(target) | Type::Exclusive(target)) => target,
             _ => return None,
         };
     }
@@ -182,7 +182,9 @@ pub(crate) fn type_weight(ty: &Type, flow: &mut Flow, span: Span) -> Result<usiz
             return Err(State::budget(span));
         }
         match ty {
-            Type::Reference(ty) | Type::List { element: ty, .. } => pending.push(ty),
+            Type::Reference(ty) | Type::Exclusive(ty) | Type::List { element: ty, .. } => {
+                pending.push(ty)
+            }
             Type::Record { primary, fields } => {
                 pending.push(primary);
                 for field in fields {

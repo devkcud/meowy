@@ -93,6 +93,9 @@ impl<'a> Graph<'a> {
                         Bundle::new()
                     };
                     let mut node = self.copied(&value, &target)?;
+                    if self.proofs.receivers.contains(id) {
+                        node.barrier = Some(span);
+                    }
                     self.event(&mut node, EventKind::Init(cell), span)?;
                     self.append(node)?;
                     if let Some(state) = self.facts.locals.get(id) {
@@ -122,7 +125,10 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         continue;
                     }
-                    let target = if matches!(self.program.locals[*id], Type::Reference(_)) {
+                    let target = if matches!(
+                        self.program.locals[*id],
+                        Type::Reference(_) | Type::Exclusive(_)
+                    ) {
                         if !self.merging {
                             return Err(crate::diagnostic::Diagnostic::unsupported(
                                 "missing mutable-reference body proof",
@@ -149,6 +155,28 @@ impl<'a> Graph<'a> {
                     if let Some(target) = target {
                         self.locals.insert(*id, target);
                     }
+                }
+                Stmt::Store {
+                    target,
+                    value,
+                    span,
+                } => {
+                    let pointer = self.reference_value(target)?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    let value = self.expression(value)?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    let access = self.pointee_access(&pointer, &[], Kind::Write, *span)?;
+                    let mut uses = self.direct(&pointer)?;
+                    uses.extend(value.into_values());
+                    self.append(Node {
+                        uses,
+                        access: Some(access),
+                        ..Node::default()
+                    })?;
                 }
                 Stmt::SetPath {
                     id,
@@ -252,6 +280,7 @@ impl<'a> Graph<'a> {
                     value,
                     ..
                 } => {
+                    let span = value.span;
                     let scope = self.blocks.get(target).expect("emission target");
                     let slot = crate::borrow::slot(&scope.ty, field)
                         .filter(|(_, ty)| ty.accepts(&value.ty))
@@ -265,7 +294,8 @@ impl<'a> Graph<'a> {
                     } else {
                         self.expression(value)?
                     };
-                    let node = self.copied(&value, &result)?;
+                    let mut node = self.copied(&value, &result)?;
+                    node.barrier = Some(span);
                     self.append(node)?;
                 }
                 Stmt::If {

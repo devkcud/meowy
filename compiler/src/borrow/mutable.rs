@@ -30,6 +30,7 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
         push(&mut pending, Item::Statement(stmt), 0, guards)?;
     }
     let mut write = None;
+    let mut exclusive = None;
     let mut restarts = super::BTreeSet::new();
     while let Some((item, depth)) = pending.pop() {
         if !guards.spend(1) {
@@ -44,13 +45,20 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                     }
                 }
                 Stmt::Assign { id, value } => {
-                    if matches!(program.locals.get(*id), Some(Type::Reference(_))) {
+                    if matches!(
+                        program.locals.get(*id),
+                        Some(Type::Reference(_) | Type::Exclusive(_))
+                    ) {
                         write.get_or_insert(value.span);
                     }
                     add(Item::Expression(value))?;
                 }
                 Stmt::Bind { value, .. } | Stmt::Emit { value, .. } | Stmt::Expr(value) => {
                     add(Item::Expression(value))?;
+                }
+                Stmt::Store { target, value, .. } => {
+                    add(Item::Expression(value))?;
+                    add(Item::Expression(target))?;
                 }
                 Stmt::SetPath { path, value, .. } => {
                     add(Item::Expression(value))?;
@@ -76,52 +84,83 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                 Stmt::Leave(_) => {}
                 Stmt::SlotAlias { .. } => {}
             },
-            Item::Expression(expr) => match &expr.kind {
-                ExprKind::Block(block) => {
-                    for stmt in block.stmts.iter().rev() {
-                        add(Item::Statement(stmt))?;
+            Item::Expression(expr) => {
+                if expr.ty.has_exclusive() {
+                    exclusive.get_or_insert(expr.span);
+                    if !matches!(expr.ty, Type::Exclusive(_)) {
+                        return Err(crate::diagnostic::Diagnostic::unsupported(
+                            "exclusive reference carriers",
+                            expr.span,
+                        ));
                     }
                 }
-                ExprKind::Binary { left, right, .. } => {
-                    add(Item::Expression(right))?;
-                    add(Item::Expression(left))?;
-                }
-                ExprKind::TemporaryBorrow { value, .. }
-                | ExprKind::Reborrow { value, .. }
-                | ExprKind::Deref(value)
-                | ExprKind::Unary { value, .. }
-                | ExprKind::Field { value, .. }
-                | ExprKind::Primary(value)
-                | ExprKind::StringSize(value)
-                | ExprKind::ListSize(value)
-                | ExprKind::Coerce { value }
-                | ExprKind::TypeTest { value, .. } => add(Item::Expression(value))?,
-                ExprKind::ElementBorrow { value, index, .. }
-                | ExprKind::ListIndex { value, index }
-                | ExprKind::ListAdd { value, item: index } => {
-                    add(Item::Expression(index))?;
-                    add(Item::Expression(value))?;
-                }
-                ExprKind::List { values, .. }
-                | ExprKind::Call { args: values, .. }
-                | ExprKind::Print { parts: values, .. }
-                | ExprKind::Panic { parts: values } => {
-                    for value in values.iter().rev() {
+                match &expr.kind {
+                    ExprKind::Block(block) => {
+                        if block.ty.has_exclusive() {
+                            return Err(crate::diagnostic::Diagnostic::unsupported(
+                                "exclusive block results",
+                                expr.span,
+                            ));
+                        }
+                        for stmt in block.stmts.iter().rev() {
+                            add(Item::Statement(stmt))?;
+                        }
+                    }
+                    ExprKind::Binary { left, right, .. } => {
+                        if left.ty.has_exclusive() || right.ty.has_exclusive() {
+                            return Err(crate::diagnostic::Diagnostic::unsupported(
+                                "exclusive reference comparison",
+                                expr.span,
+                            ));
+                        }
+                        add(Item::Expression(right))?;
+                        add(Item::Expression(left))?;
+                    }
+                    ExprKind::TemporaryBorrow { value, .. }
+                    | ExprKind::Reborrow { value, .. }
+                    | ExprKind::Deref(value)
+                    | ExprKind::Unary { value, .. }
+                    | ExprKind::Field { value, .. }
+                    | ExprKind::Primary(value)
+                    | ExprKind::StringSize(value)
+                    | ExprKind::ListSize(value)
+                    | ExprKind::Coerce { value }
+                    | ExprKind::TypeTest { value, .. } => add(Item::Expression(value))?,
+                    ExprKind::ElementBorrow { value, index, .. }
+                    | ExprKind::ListIndex { value, index }
+                    | ExprKind::ListAdd { value, item: index } => {
+                        add(Item::Expression(index))?;
                         add(Item::Expression(value))?;
                     }
+                    ExprKind::List { values, .. }
+                    | ExprKind::Call { args: values, .. }
+                    | ExprKind::Print { parts: values, .. }
+                    | ExprKind::Panic { parts: values } => {
+                        for value in values.iter().rev() {
+                            add(Item::Expression(value))?;
+                        }
+                    }
+                    ExprKind::Null
+                    | ExprKind::Bool(_)
+                    | ExprKind::Int(_)
+                    | ExprKind::Float(_)
+                    | ExprKind::String(_)
+                    | ExprKind::Local(_)
+                    | ExprKind::Borrow(_) => {}
                 }
-                ExprKind::Null
-                | ExprKind::Bool(_)
-                | ExprKind::Int(_)
-                | ExprKind::Float(_)
-                | ExprKind::String(_)
-                | ExprKind::Local(_)
-                | ExprKind::Borrow(_) => {}
-            },
+            }
         }
     }
+    if let Some(span) = exclusive
+        && !restarts.is_empty()
+    {
+        return Err(crate::diagnostic::Diagnostic::unsupported(
+            "exclusive references in restart bodies",
+            span,
+        ));
+    }
     Ok(Plan {
-        merging: write.is_some(),
+        merging: write.is_some() || exclusive.is_some(),
         restarts,
     })
 }

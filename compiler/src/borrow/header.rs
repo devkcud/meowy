@@ -10,7 +10,7 @@ pub(crate) struct Shape {
 
 impl Shape {
     pub(crate) fn new(ty: &Type, guards: &mut Guards, span: Span) -> Result<Self> {
-        if !matches!(ty, Type::Reference(_)) {
+        if !matches!(ty, Type::Reference(_) | Type::Exclusive(_)) {
             return Err(Diagnostic::unsupported(
                 "restart header requires a fixed reference type",
                 span,
@@ -26,7 +26,7 @@ impl Shape {
                 return Err(State::budget(span));
             }
             match ty {
-                Type::Reference(target) => {
+                Type::Reference(target) | Type::Exclusive(target) => {
                     if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS {
                         return Err(State::budget(span));
                     }

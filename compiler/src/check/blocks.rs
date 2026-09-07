@@ -66,6 +66,7 @@ impl Checker {
         if let Some(value) = receiver {
             let ty = value.ty.clone();
             let local = self.local(ty.clone());
+            self.proofs.receivers.insert(local);
             self.places.insert(local);
             self.declare(
                 "self",

@@ -134,6 +134,7 @@ impl<'a> Graph<'a> {
         let value = self.bundle(origins)?;
         let mut node = Node {
             uses,
+            barrier: Some(span),
             defs: value.values().copied().collect(),
             ..Node::default()
         };
@@ -158,6 +159,8 @@ impl<'a> Graph<'a> {
             ExprKind::Local(id) => {
                 if self.has_tag(&expr.ty, path)? {
                     self.read_local(*id, path, Kind::Tag, expr.span, false)?;
+                } else if expr.ty.has_exclusive() {
+                    self.read_local(*id, path, Kind::Read, expr.span, false)?;
                 }
             }
             ExprKind::Field { value, index } => {
@@ -333,10 +336,18 @@ impl<'a> Graph<'a> {
                     value,
                     uses,
                     expr.span,
+                    crate::hir::ReferenceMode::Shared,
                 )?;
                 Self::select(result, path)
             }
-            ExprKind::Borrow(place) => Self::select(self.borrowed(place, expr.span)?, path),
+            ExprKind::Borrow(place) => Self::select(
+                self.borrowed(
+                    place,
+                    expr.span,
+                    expr.ty.reference_mode().ok_or_else(Self::budget)?,
+                )?,
+                path,
+            ),
             ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {
                 self.derived(expr, path)?
             }

@@ -50,7 +50,7 @@ impl Checker<'_> {
                         .ok_or_else(|| Self::unsupported(expr.span))?
                         .ty;
                 }
-                if expr.ty != Type::Reference(Box::new(ty.clone())) {
+                if expr.ty.pointee() != Some(ty) {
                     return Err(Self::unsupported(expr.span));
                 }
                 let path = place
@@ -84,12 +84,12 @@ impl Checker<'_> {
                     }
                     _ => unreachable!(),
                 };
-                let Type::Reference(ty) = &value.ty else {
+                let (Type::Reference(ty) | Type::Exclusive(ty)) = &value.ty else {
                     return Err(Self::unsupported(expr.span));
                 };
                 let target = crate::borrow_contract::projected_type(ty, &fields)
                     .ok_or_else(|| Self::unsupported(expr.span))?;
-                if expr.ty != Type::Never && expr.ty != Type::Reference(Box::new(target.clone())) {
+                if expr.ty != Type::Never && expr.ty.pointee() != Some(target) {
                     return Err(Self::unsupported(expr.span));
                 }
                 let state = result
@@ -100,7 +100,9 @@ impl Checker<'_> {
                 state
             }
             ExprKind::Local(id) => {
-                if self.proofs.mutable.contains(id) && !matches!(expr.ty, Type::Reference(_)) {
+                if self.proofs.mutable.contains(id)
+                    && !matches!(expr.ty, Type::Reference(_) | Type::Exclusive(_))
+                {
                     State::unknown(&expr.ty, self.guards, expr.span)?
                 } else {
                     let state = self

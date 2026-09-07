@@ -41,7 +41,7 @@ pub fn shared_reference_scope_checks_run_before_native_lowering() {
     for (source, code) in [
         ("view:{owner:1;->&owner}", "E303"),
         ("bad:(){owner:1;ref:&owner;alias:ref;->alias}", "E303"),
-        ("owner:=1;view:&!owner", "B001"),
+        ("owner:=1;view:&!owner;owner=2;value:*view", "E302"),
         ("view:&(1+2);value:*view", "E303"),
     ] {
         let case = Case::new(source);

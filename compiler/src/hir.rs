@@ -9,6 +9,12 @@ pub type ReborrowId = usize;
 pub type StatementId = usize;
 pub type RestartId = usize;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ReferenceMode {
+    Shared,
+    Exclusive,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Field {
     pub name: String,
@@ -34,6 +40,7 @@ pub enum Type {
         capacity: usize,
     },
     Reference(Box<Type>),
+    Exclusive(Box<Type>),
     Record {
         primary: Box<Type>,
         fields: Vec<Field>,
@@ -42,6 +49,33 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn pointee(&self) -> Option<&Type> {
+        match self {
+            Self::Reference(ty) | Self::Exclusive(ty) => Some(ty),
+            _ => None,
+        }
+    }
+
+    pub fn reference_mode(&self) -> Option<ReferenceMode> {
+        match self {
+            Self::Reference(_) => Some(ReferenceMode::Shared),
+            Self::Exclusive(_) => Some(ReferenceMode::Exclusive),
+            _ => None,
+        }
+    }
+
+    pub fn has_exclusive(&self) -> bool {
+        match self {
+            Self::Exclusive(_) => true,
+            Self::Reference(ty) | Self::List { element: ty, .. } => ty.has_exclusive(),
+            Self::Record { primary, fields } => {
+                primary.has_exclusive() || fields.iter().any(|field| field.ty.has_exclusive())
+            }
+            Self::Union(types) => types.iter().any(Self::has_exclusive),
+            _ => false,
+        }
+    }
+
     pub fn is_copy(&self) -> bool {
         match self {
             Self::Null
@@ -51,6 +85,7 @@ impl Type {
             | Self::Float { .. }
             | Self::String
             | Self::Reference(_) => true,
+            Self::Exclusive(_) => false,
             Self::List { element, .. } => element.is_copy(),
             Self::Record { primary, fields } => {
                 primary.is_copy() && fields.iter().all(|field| field.ty.is_copy())
@@ -68,7 +103,7 @@ impl Type {
                 Some((size, size))
             }
             Type::String => Some((16, 8)),
-            Type::Reference(_) => Some((8, 8)),
+            Type::Reference(_) | Type::Exclusive(_) => Some((8, 8)),
             Type::Record { primary, fields } => {
                 let mut size = 0usize;
                 let mut align = 1;
@@ -101,7 +136,7 @@ impl Type {
     pub fn has_reference(&self) -> bool {
         match self {
             Self::List { element, .. } => element.has_reference(),
-            Self::Reference(_) => true,
+            Self::Reference(_) | Self::Exclusive(_) => true,
             Self::Record { primary, fields } => {
                 primary.has_reference() || fields.iter().any(|field| field.ty.has_reference())
             }
@@ -217,6 +252,11 @@ pub enum Stmt {
     SetPath {
         id: LocalId,
         path: Vec<WriteStep>,
+        value: Expr,
+        span: Span,
+    },
+    Store {
+        target: Expr,
         value: Expr,
         span: Span,
     },

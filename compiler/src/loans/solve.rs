@@ -181,6 +181,7 @@ impl<'a> Graph<'a> {
         self.solve_init(&reach)?;
         self.solve_authority(&reach)?;
         let live = self.liveness(&reach)?;
+        self.permissions(&reach, &live)?;
         for (id, reachable) in reach.iter().enumerate() {
             let Some((place, span)) = self.nodes[id]
                 .access

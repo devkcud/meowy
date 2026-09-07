@@ -169,7 +169,7 @@ pub fn reference_binding_types_and_unsupported_mutation_forms_stay_explicit() {
         ("a:1;holder:={->view:&a}", "B001"),
         ("a:1;holder:{->view:=&a}", "B001"),
         ("a:1;values:[&a]", "B001"),
-        ("a:=1;p:&!a", "B001"),
+        ("a:=1;p:&!a;q:p;v:*p", "E301"),
         ("a:1;b:2;p:=&a;cell:&p;*cell=&b", "B001"),
     ] {
         let output = Case::new(source).command("check", &["--json"]);

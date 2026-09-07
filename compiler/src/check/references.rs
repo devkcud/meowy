@@ -5,13 +5,19 @@ use crate::hir::{self, Type};
 
 impl Checker {
     pub(crate) fn reference_type(&mut self, ty: Type, span: Span) -> Result<Type> {
+        if ty.has_exclusive() {
+            return Err(Diagnostic::unsupported(
+                "references containing exclusive values",
+                span,
+            ));
+        }
         let mut pending = vec![(&ty, 1usize)];
         while let Some((ty, depth)) = pending.pop() {
             if !self.flow.spend(1) {
                 return Err(crate::borrow_value::State::budget(span));
             }
             match ty {
-                Type::Reference(ty) => {
+                Type::Reference(ty) | Type::Exclusive(ty) => {
                     if depth >= 64 {
                         return Err(Diagnostic::unsupported(
                             "reference nesting budget exhausted",
@@ -44,6 +50,86 @@ impl Checker {
         Ok(Type::Reference(Box::new(ty)))
     }
 
+    pub(crate) fn exclusive_type(&mut self, ty: Type, span: Span) -> Result<Type> {
+        if !matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. }) {
+            return Err(Diagnostic::unsupported(
+                "exclusive references outside ordinary scalar storage",
+                span,
+            ));
+        }
+        Ok(Type::Exclusive(Box::new(ty)))
+    }
+
+    pub(crate) fn exclusive_borrow(&mut self, expr: &ast::Expr, span: Span) -> Result<hir::Expr> {
+        if let ExprKind::Group(value) = &expr.kind {
+            return self.exclusive_borrow(value, span);
+        }
+        if let ExprKind::Unary { op, value } = &expr.kind
+            && op == "*"
+        {
+            let value = self.expr(value, None)?;
+            if value.ty == Type::Never {
+                return Ok(value);
+            }
+            let Type::Exclusive(ty) = &value.ty else {
+                return Err(Self::error(
+                    "E305",
+                    "exclusive reborrow requires exclusive access",
+                    span,
+                ));
+            };
+            let ty = self.exclusive_type(*ty.clone(), span)?;
+            let site = self.reborrows;
+            self.reborrows += 1;
+            return Ok(hir::Expr {
+                kind: hir::ExprKind::Reborrow {
+                    site,
+                    value: Box::new(value),
+                    fields: Vec::new(),
+                },
+                ty,
+                span,
+            });
+        }
+        let ExprKind::Name(name) = &expr.kind else {
+            return Err(Diagnostic::unsupported(
+                "exclusive borrowing of fields or temporaries",
+                span,
+            ));
+        };
+        let Value::Local {
+            id, ty, mutable, ..
+        } = self.value(name, expr.span)?
+        else {
+            return Err(Diagnostic::unsupported(
+                "exclusive borrowing outside local storage",
+                span,
+            ));
+        };
+        if !self.places.contains(&id) || self.proofs.aliases.contains_key(&id) {
+            return Err(Diagnostic::unsupported(
+                "exclusive borrowing of emitted storage",
+                span,
+            ));
+        }
+        let ty = self.exclusive_type(ty, span)?;
+        if !mutable {
+            return Err(Self::error(
+                "E305",
+                format!("binding `{name}` is immutable"),
+                span,
+            ));
+        }
+        Ok(hir::Expr {
+            kind: hir::ExprKind::Borrow(hir::Place {
+                root: id,
+                fields: Vec::new(),
+            }),
+            ty,
+            span,
+        })
+    }
+
     pub(crate) fn address_root<'a>(expr: &'a ast::Expr, fields: &mut Vec<String>) -> &'a ast::Expr {
         match &expr.kind {
             ExprKind::Group(value) => Self::address_root(value, fields),
@@ -63,7 +149,7 @@ impl Checker {
         match &expr.kind {
             ExprKind::Group(value) => self.address_hint(value),
             ExprKind::Unary { op, value } if op == "*" => match self.hint(value)? {
-                Type::Reference(ty) => Some(*ty),
+                Type::Reference(ty) | Type::Exclusive(ty) => Some(*ty),
                 _ => None,
             },
             ExprKind::Field { .. } => self.hint(expr),
@@ -115,7 +201,9 @@ impl Checker {
             if names.is_empty() {
                 return self.temporary_borrow(value, span);
             }
-            if !matches!(value.ty, Type::Reference(_)) && self.address(root).is_err() {
+            if !matches!(value.ty, Type::Reference(_) | Type::Exclusive(_))
+                && self.address(root).is_err()
+            {
                 self.temporary_borrow(value, root.span)?
             } else {
                 value
@@ -125,7 +213,7 @@ impl Checker {
             return Ok(value);
         }
         let mut names = names.into_iter().peekable();
-        while !matches!(value.ty, Type::Reference(_)) {
+        while !matches!(value.ty, Type::Reference(_) | Type::Exclusive(_)) {
             let Some(name) = names.next() else {
                 return Err(error);
             };
@@ -153,7 +241,7 @@ impl Checker {
             }
         }
         loop {
-            let Type::Reference(target) = &value.ty else {
+            let (Type::Reference(target) | Type::Exclusive(target)) = &value.ty else {
                 unreachable!()
             };
             let mut ty = target.as_ref();
@@ -177,7 +265,7 @@ impl Checker {
                     })?;
                 path.push(index);
                 ty = &field.ty;
-                if matches!(ty, Type::Reference(_)) && names.peek().is_some() {
+                if matches!(ty, Type::Reference(_) | Type::Exclusive(_)) && names.peek().is_some() {
                     break;
                 }
             }

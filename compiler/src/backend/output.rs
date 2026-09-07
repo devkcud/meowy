@@ -34,7 +34,9 @@ impl<'a> Generator<'a> {
                 self.print_value(&Type::String, &value, fd)?;
             }
             Type::Never => return Err("cannot print a never value".into()),
-            Type::Reference(_) => return Err("shared-reference formatting is unavailable".into()),
+            Type::Reference(_) | Type::Exclusive(_) => {
+                return Err("shared-reference formatting is unavailable".into());
+            }
             Type::List { .. } => return Err("list formatting is unavailable".into()),
             Type::Bool => self.line(format!(
                 "call void @meowy_bool_v1(i32 {fd}, i1 zeroext {value})"

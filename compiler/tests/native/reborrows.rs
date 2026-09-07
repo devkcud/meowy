@@ -144,7 +144,7 @@ pub fn shared_reborrow_escapes_and_remaining_storage_boundaries_are_explicit() {
             "first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:\"local\";->&*first(&owner,&short)}",
             "E303",
         ),
-        ("owner:=1;parent:&owner;view:&!*parent", "B001"),
+        ("owner:=1;parent:&owner;view:&!*parent", "E305"),
         (
             "make<{value<int32>}>:(){->value:1};view:&make().value;copy:*view",
             "E303",

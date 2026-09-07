@@ -70,7 +70,7 @@ pub(crate) fn ir_type(ty: &Type) -> String {
         Type::List { element, capacity } => {
             format!("{{ i64, [{capacity} x {}] }}", ir_type(element))
         }
-        Type::Reference(_) => "ptr".into(),
+        Type::Reference(_) | Type::Exclusive(_) => "ptr".into(),
         Type::Record { primary, fields } => {
             let mut types = vec![ir_type(primary)];
             types.extend(fields.iter().map(|field| ir_type(&field.ty)));
@@ -321,6 +321,22 @@ impl<'a> Generator<'a> {
                 } => {
                     self.set_path(*id, path, value)?;
                 }
+                Stmt::Store { target, value, .. } => {
+                    if target.ty.pointee() != Some(&value.ty) && value.ty != Type::Never {
+                        return Err("indirect store type mismatch".into());
+                    }
+                    if !matches!(target.ty, Type::Exclusive(_)) {
+                        return Err("indirect store requires exclusive reference".into());
+                    }
+                    let pointer = self.expression(target)?;
+                    if self.ended {
+                        continue;
+                    }
+                    let result = self.expression(value)?;
+                    if !self.ended {
+                        self.store_value(&value.ty, &result, &pointer);
+                    }
+                }
                 Stmt::Emit {
                     target,
                     field,
@@ -459,7 +475,7 @@ impl<'a> Generator<'a> {
             }
             ExprKind::Borrow(place) => {
                 let (ptr, stored) = self.place(place)?;
-                if expression.ty != Type::Reference(Box::new(stored)) {
+                if expression.ty.pointee() != Some(&stored) {
                     return Err("borrow type differs from declared storage".into());
                 }
                 Ok(ptr)
@@ -468,9 +484,14 @@ impl<'a> Generator<'a> {
                 self.temporary_borrow(*id, value, &expression.ty)
             }
             ExprKind::Reborrow { value, fields, .. } => {
-                let Type::Reference(target) = &value.ty else {
-                    return Err("reborrow requires a shared reference".into());
+                let (Type::Reference(target) | Type::Exclusive(target)) = &value.ty else {
+                    return Err("reborrow requires a reference".into());
                 };
+                if matches!(expression.ty, Type::Exclusive(_))
+                    && !matches!(value.ty, Type::Exclusive(_))
+                {
+                    return Err("exclusive reborrow requires exclusive parent".into());
+                }
                 let mut ptr = self.expression(value)?;
                 if self.ended {
                     return Ok("undef".into());
@@ -488,14 +509,14 @@ impl<'a> Generator<'a> {
                     ));
                     ty = field;
                 }
-                if expression.ty != Type::Reference(Box::new(ty.clone())) {
+                if expression.ty.pointee() != Some(ty) {
                     return Err("reborrow result type mismatch".into());
                 }
                 Ok(ptr)
             }
             ExprKind::Deref(value) => {
-                let Type::Reference(stored) = &value.ty else {
-                    return Err("dereference requires a shared reference".into());
+                let (Type::Reference(stored) | Type::Exclusive(stored)) = &value.ty else {
+                    return Err("dereference requires a reference".into());
                 };
                 let ptr = self.expression(value)?;
                 if self.ended {
