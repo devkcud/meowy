@@ -5,6 +5,10 @@ pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (include_str!("../../examples/hello.mwy"), "Hello, meowy!\n"),
         (
+            include_str!("../../examples/exclusive-indexed-fields.mwy"),
+            "index\n2\n2\n3\n",
+        ),
+        (
             include_str!("../../examples/exclusive-nested-elements.mwy"),
             "outer\ninner\n2\n3\n4\n",
         ),

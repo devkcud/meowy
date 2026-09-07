@@ -170,6 +170,8 @@ The [projected elements example](examples/exclusive-projected-elements.mwy) pres
 emitted target lifetime while reserving one list and mutating a sibling.
 The [nested elements example](examples/exclusive-nested-elements.mwy) checks indexes
 in order and retains enclosing reservations only through their required uses.
+The [indexed fields example](examples/exclusive-indexed-fields.mwy) borrows a scalar
+field inside an emitted list and carries it beyond the lexical alias scope.
 
 ## Implemented language
 
@@ -233,15 +235,16 @@ in order and retains enclosing reservations only through their required uses.
   through completion; proven cancellation preserves effects and moves without
   keeping a future result loan alive. Unsupported call/result/cell/dispatch-block crossings also reject
   shared values carrying exclusive ancestry.
-- Exclusive element borrows of mutable scalar bounded-list locals, record fields,
-  nested indexed owners and exact-backed emitted storage.
+- Exclusive scalar borrows through bounded-list locals, record fields, nested
+  indexed owners and exact-backed emitted storage. Both scalar elements and field
+  leaves such as `&!rows[i].value` retain their complete owned path.
   Owner/length capture precedes one index evaluation; a no-authority reservation
   protects returning acquisition, then mutable-owner proof grants the element loan.
   Bounds use initialized length and existing E101/P001 behavior. Same-list element
   overlap remains conservative; outer sibling fields stay disjoint. Nested paths check
   each list before the next index and reserve every enclosing collection through
   acquisition. Cancellation retains earlier completed-index demand. Reference and
-  temporary roots, scalar field leaves after indexes and wider pointees remain gated.
+  temporary roots and wider pointees remain gated.
   Moves, children, calls, block returns and scoped exits preserve ownership rules.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access

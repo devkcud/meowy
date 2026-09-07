@@ -1,7 +1,7 @@
-# Exclusive scalar list-element borrows
+# Exclusive scalar borrows through indexed storage
 
-`&!items[index]` borrows an initialized scalar element of mutable bounded-list
-storage: ordinary locals, named record fields, nested indexed owners and exact-backed
+`&!items[index]` and `&!rows[index].value` borrow initialized scalar storage
+through mutable bounded lists: ordinary locals, named record fields, nested indexed owners and exact-backed
 emitted aliases. Elements may be boolean, integer or float. This implements a
 bounded slice of the existing [collection](../docs/reference/collections.md) and
 [memory](../docs/reference/memory.md) contracts, preserving one-based positions and
@@ -9,9 +9,11 @@ initialized-length checks. Whole-list exclusive references remain unavailable.
 
 ## Owner authority and reservation
 
-`ExclusiveElement` HIR stores an owned Place (local view plus leading named-field
-path), intermediate WriteStep indexes/fields, and a final scalar-element index.
-It is separate from shared ElementBorrow and names no parent reference. Frontend and analysis require mutable owner proof. Every crossed
+`ExclusivePath` HIR stores an owned Place (local view plus leading named-field
+path) and the complete WriteStep sequence. Its scalar leaf may be a list element
+or a mutable record field beneath one or more indexes. It is separate from shared
+ElementBorrow and names no parent reference. `check/indexed.rs` resolves the bounded
+path; `Proofs::exclusive_path_type` independently validates it in both analyses. Frontend and analysis require mutable owner proof. Every crossed
 field must be mutable; projected owners must be reference-free Copy records. A
 mutable binding holding a shared reference is not an owner proof. Nested list
 owners and mutable record fields between indexes use the same reference-free Copy
@@ -32,7 +34,9 @@ It permits reads while blocking conflicting writes/exclusive acquisitions during
 returning index evaluation. This protects the captured address and initialized length.
 
 After the index returns, a fresh root exclusive loan names Source::Local or
-Source::Slot with mixed Field/Element projections ending at the selected element.
+Source::Slot with mixed Field/Element projections ending at the selected scalar.
+Field acquisition retains the final Field projection and demands enclosing list
+reservations; it adds no synthetic index or extra element projection.
 Its authority comes from mutable-owner proof, not from the reservation or a shared
 pointer. The final acquisition demands the reservation;
 afterward the reservation is dead. A non-returning index creates no exclusive loan
@@ -53,7 +57,8 @@ inside a non-returning inner index is allowed after earlier checks have complete
 The backend captures the actual owner address and initialized length before evaluating
 each index exactly once, checking an outer position before evaluating the next.
 Intermediate bounds diagnostics retain their own index-path spans. It reuses the
-existing signed/unsigned conversion and P001 bounds helper, then computes the element address only on the valid path. No list copy,
+existing signed/unsigned conversion and P001 bounds helper, then computes the
+selected address only on the valid path. No list copy,
 allocation, runtime ABI change or LLVM alias promise is added for the borrow itself.
 
 Known invalid constant positions report E101 using available length/capacity facts.
@@ -110,7 +115,14 @@ groups prove reservation chains and independently checked intermediate owner pat
 The [nested elements example](examples/exclusive-nested-elements.mwy) demonstrates
 ordered index effects, a disjoint outer sibling and cancellation of an inner index.
 
-Next, extend owned indexed paths to scalar field leaves such as `&!rows[i].value`,
-with capture and reservation demand through field acquisition. Reference-derived
-and temporary roots, owning elements, whole-list exclusive values, generated cleanup
-and exclusive restart bodies remain separate work.
+Sixteen indexed-field native groups cover scalar widths, mixed paths, mutable
+boundaries, collection conflicts, disjoint shared-field views, exact alias backing,
+call/child/move transfer, target scope, guarded views, cancellation and prefix bounds
+spans. Three graph groups prove the exact leaf region, reservation expiry, cancelled
+acquisition demand and required field mutability in both analysis passes.
+The [indexed fields example](examples/exclusive-indexed-fields.mwy) returns an
+emitted field pointer across its alias scope and mutates the actual target via a call.
+
+Generated payload/diagnostic layouts and scope cleanup are the next integration
+boundary. Reference-derived and temporary roots, owning elements, whole-list
+exclusive values and exclusive restart bodies still require separate contracts.
