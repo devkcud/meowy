@@ -1,7 +1,4 @@
-use super::{
-    Checker, Expr, ExprKind, FALSE, Flow, Origin, Projection, Result, State, Step, TRUE, Type,
-    Value,
-};
+use super::{Checker, Expr, ExprKind, FALSE, Flow, Projection, Result, State, Step, Type, Value};
 
 impl Checker<'_> {
     pub(crate) fn expression(&mut self, expr: &Expr) -> Result<Value> {
@@ -25,17 +22,16 @@ impl Checker<'_> {
                         .ok_or_else(|| Self::unsupported(expr.span))?
                         .ty;
                 }
-                if ty.has_reference() || expr.ty != Type::Reference(Box::new(ty.clone())) {
+                if expr.ty != Type::Reference(Box::new(ty.clone())) {
                     return Err(Self::unsupported(expr.span));
                 }
-                State {
-                    origins: vec![Origin {
-                        component: Vec::new(),
-                        source: self.proofs.source(place),
-                        guard: TRUE,
-                    }],
-                    ..State::default()
-                }
+                let path = place
+                    .fields
+                    .iter()
+                    .map(|index| Step::Slot(index + 1))
+                    .collect::<Vec<_>>();
+                let state = self.locals[&place.root].state.select(&path, self.guards);
+                state.borrowed(self.proofs.source(place), ty, self.guards, expr.span)?
             }
             ExprKind::Reborrow { site, value, .. }
             | ExprKind::ElementBorrow { site, value, .. } => {
@@ -65,22 +61,12 @@ impl Checker<'_> {
                 };
                 let target = crate::borrow_contract::projected_type(ty, &fields)
                     .ok_or_else(|| Self::unsupported(expr.span))?;
-                if ty.has_reference()
-                    || (expr.ty != Type::Never
-                        && expr.ty != Type::Reference(Box::new(target.clone())))
-                {
+                if expr.ty != Type::Never && expr.ty != Type::Reference(Box::new(target.clone())) {
                     return Err(Self::unsupported(expr.span));
                 }
-                let mut state = result.state;
-                if !self
-                    .guards
-                    .spend(state.weight() + fields.len().saturating_mul(state.origins.len()))
-                {
-                    return Err(State::budget(expr.span));
-                }
-                for origin in &mut state.origins {
-                    origin.source = origin.source.project(&fields);
-                }
+                let state = result
+                    .state
+                    .reborrowed(&fields, target, self.guards, expr.span)?;
                 self.reserve_origins(state.weight() + 1, expr.span)?;
                 self.facts.reborrows.insert(*site, state.clone());
                 state
@@ -94,13 +80,7 @@ impl Checker<'_> {
                         .get(id)
                         .map(|storage| storage.state.clone())
                         .ok_or_else(|| Self::unsupported(expr.span))?;
-                    let assumptions = self.assumptions();
-                    let proof = self.guards.and(state.proof, assumptions);
-                    for origin in state.origins.iter().chain(&state.bounds) {
-                        if self.guards.overlap(origin.guard, proof) {
-                            self.live(&origin.source, expr.span)?;
-                        }
-                    }
+                    self.live_value(&state, expr.span)?;
                     state
                 }
             }
@@ -111,31 +91,10 @@ impl Checker<'_> {
                     .state
                     .convert(&value.ty, &expr.ty, self.guards, expr.span)?
             }
-            ExprKind::Deref(value) => {
-                let result = self.expression(value)?;
+            ExprKind::Deref(_) | ExprKind::Field { .. } | ExprKind::Primary(_) => {
+                let result = self.read(expr, &[])?;
                 flow = result.flow;
-                if flow.next {
-                    if result.state.origins.is_empty() {
-                        return Err(Self::unsupported(expr.span));
-                    }
-                    let proof = self.guards.and(result.state.present, result.state.proof);
-                    for origin in result.state.origins.iter().chain(&result.state.bounds) {
-                        if self.guards.overlap(origin.guard, proof) {
-                            self.live(&origin.source, expr.span)?;
-                        }
-                    }
-                }
-                State::unknown(&expr.ty, self.guards, expr.span)?
-            }
-            ExprKind::Field { value, index } => {
-                let value = self.expression(value)?;
-                flow = value.flow;
-                value.state.select(&[Step::Slot(index + 1)], self.guards)
-            }
-            ExprKind::Primary(value) => {
-                let value = self.expression(value)?;
-                flow = value.flow;
-                value.state.select(&[Step::Slot(0)], self.guards)
+                result.state
             }
             ExprKind::Unary { value, .. }
             | ExprKind::StringSize(value)

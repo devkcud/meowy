@@ -4,6 +4,7 @@ mod control;
 mod fields;
 mod functions;
 mod places;
+mod transitive;
 mod values;
 
 use super::{Facts, Flow, Graph, Proofs};

@@ -192,10 +192,7 @@ impl Checker {
                     ));
                 }
                 let ty = self.ty(value)?;
-                if ty.has_reference() {
-                    return Err(Diagnostic::unsupported("nested reference types", expr.span));
-                }
-                Ok(Spec::Data(Type::Reference(Box::new(ty))))
+                Ok(Spec::Data(self.reference_type(ty, expr.span)?))
             }
             TypeKind::Unsupported(feature) => Err(Diagnostic::unsupported(feature, expr.span)),
         }

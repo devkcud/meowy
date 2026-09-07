@@ -107,8 +107,6 @@ pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() 
         ),
         ("bad:(){owner:1;pair:{->view:&owner};->pair}", "E303"),
         ("owner:1;pair:={->view:&owner}", "B001"),
-        ("owner:1;pair:{->view:&owner};view:&pair", "B001"),
-        ("f<null>:(pair<{view<&int32>}>){alias:&pair}", "B001"),
         (
             "f<null>:(flag<boolean>){owner:1;pair:={|flag|->view:&owner}}",
             "B001",

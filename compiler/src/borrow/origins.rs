@@ -239,13 +239,23 @@ impl Checker<'_> {
                 return Err(State::budget(span));
             }
             match ty {
-                Type::Reference(_) => {
+                Type::Reference(ty) => {
                     valid.insert(path.clone());
                     if !self
                         .guards
                         .implies(present, origins.get(&path).copied().unwrap_or(FALSE))
                     {
                         return Err(Self::unsupported(span));
+                    }
+                    if ty.has_reference() {
+                        if pending.len() + valid.len() + unions.len() >= MAX_ORIGINS
+                            || !self.guards.spend(path.len() + 1)
+                        {
+                            return Err(State::budget(span));
+                        }
+                        let mut path = path;
+                        path.push(Step::Deref);
+                        pending.push((ty, path, present));
                     }
                 }
                 Type::Record { primary, fields } => {

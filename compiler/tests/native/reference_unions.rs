@@ -134,7 +134,6 @@ pub fn reference_union_escapes_and_remaining_contracts_are_explicit() {
             "E303",
         ),
         ("a:1;r<&int32><null>:=&a", "B001"),
-        ("a:1;r<&int32><null>:&a;alias:&r", "B001"),
         ("f<null>:(r<&int32><null>){copy:=r}", "B001"),
         ("a:1;r<&int32><null>:&a;d:@\"debug\";d.print(r)", "B001"),
     ] {

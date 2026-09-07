@@ -14,6 +14,7 @@ pub(crate) struct Edge {
 pub(crate) struct Node {
     pub(crate) uses: Vec<usize>,
     pub(crate) defs: Vec<usize>,
+    pub(crate) transfers: Vec<(usize, usize)>,
     pub(crate) write: Option<(Place, Span)>,
     pub(crate) next: Vec<Edge>,
 }

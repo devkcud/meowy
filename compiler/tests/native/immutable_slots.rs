@@ -194,8 +194,6 @@ pub fn immutable_emitted_lists_keep_static_and_dynamic_bounds() {
 #[test]
 pub fn immutable_emitted_borrows_keep_unrepresented_storage_explicit() {
     for source in [
-        "owner:1;value:{->view:&owner;address:&view}",
-        "owner:1;value:{->holder:{->view:&owner};address:&holder}",
         "value:{->n:1;view:&!n}",
         "choose:(flag<boolean>)'out{|flag|{'out->n<int32><null>:null;view:&n};|!flag|{'out->n:\"text\"}}",
     ] {

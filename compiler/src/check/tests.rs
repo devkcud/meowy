@@ -187,14 +187,18 @@ pub(crate) fn union_equality_requires_the_same_normalized_union_type() {
 #[test]
 pub(crate) fn reference_capability_boundaries_are_explicit() {
     for source in [
+        "x:1;r:&x;s:&r;v:**s",
+        "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",
+        "x:1;r:&x;r.{v:&self}",
+    ] {
+        accepts(source);
+    }
+    for source in [
         "x:1;r:=&x",
         "x:=1;r:&!x",
         "r:&(1+2)",
-        "x:1;r:&x;s:&r",
         "f<int32>:(x<int32>){r:&!x;->*r}",
         "f<int32>:(x<&!int32>){->*x}",
-        "<R>:<{value<&int32>}>;f<null>:(x<&R>){->null}",
-        "x:1;r:&x;r.{v:&self}",
         "x:1;r:&x;debug:@\"debug\";debug.print(r)",
         "x:1;r:&x;s:&!*r",
         "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",

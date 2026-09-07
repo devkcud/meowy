@@ -155,10 +155,6 @@ d.print(owner.n)
     .runs(b"true\n7\nmake\n7\n7\n4\n8\n");
     for (source, code) in [
         (
-            "owner:{->n:1};holder:{->view:&owner};view:&holder.view",
-            "B001",
-        ),
-        (
             "view:{owner:{->n:1};holder:{->view:&owner};->&holder.view.n}",
             "E303",
         ),

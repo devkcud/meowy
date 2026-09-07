@@ -1,6 +1,7 @@
 pub(crate) mod control;
 pub(crate) mod emissions;
 pub(crate) mod origins;
+pub(crate) mod pointee;
 pub(crate) mod state;
 pub(crate) mod value;
 use std::collections::{BTreeMap, BTreeSet};

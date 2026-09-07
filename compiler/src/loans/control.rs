@@ -15,11 +15,8 @@ impl<'a> Graph<'a> {
             defs: result.values().copied().collect(),
             ..Node::default()
         })?;
-        let end = self.node(Node {
-            uses: result.values().copied().collect(),
-            defs: value.values().copied().collect(),
-            ..Node::default()
-        })?;
+        let node = self.copied(&result, &value)?;
+        let end = self.node(node)?;
         self.blocks.insert(
             block.id,
             Scope {
@@ -55,11 +52,8 @@ impl<'a> Graph<'a> {
                     } else {
                         Bundle::new()
                     };
-                    self.append(Node {
-                        uses: value.into_values().collect(),
-                        defs: target.into_values().collect(),
-                        ..Node::default()
-                    })?;
+                    let node = self.copied(&value, &target)?;
+                    self.append(node)?;
                     if let Some(state) = self.facts.locals.get(id) {
                         self.assume(state.proof)?;
                     }
@@ -182,16 +176,21 @@ impl<'a> Graph<'a> {
                     value,
                     ..
                 } => {
-                    let value = self.expression(value)?;
                     let scope = self.blocks.get(target).expect("emission target");
-                    let result = crate::borrow::slot(&scope.ty, field)
-                        .map(|(prefix, _)| Self::select(scope.result.clone(), &prefix))
+                    let slot = crate::borrow::slot(&scope.ty, field)
+                        .filter(|(_, ty)| ty.accepts(&value.ty))
+                        .map(|(prefix, ty)| (prefix, ty.clone()));
+                    let result = slot
+                        .as_ref()
+                        .map(|(prefix, _)| Self::select(scope.result.clone(), prefix))
                         .unwrap_or_default();
-                    self.append(Node {
-                        uses: value.into_values().collect(),
-                        defs: result.into_values().collect(),
-                        ..Node::default()
-                    })?;
+                    let value = if let Some((_, ty)) = slot {
+                        self.convert(value, &ty, &[])?
+                    } else {
+                        self.expression(value)?
+                    };
+                    let node = self.copied(&value, &result)?;
+                    self.append(node)?;
                 }
                 Stmt::If {
                     condition,
@@ -215,8 +214,9 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::Expr(value) => {
                     let value = self.expression(value)?;
+                    let uses = self.direct(&value)?;
                     self.append(Node {
-                        uses: value.into_values().collect(),
+                        uses,
                         ..Node::default()
                     })?;
                 }

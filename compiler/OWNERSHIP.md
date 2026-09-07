@@ -12,8 +12,8 @@ implementation boundary; it does not change language rules.
 - Shared references are non-null target-width pointers and copy by value.
   Equality compares addresses; dereference copies the supported copyable referent.
 - Eligible roots include ordinary locals, by-value parameters and dispatch receiver
-  copies. The selected referent must be reference-free; concrete fields can be
-  selected from reference-bearing carriers. Parameter/self addresses refer to their
+  copies. Reference-bearing referents carry transitive value summaries as described
+  below. Parameter/self addresses refer to their
   local storage, not an original caller value. Emitted storage uses the slot model below.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
@@ -62,10 +62,48 @@ implementation boundary; it does not change language rules.
   retains known full-record context through block operands instead of silently
   comparing their scalar primaries; scalar literals retain numeric-primary width.
 - Union wrappers containing references and omitted optional reference fields are
-  supported. Concrete reference-free fields of a carrier can be borrowed without
-  reading its other reference components. Borrowing the whole carrier or a
-  reference-valued field, mutable carriers and indirect/capturing function contracts
-  remain separate work. Shared reborrows inspect reference-free referents.
+  supported. Concrete fields of a carrier can be borrowed without reading its other
+  reference components. Whole-carrier and reference-cell borrows preserve separate
+  cell and pointee origins. Mutable carriers and indirect/capturing function
+  contracts remain separate work.
+
+## Transitive pointee summaries
+
+- `Step::Deref` extends the existing flat component paths. The borrowed cell's
+  physical origin is at the reference component; its stored value's origins, bounds
+  and active variants are beneath that component's Deref step. Nested references
+  repeat this step without recursive State objects or capacity enumeration.
+- A whole-carrier or reference-cell borrow snapshots immutable reference-bearing
+  contents. Copying a reference transfers its summary metadata, but does not itself
+  read the pointee's reference fields. Runtime pointer uses consume the direct
+  component; demanded summary uses propagate backwards through explicit CFG
+  transfers to the original stored reference values.
+- Dereference in a copy context selects the Deref subtree. A copied contained
+  reference can survive the containing Local/Slot cell when its own pointee survives.
+  The outer cell origin ends at the load. Public function bounds are attached to
+  every returned transitive reference leaf, so dereferencing a call result cannot
+  remove an ignored input's lifetime constraint.
+- Field reads and reborrows project the relevant summary before checking loaded
+  origins. Reading `outer.count` or borrowing `&outer.count` does not read an unrelated
+  `outer.view` pointee. A whole dereference-copy reads every directly contained
+  reference component. Address equality reads only the pointer components.
+- A reborrow projects the physical pointer source and keeps its outer bounds.
+  Its summary is the selected referent subtree. Crossing an intermediate stored
+  reference, as in `&outer.view.field`, loads that pointer once and continues from
+  its original pointee source; taking `&outer.view` instead addresses the reference cell.
+- Reference-free dereferences still produce fresh unknown activity. They cannot
+  replay a mutable referent's borrow-time union tag. Mutation of reference-bearing
+  storage remains unavailable, so supported transitive snapshots cannot become stale
+  through reference reassignment. Restart continues to clear iteration proofs.
+- Publishing a whole borrowed carrier must prove that its physical cell and every
+  transitive reference source outlive the receiving block. An unused field does not
+  excuse a shorter-lived source in a published whole-carrier summary. Directly
+  borrowing a separate reference-free field retains only that selected storage.
+- Extra entries, Deref paths, summary copies, projection scans and graph transfers
+  consume the existing work and persistent-state budgets. Long reference chains
+  and duplicating carrier shapes fail with B001 before unbounded summary growth.
+  Reference construction also caps inferred and aliased chains at 64 reference
+  layers before deeper Type copies can reach origin analysis.
 
 ## Active union variants
 
@@ -123,6 +161,11 @@ implementation boundary; it does not change language rules.
   bounded-list element regions, using the result leaf's exact reference type. Each returned reference also inherits every active input
   origin and transitive bound, including ignored inputs of another referent type.
   These are lifetime/loan dependencies, not claims about pointer identity.
+- Input component paths can descend through Deref to identify references stored
+  inside borrowed cells. A returned reference-bearing pointee receives the matching
+  input summary under bounded, mutually exclusive candidate guards. Distinct
+  candidate cells cannot assert conflicting active tags simultaneously. Every
+  transitive returned reference leaf also receives the public all-input bounds.
 - Consequently, `first(p, q)` remains bounded by both inputs even if the body
   returns only `p`. An ignored shorter-lived `q` causes E303 on escape, and a write
   to its owner before a returned reference's final use causes E302. Bounds survive
@@ -153,8 +196,8 @@ implementation boundary; it does not change language rules.
 
 ## Parameter and dispatch storage
 
-- Reference-free parameters and reference-free fields of carrier parameters may be
-  borrowed within the function or its nested blocks. Returning their addresses,
+- Parameters and their concrete fields may be borrowed within the function or its
+  nested blocks. Returning their own cell addresses,
   directly or through another call/dispatch,
   is E303. Every definition is checked even when callers infer no normal return.
 - A by-value dispatch receiver is copied into an immutable `self` local before the
@@ -167,9 +210,9 @@ implementation boundary; it does not change language rules.
 - Receiver expressions and function arguments evaluate once in order. Source/native
   tests distinguish original versus copied addresses, nullable carrier dispatch,
   earlier argument copies, effectful receivers and enclosing-scope early leaves.
-- Taking the address of a whole reference-bearing holder is still B001; its concrete
-  reference-free fields use the local copy's address. Shared dispatch does not enable
-  exclusive `self` mutation, captures or reference-bearing referent storage.
+- Borrowing a whole reference-bearing receiver follows the copied receiver's cell
+  lifetime, while its contained reference values keep their original sources.
+  Shared dispatch does not enable exclusive `self` mutation or captures.
 
 ## Shared reborrows
 
@@ -179,7 +222,7 @@ implementation boundary; it does not change language rules.
   Temporary reference values from calls/blocks are allowed because their referents
   retain the original lifetime. Leading carrier fields may produce that reference,
   as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
-  at the final field still requests holder storage (`&holder.view`) and is B001.
+  at the final field instead requests its reference-cell storage (`&holder.view`).
   A holder's own reference-free field uses its physical storage origin instead;
   it does not inherit unrelated contained references. Temporary owners remain B001.
 - Pure address hints resolve types without lowering expressions or changing
@@ -202,7 +245,7 @@ implementation boundary; it does not change language rules.
   An input `&Record` or `&List` can supply a descendant reference with a different
   target type. The abstract list region preserves potential input bounds even at
   capacity zero; it does not prove initialized storage or bypass bounds checks.
-  Fields inside union payloads, reference-bearing pointees, primary-ascription addresses,
+  Fields inside union payloads, primary-ascription addresses,
   static sources and reference-producing intrinsic contracts remain separate work.
 - Type walks, candidate frontiers, projected paths and snapshot expansion consume
   existing work/storage budgets. Many matching fields multiplied by returned
@@ -263,8 +306,8 @@ implementation boundary; it does not change language rules.
   block reinitializes its cells; inner restarts preserve initialized outer slots.
   Alias names remain lexically scoped; their shared views follow target ownership below.
 - Slot aliases stay separate from ordinary addressable places. The address
-  resolver supports `&name` and concrete field/list borrows only when the selected
-  referent is reference-free and the alias cell has the lexical type or contains
+  resolver supports `&name` and concrete field/list borrows only when the
+  alias cell has the lexical type or contains
   it as one exact union member. A lexical union that is only a proper subset of the
   stored union has incompatible tags/layout and remains B001; no copied borrow view or silent widening is made.
   Type hints do not register a borrow; actual uses receive final backing validation.
@@ -291,8 +334,9 @@ implementation boundary; it does not change language rules.
   all-input bounds; copying a reference adds no dependency on its containing slot.
   Borrowing a selected reference-free field instead creates only its physical Slot
   origin. A contained reference crossed by `&carrier.view.field` keeps the existing
-  pointee reborrow path. Whole-carrier/reference-cell borrows, exclusive references
-  and mutable reference-bearing fields remain unavailable.
+  pointee reborrow path. Whole-carrier/reference-cell borrows add transitive summaries
+  without replacing the stored value's sources. Exclusive references and mutable
+  reference-bearing fields remain unavailable.
 - Only mutable alias IDs enter mutable proofs and omit initializer constant/length caches.
   Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
@@ -545,10 +589,9 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Model transitive pointee origins for whole-carrier/reference-cell shared borrows
-   before enabling their addresses. Dereference copies must recover each contained
-   reference's origins and bounds separately from the borrowed cell's owner, including
-   discarded slots and restart. Add finer indexed disjointness,
+7. Extend storage and transitive summaries only alongside proved mutation, source
+   and lifetime rules. Preserve separate cell/pointee origins across future temporary
+   owners and exclusive reborrows. Add finer indexed disjointness,
    exclusive references, slice/alias metadata and non-Copy state separately.
 
 ## Verification

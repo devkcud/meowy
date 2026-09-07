@@ -2,6 +2,7 @@ pub(crate) mod control;
 pub(crate) mod graph;
 pub(crate) mod solve;
 pub(crate) mod state;
+pub(crate) mod transitive;
 pub(crate) mod values;
 use std::collections::{BTreeMap, VecDeque};
 

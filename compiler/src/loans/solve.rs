@@ -66,8 +66,20 @@ impl<'a> Graph<'a> {
                 continue;
             }
             let mut next = self.outgoing(id, &live)?;
+            let transfers = self.nodes[id].transfers.clone();
+            self.charge(transfers.len())?;
+            let mut incoming = Vec::new();
+            for (target, source) in transfers {
+                if let Some(guard) = next.get(&target) {
+                    incoming.push((source, *guard));
+                }
+            }
             for value in &self.nodes[id].defs {
                 next.remove(value);
+            }
+            for (source, guard) in incoming {
+                let prior = next.get(&source).copied().unwrap_or(FALSE);
+                next.insert(source, self.guards.or(prior, guard));
             }
             for value in &self.nodes[id].uses {
                 next.insert(*value, TRUE);

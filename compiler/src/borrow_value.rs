@@ -3,6 +3,8 @@ use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
 use crate::hir::{BlockId, LocalId, Place, Type};
 
+mod pointee;
+
 pub(crate) const MAX_PARTS: usize = 4_096;
 pub(crate) type Result<T> = std::result::Result<T, Diagnostic>;
 pub(crate) type Path = Vec<Step>;
@@ -11,6 +13,7 @@ pub(crate) type Path = Vec<Step>;
 pub(crate) enum Step {
     Slot(usize),
     Variant(usize),
+    Deref,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -345,6 +348,14 @@ impl State {
         let mut pending = vec![(ty, Vec::new(), TRUE)];
         while let Some((ty, path, present)) = pending.pop() {
             match ty {
+                Type::Reference(ty) if ty.has_reference() => {
+                    if result.size() + pending.len() >= MAX_PARTS || !flow.spend(path.len() + 1) {
+                        return Err(Self::budget(span));
+                    }
+                    let mut path = path;
+                    path.push(Step::Deref);
+                    pending.push((ty, path, present));
+                }
                 Type::Record { primary, fields } => {
                     for (index, ty) in std::iter::once(primary.as_ref())
                         .chain(fields.iter().map(|field| &field.ty))

@@ -214,9 +214,6 @@ d.print(owner);d.print(other)
 #[test]
 pub fn reference_slot_storage_keeps_whole_carrier_and_mutation_boundaries() {
     for source in [
-        "owner:1;value:{->view:&owner;address:&view}",
-        "owner:1;value:{->holder:{->view:&owner;->count:3};address:&holder}",
-        "owner:1;value:{->holder:{->view:&owner;->count:3};address:&holder.view}",
         "owner:1;value:{->view:=&owner}",
         "owner:1;value:{->holder:={->view:&owner;->count:3}}",
         "owner:1;value:{->holder:{->view:&owner;->count:3};address:&!holder.count}",

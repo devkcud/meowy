@@ -1,6 +1,6 @@
 use super::{
     BTreeMap, Bundle, CallId, Diagnostic, Expr, ExprKind, FALSE, Graph, LocalId, MAX_ORIGINS,
-    MAX_VALUES, Node, Origin, Path, Result, Span, Step, TRUE, Type,
+    MAX_VALUES, Node, Origin, Path, Result, Span, Step, Type,
 };
 
 impl<'a> Graph<'a> {
@@ -43,11 +43,8 @@ impl<'a> Graph<'a> {
             self.charge(weight + path.len() + 1)?;
             value.insert(path.clone(), self.value(self.values[*id].clone())?);
         }
-        self.append(Node {
-            uses: source.into_values().collect(),
-            defs: value.values().copied().collect(),
-            ..Node::default()
-        })?;
+        let node = self.copied(&source, &value)?;
+        self.append(node)?;
         Ok(value)
     }
 
@@ -107,6 +104,14 @@ impl<'a> Graph<'a> {
             | ExprKind::Coerce { value } => self.inspect(value)?,
             ExprKind::Block(block) => {
                 self.block(block)?;
+            }
+            ExprKind::Deref(value) => {
+                let value = self.expression(value)?;
+                let uses = self.direct(&value)?;
+                self.append(Node {
+                    uses,
+                    ..Node::default()
+                })?;
             }
             _ => {
                 self.expression(expr)?;
@@ -197,48 +202,9 @@ impl<'a> Graph<'a> {
     pub(crate) fn project(&mut self, expr: &Expr, path: &[Step]) -> Result<Bundle> {
         self.charge(path.len() + 1)?;
         let value = match &expr.kind {
-            ExprKind::Borrow(place) => {
-                let value = self.value(vec![Origin {
-                    component: Vec::new(),
-                    source: self.proofs.source(place),
-                    guard: TRUE,
-                }])?;
-                self.append(Node {
-                    defs: vec![value],
-                    ..Node::default()
-                })?;
-                Bundle::from([(Vec::new(), value)])
-            }
-            ExprKind::Reborrow { site, value, .. }
-            | ExprKind::ElementBorrow { site, value, .. } => {
-                let mut parent = self.expression(value)?.into_values().collect::<Vec<_>>();
-                if self.current.is_empty() {
-                    return Ok(Bundle::new());
-                }
-                if let ExprKind::ElementBorrow { index, .. } = &expr.kind {
-                    parent.extend(self.expression(index)?.into_values());
-                }
-                if self.current.is_empty() {
-                    return Ok(Bundle::new());
-                }
-                let Some(state) = self.facts.reborrows.get(site) else {
-                    let node = self.append(Node {
-                        uses: parent,
-                        ..Node::default()
-                    })?;
-                    self.missing_reborrows.push((node, expr.span));
-                    self.assume(FALSE)?;
-                    return Ok(Bundle::new());
-                };
-                self.charge(state.weight() + 1)?;
-                let result =
-                    self.bundle(state.origins.iter().chain(&state.bounds).cloned().collect())?;
-                self.append(Node {
-                    uses: parent,
-                    defs: result.values().copied().collect(),
-                    ..Node::default()
-                })?;
-                Self::select(result, path)
+            ExprKind::Borrow(place) => Self::select(self.borrowed(place)?, path),
+            ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {
+                self.derived(expr, path)?
             }
             ExprKind::Local(id) if expr.ty.has_reference() => {
                 let local = Self::select(self.local(*id)?, path);
@@ -258,13 +224,14 @@ impl<'a> Graph<'a> {
                     .collect();
                 self.project(value, &prefix)?
             }
-            ExprKind::Deref(value)
-            | ExprKind::Unary { value, .. }
+            ExprKind::Deref(value) => self.dereferenced(value, path)?,
+            ExprKind::Unary { value, .. }
             | ExprKind::StringSize(value)
             | ExprKind::ListSize(value) => {
                 let value = self.expression(value)?;
+                let uses = self.direct(&value)?;
                 self.append(Node {
-                    uses: value.into_values().collect(),
+                    uses,
                     ..Node::default()
                 })?;
                 Bundle::new()
@@ -275,8 +242,9 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         return Ok(Bundle::new());
                     }
+                    let uses = self.direct(&value)?;
                     self.append(Node {
-                        uses: value.into_values().collect(),
+                        uses,
                         ..Node::default()
                     })?;
                 }
@@ -288,8 +256,10 @@ impl<'a> Graph<'a> {
                     return Ok(Bundle::new());
                 }
                 let right = self.expression(index)?;
+                let mut uses = self.direct(&left)?;
+                uses.extend(self.direct(&right)?);
                 self.append(Node {
-                    uses: left.into_values().chain(right.into_values()).collect(),
+                    uses,
                     ..Node::default()
                 })?;
                 Bundle::new()
@@ -315,8 +285,10 @@ impl<'a> Graph<'a> {
             ExprKind::Binary { left, right, .. } => {
                 let left = self.expression(left)?;
                 let right = self.expression(right)?;
+                let mut uses = self.direct(&left)?;
+                uses.extend(self.direct(&right)?);
                 self.append(Node {
-                    uses: left.into_values().chain(right.into_values()).collect(),
+                    uses,
                     ..Node::default()
                 })?;
                 Bundle::new()
@@ -327,8 +299,9 @@ impl<'a> Graph<'a> {
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {
                     let value = self.expression(part)?;
+                    let uses = self.direct(&value)?;
                     self.append(Node {
-                        uses: value.into_values().collect(),
+                        uses,
                         ..Node::default()
                     })?;
                 }

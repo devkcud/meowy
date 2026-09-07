@@ -4,6 +4,46 @@ use crate::diagnostic::Diagnostic;
 use crate::hir::{self, Type};
 
 impl Checker {
+    pub(crate) fn reference_type(&mut self, ty: Type, span: Span) -> Result<Type> {
+        let mut pending = vec![(&ty, 1usize)];
+        while let Some((ty, depth)) = pending.pop() {
+            if !self.flow.spend(1) {
+                return Err(crate::borrow_value::State::budget(span));
+            }
+            match ty {
+                Type::Reference(ty) => {
+                    if depth >= 64 {
+                        return Err(Diagnostic::unsupported(
+                            "reference nesting budget exhausted",
+                            span,
+                        ));
+                    }
+                    pending.push((ty, depth + 1));
+                }
+                Type::Record { primary, fields } => {
+                    for ty in std::iter::once(primary.as_ref())
+                        .chain(fields.iter().map(|field| &field.ty))
+                    {
+                        if pending.len() >= crate::borrow_value::MAX_PARTS || !self.flow.spend(1) {
+                            return Err(crate::borrow_value::State::budget(span));
+                        }
+                        pending.push((ty, depth));
+                    }
+                }
+                Type::Union(members) => {
+                    for ty in members {
+                        if pending.len() >= crate::borrow_value::MAX_PARTS || !self.flow.spend(1) {
+                            return Err(crate::borrow_value::State::budget(span));
+                        }
+                        pending.push((ty, depth));
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(Type::Reference(Box::new(ty)))
+    }
+
     pub(crate) fn address_root<'a>(expr: &'a ast::Expr, fields: &mut Vec<String>) -> &'a ast::Expr {
         match &expr.kind {
             ExprKind::Group(value) => Self::address_root(value, fields),
@@ -56,7 +96,7 @@ impl Checker {
                 }
                 return Ok(hir::Expr {
                     kind: hir::ExprKind::Borrow(place),
-                    ty: Type::Reference(Box::new(ty)),
+                    ty: self.reference_type(ty, span)?,
                     span,
                 });
             }
@@ -106,57 +146,76 @@ impl Checker {
                 return Err(error);
             }
         }
-        let Type::Reference(target) = &value.ty else {
-            unreachable!()
-        };
-        if target.has_reference() {
-            return Err(Diagnostic::unsupported(
-                "reborrowing reference-carrying referents",
-                span,
-            ));
-        }
-        let mut ty = target.as_ref();
-        let mut path = Vec::new();
-        for name in names {
-            let Type::Record { fields, .. } = ty else {
-                return Err(Diagnostic::unsupported(
-                    "reborrow projection outside concrete record storage",
-                    span,
-                ));
+        loop {
+            let Type::Reference(target) = &value.ty else {
+                unreachable!()
             };
-            let (index, field) = fields
-                .iter()
-                .enumerate()
-                .find(|(_, field)| field.name == name)
-                .ok_or_else(|| {
-                    Self::error("E201", format!("unknown record field `{name}`"), span)
-                })?;
-            path.push(index);
-            ty = &field.ty;
+            let mut ty = target.as_ref();
+            let mut path = Vec::new();
+            while let Some(name) = names.next() {
+                let Type::Record { fields, .. } = ty else {
+                    return Err(Diagnostic::unsupported(
+                        "reborrow projection outside concrete record storage",
+                        span,
+                    ));
+                };
+                if !self.flow.spend(fields.len() + path.len() + 1) {
+                    return Err(crate::borrow_value::State::budget(span));
+                }
+                let (index, field) = fields
+                    .iter()
+                    .enumerate()
+                    .find(|(_, field)| field.name == name)
+                    .ok_or_else(|| {
+                        Self::error("E201", format!("unknown record field `{name}`"), span)
+                    })?;
+                path.push(index);
+                ty = &field.ty;
+                if matches!(ty, Type::Reference(_)) && names.peek().is_some() {
+                    break;
+                }
+            }
+            crate::borrow_contract::type_weight(ty, &mut self.flow, span)?;
+            if names.peek().is_none() {
+                let ty = self.reference_type(ty.clone(), span)?;
+                let site = self.reborrows;
+                self.reborrows += 1;
+                return Ok(hir::Expr {
+                    kind: hir::ExprKind::Reborrow {
+                        site,
+                        value: Box::new(value),
+                        fields: path,
+                    },
+                    ty,
+                    span,
+                });
+            }
+            crate::borrow_contract::type_weight(target, &mut self.flow, span)?;
+            value = hir::Expr {
+                ty: *target.clone(),
+                kind: hir::ExprKind::Deref(Box::new(value)),
+                span,
+            };
+            for index in path {
+                let Type::Record { fields, .. } = &value.ty else {
+                    unreachable!()
+                };
+                let ty = &fields[index].ty;
+                crate::borrow_contract::type_weight(ty, &mut self.flow, span)?;
+                value = hir::Expr {
+                    ty: ty.clone(),
+                    kind: hir::ExprKind::Field {
+                        value: Box::new(value),
+                        index,
+                    },
+                    span,
+                };
+            }
         }
-        let ty = Type::Reference(Box::new(ty.clone()));
-        let site = self.reborrows;
-        self.reborrows += 1;
-        Ok(hir::Expr {
-            kind: hir::ExprKind::Reborrow {
-                site,
-                value: Box::new(value),
-                fields: path,
-            },
-            ty,
-            span,
-        })
     }
 
     pub(crate) fn address(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
-        let (place, ty) = self.address_storage(expr)?;
-        if ty.has_reference() {
-            return Err(Diagnostic::unsupported(
-                "borrowing reference-carrying storage",
-                expr.span,
-            ));
-        }
-        Ok((place, ty))
+        self.address_storage(expr)
     }
 
     pub(self) fn address_storage(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
