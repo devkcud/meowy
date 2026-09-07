@@ -44,17 +44,35 @@ impl Graph<'_> {
     }
 
     pub(crate) fn physical_overlap(left: &Source, right: &Source) -> bool {
+        if let (
+            Source::Input {
+                id: left,
+                component: a,
+                fields: x,
+            },
+            Source::Input {
+                id: right,
+                component: b,
+                fields: y,
+            },
+        ) = (left, right)
+        {
+            return left == right && a == b && Self::projection_overlap(x, y);
+        }
         let (Some((left, a)), Some((right, b))) =
             (Self::physical_region(left), Self::physical_region(right))
         else {
             return false;
         };
-        left == right
-            && a.iter().zip(b).all(|(a, b)| {
-                a == b
-                    || matches!(a, super::Projection::Element)
-                    || matches!(b, super::Projection::Element)
-            })
+        left == right && Self::projection_overlap(a, b)
+    }
+
+    pub(crate) fn projection_overlap(a: &[super::Projection], b: &[super::Projection]) -> bool {
+        a.iter().zip(b).all(|(a, b)| {
+            a == b
+                || matches!(a, super::Projection::Element)
+                || matches!(b, super::Projection::Element)
+        })
     }
 
     pub(crate) fn exclusive_boundary(&mut self, id: usize, entered: Guard) -> Result<()> {

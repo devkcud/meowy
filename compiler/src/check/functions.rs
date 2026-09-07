@@ -209,6 +209,7 @@ impl Checker {
                         span,
                     )
                 })?;
+                let mutating = params.iter().any(|ty| matches!(ty, Type::Exclusive(_)));
                 let mut values = Vec::new();
                 for (arg, ty) in args.into_iter().zip(params) {
                     values.push(self.expr(arg, Some(&ty)).map_err(|error| {
@@ -218,6 +219,9 @@ impl Checker {
                             error
                         }
                     })?);
+                }
+                if mutating {
+                    self.forget_mutable();
                 }
                 let site = self.calls;
                 self.calls += 1;

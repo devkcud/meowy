@@ -188,6 +188,7 @@ pub(crate) fn union_equality_requires_the_same_normalized_union_type() {
 #[test]
 pub(crate) fn reference_capability_boundaries_are_explicit() {
     accepts("x:=1;r:&!x");
+    accepts("f<int32>:(x<&!int32>){->*x}");
     rejects("f<int32>:(x<int32>){r:&!x;->*r}", "E305");
     rejects("x:1;r:&x;s:&!*r", "E305");
     for source in [
@@ -200,7 +201,6 @@ pub(crate) fn reference_capability_boundaries_are_explicit() {
         accepts(source);
     }
     for source in [
-        "f<int32>:(x<&!int32>){->*x}",
         "x:1;r:&x;debug:@\"debug\";debug.print(r)",
         "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",
     ] {

@@ -58,10 +58,6 @@ impl Graph<'_> {
         Ok(())
     }
 
-    pub(crate) fn grant(&mut self, node: usize, value: usize, parent: Option<usize>) -> Result<()> {
-        self.grant_mode(node, value, parent, ReferenceMode::Shared)
-    }
-
     pub(crate) fn grant_mode(
         &mut self,
         node: usize,

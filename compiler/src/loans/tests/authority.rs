@@ -389,7 +389,11 @@ pub(crate) fn authority_growth_and_invalid_parent_graphs_fail_without_publicatio
         graph.origins = crate::loans::MAX_ORIGINS;
         assert!(graph.copy_link(&mut node, 0, 0, TRUE).is_err());
         assert!(node.copies.is_empty());
-        assert!(graph.grant(0, 0, None).is_err());
+        assert!(
+            graph
+                .grant_mode(0, 0, None, crate::hir::ReferenceMode::Shared)
+                .is_err()
+        );
         assert_eq!(graph.loans.len(), count);
         let source = Authority {
             loans: [(LoanId(0), TRUE)].into(),

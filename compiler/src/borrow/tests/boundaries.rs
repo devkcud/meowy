@@ -3,11 +3,8 @@ use super::{accepts, rejects};
 #[test]
 pub(crate) fn reference_mutation_and_exclusive_contracts_remain_explicit() {
     accepts("a:=1;r:&!a");
-    for source in [
-        "a:1;r:={->field:&a}",
-        "a:1;flag:=true;r:={|flag|->&a}",
-        "f<int32>:(r<&!int32>){->*r}",
-    ] {
+    accepts("f<int32>:(r<&!int32>){->*r}");
+    for source in ["a:1;r:={->field:&a}", "a:1;flag:=true;r:={|flag|->&a}"] {
         rejects(source, "B001");
     }
 }

@@ -7,6 +7,25 @@ use crate::borrow_value::{MAX_PARTS, Origin, Path, Projection, Result, Source, S
 use crate::flow::{Flow, Guard};
 use crate::hir::{LocalId, Type};
 
+pub(crate) fn scalar_value(ty: &Type) -> bool {
+    matches!(
+        ty,
+        Type::Null | Type::Never | Type::Bool | Type::Int { .. } | Type::Float { .. }
+    )
+}
+
+pub(crate) fn scalar_reference(ty: &Type) -> bool {
+    ty.pointee()
+        .is_some_and(|ty| matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. }))
+}
+
+pub(crate) fn scalar_call<'a>(result: &Type, params: impl IntoIterator<Item = &'a Type>) -> bool {
+    scalar_value(result)
+        && params
+            .into_iter()
+            .all(|ty| scalar_value(ty) || scalar_reference(ty))
+}
+
 pub(crate) struct Leaf<'a> {
     pub(crate) component: Path,
     pub(crate) ty: &'a Type,

@@ -118,13 +118,41 @@ impl<'a> Graph<'a> {
         self.project_mode(expr, &[], false)
     }
 
-    pub(crate) fn call(&mut self, site: CallId, args: &[Expr], span: Span) -> Result<Bundle> {
+    pub(crate) fn call(
+        &mut self,
+        site: CallId,
+        args: &[Expr],
+        span: Span,
+        ty: &Type,
+    ) -> Result<Bundle> {
+        self.charge(args.len() + 1)?;
+        let scalar = crate::borrow_contract::scalar_call(ty, args.iter().map(|arg| &arg.ty));
         let mut uses = Vec::new();
+        let mut accesses = Vec::new();
         for arg in args {
-            uses.extend(self.expression(arg)?.into_values());
+            let value = self.expression(arg)?;
+            if scalar
+                && crate::borrow_contract::scalar_reference(&arg.ty)
+                && !self.current.is_empty()
+            {
+                let kind = if matches!(arg.ty, Type::Exclusive(_)) {
+                    Kind::Write
+                } else {
+                    Kind::Read
+                };
+                let access = self.pointee_access(&value, &[], kind, arg.span)?;
+                accesses.push(access);
+            }
+            uses.extend(value.into_values());
             if self.current.is_empty() {
                 return Ok(Bundle::new());
             }
+        }
+        for access in accesses {
+            self.append(Node {
+                access: Some(access),
+                ..Node::default()
+            })?;
         }
         let state = self.facts.calls.get(&site);
         let origins = state.map(Value::from).unwrap_or_default();
@@ -134,7 +162,7 @@ impl<'a> Graph<'a> {
         let value = self.bundle(origins)?;
         let mut node = Node {
             uses,
-            barrier: Some(span),
+            barrier: (!scalar).then_some(span),
             defs: value.values().copied().collect(),
             ..Node::default()
         };
@@ -444,7 +472,7 @@ impl<'a> Graph<'a> {
                 Bundle::new()
             }
             ExprKind::Call { site, args, .. } => {
-                Self::select(self.call(*site, args, expr.span)?, path)
+                Self::select(self.call(*site, args, expr.span, &expr.ty)?, path)
             }
             ExprKind::Print { parts, .. } | ExprKind::Panic { parts } => {
                 for part in parts {

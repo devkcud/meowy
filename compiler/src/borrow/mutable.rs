@@ -24,13 +24,24 @@ pub(crate) fn push<'a>(
     Ok(())
 }
 
-pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Result<Plan> {
+pub(crate) fn check(
+    block: &Block,
+    program: &Program,
+    guards: &mut Guards,
+    params: &[crate::hir::LocalId],
+) -> Result<Plan> {
     let mut pending = Vec::new();
     for stmt in block.stmts.iter().rev() {
         push(&mut pending, Item::Statement(stmt), 0, guards)?;
     }
     let mut write = None;
-    let mut exclusive = None;
+    if !guards.spend(params.len() + 1) {
+        return Err(State::budget(Span::default()));
+    }
+    let mut exclusive = params
+        .iter()
+        .any(|id| program.locals[*id].has_exclusive())
+        .then_some(Span::default());
     let mut restarts = super::BTreeSet::new();
     while let Some((item, depth)) = pending.pop() {
         if !guards.spend(1) {

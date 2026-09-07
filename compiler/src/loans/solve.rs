@@ -141,7 +141,10 @@ impl<'a> Graph<'a> {
             self.event(&mut node, EventKind::Init(cell), Span::default())?;
             let node = self.append(node)?;
             for value in value.into_values() {
-                self.grant(node, value, None)?;
+                let mode = self.program.locals[*id]
+                    .reference_mode()
+                    .unwrap_or(crate::hir::ReferenceMode::Shared);
+                self.grant_mode(node, value, None, mode)?;
             }
             self.assume(proof)?;
         }
