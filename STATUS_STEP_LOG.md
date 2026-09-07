@@ -6,6 +6,22 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Indexed scalar field milestone
+
+- Complete ExclusivePath representation (`16e0230`) passed the full gate before
+  enabling indexed scalar field leaves. New behavior uses the same owned-path proof,
+  canonical Field/Element sources, exact alias backing and enclosing reservations.
+- Final full gate: 785 Rust (357 library, 428 native), 20 Python, 48 debug/release
+  examples, 936 links, formatting, Clippy, build and schemas/catalog all pass.
+  Conformance: 10 passed, 13 unsupported, 0 failed; full language gate remains open.
+- Sixteen new native and three graph groups prove field acquisition, cancellation,
+  scopes, bounds spans and transfer. Corrected one canonical-field-order test assumption
+  and removed an unused helper; migrated five B001 cases after actual execution proof.
+- Implementation: `1f8295c`; contract/example: `397b3b2`.
+- No unfinished slice work. Runtime/editor/optimized-compiler/host qualification not
+  rerun. Next: generated payload/diagnostic layouts and scope cleanup, connecting
+  existing Stack::mark/unwind and Task::mark/close while retaining parent/owning data.
+
 ### 2026-09-07 — Nested exclusive element milestone
 
 - Integrated nested indexed owners and mixed mutable fields for scalar element

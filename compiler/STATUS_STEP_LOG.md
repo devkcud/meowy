@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Indexed field final validation complete
+
+- Complete ExclusivePath representation (`16e0230`) passed the full gate before
+  enabling indexed scalar field leaves. New behavior uses the same owned-path proof,
+  canonical Field/Element sources, exact alias backing and enclosing reservations.
+- Final full gate: 785 Rust (357 library, 428 native), 20 Python, 48 debug/release
+  examples, 936 links, formatting, Clippy, build and schemas/catalog all pass.
+  Conformance: 10 passed, 13 unsupported, 0 failed; full language gate remains open.
+- Sixteen new native and three graph groups prove field acquisition, cancellation,
+  scopes, bounds spans and transfer. Corrected one canonical-field-order test assumption
+  and removed an unused helper; migrated five B001 cases after actual execution proof.
+- Implementation: `1f8295c`; contract/example: `397b3b2`.
+- No unfinished slice work. Runtime/editor/optimized-compiler/host qualification not
+  rerun. Next: generated payload/diagnostic layouts and scope cleanup, connecting
+  existing Stack::mark/unwind and Task::mark/close while retaining parent/owning data.
+
+### 2026-09-07 — Indexed field behavior and proof coverage complete
+
+- Sixteen native groups and three new graph groups pass. Actual scalar fields,
+  emitted backing/target scope, mixed paths, owner conflicts, cancelled acquisition,
+  exact bounds spans and scalar width/empty-list behavior are covered in both profiles.
+- Corrected a graph-test assumption: canonical record layout orders b before n, so
+  the n source projection is Field(1). No implementation failure was found. Removed
+  the scalar-list helper made unused by complete paths; its warning is resolved.
+- Migrated five obsolete indexed-field B001 expectations after execution proof.
+  Updated related contracts and added an emitted-field native example.
+- Next: full compiler gate, focused commits and handoff toward generated payload/
+  diagnostic layouts and runtime scope cleanup. No runtime execution claimed here.
+
+### 2026-09-07 — Indexed scalar field frontend implemented
+
+- check/indexed.rs resolves the complete bounded field/index path and checks its final
+  scalar type. Shared references.rs dispatch keeps ordinary fields/reborrows unchanged.
+  Existing origin/loan/backend paths already handle field acquisition and reservations.
+- Final-index borrows retain their full borrow diagnostic span; indexes beneath field
+  leaves retain the actual indexed prefix. Non-returning indexes make the result Never.
+- All 354 existing library tests pass. Native and new proof coverage pending.
+- Next: test actual local/emitted fields, mutable boundaries, conflicts, cancellation,
+  bounds spans and target scopes; migrate B001 expectations only after execution proof.
+
+### 2026-09-07 — Owned-path normalization validated and committed
+
+- Full compiler gate passed: 354 library + 412 native (766 Rust), 20 Python,
+  47 debug/release examples, 933 links, formatting, Clippy, build and schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed. No regression found.
+- Committed `16e0230` with field syntax still gated. No runtime or release qualification.
+- Next: move indexed AST path resolution into check/indexed.rs, accept mutable scalar
+  field leaves, and verify source regions, reservation lifetime and emitted backing.
+
+### 2026-09-07 — Complete indexed-path representation implemented
+
+- ExclusivePath carries the complete WriteStep sequence, including the former final
+  index. Backend and both analysis passes walk one path; the scalar leaf proof replaces
+  the separate list-element tail. Final acquisition demands captured reservations.
+- Existing proof fault-injection tests now provide complete paths and establish a
+  valid control before deleting alias/field evidence. Field syntax remains gated.
+- Full compiler gate running; no result claimed yet. Next: resolve any regressions,
+  commit this behavior-preserving representation change, then enable scalar fields.
+
+### 2026-09-07 — Indexed scalar field investigation
+
+- Scalar fields beneath indexes need the same mutable root/field proof, exact full
+  backing and canonical projections as nested elements. Final acquisition must demand
+  enclosing collection reservations without inventing a final scalar-list index.
+- Normalize HIR to ExclusivePath containing all WriteSteps. Retain source-order bounds,
+  cancellation and acquisition demand; keep field leaves gated during the refactor.
+- Read current rules, compiler plan and memory/collection contracts. Tree starts clean;
+  no new tests yet. Next: validate the representation change, commit it separately,
+  then enable scalar field leaves and prove execution/conflict/lifetime behavior.
+
 ### 2026-09-07 — Nested owner full validation complete
 
 - Integrated nested indexed owners and mixed mutable fields for scalar element
