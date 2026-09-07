@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Exclusive scalar fields beneath indexed owners integrated.
+Updated: 2026-09-07. Private generated cleanup bridge integrated and verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
 Indexed scalar fields: `1f8295c`; contract/example: `397b3b2`.
 Complete indexed-path representation: `16e0230`.
 Nested indexed elements: `d4cd292`; contract/example: `345cf64`.
@@ -37,26 +38,26 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-ExclusivePath carries an owned Place and a complete WriteStep sequence. The scalar
-leaf may be an element or a mutable field beneath indexes, including nested and
-emitted owners. check/indexed.rs reuses mutable-field lookup and reference-free Copy
-owner proof; exact backing covers the full emitted list/record and its capacity.
-Both analyses validate the full path and preserve canonical Local/Slot projections.
+A private scalar C ABI now connects generated LLVM callbacks to the existing runtime
+Stack and owning Panic snapshot. Caller-owned frame storage includes fixed-capacity
+entries and callback records; token/mark POD layouts are checked for Linux x86-64.
+Explicit open/mark/reserve/arm/disarm/unwind/finish operations preserve initialization,
+LIFO order, stale/foreign handle rejection and callback reentry protection. Panic
+capture owns callback-local text before destruction and retains truncation metadata.
 
-Field acquisition demands enclosing collection reservations and retains its terminal
-Field projection. No synthetic index, owner copy or new reference type is introduced.
-Index order, initialized-length bounds and per-prefix spans are preserved. Cancelled
-acquisition retains only demand from completed indexes. Moves, child/call transfer,
-target-scope lifetime and captured stores reuse the established scalar authority rules.
-Outer siblings and pre-existing disjoint shared-field views remain independent;
-whole-collection capture/access still conservatively overlaps indexed field loans.
+compiler/build.rs embeds cleanup.cpp and generated.cpp in the native archive, with
+source/header invalidation. Two LLVM-native groups exercise actual callbacks in both
+profiles, including exact P008 after overwriting the callback's message buffer.
+The compiler still emits scalar runtime calls for ordinary Meowy programs. Automatic
+owner cleanup, payload move descriptors, task close/cancellation and DWARF are pending;
+no language syntax or reference fixture was broadened by this bridge.
 
-All ten compiler checks pass: 785 Rust tests (357 library, 428 native), 20 Python,
-48 debug/release examples, 936 links, formatting, Clippy, build and schema/catalog/
-conformance checks. Sixteen new native groups and three graph groups cover indexed
-field behavior. Runtime ABI, dependencies and reference fixtures did not change.
-Reference-derived/temporary roots, non-scalar pointees, exclusive-bearing carriers,
-whole-list exclusive values and exclusive restart bodies remain gated.
+All fourteen combined repository checks pass: 787 Rust (359 library, 428 native),
+35 Python, 48 debug/release examples, Vim/Neovim, 940 links and compiler formatting/
+Clippy/build/schema/catalog/conformance checks. Runtime debug/release/sanitized runs
+pass 85 case groups per profile plus their required fatal, guard, admission and fiber
+probes. Native linkage inspection of a bridge-using ELF found only libc.so.6 in NEEDED.
+The private ABI and exit mapping are documented in runtime/GENERATED_CLEANUP.md.
 
 ## Prior implemented milestone
 
@@ -596,42 +597,45 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 357
-  library and 428 native groups (785 total); 16 tooling and 4 compiler Python tests;
-  all 48 examples in debug/release; formatting, Clippy, pinned build, schemas/catalog
-  and 936 links in 93 Markdown files. Conformance: 10 passed, 13 unsupported, 0 failed.
-- The representation-only commit `16e0230` independently passed the full gate at
-  766 Rust, 20 Python and 47 examples before scalar-field syntax was enabled.
-- Sixteen new native groups cover scalar widths, mixed paths, mutable boundaries,
-  owner/sibling conflicts, disjoint shared fields, exact alias backing, transfer,
-  cancellation, target lifetimes, guarded views, stores and exact P001 prefix spans.
-  The indexed-field example prints index, 2, 2, 3 in both profiles.
-- Three graph groups prove the final Field projection, reservation lifetime without
-  authority, completed-index demand after cancellation, and required mutable leaf
-  proof in both analyses. Twelve indexed-storage graph groups pass across slices.
-- Corrected one test assumption about canonical field order (b before n); removed
-  the scalar-list helper made unused by complete paths. Five old B001 expectations
-  were migrated after native execution proof. The final full gate passed first try.
-- Runtime ABI, dependencies and reference fixtures did not change. Runtime/editor/
-  optimized-compiler/host qualification were not rerun. Generated payload layouts,
-  scope cleanup and complete v0.0.1 qualification remain open.
+- Current `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 359 library
+  + 428 native groups (787 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 48 examples execute in debug/release. Vim/Neovim, formatting, Clippy, pinned
+  build, schemas/catalog and 940 links in 94 Markdown files pass.
+- Runtime passes all debug, release and ASan/UBSan/LSan checks. Each profile executes
+  85 case groups (6 diagnostics, 14 cleanup, 6 generated bridge, 10 stacks, 10 contexts,
+  25 scheduler, 14 owned values) plus required exact fatal/admission/guard probes.
+  Sanitized fiber checks detect the deliberately expired stack local.
+- Two new LLVM-native groups prove the private C ABI across generated callback code,
+  nested marks, partial construction, complete/leave/restart/cancel metadata and
+  callback-local panic snapshot lifetime. This is not automatic Meowy cleanup lowering.
+- Initial sandboxed runtime run passed debug/release, then LeakSanitizer failed under
+  ptrace. Approved unsandboxed combined verification passed all sanitizer checks.
+- Extracted and linked a bridge-using LLVM fixture against the current native archive;
+  it printed 2, 1. readelf reported only libc.so.6 in NEEDED. An initial temporary
+  extraction regex failed on rustfmt whitespace; corrected without repository changes.
+- Conformance remains 10 passed, 13 unsupported, 0 failed. Owning syntax, automatic
+  task cancellation, DWARF/pinned unwinding, optimized-compiler and minimum-host/full
+  release qualification remain open. Runtime changes are private, not a release ABI.
 
 ## Next steps
 
-1. Map generated backend block exits and panic paths to the existing runtime contracts
-   in `runtime/include/meowy/cleanup.hpp` and `runtime/include/meowy/scheduler.hpp`.
-   Define generated payload/diagnostic layouts and the bridge for Stack::mark/unwind
-   and Task::mark/close before enabling owning/task syntax. Preserve parent storage,
-   retained owning outcomes, drained failure reports and interleaved cleanup before
-   cancellation/unwinding. Add focused runtime/native proof when implementation lands;
-   current loan lifecycle events are analysis evidence, not generated destruction.
-2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
+1. Define generated payload move/drop descriptors over runtime ValueOps/Owned and
+   extend LLVM-native fixtures with real relocation across cleanup frames. Establish
+   destination initialization and arm its obligation before disarming the source;
+   failed capacity/alignment/admission must preserve ownership or release exactly once.
+   The current bridge manages cleanup obligations; disarm itself does not relocate
+   or release payloads. Keep unsupported owning syntax explicitly gated.
+2. Design initialized-state/drop schedules for the first contract-supported owning HIR
+   value, then lower normal/Leave/Restart exits with retained emissions. Panic requires
+   owning outcomes and qualified landing pads; Task::close needs resumable report drain
+   and child settlement while parents live. Existing loan events are not drop schedules.
+3. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.
-3. Build the manifest/module graph and initial Meowy library layer; implement
+4. Build the manifest/module graph and initial Meowy library layer; implement
    required evaluation and specialization before enabling their reference fixtures.
    Continue root runtime/editor/library tracking alongside compiler work.
-4. Extend diagnostic source identities and evidence without treating bootstrap
+5. Extend diagnostic source identities and evidence without treating bootstrap
    byte-span text as a complete replay artifact. Run the combined repository gate
    after wider integrations; preserve current compiler evidence until code changes.
    Strict conformance still requires zero unsupported cases; this host does not

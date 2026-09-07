@@ -11,28 +11,27 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Added exclusive scalar field borrows beneath owned indexes, including nested and
-  emitted storage (`1f8295c`; contract/example `397b3b2`; refactor `16e0230`).
-  Complete paths preserve canonical leaf regions, exact backing,
-  mutable boundaries, target lifetime and enclosing collection reservations.
-- Index effects and initialized-length checks run once in order. Field acquisition
-  adds no synthetic index; cancellation, moves, child/call transfer and captured
-  stores preserve the existing scalar ownership behavior.
-- All ten compiler checks pass: 785 Rust tests (357 library, 428 native), 20 Python,
-  48 debug/release examples, formatting, Clippy, build, schemas/catalog and 936 links.
-  Sixteen new native groups and three graph groups pass. The representation refactor
-  separately passed the full gate before the new behavior was enabled.
-- Reference/temporary roots, wider pointees, exclusive-bearing carriers, whole-list
-  exclusive values and exclusive restart bodies remain gated. Runtime ABI, dependencies
-  and reference fixtures did not change. Runtime/editor and release qualification
-  were not rerun; conformance still has 13 unsupported cases.
+- Added a private generated-code cleanup bridge over the runtime Stack and owning
+  Panic snapshot (`2288ed5`; compiler proof `2da831f`; contract `53f8e6b`).
+  Caller-owned storage, explicit initialized slots, checked token/mark
+  layouts and callback reentry protection preserve reverse-order cleanup.
+- The compiler native archive includes the bridge. LLVM callback probes execute it
+  in debug/release and prove owning panic text survives destruction of its source.
+  Ordinary Meowy programs still have no automatic owner cleanup or task lowering.
+- All fourteen combined checks pass: 787 Rust tests (359 library, 428 native),
+  35 Python, 48 debug/release examples, Vim/Neovim, 940 links, formatting, Clippy,
+  build and schema/catalog checks. Runtime debug/release/ASan/UBSan/LSan pass all
+  85 case groups per profile and required fatal/guard/admission/fiber probes.
+- Sandbox LeakSanitizer failed under ptrace; the approved unsandboxed combined run
+  passed. A bridge-using ELF imports only libc.so.6. Conformance still has 13 unsupported
+  cases. Private ABI proof does not qualify automatic cancellation, DWARF or release.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar elements and field leaves through owned indexed paths | Generated cleanup and wider ownership shapes |
-| Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
+| Compiler | Scalar ownership plus a native archive cleanup bridge | Generated payload descriptors and automatic owning-value cleanup |
+| Runtime | Owning snapshots, cleanup bridge and bounded task prototypes | Payload relocation bridge, task-close progress, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
 | Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
@@ -41,11 +40,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Define generated payload/diagnostic layouts and scope-cleanup integration. Map
-   backend exits to runtime cleanup Stack::mark/unwind and Task::mark/close, retaining
-   parent storage and owning outcomes, draining failures and preserving interleaved
-   cleanup before cancellation/unwinding. Prove each integration with runtime/native
-   checks; current loan events do not implement generated destruction.
+1. Define generated payload move/drop descriptors using existing ValueOps/Owned and
+   prove actual relocation across cleanup frames with LLVM-native fixtures. Arm the
+   initialized destination before disarming the source; preserve ownership on failure.
+   Then design owning-HIR drop schedules for normal/Leave/Restart and retained emissions.
+   Keep task-close progress, cancellation and pinned unwinding separate until proved.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

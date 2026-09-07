@@ -6,6 +6,50 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Generated cleanup bridge combined validation complete
+
+- All fourteen repository checks pass: 787 Rust (359 library, 428 native), 35 Python,
+  48 debug/release examples, both editors, 940 links, formatting, Clippy, build and
+  schema/catalog/conformance gates. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 85 case groups per debug/release/sanitized profile and required
+  fatal/guard/admission/fiber probes, including six new bridge cases and two fatal
+  bridge subprocesses. Two LLVM-native groups prove callback ABI and owning panic text.
+- Initial sandboxed runtime run hit LeakSanitizer's ptrace restriction after passing
+  debug/release. Approved unsandboxed combined verification passed ASan/UBSan/LSan.
+- A generated bridge fixture linked against the current archive printed 2, 1; readelf
+  NEEDED contains only libc.so.6. A scratch extraction regex first missed rustfmt
+  whitespace; corrected without repository changes. No new dependency or syntax.
+- Runtime bridge: `2288ed5`; compiler proof: `2da831f`; contract: `53f8e6b`.
+- No remaining bridge blocker. Next: ValueOps/Owned payload descriptors and real
+  relocation with destination-before-source ownership transfer, then owning-HIR
+  cleanup schedules. Automatic Meowy cleanup, task cancellation and DWARF remain open.
+
+### 2026-09-07 — Caller-owned bridge and generated LLVM proof
+
+- Added explicit cleanup frame sizing/alignment, reserve/arm/disarm, token/mark
+  layouts, unwind/finish and owning Panic capture. Frame capacity comes from caller
+  storage; reentry, stale tokens, invalid causes and live finish reject explicitly.
+- Six C++ bridge cases pass in initial native, debug and release runs; runtime
+  Python regressions pass (15). Full runtime sanitizer suite is in progress.
+- Compiler archive now contains the bridge and existing cleanup implementation.
+  Two LLVM-native groups pass debug/release: nested LIFO/partial construction across
+  exit reasons, and exact fatal P008 with callback-local text overwritten after capture.
+- No automatic Meowy cleanup or task cancellation was enabled. Next: document private
+  ABI/lifetimes and exit mapping, then run the combined repository gate.
+
+### 2026-09-07 — Generated cleanup bridge investigation
+
+- Current backend completion/Leave/Restart branches and panic calls have no runtime
+  cleanup frame; all supported values still have trivial destruction. Prototype
+  Stack already enforces reservation/arming, LIFO unwind and fatal second panic.
+- Add a private scalar C ABI over caller-owned frame storage, token/mark POD layouts
+  and callback-written owning Panic snapshots. Link cleanup objects into the native
+  archive and execute LLVM callback probes before enabling owning Meowy syntax.
+- Task::mark/close remains distinct: it can suspend/report_full and must complete
+  while parent storage lives; no bridge in this slice may claim cancellation/DWARF.
+- Read runtime/compiler rules and memory/cleanup contracts. No tests run yet.
+  Next: implement bridge, verify initialization/reentry/failure lifetime and LLVM ABI.
+
 ### 2026-09-07 — Indexed field final validation complete
 
 - Complete ExclusivePath representation (`16e0230`) passed the full gate before
