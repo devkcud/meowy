@@ -6,6 +6,68 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Exclusive emitted scalar final validation complete
+
+- All ten compiler checks pass: 697 Rust groups (343 library, 354 native), 20 Python
+  groups, 43 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  919 local links in 92 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fourteen native groups and canonical/backing evidence pass, including cancelled
+  mixed backing. The example prints 8, 8, false, 4. No backend, ABI, dependency or
+  reference fixture changed. Prior compiler validation detail was moved verbatim
+  to its step log so the handoff describes current evidence concisely.
+- Commits: `94192da` implements mutable emitted scalar borrows and tests; `ec45d2e`
+  adds docs/example. Staged whitespace checks passed for both concerns.
+- Blockers: None for this slice. Next: Design mutable emitted record-field projections
+  with exact backing, per-field mutability, canonical regions and target lifetime.
+
+### 2026-09-07 — Exclusive emitted scalar compiler gate passes
+
+- All ten compiler checks pass: 697 Rust groups (343 library, 354 native), 20 Python
+  groups, 42 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  911 links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Fourteen native groups and canonical target-storage/guarded-loan evidence pass.
+  Exact exclusive backing rejects widening while the paired shared union case stays
+  valid. No backend, runtime ABI, dependency or reference fixture changed.
+- Added the exclusive-slots example, contract/capability docs and a cancelled branch
+  whose completed field has a different type, exercising declared-type fallback.
+  Next: final gate, focused commits and emitted record-field design handoff.
+
+### 2026-09-07 — Mutable emitted scalar native matrix passes
+
+- Thirteen native groups pass in debug/release: actual result mutation, widths,
+  sibling/canonical conflicts, alias scope versus target lifetime, guarded views,
+  moves/children, call/block results, captured stores, cancellation, escapes,
+  exact backing, immutable/projected boundaries and panic.
+- Added initializer visibility and uncertain-move checks. Migrated old scalar B001
+  cases to acceptance/E305 or nullable/record-alias B001 after proof. Next: canonical
+  slot/lifecycle and shared-versus-exclusive backing tests, then full gate and docs.
+
+### 2026-09-07 — Exclusive scalar alias intent and backing checks integrated
+
+- Direct scalar aliases now record exclusive borrow intent after mutability checks;
+  completed result storage must have exactly the declared scalar type. Existing
+  discarded scalar fallback cells, Slot roots, target lifetimes and lowering remain.
+- Validation: Nine probes match acceptance, immutable E305, conflict E302, target-
+  scope escape/self-containing shared-view E303 and widened/record-alias B001.
+  Library run passes 340 and fails one obsolete scalar-alias B001 expectation.
+- Exclusive-reference carriers remain B001; no carrier gate was broadened merely
+  to diagnose their lifetime. Next: native exact-code/execution matrix, canonical
+  slot/backing/lifecycle evidence, full gate, docs/example and focused commits.
+
+### 2026-09-07 — Mutable emitted scalar exclusive borrows scoped
+
+- Direct mutable scalar alias borrows can reuse canonical Slot identity, target
+  lifetime, existing initialization and backend place addressing. Record exclusive
+  borrow intent until alias validation; require exact completed backing type.
+- Preserve immutable E305, canonical conflicts, self-escape E303, target-owned
+  lifetime beyond alias scope and cancelled scalar fallback cells. Keep widened
+  union storage, record aliases, projections and exclusive restart bodies gated.
+- Validation: Clean tree at 8391a54; six scalar/immutable/conflict/target/escape/
+  discard baseline probes report B001. Read alias/storage/backing and memory rules.
+- Next: Integrate intent and exact backing checks, native debug/release matrix,
+  canonical/lifecycle evidence, full gate, docs/example and focused commits.
+
 ### 2026-09-07 — Exclusive scalar-field final validation complete
 
 - All ten compiler checks pass: 681 Rust groups (341 library, 340 native), 20 Python

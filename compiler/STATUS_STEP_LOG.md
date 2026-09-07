@@ -6,6 +6,242 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Exclusive emitted scalar final validation complete
+
+- All ten compiler checks pass: 697 Rust groups (343 library, 354 native), 20 Python
+  groups, 43 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  919 local links in 92 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fourteen native groups and canonical/backing evidence pass, including cancelled
+  mixed backing. The example prints 8, 8, false, 4. No backend, ABI, dependency or
+  reference fixture changed. Prior compiler validation detail was moved verbatim
+  to its step log so the handoff describes current evidence concisely.
+- Commits: `94192da` implements mutable emitted scalar borrows and tests; `ec45d2e`
+  adds docs/example. Staged whitespace checks passed for both concerns.
+- Blockers: None for this slice. Next: Design mutable emitted record-field projections
+  with exact backing, per-field mutability, canonical regions and target lifetime.
+
+### 2026-09-07 — Prior validation evidence archived from handoff
+
+The following evidence is historical, preserved verbatim from the preceding handoff
+validation section. Its original milestone claims do not mean these checks ran in
+the current slot-borrow slice. Current results are recorded in STATUS.md and the
+newest checkpoint; all earlier step-log entries are preserved below.
+
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 341
+  library and 340 native groups (681 total); 20 Python tests; all 42 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 911 links in
+  91 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Fourteen new native groups cover scalar field layouts, sibling/primary regions,
+  nested mutability, ancestor/whole-owner conflicts, copies, moves/reborrows, call/
+  block returns, bounds, guarded choices, captured stores, lifetimes and exclusions.
+  A 16-level path executes; 300 levels stop at a structural budget. The direct AST
+  test checks the path cap before root lookup; a graph test checks primary versus
+  named-descendant disjointness while retaining ancestor overlap.
+- Initial library run passed all 339 groups. Six probes matched intended outcomes;
+  two primary-read probes exposed conservative E302 and were corrected using the
+  existing Slot(0) component. Fourteen native groups and both full gates passed
+  after integration; the final example prints 7, 2, 3, false on separate lines.
+- Old B001 scalar-field expectations were migrated after source/native proof.
+  Shared field-write checks remain green with common mutability validation. No
+  backend, runtime ABI, dependency or reference fixture changed. Runtime/editor,
+  optimized-compiler and host qualification were not rerun; generated cleanup and
+  complete release qualification remain open.
+- Prior block-result/operator `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 339
+  library and 326 native groups (665 total); 20 Python tests; all 41 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 904 links in
+  90 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Fifteen new block groups cover anonymous moves/reinitialization, shared results,
+  retained demand, guard/Leave/cancellation, RHS replacement, captured stores, call
+  integration, widths, lifetimes, initialization, dispatch gates, short circuits
+  and panic. Two graph groups validate guarded identity and missing cancellation
+  evidence. The example prints 7, ready, 8, 9 and 10 on separate lines.
+- Initial library run passed 337. The first native matrix passed 13 groups and
+  exposed a test expectation error (required missing result is E204, not E203).
+  The first full gate then passed 339 library and 322 native groups but failed a
+  skipped block comparison: Never operands were rejected by scalar operators.
+- The separate checker fix propagates Never through unary/non-boolean binary
+  operators while retaining operand checks and effect order. Three new native
+  control groups plus the three prior control groups passed; the final full gate
+  passed after the fix and new example. Two dispatch-result bypass probes were
+  closed with explicit BlockId metadata before final validation.
+- No backend, runtime ABI, dependency or reference fixture changed. Runtime/editor
+  suites, optimized compiler builds and host qualification were not rerun. Wider
+  ownership shapes, generated cleanup and complete release qualification remain open.
+- Prior reference-return `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 337
+  library and 308 native groups (645 total); 20 Python tests; all 40 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 896 links in
+  89 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Sixteen new native return groups cover shared/exclusive identity, guarded input
+  selection, nested/recursive calls, parent/sibling suspension, moves, widths, public
+  bounds, retained emissions, call entry/capture, no-return arguments/callees and
+  existing shared restart behavior. Sixteen returned-parent stages execute; 512
+  report B001 within the proof budget. The new example outputs 10, 8, 10, 11.
+- Three graph groups check matching origin/parent choice guards, distinct parents
+  at equal addresses and B001 for missing, incomplete or invalid-index return
+  evidence. First library run passed 332 and failed two old access/opaque metadata
+  expectations; wider-signature opaque coverage was retained during migration.
+- Source probes preceded thirteen passing native groups, then proof/captured-target/
+  resource checks and the full gate passed at 644. The final example/shared-restart
+  gate passed at 645. No reference fixture, backend, runtime ABI or dependency changed.
+  Runtime/editor/optimized-compiler/host qualification were not rerun; generated
+  cleanup and wider ownership results remain unimplemented.
+- Prior function-argument `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 334
+  library and 292 native groups (626 total); 20 Python tests; all 39 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 888 links in
+  88 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Seventeen new function-argument groups cover scalar widths/boolean mutation,
+  explicit/implicit reborrows, moves/reinitialization, symbolic parents, nested and
+  recursive calls, receiver syntax, guarded choices, public bounds, no-return entry
+  and argument-side Leave/panic. Maximum entry access is checked even for unused
+  parameters. Mutable-refinement and shared-only restart-callee regressions pass.
+- The first library run passed 332 and failed two obsolete signature B001 groups.
+  Fourteen native groups then passed; final review added three more and migrated
+  obsolete boundaries. Two full compiler gates passed, the final one including the
+  new example output `9\n9\n10\n5\n`. No source capability was enabled on a crash
+  or unsupported rejection, and no reference fixture changed.
+- No backend/runtime ABI change or dependency was needed. Runtime/editor suites,
+  optimized compiler builds and release-host qualification were not rerun. Returned
+  reference authority and generated cleanup remain unimplemented.
+- Prior scalar-local `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+  Rust: 334 library and 275 native groups (609 total); 20 Python tests pass. All 38
+  examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
+  schemas/catalog and 881 links in 87 Markdown files pass. Conformance remains
+  10 passed, 13 unsupported, 0 failed in both profiles.
+- Seventeen exclusive native groups cover scalar widths/boolean layout, moves,
+  reinitialization, copied children, parent transfer/suspension, guarded owner choices,
+  short circuits, Leave, pointer capture and panic. Exact rejection codes are checked
+  in debug/release builds. Sixteen nested loans execute; 512 are bounded by B001.
+  The new example outputs `8\n9\n10\n11\n20\n21\n` in both profiles.
+- First library run passed 332 and failed two obsolete B001 groups. The initial
+  full gate passed at 607 Rust tests after migration. Final review added captured
+  child/parent-budget regressions and removed allocation from physical overlap;
+  the final gate at 609 passes. A derived shared dispatch bypass found by probes
+  was gated before validation. No reference fixture, dependency or runtime ABI changed.
+- Runtime/editor checks and optimized compiler builds were not rerun. Generated
+  cleanup, exclusive calls/carriers/restarts and full release qualification remain
+  open. Existing historical evidence below is not new validation.
+- Prior lifecycle `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
+  Rust: 334 library and 258 native groups (592 total); 20 Python tests pass. All 37
+  examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
+  schemas/catalog and 879 links in 87 Markdown files pass. Conformance remains
+  10 passed, 13 unsupported, 0 failed in both profiles.
+- Fifteen lifecycle groups pass; total loan coverage is 119 groups. Tests cover
+  initialization versus reference definitions, RHS order, Copy taking, inspection,
+  internal non-Copy E301/E309, reinitialization, guards/short circuits/Leave,
+  statement/slot ownership, restart, panic, ended scopes and bounded sparse demand.
+  Those non-Copy cases altered internal metadata explicitly; that prior slice did
+  not accept or execute exclusive source programs. Reference fixtures and REQUIRED are unchanged.
+- Initial integration passed all 319 existing library groups after fixing two
+  missing wiring locals and one Rust mutable-borrow conflict. First full gate then
+  passed 333 groups but hit the work budget in the existing 1,000-matcher acceptance
+  test after stronger allocation precharges. Empty-scope state was removed while
+  retaining events; the unchanged regression and full final gate pass. No limit or
+  behavioral expectation was relaxed.
+- Lifecycle registries/events use existing graph origin/work/node limits. Storage
+  demand and weighted forward snapshots share the existing liveness-entry limit.
+  Unused cells and empty scopes do not fill every snapshot. Forward proofs validate
+  only after convergence and preserve reset uncertainty; initialization cannot
+  revive an ended scope without entry. This does not prove owned cleanup order.
+- Prior shared-provenance gate (`ebc8ebe`): 319 library plus 258 native groups,
+  fifteen provenance groups and all 37 examples in both profiles passed. Source
+  roles, guarded ancestry, opaque call/restart boundaries and unresolved-region
+  safeguards remain intact.
+- Prior access gate (`698e4b1`): 304 library plus 258 native groups and twelve access
+  groups passed. Prior design probes checked capability boundaries, not exclusive
+  execution. Runtime/editor/optimized-compiler checks and independent agent review
+  were not rerun during the current lifecycle slice. Older evidence is historical.
+- Prior expiry `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
+  Rust: 292 library and 258 native groups (550 total). All 37 examples execute in
+  debug/release; expired-restarts output is exactly `1\n2\n3\n7\n9\n9\n`.
+  Formatting, Clippy `-D warnings`, pinned build and schemas/catalog pass.
+- Added three origin, six loan and nine native groups. Focused origin/loan totals
+  are 60/77. New native coverage runs 16 programs in both profiles and checks
+  16 exact-primary E303 rejections. It covers entry/backedge Local/Slot/Temporary
+  overwrite, same-site reinitialization, old copies, nested targets, live ancestor
+  temporaries, active/inactive nested payloads, public bounds and once-only effects.
+- Independent production/resource review found no blocker. Twelve exact-code checks
+  and five programs in both profiles pass (ten executions), including nested active
+  temporaries, same temporary-site revival rejection, skipped calls, projected
+  reborrows and physical old-copy conflicts. No optimized compiler rebuild or new
+  ELF/linkage qualification was performed; native debug/release execution did run.
+- Baseline compiler gate passed all ten checks at 532 Rust tests. Eleven focused
+  baseline probes exposed B001 for the newly supported expiry cases. Initial library
+  integration passed 274 groups and failed nine obsolete B001 expectations. First
+  full gate passed 292 library groups and 254 native groups, then stopped at four
+  more legacy B001 groups. Those now assert acceptance for unread carriage or E303
+  for actual use; mutable-carrier/list B001 boundaries remain. A follow-up formatting
+  stop and test-design corrections are recorded in STATUS_STEP_LOG.md. Final gate
+  is green; no production defect was found during integration.
+- Existing fixed-point/resource checks pass, including the 80-binding source-budget
+  rejection, 64 joins and 64 forward exits, RestartId exhaustion, active-path coverage
+  and missing-predecessor failures. Expired markers remain in the existing weighted
+  source/fact/replay budgets; no dynamic epoch allocation or new cap was introduced.
+- Python: 16 tooling and four compiler-harness groups pass (20 total). Documentation
+  checks 873 links in 86 Markdown files. Final handoff review and Git whitespace
+  checks pass; prior step-log history is preserved exactly. Static metadata validation remains separate
+  from compiler execution. Reference fixtures and REQUIRED were not changed.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Generic
+  temporary-borrow fixtures remain unsupported despite independently executed
+  temporary-owner support. Complete language/release qualification remains open.
+- Runtime/editor checks were not rerun. Historical evidence at `f16c30b`: Vim/Neovim,
+  15 runtime Python groups and native debug/release/sanitized checks passed. Runtime
+  groups were six diagnostic, 14 cleanup, ten stack, ten context, 25 scheduler and
+  14 owned, with fatal, truncation, lifetime, guard and admission probes.
+  ASan/UBSan/LSan and expired fiber-local detection passed outside the sandbox.
+  These remain prior checks, not generated-cleanup/unwind qualification.
+- Historical ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
+  It was not repeated. Baseline-host execution, bundled distribution, full panic
+  artifacts/replay and v0.0.1 remain unqualified. Preserve the unchanged vendored
+  fcontext.hpp EOF exception and checksum.
+
+### 2026-09-07 — Exclusive emitted scalar compiler gate passes
+
+- All ten compiler checks pass: 697 Rust groups (343 library, 354 native), 20 Python
+  groups, 42 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  911 links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Fourteen native groups and canonical target-storage/guarded-loan evidence pass.
+  Exact exclusive backing rejects widening while the paired shared union case stays
+  valid. No backend, runtime ABI, dependency or reference fixture changed.
+- Added the exclusive-slots example, contract/capability docs and a cancelled branch
+  whose completed field has a different type, exercising declared-type fallback.
+  Next: final gate, focused commits and emitted record-field design handoff.
+
+### 2026-09-07 — Mutable emitted scalar native matrix passes
+
+- Thirteen native groups pass in debug/release: actual result mutation, widths,
+  sibling/canonical conflicts, alias scope versus target lifetime, guarded views,
+  moves/children, call/block results, captured stores, cancellation, escapes,
+  exact backing, immutable/projected boundaries and panic.
+- Added initializer visibility and uncertain-move checks. Migrated old scalar B001
+  cases to acceptance/E305 or nullable/record-alias B001 after proof. Next: canonical
+  slot/lifecycle and shared-versus-exclusive backing tests, then full gate and docs.
+
+### 2026-09-07 — Exclusive scalar alias intent and backing checks integrated
+
+- Direct scalar aliases now record exclusive borrow intent after mutability checks;
+  completed result storage must have exactly the declared scalar type. Existing
+  discarded scalar fallback cells, Slot roots, target lifetimes and lowering remain.
+- Validation: Nine probes match acceptance, immutable E305, conflict E302, target-
+  scope escape/self-containing shared-view E303 and widened/record-alias B001.
+  Library run passes 340 and fails one obsolete scalar-alias B001 expectation.
+- Exclusive-reference carriers remain B001; no carrier gate was broadened merely
+  to diagnose their lifetime. Next: native exact-code/execution matrix, canonical
+  slot/backing/lifecycle evidence, full gate, docs/example and focused commits.
+
+### 2026-09-07 — Mutable emitted scalar exclusive borrows scoped
+
+- Direct mutable scalar alias borrows can reuse canonical Slot identity, target
+  lifetime, existing initialization and backend place addressing. Record exclusive
+  borrow intent until alias validation; require exact completed backing type.
+- Preserve immutable E305, canonical conflicts, self-escape E303, target-owned
+  lifetime beyond alias scope and cancelled scalar fallback cells. Keep widened
+  union storage, record aliases, projections and exclusive restart bodies gated.
+- Validation: Clean tree at 8391a54; six scalar/immutable/conflict/target/escape/
+  discard baseline probes report B001. Read alias/storage/backing and memory rules.
+- Next: Integrate intent and exact backing checks, native debug/release matrix,
+  canonical/lifecycle evidence, full gate, docs/example and focused commits.
+
 ### 2026-09-07 — Exclusive scalar-field final validation complete
 
 - All ten compiler checks pass: 681 Rust groups (341 library, 340 native), 20 Python

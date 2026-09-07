@@ -11,20 +11,22 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented exclusive borrows of scalar fields in ordinary mutable reference-free
-  Copy records (`55b3a1d`; contract/example `59caddd`). Each crossed field must be mutable; paths retain the original owner
-  and canonical field indexes. Direct writes share the same field validation.
-- Disjoint siblings and primary reads remain available while field loans are live;
-  ancestor/whole-owner access conflicts with E302. Moves, reborrows, call/block results,
-  bounds, guarded choices and captured stores reuse existing authority and lifetimes.
-- All ten compiler checks pass: 681 Rust tests (341 library, 340 native), 20 Python
-  tests, 42 debug/release examples, formatting, Clippy, build, schemas/catalog and
-  911 local links. Fourteen new native groups and projection/path evidence cover
-  the feature.
-- Aliases, indexed/union/reference paths, non-scalar exclusive pointees and existing
-  ownership boundaries remain B001. No backend, ABI, dependency or reference fixture
-  changed. Conformance remains 10 passed/13 unsupported/0 failed; runtime/editor
-  suites were not rerun.
+- Implemented direct exclusive borrows of mutable emitted Bool/Int/Float aliases
+  (`94192da`; contract/example `ec45d2e`).
+  Exclusive intent is checked against the completed backing type; it must be exact.
+  Shared union-member borrowing retains its existing compatibility rule.
+- Canonical Slot roots and target-block lifetime preserve alias identity beyond
+  lexical scope, including guarded aliases and cancelled typed fallback storage.
+  Mutations, moves, children, calls/blocks, bounds and captured stores reuse the
+  existing passes. Self-containing shared views and direct escapes report E303.
+- All ten compiler checks pass: 697 Rust tests (343 library, 354 native), 20 Python
+  tests, 43 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  919 local links. Fourteen new native groups and canonical/backing evidence pass,
+  including cancelled storage with a different completed field type.
+- Immutable scalar aliases report E305; widened backing, record aliases/projections,
+  exclusive carriers and restart bodies remain gated. No backend, ABI, dependency
+  or reference fixture changed. Conformance remains 10 passed/13 unsupported/0
+  failed; runtime/editor suites were not rerun.
 - Standard library/module loading, generated cleanup and complete v0.0.1
   qualification remain open.
 
@@ -32,7 +34,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar exclusive values, calls, block results and record fields | Emitted scalar borrows and wider ownership shapes |
+| Compiler | Exclusive scalar locals, fields and emitted storage | Emitted record-field borrows and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -42,11 +44,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design exclusive borrows of mutable emitted scalar storage in
-   `compiler/src/check/references.rs` and `compiler/src/check/aliases.rs`. Require
-   exact declared/backing types, target-block lifetime and canonical slot conflicts;
-   prove E303 for references escaping into their own result before opening the gate.
-   Preserve ordinary field/native evidence and keep owning carriers/cleanup separate.
+1. Design scalar-field exclusive borrows through mutable emitted record aliases.
+   Reuse `compiler/src/check/references.rs`, `compiler/src/check/aliases.rs` and
+   canonical Slot projections; require exact backing, reference-free Copy records,
+   mutable crossed fields and target-block lifetime. Prove disjoint siblings,
+   ancestor conflicts and self-escape rejection before removing the projection gate.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.
