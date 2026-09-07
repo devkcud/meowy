@@ -246,8 +246,10 @@ implementation boundary; it does not change language rules.
   block field. The marker and private proof retain declared field mutability;
   real backing requires an exact mutability match. Reads and permitted mutable
   assignments/SetPath operations resolve that result storage; assignment is not
-  a second initialization. Immutable alias writes are E305 even when their payload
-  contains mutable fields. Ordinary bindings still receive independent copies. E204/E205 slot-initialization rules are unchanged.
+  a second initialization. Direct immutable alias assignment is E305; field/element
+  writes require the supported reference-free owner model and mutable boundaries.
+  Ordinary bindings still receive independent copies. E204/E205 initialization
+  rules are unchanged.
 - The lexical alias type and final slot type remain distinct. Compatible concrete
   record destinations load/coerce from the final slot and inject assignments back
   into it. A concrete Record/List alias inside a wider union field addresses that
@@ -261,10 +263,10 @@ implementation boundary; it does not change language rules.
   block reinitializes its cells; inner restarts preserve initialized outer slots.
   Alias names remain lexically scoped; their shared views follow target ownership below.
 - Slot aliases stay separate from ordinary addressable places. The address
-  resolver explicitly supports `&name` and concrete field/list borrows when the
-  final cell has the lexical type or contains it as one exact union member. A
-  lexical union that is only a proper subset of the stored union has incompatible
-  tags/layout and remains B001; no copied borrow view or silent widening is made.
+  resolver supports `&name` and concrete field/list borrows only when the selected
+  referent is reference-free and the alias cell has the lexical type or contains
+  it as one exact union member. A lexical union that is only a proper subset of the
+  stored union has incompatible tags/layout and remains B001; no copied borrow view or silent widening is made.
   Type hints do not register a borrow; actual uses receive final backing validation.
 - `Source::Slot` carries the owning target block, canonical slot root, original
   alias view ID and typed field/element projections. Lifetime lookup uses the

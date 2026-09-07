@@ -6,6 +6,83 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Reference-bearing emitted-slot handoff
+
+- State: Reference-bearing immutable emitted aliases and selected carrier-field borrows are complete in 0c6492b, with native/example/README evidence in 888c67e. Stored reference origins and bounds remain separate from cell ownership; selected addresses do not consume unrelated reference fields. Source and reviews are complete. Older alias commit history remains in this log instead of accumulating in the current compiler header.
+- Validation: All 14 combined checks pass: 187 library and 173 native Rust tests, 35 Python tests, 863 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitizers. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized reference-slots output is exact. Twelve independent cases and all 53 backend groups pass; focused commits pass cached whitespace checks.
+- Blockers: No unfinished source work or failing checks. Whole-carrier/reference-cell borrows, mutable reference carriers, exclusive/temporary ownership, modules and full release qualification remain open.
+- Next steps: Commit this handoff and verify clean Git state. Then model transitive pointee summaries so dereference copies recover contained origins and input bounds separately from borrowed-cell lifetime. Cover nested references, copied parameters, widened/discarded cells and restart before enabling currently unsupported whole-carrier/reference-cell addresses. Keep runtime/library/tooling work visible.
+
+### 2026-09-06 — Reference-bearing slot coverage commit
+
+- State: Committed nine native groups, reference-slots example and README as 888c67e. Implementation is 0c6492b. Source, optimized execution and reviews are complete; only final handoffs remain.
+- Validation: All 14 checks pass with 360 Rust and 35 Python tests. Optimized example output is exact; both focused commits pass cached whitespace checks. No source changes followed validation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize current root/compiler STATUS and transitive carrier-borrow next steps, preserve prior logs, check links/whitespace, then commit handoffs and confirm a clean tree.
+
+### 2026-09-06 — Reference-bearing slot implementation commit
+
+- State: Committed immutable reference-bearing aliases, selected carrier-field addressing, focused library evidence and obsolete boundaries as 0c6492b. Native/example/README evidence remains separate; source and reviews are complete.
+- Validation: All 14 checks and optimized exact-output smoke passed before committing. Cached whitespace and staged scope checks pass. No source changes followed the gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit reference_slots native coverage, example and README, then finalize current handoffs with transitive pointee-summary next steps. Check documentation links, preserve history and verify clean Git state.
+
+### 2026-09-06 — Reference-bearing slot optimized smoke passed
+
+- State: The optimized reference-slots compiler build and example execution pass. Source, ownership documentation, native evidence and reviews are complete; no source changes followed the full gate. Preparing focused commits.
+- Validation: Release-profile example exited 0 with exact 3,7,7,3 lines and empty stderr. All 14 checks passed with 187 library/173 native Rust tests and 35 Python tests. Whitespace is clean.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit source/ownership and obsolete carrier-field boundary removals, then native/example/README evidence. Refresh current STATUS files, preserve prior step logs and record transitive carrier-borrow next steps before final Git checks.
+
+### 2026-09-06 — Reference-bearing slot combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on frozen source. Immutable reference-bearing names use actual slots, copied values preserve original origins, and selected carrier fields use their physical owner without unrelated pointee loans. Optimized compiler build is running.
+- Validation: 187 library and 173 native Rust tests, 35 Python tests, 863 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the optimized reference-slots example, inspect and commit implementation/ownership/obsolete boundaries separately from native/example/README evidence, then finalize current handoffs and preserved logs. Next: transitive summaries before whole-carrier/reference-cell borrowing.
+
+### 2026-09-06 — Reference-bearing slot combined gate started
+
+- State: Source and tests are frozen. All 53 backend groups pass, including five new groups and 28 native profile executions. No production backend change was required. The combined repository/compiler/runtime gate is running outside the sandbox for sanitizer inspection.
+- Validation: Nine new native groups, four semantic groups, 12 independent cases and the full focused backend suite pass. Source review is clean; final combined-gate results are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect all gate results, run the optimized reference-slots example, then split implementation/obsolete boundaries from native/example/README evidence. Finalize both current handoffs and preserved logs with transitive carrier-borrow next steps.
+
+### 2026-09-06 — Reference-bearing slot ownership review passed
+
+- State: Production and semantic tests are frozen. All immutable named emissions use slot cells while existing component states preserve pointee origins. Selected field address resolution is shared by Local and Slot storage. Independent review confirms no fabricated slot bounds on copied references and no unrelated pointee loans on selected addresses.
+- Validation: Nine new native groups, all 20 borrow groups, 18 matching alias groups and 12 independent cases pass. Four new semantic groups cover value/cell separation. Cargo check, Clippy, formatting and whitespace pass. Backend evidence is finishing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish backend focused evidence, run the combined repository/compiler/runtime gate and optimized reference-slots example, then split focused commits. Next: transitive pointee summaries before whole-carrier/reference-cell borrows; keep exclusive/temporary/owned work separate.
+
+### 2026-09-06 — Reference-bearing slot native integration passed
+
+- State: All nine native reference_slots groups pass on first integration in debug/release. Carried-reference copies retain pointee/input origins, selected fields follow Local/Slot storage lifetimes, unrelated reference fields are not read, and pending result references still protect their owners.
+- Validation: Native run: 9 passed, 0 failed. Verified copied-parameter/receiver E303, discarded target scalar views after unrelated pointee scope exit, retained carrier E302, widening/restart, whole-carrier boundaries and exact P001 effects. Pinned compiler is refreshed for independent review.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish focused semantic/backend tests and independent 12-case review, freeze source, then run all repository/runtime checks and optimized reference-slots example. Split source/obsolete boundaries, native evidence and final handoff commits.
+
+### 2026-09-06 — Reference-bearing slot address model aligned
+
+- State: All immutable named emissions will use SlotAlias while preserving their existing content states and pointee origins. A pure storage-path walk followed by a selected-type check permits reference-free fields of locals, copied parameters/receivers and emitted carriers. Crossing a stored reference continues through the existing reborrow path.
+- Validation: Native coverage now includes copied parameter/receiver fields and E303 for their escape. The obsolete ordinary carrier-count B001 row is removed. Baseline copied-reference behavior was verified; new execution remains pending integration.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish shared address resolution and alias registration, verify selected borrows do not retain unrelated pointees while pending result emissions still do, then run native/semantic/backend and independent checks before the full gate.
+
+### 2026-09-06 — Reference-bearing slot acceptance coverage
+
+- State: Added eight native groups for carried reference identity, safe copies after slot exit, selected scalar/list storage views, ordinary/outer/discarded carriers, widened payloads, restart, E302/E303 and all-input bounds. Whole carriers, reference cells and mutable reference-bearing storage remain explicit B001 boundaries.
+- Validation: Baseline compiler rejects a selected emitted carrier-field address with B001 and accepts a copied reference return. New native file is formatted; implementation-dependent execution is pending. Existing backend helpers appear reusable.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Align selected-field resolution for ordinary Local and emitted Slot roots, preserve value origins independently from cell origins, then run native and independent cases. Update only obsolete boundaries after proving support.
+
+### 2026-09-06 — Reference-bearing emitted-slot implementation started
+
+- State: Starting immutable emitted aliases that carry references, with value/pointee origins separate from physical slot ownership. Frontend/ownership, backend storage evidence and independent review are delegated. Root owns native tests, README and both handoffs. Selected reference-free field addresses will be enabled only with explicit storage proof.
+- Validation: Tree starts clean at 68318c4. Read current alias, address, origin and reference-carrier boundaries plus language lifetime contracts. Previous gate results are historical; no new checks have run.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Register immutable reference-bearing slot identities, preserve component origins/input bounds/tag facts, prove selected field addressing without whole-carrier borrows, then run native and independent lifetime checks before full verification and split commits.
+
 ### 2026-09-06 — Immutable emitted-slot handoff
 
 - State: Immutable reference-free emitted aliases and shared borrows are complete in faaa08b, with native/example/README evidence in 496b529. Declared mutability selects compatible result or discarded backing; immutable constants, variants and lengths are preserved. E305 writes, E303 publication, mutable aliases and reference-carrier copies retain their boundaries. Source and reviews are complete.

@@ -282,8 +282,8 @@ reference reassignment and direct reference formatting require future analysis.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's
 storage. Whole carriers and reference-valued cells cannot themselves be borrowed yet.
-Parameter and receiver field addresses cannot escape their local storage. Missing
-origin proofs or exhausted analysis budgets produce B001.
+Field addresses of copied parameters and receivers cannot escape those local copies.
+Missing origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
 right-hand side before writing: `owner = *view + 1` is valid when that is the last
 use of `view`. A later use of that view makes the write a conflict. Replacing a
@@ -300,10 +300,11 @@ between the declared local type and a wider final slot type. Matching field muta
 is required for that backing; mixed paths address the compatible payload.
 When an emission is proved discarded, an initialized local cell preserves its
 remaining effects without projecting into an absent or incompatible result field.
-Shared borrows use the target block as their storage owner even when the alias name
+Borrows of slot storage use the target block as their owner even when the alias name
 was declared in an inner scope. Discarded cells are retained as target-owned partial
-result storage. Exact slot types and concrete members of a wider union are addressable;
-proper subunion views remain B001 because borrowing cannot retag a copied value.
+result storage. A slot borrow needs a reference-free selected referent and backing
+that matches the alias type or one concrete union member. Proper subunion views
+remain B001 because borrowing cannot retag a copied value.
 References may pass through inner results, but escaping their target's publication
 reports E303. Live overlapping writes report E302, including uses across an inner
 restart. Restarting the target ends its iteration's storage. Mutable aliases publish
