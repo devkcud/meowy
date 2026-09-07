@@ -49,6 +49,7 @@ compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
+compiler/target/debug/meowy run compiler/examples/transitive-restarts.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -121,6 +122,8 @@ The [leave references example](examples/leave-references.mwy) keeps an earlier R
 reassignment when leaving the target skips the unfinished outer assignment.
 The [restart references example](examples/restart-references.mwy) carries a new
 reference into the next iteration while a copy made before the loop keeps its target.
+The [transitive restarts example](examples/transitive-restarts.mwy) carries pointers
+to reference-bearing records through a loop while preserving an earlier record copy.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -230,10 +233,11 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   surviving reference values for its exact target, then joins them with normal
   completion there. Nested exits preserve completed effects and skip unfinished
   stores/calls. Exiting a target does not extend its local, slot or temporary storage.
-- Bounded restart analysis for mutable references to reference-free pointees.
-  Header values include initial and backedge sources, with iteration guards reset.
-  Old copies and physical cell loans remain separate; header transfers add no read.
-  Nested targets and skipped RHS/call work retain their normal execution order.
+- Bounded restart analysis for mutable references with supported nested-reference
+  and record summaries. Header values preserve typed component paths for initial
+  and backedge origins/bounds, with iteration guards reset. Old copies and physical
+  cell loans remain separate; header transfers add no read. Nested targets and
+  skipped RHS/call work retain their normal execution order.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -349,17 +353,21 @@ completed assignments and skips the unfinished store, call or index operation.
 Initialized result emissions retain their own loans and path-specific proofs.
 Restart headers are solved by bounded origin analysis before loan checking. In
 bodies using reference reassignment, every mutable reference already present at a
-restarted target's entry must have a
-reference-free pointee and sources/bounds owned by surviving ancestor storage or
-function inputs. Temporary sources and storage owned by the target or its inner
-scopes remain B001 in these headers, even when an overwrite could precede the next
-read. Rebinding local references created inside an iteration remains supported
-when they do not enter another restarted target's header.
+restarted target's entry must have a supported summary shape. Reference and record
+paths can carry nested references, but stored summary variant activity remains B001.
+Traversal stops at reference-free referents, so plain references to scalar unions
+and references to cells holding those references remain supported. A union reached
+inside a reference-bearing record summary still needs the future activity model.
+Every component's sources/bounds must belong to surviving ancestor storage or
+function inputs. Temporary sources and target/inner-scope storage remain B001 in
+these headers, even when an overwrite could precede the next read. Rebinding local
+references created inside an iteration remains supported when they do not enter
+another restarted target's header.
 The analysis forgets header-entry and iteration guards, so programs needing finer
 iteration correlations may be rejected. Canonical source/bound sets must converge within
 64 passes and the existing work/storage budgets; incomplete proof reports B001.
-Mutable reference carriers, mutable nullable reference bindings, transitive loop
-headers and direct reference formatting require future analysis. A panic during
+Mutable reference carriers, mutable nullable reference bindings, loop headers with
+stored variant activity and direct reference formatting require future analysis. A panic during
 the RHS skips the store; nested blocks and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's

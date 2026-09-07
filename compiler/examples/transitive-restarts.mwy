@@ -1,0 +1,17 @@
+debug:@"debug"
+
+first:7
+second:9
+left:{->view:&first;->count:1}
+right:{->view:&second;->count:2}
+current:=&left
+original:*current
+count:=0
+'loop{
+    debug.print(*current.view)
+    debug.print(current.count)
+    current=&right
+    count=count+1
+    |count<2|'loop.restart()
+}
+debug.print(*original.view)

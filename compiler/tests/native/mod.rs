@@ -29,6 +29,7 @@ pub(crate) mod restart_references;
 pub(crate) mod scalars;
 pub(crate) mod temporary_borrows;
 pub(crate) mod transitive_borrows;
+pub(crate) mod transitive_restarts;
 pub(crate) mod unions;
 
 use std::fs;
