@@ -77,3 +77,64 @@ d.print("done")
         }
     }
 }
+
+#[test]
+pub fn skipped_block_operators_accept_nonreturning_operands() {
+    Case::new(
+        r#"
+d:@"debug"
+x:1;b:true
+d.print(false&&(*{d.print(99);->&x}>0))
+d.print(true||(!*{d.print(99);->&b}))
+d.print(false&&(-{d.print(99);->1}>0))
+d.print(true||(~{d.print(99);->1}==0))
+"#,
+    )
+    .runs(b"false\ntrue\nfalse\ntrue\n");
+}
+
+#[test]
+pub fn nonreturning_operator_operands_preserve_prefix_effects() {
+    for (expr, expected) in [
+        ("mark(1)+d.panic(\"stop\")", b"1\n".as_slice()),
+        ("d.panic(\"stop\")+mark(2)", b"".as_slice()),
+        ("mark(1)>d.panic(\"stop\")", b"1\n".as_slice()),
+        ("d.panic(\"stop\")==mark(2)", b"".as_slice()),
+        ("-d.panic(\"stop\")", b"".as_slice()),
+        ("!d.panic(\"stop\")", b"".as_slice()),
+        ("~d.panic(\"stop\")", b"".as_slice()),
+    ] {
+        let source =
+            format!("d:@\"debug\";mark<int32>:(n<int32>){{d.print(n);->n}};v:{expr};d.print(99)");
+        let case = Case::new(&source);
+        for profile in ["debug", "release"] {
+            let output = case.command("run", &["--profile", profile]);
+            assert_eq!(
+                output.status.code(),
+                Some(1),
+                "{expr}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert_eq!(output.stdout, expected, "{expr}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).starts_with("panic[P006]: stop"),
+                "{expr}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+}
+
+#[test]
+pub fn operator_leave_skips_only_the_nonreturning_continuation() {
+    Case::new(
+        r#"
+d:@"debug"
+mark<int32>:(){d.print(1);->1}
+'out{v:mark()+{'out.leave()};d.print(99)}
+'next{v:-{'next.leave()};d.print(99)}
+d.print(2)
+"#,
+    )
+    .runs(b"1\n2\n");
+}

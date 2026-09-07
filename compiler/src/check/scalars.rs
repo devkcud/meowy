@@ -250,7 +250,9 @@ impl Checker {
             left = Self::project(left);
             right = Self::project(right);
         }
-        if left.ty != right.ty
+        let diverges = !boolean && (left.ty == Type::Never || right.ty == Type::Never);
+        if !diverges
+            && left.ty != right.ty
             && !(boolean
                 && matches!(left.ty, Type::Bool | Type::Never)
                 && matches!(right.ty, Type::Bool | Type::Never))
@@ -277,7 +279,7 @@ impl Checker {
             "==" | "!=" => true,
             _ => false,
         };
-        if !valid {
+        if !valid && !diverges {
             return Err(Self::error(
                 "E222",
                 format!("operator `{op}` is not defined for {:?}", left.ty),
@@ -309,7 +311,9 @@ impl Checker {
                 ));
             }
         }
-        let ty = if boolean || compare {
+        let ty = if diverges {
+            Type::Never
+        } else if boolean || compare {
             Type::Bool
         } else {
             left.ty.clone()

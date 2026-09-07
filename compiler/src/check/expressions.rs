@@ -172,6 +172,9 @@ impl Checker {
                 }
                 let context = self.unary_context(op, value, expected)?;
                 let mut value = self.expr(value, context.as_ref())?;
+                if value.ty == Type::Never {
+                    return Ok(value);
+                }
                 if matches!(value.ty, Type::Record { .. }) {
                     value = Self::project(value);
                 }
