@@ -1,9 +1,11 @@
 use super::access::Kind;
+use super::storage::{EventKind, ScopeKind};
 use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Stmt, TRUE, Type};
 use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
+        let life = self.new_scope(ScopeKind::Block(block.id))?;
         let mut incoming = if self.merging {
             self.versions()?
         } else {
@@ -27,10 +29,12 @@ impl<'a> Graph<'a> {
             .unwrap_or_default();
         let result = self.bundle(origins.clone())?;
         let value = self.bundle(origins)?;
-        let start = self.node(Node {
+        let mut node = Node {
             defs: result.values().copied().collect(),
             ..Node::default()
-        })?;
+        };
+        self.event(&mut node, EventKind::Enter(life), super::Span::default())?;
+        let start = self.node(node)?;
         self.connect(start, TRUE, restarted);
         self.current.push(start);
         let node = self.copied(&result, &value)?;
@@ -38,6 +42,7 @@ impl<'a> Graph<'a> {
         self.blocks.insert(
             block.id,
             Scope {
+                life,
                 start,
                 end,
                 result,
@@ -60,6 +65,7 @@ impl<'a> Graph<'a> {
         if let Some(state) = self.facts.blocks.get(&block.id) {
             self.assume(state.proof)?;
         }
+        self.close_scope(life)?;
         if block.ty == Type::Never {
             self.current.clear();
         }
@@ -73,19 +79,21 @@ impl<'a> Graph<'a> {
             }
             match statement {
                 Stmt::Statement { id, stmts } => {
-                    self.charge(self.statements.len() + 1)?;
-                    self.statements.push(*id);
+                    let scope = self.enter_scope(ScopeKind::Statement(*id))?;
                     self.statements(stmts)?;
-                    self.statements.pop();
+                    self.close_scope(scope)?;
                 }
                 Stmt::Bind { id, value } => {
+                    let span = value.span;
+                    let cell = self.register_store(*id, span)?;
                     let value = self.expression(value)?;
                     let target = if self.program.locals[*id].has_reference() {
                         self.local(*id)?
                     } else {
                         Bundle::new()
                     };
-                    let node = self.copied(&value, &target)?;
+                    let mut node = self.copied(&value, &target)?;
+                    self.event(&mut node, EventKind::Init(cell), span)?;
                     self.append(node)?;
                     if let Some(state) = self.facts.locals.get(id) {
                         self.assume(state.proof)?;
@@ -136,6 +144,7 @@ impl<'a> Graph<'a> {
                     let access =
                         self.access(Kind::Write, self.storage(*id, Vec::new()), &[], value.span)?;
                     node.access = Some(access);
+                    self.event(&mut node, EventKind::Init(self.cell(*id)), value.span)?;
                     self.append(node)?;
                     if let Some(target) = target {
                         self.locals.insert(*id, target);
@@ -171,6 +180,16 @@ impl<'a> Graph<'a> {
                         fields,
                     };
                     self.charge(place.fields.len() + 1)?;
+                    let mut access = Node::default();
+                    self.event(
+                        &mut access,
+                        EventKind::Use {
+                            id: self.cell(*id),
+                            take: false,
+                        },
+                        *span,
+                    )?;
+                    self.append(access)?;
                     let reservation = if first.is_some() {
                         let value = self.value(vec![Origin {
                             component: Vec::new(),
@@ -212,11 +231,20 @@ impl<'a> Graph<'a> {
                     }
                     let access =
                         self.access(Kind::Write, self.storage(*id, place.fields), &[], *span)?;
-                    self.append(Node {
+                    let mut node = Node {
                         uses: reservation.into_iter().chain(value.into_values()).collect(),
                         access: Some(access),
                         ..Node::default()
-                    })?;
+                    };
+                    self.event(
+                        &mut node,
+                        EventKind::Use {
+                            id: self.cell(*id),
+                            take: false,
+                        },
+                        *span,
+                    )?;
+                    self.append(node)?;
                 }
                 Stmt::Emit {
                     target,
@@ -256,10 +284,14 @@ impl<'a> Graph<'a> {
                     )?;
                 }
                 Stmt::Restart { target, site } if self.merging => {
+                    let life = self.blocks.get(target).expect("restart scope").life;
+                    self.end_scopes(Some((life, true)))?;
                     self.restart(*target, *site)?;
                 }
                 Stmt::Leave(id) | Stmt::Restart { target: id, .. } => {
                     let restart = matches!(statement, Stmt::Restart { .. });
+                    let life = self.blocks.get(id).expect("control scope").life;
+                    self.end_scopes(Some((life, restart)))?;
                     if self.merging && !restart {
                         self.charge(
                             self.blocks.get(id).expect("control target").incoming.len() + 1,

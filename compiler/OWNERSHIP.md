@@ -642,8 +642,8 @@ implementation boundary; it does not change language rules.
 - Twelve focused graph groups cover read/store order, field/primary/tag paths,
   pointer versions/public bounds, acquisitions, aliases, skipped stores, indexed
   regions, complementary guards, reset edges, missing evidence and resource limits.
-  Exclusive modes, parent permission, forward availability and indirect writes remain
-  the next stages; access metadata is not source-level `&!` support or a public artifact.
+  Exclusive modes, parent permission and indirect writes remain
+  later stages; forward availability is described below; access metadata is not source-level `&!` support or a public artifact.
 
 ## Shared authority provenance
 
@@ -663,8 +663,8 @@ implementation boundary; it does not change language rules.
   with guarded parent alternatives from the captured parent value version.
 - Parent alternatives stay fixed when a reference holder is replaced; copied shared
   children retain their ancestry. Parent graphs are checked for cycles and invalid
-  IDs with charged work. This records provenance only: there is still no exclusive
-  mode, suspension enforcement, consuming use or forward initialized/moved state.
+  IDs with charged work. This records provenance only: exclusive mode and suspension enforcement remain
+  unimplemented. Lifecycle taking intent and forward availability are described below.
 - Call result ancestry is opaque because current signatures do not describe loan
   transfer. Opacity propagates through copies and derived loans. Every reachable
   restart body is also opaque for authority purposes, so a repeated static site
@@ -688,7 +688,53 @@ implementation boundary; it does not change language rules.
   parent chains, holder replacement, guard/Leave/short-circuit joins, public bounds,
   opaque calls and restarts, copied carriers, normalized fields/slots, input cells,
   expiry and resource/cycle rejection. Exclusive references remain gated until
-  permission checks and forward availability complete the designed scalar slice.
+  mode-aware permission checks integrate with availability for the scalar slice.
+
+## Storage lifecycle and forward availability
+
+- `loans/storage.rs` records canonical storage cells separately from reference value
+  IDs. Graph-local scope IDs identify function, block, controlled-branch and complete
+  statement lifetimes. Ordinary locals belong to their lexical scope, parameters to
+  their function, temporaries to their actual statement and alias cells to the exact
+  target block. Distinct alias views share one canonical cell.
+- Enter, End, Init and Use events are explicit on the existing CFG. Init follows
+  normally returning RHS work; partial writes require an initialized owner. Temporary
+  initialization precedes its acquisition. Named Leave closes exited descendants and
+  closes its target at the common completion; restart closes target/descendant scopes
+  before reentering the target. Panic marks active scopes ended. These are analysis
+  events, not generated cleanup or a proof of destructor order within a scope.
+- HIR Copy classification is explicit and exhaustive. All currently supported source
+  storage is Copy. Value contexts retain taking intent through groups/ascriptions,
+  while pointer evaluation for dereference/reborrow and tag inspection do not take
+  the holder. Copy taking leaves storage initialized; an internal non-Copy take
+  transitions it to moved. Source-level non-Copy modes are still gated.
+- `loans/init.rs` computes backward storage demand, then forward guarded availability
+  for demanded cells/scopes. Reference definitions do not initialize storage, and
+  reference liveness does not establish availability. Scope entry starts cells
+  uninitialized; returning Init makes them ready; End ends their lifetime. A mutable
+  moved cell can be reinitialized while its owning scope remains active.
+- Ready, moved, uninitialized and ended alternatives join under actual edge guards.
+  Reset erases predicate correlations conservatively, while explicit scope entry
+  starts a new local lifetime. Uses require ready storage on every feasible path.
+  Definite moved use is E301; uncertain availability or ended storage is E309.
+  Origin checking still owns E303 for borrowed storage lifetime violations.
+- Forward proof is checked after convergence, so a tentative path cannot cause an
+  early rejection. Only states demanded by lifecycle uses are retained; unused
+  declarations do not fill every snapshot. Empty scopes retain lifecycle events
+  without availability state. Scope readiness is tracked independently
+  to prevent initialization after End without reentry. End does not read moved or
+  uninitialized cells, and failed RHS work does not commit its outer destination.
+- Lifecycle metadata uses existing graph origin/work/node limits. Storage demand
+  and weighted forward snapshots share the existing liveness-entry limit; cloning,
+  unions and edge propagation are charged. Registries and queues are bounded.
+  Fifteen groups cover ordering, consumption intent, Copy behavior, internal moves,
+  guarded/short-circuit/Leave state, statement/slot ownership, restart, panic, sparse
+  demand and budget rejection. Internal tests vary cell Copy metadata explicitly;
+  they do not establish source-level exclusive reference or move support.
+- Indirect permission checking, parent suspension, partial-cell initialization and
+  runtime cleanup remain unimplemented. First-slice exclusive references still need
+  mode-aware frontend/backend integration and permission checks over provenance;
+  opaque ancestry or unresolved regions must not authorize access.
 
 ## Inline bounded lists
 

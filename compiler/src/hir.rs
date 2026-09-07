@@ -42,6 +42,23 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_copy(&self) -> bool {
+        match self {
+            Self::Null
+            | Self::Never
+            | Self::Bool
+            | Self::Int { .. }
+            | Self::Float { .. }
+            | Self::String
+            | Self::Reference(_) => true,
+            Self::List { element, .. } => element.is_copy(),
+            Self::Record { primary, fields } => {
+                primary.is_copy() && fields.iter().all(|field| field.ty.is_copy())
+            }
+            Self::Union(types) => types.iter().all(Self::is_copy),
+        }
+    }
+
     pub fn layout(&self) -> Option<(usize, usize)> {
         let ty = self;
         match ty {

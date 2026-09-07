@@ -5,8 +5,8 @@ This is the next implementation slice after terminal restart-source expiry
 [memory rules](../docs/reference/memory.md),
 [reference conversions](../docs/reference/types.md#inference-and-assignment), and
 [ownership diagnostics](../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
-Bounded access records and shared acquisition/ancestry metadata are implemented;
-exclusive permission and forward availability remain unimplemented.
+Bounded access records, shared ancestry, lifecycle events and forward availability
+are implemented. Exclusive source modes and permission enforcement remain unimplemented.
 `&!value`, `<&!T>` and indirect assignment remain
 bootstrap capabilities gated by B001. Planned rejections below are not current
 conformance results.
@@ -108,7 +108,8 @@ alternatives; copies preserve identity independently of value versions. Call res
 and restart bodies retain explicit opaque ancestry. Restart-erased source/tag
 correlations may also leave explicit unresolved-region guards; these cannot authorize
 access. Non-restarting accesses still require actual-origin coverage. This provenance does not yet
-implement exclusive permission, consumption or forward initialization. Preserve source access evidence through future folding,
+implement exclusive permission or source-level moves. Lifecycle events now retain
+taking intent, and forward availability handles Copy and internal non-Copy states. Preserve source access evidence through future folding,
 and distinguish accessing a reference cell from accessing its referent.
 
 | Active loan | External read/shared acquisition | External write/exclusive acquisition | Access through that loan |
@@ -131,8 +132,9 @@ collection retain the existing conservative overlap boundary.
 
 ## Moves and initialization
 
-Add forward guarded availability to the existing graph. Track initialized, moved
-and otherwise unavailable alternatives independently of backward loan liveness.
+Forward guarded availability is implemented on the existing graph, independently
+of backward reference liveness. It tracks ready, moved, uninitialized and ended
+alternatives demanded by lifecycle events; currently all source types are Copy.
 An unused variable is not thereby moved, and a live reference does not prove its
 holder initialized. Every read, borrow or move requires availability on its actual
 entered guard.
@@ -179,7 +181,7 @@ pointer use. Completed RHS moves, writes and outputs still occur. Use the same
 returning-edge discipline as existing indexed-write reservations. Never reevaluate
 the target or restore a stale aggregate after the RHS.
 
-Scope/statement exits must be explicit ownership events before later owned-value
+Scope/statement exits are now explicit lifecycle events before later owned-value
 support. For this scalar-reference slice they invalidate storage and retire holder
 state without generating runtime destruction. Later owned payloads require flags
 for initialized parts, reverse-order cleanup on normal/Leave/restart/panic paths,
@@ -273,10 +275,10 @@ session. No production source or reference conformance fixture changed.
    diagnostics, evaluation order and demand-only transfers while extending them.
    Keep weighted metadata/work charging and reach-checked missing evidence.
 2. Shared LoanIds, guarded ancestry and actual-source region resolution are
-   implemented, with explicit call/restart opacity. Add permission enforcement and
-   forward availability while preserving guards, value versions and source/bound
-   roles. Prove local moves, replacement, child demand and exact Leave behavior
-   before admitting source-level exclusivity.
+   implemented, with explicit call/restart opacity. Lifecycle events and forward
+   availability now preserve taking intent and exact scope/Leave behavior. Internal
+   non-Copy transition tests pass; integrate real source modes and permission
+   enforcement before admitting source-level exclusivity.
 3. Integrate reference mode, consuming contexts and scalar indirect stores across
    checker, origin/loan passes and backend. Reject excluded inferred forms before
    partial facts reach later phases. Keep parser grammar and runtime ABI unchanged.

@@ -1,3 +1,4 @@
+use super::storage::ScopeKind;
 use super::{BTreeMap, Bundle, FALSE, Graph, Guard, LocalId, Node, Result, Span, TRUE, Type};
 use crate::borrow_value::State;
 
@@ -89,10 +90,14 @@ impl Graph<'_> {
         if !self.merging {
             let (left, right) = self.fork(guard)?;
             self.current.push(left);
+            let scope = self.enter_scope(ScopeKind::Branch)?;
             yes(self)?;
+            self.close_scope(scope)?;
             let mut ends = std::mem::take(&mut self.current);
             self.current.push(right);
+            let scope = self.enter_scope(ScopeKind::Branch)?;
             no(self)?;
+            self.close_scope(scope)?;
             ends.append(&mut self.current);
             self.current = ends;
             return Ok(());
@@ -100,11 +105,15 @@ impl Graph<'_> {
         let incoming = self.versions()?;
         let (left, right) = self.fork(guard)?;
         self.current.push(left);
+        let scope = self.enter_scope(ScopeKind::Branch)?;
         yes(self)?;
+        self.close_scope(scope)?;
         let left = self.arm()?;
         self.restore_versions(&incoming)?;
         self.current.push(right);
+        let scope = self.enter_scope(ScopeKind::Branch)?;
         no(self)?;
+        self.close_scope(scope)?;
         let right = self.arm()?;
         self.merge_versions(incoming, vec![left, right])
     }

@@ -15,11 +15,13 @@ pub(crate) struct Node {
     pub(crate) transfers: Vec<(usize, usize, Guard)>,
     pub(crate) copies: Vec<(usize, usize, Guard)>,
     pub(crate) opaque: Vec<usize>,
+    pub(crate) events: Vec<super::storage::Event>,
     pub(crate) access: Option<super::access::Access>,
     pub(crate) next: Vec<Edge>,
 }
 
 pub(crate) struct Scope {
+    pub(crate) life: super::storage::ScopeId,
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) result: Bundle,
@@ -40,7 +42,10 @@ pub(crate) struct Graph<'a> {
     pub(crate) authority: Vec<super::authority::Authority>,
     pub(crate) locals: BTreeMap<LocalId, Bundle>,
     pub(crate) blocks: BTreeMap<BlockId, Scope>,
-    pub(crate) statements: Vec<crate::hir::StatementId>,
+    pub(crate) scopes: Vec<super::storage::Frame>,
+    pub(crate) active: Vec<super::storage::ScopeId>,
+    pub(crate) stores: BTreeMap<LocalId, super::storage::Store>,
+    pub(crate) availability: Vec<super::init::Values>,
     pub(crate) current: Vec<usize>,
     pub(crate) work: usize,
     pub(crate) origins: usize,

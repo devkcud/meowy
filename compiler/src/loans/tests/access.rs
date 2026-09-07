@@ -349,7 +349,7 @@ pub(crate) fn access_paths_stop_before_exceeding_storage_or_work_budgets() {
         graph.work = crate::loans::MAX_WORK;
         assert!(
             graph
-                .read_local(0, &[], Kind::Read, crate::ast::Span::default())
+                .read_local(0, &[], Kind::Read, crate::ast::Span::default(), true)
                 .is_err()
         );
         assert_eq!(graph.nodes.len(), count);

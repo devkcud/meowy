@@ -208,16 +208,26 @@ impl Graph<'_> {
         path: &[Step],
         kind: Kind,
         span: Span,
+        take: bool,
     ) -> Result<()> {
         if self.current.is_empty() {
             return Ok(());
         }
         let target = self.storage(id, Vec::new());
         let access = self.access(kind, target, path, span)?;
-        self.append(Node {
+        let mut node = Node {
             access: Some(access),
             ..Node::default()
-        })?;
+        };
+        self.event(
+            &mut node,
+            super::storage::EventKind::Use {
+                id: self.cell(id),
+                take,
+            },
+            span,
+        )?;
+        self.append(node)?;
         Ok(())
     }
 

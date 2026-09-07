@@ -1,3 +1,4 @@
+use super::storage::{EventKind, ScopeKind};
 use super::{
     Block, Diagnostic, FALSE, Graph, Guard, Live, LocalId, MAX_LIVE, Node, Place, Projection,
     Result, Source, Span, TRUE, VecDeque,
@@ -118,6 +119,7 @@ impl<'a> Graph<'a> {
 
     pub(crate) fn build(&mut self, block: &Block, params: &[LocalId]) -> Result<()> {
         self.merging = self.facts.merging.contains(&block.id);
+        let scope = self.enter_scope(ScopeKind::Function)?;
         for id in params {
             let proof = self
                 .facts
@@ -130,17 +132,21 @@ impl<'a> Graph<'a> {
                     )
                 })?
                 .proof;
+            let cell = self.register_store(*id, Span::default())?;
             let value = self.local(*id)?;
-            let node = self.append(Node {
+            let mut node = Node {
                 defs: value.values().copied().collect(),
                 ..Node::default()
-            })?;
+            };
+            self.event(&mut node, EventKind::Init(cell), Span::default())?;
+            let node = self.append(node)?;
             for value in value.into_values() {
                 self.grant(node, value, None)?;
             }
             self.assume(proof)?;
         }
         self.block(block)?;
+        self.close_scope(scope)?;
         Ok(())
     }
 
@@ -172,6 +178,7 @@ impl<'a> Graph<'a> {
                 ));
             }
         }
+        self.solve_init(&reach)?;
         self.solve_authority(&reach)?;
         let live = self.liveness(&reach)?;
         for (id, reachable) in reach.iter().enumerate() {

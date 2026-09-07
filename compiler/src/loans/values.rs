@@ -114,6 +114,10 @@ impl<'a> Graph<'a> {
         self.project(expr, &[])
     }
 
+    pub(crate) fn reference_value(&mut self, expr: &Expr) -> Result<Bundle> {
+        self.project_mode(expr, &[], false)
+    }
+
     pub(crate) fn call(&mut self, site: CallId, args: &[Expr], span: Span) -> Result<Bundle> {
         let mut uses = Vec::new();
         for arg in args {
@@ -153,7 +157,7 @@ impl<'a> Graph<'a> {
         match &expr.kind {
             ExprKind::Local(id) => {
                 if self.has_tag(&expr.ty, path)? {
-                    self.read_local(*id, path, Kind::Tag, expr.span)?;
+                    self.read_local(*id, path, Kind::Tag, expr.span, false)?;
                 }
             }
             ExprKind::Field { value, index } => {
@@ -176,7 +180,7 @@ impl<'a> Graph<'a> {
                 self.block(block)?;
             }
             ExprKind::Deref(value) => {
-                let value = self.expression(value)?;
+                let value = self.reference_value(value)?;
                 if self.current.is_empty() {
                     return Ok(());
                 }
@@ -200,10 +204,20 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn convert(&mut self, value: &Expr, to: &Type, path: &[Step]) -> Result<Bundle> {
+        self.convert_mode(value, to, path, true)
+    }
+
+    pub(crate) fn convert_mode(
+        &mut self,
+        value: &Expr,
+        to: &Type,
+        path: &[Step],
+        take: bool,
+    ) -> Result<Bundle> {
         let from = &value.ty;
         self.charge(path.len() + from.members().len() + to.members().len() + 1)?;
         if from == to {
-            return self.project(value, path);
+            return self.project_mode(value, path, take);
         }
         if *from == Type::Never {
             self.inspect(value)?;
@@ -222,12 +236,12 @@ impl<'a> Graph<'a> {
                     let path = std::iter::once(Step::Variant(index))
                         .chain(tail.iter().copied())
                         .collect::<Vec<_>>();
-                    return self.project(value, &path);
+                    return self.project_mode(value, &path, take);
                 }
                 if !path.is_empty() {
                     return Err(unsupported());
                 }
-                let source = self.expression(value)?;
+                let source = self.project_mode(value, &[], take)?;
                 let mut result = Bundle::new();
                 for (mut component, id) in source {
                     self.charge(component.len() + targets.len() + 1)?;
@@ -249,7 +263,7 @@ impl<'a> Graph<'a> {
             let path = std::iter::once(Step::Variant(index))
                 .chain(path.iter().copied())
                 .collect::<Vec<_>>();
-            return self.project(value, &path);
+            return self.project_mode(value, &path, take);
         }
         if let Type::Union(targets) = to {
             let member = targets
@@ -258,7 +272,7 @@ impl<'a> Graph<'a> {
                 .ok_or_else(unsupported)?;
             if let Some((Step::Variant(index), tail)) = path.split_first() {
                 if *index == member {
-                    return self.project(value, tail);
+                    return self.project_mode(value, tail, take);
                 }
                 self.inspect(value)?;
                 return Ok(Bundle::new());
@@ -266,7 +280,7 @@ impl<'a> Graph<'a> {
             if !path.is_empty() {
                 return Err(unsupported());
             }
-            let source = self.expression(value)?;
+            let source = self.project_mode(value, &[], take)?;
             let mut result = Bundle::new();
             for (mut component, id) in source {
                 self.charge(component.len() + 1)?;
@@ -279,6 +293,15 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn project(&mut self, expr: &Expr, path: &[Step]) -> Result<Bundle> {
+        self.project_mode(expr, path, true)
+    }
+
+    pub(crate) fn project_mode(
+        &mut self,
+        expr: &Expr,
+        path: &[Step],
+        take: bool,
+    ) -> Result<Bundle> {
         self.charge(path.len() + 1)?;
         let value = match &expr.kind {
             ExprKind::TemporaryBorrow {
@@ -286,8 +309,8 @@ impl<'a> Graph<'a> {
                 statement,
                 value,
             } => {
-                self.charge(self.statements.len() + 1)?;
-                if !self.statements.contains(statement)
+                self.charge(self.active.len() + 1)?;
+                if self.statement_scope(*statement).is_none()
                     || self.proofs.temporaries.get(id) != Some(statement)
                 {
                     return Err(Diagnostic::unsupported(
@@ -295,6 +318,7 @@ impl<'a> Graph<'a> {
                         expr.span,
                     ));
                 }
+                self.register_store(*id, expr.span)?;
                 let value = self.expression(value)?;
                 if self.current.is_empty() {
                     return Ok(Bundle::new());
@@ -317,23 +341,23 @@ impl<'a> Graph<'a> {
                 self.derived(expr, path)?
             }
             ExprKind::Local(id) if expr.ty.has_reference() => {
-                self.read_local(*id, path, Kind::Read, expr.span)?;
+                self.read_local(*id, path, Kind::Read, expr.span, take)?;
                 let local = Self::select(self.local(*id)?, path);
                 self.copy(local)?
             }
-            ExprKind::Coerce { value } => self.convert(value, &expr.ty, path)?,
+            ExprKind::Coerce { value } => self.convert_mode(value, &expr.ty, path, take)?,
             ExprKind::Block(block) => Self::select(self.block(block)?, path),
             ExprKind::Field { value, index } => {
                 let prefix: Vec<_> = std::iter::once(Step::Slot(index + 1))
                     .chain(path.iter().copied())
                     .collect();
-                self.project(value, &prefix)?
+                self.project_mode(value, &prefix, take)?
             }
             ExprKind::Primary(value) => {
                 let prefix: Vec<_> = std::iter::once(Step::Slot(0))
                     .chain(path.iter().copied())
                     .collect();
-                self.project(value, &prefix)?
+                self.project_mode(value, &prefix, take)?
             }
             ExprKind::Deref(value) => self.dereferenced(value, path)?,
             ExprKind::Unary { value, .. }
@@ -421,12 +445,13 @@ impl<'a> Graph<'a> {
                     })?;
                 }
                 if matches!(expr.kind, ExprKind::Panic { .. }) {
+                    self.end_scopes(None)?;
                     self.current.clear();
                 }
                 Bundle::new()
             }
             ExprKind::Local(id) => {
-                self.read_local(*id, path, Kind::Read, expr.span)?;
+                self.read_local(*id, path, Kind::Read, expr.span, take)?;
                 Bundle::new()
             }
             ExprKind::Null

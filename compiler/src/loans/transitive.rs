@@ -1,4 +1,5 @@
 use super::access::Kind;
+use super::storage::EventKind;
 use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Source, Span, Step, TRUE};
 
 impl Graph<'_> {
@@ -54,6 +55,12 @@ impl Graph<'_> {
         span: Span,
     ) -> Result<Bundle> {
         self.charge(stored.len() + uses.len() + 1)?;
+        let owner = match &source {
+            Source::Local { id, .. } | Source::Temporary { id, .. } => Some(*id),
+            Source::Slot { root, .. } => Some(*root),
+            _ => None,
+        };
+        let temporary = matches!(source, Source::Temporary { .. });
         let pointer = self.value(vec![Origin {
             component: Vec::new(),
             source,
@@ -65,6 +72,12 @@ impl Graph<'_> {
             defs: vec![pointer],
             ..Node::default()
         };
+        if let Some(id) = owner {
+            if temporary {
+                self.event(&mut node, EventKind::Init(id), span)?;
+            }
+            self.event(&mut node, EventKind::Use { id, take: false }, span)?;
+        }
         for (path, source) in stored {
             self.charge(
                 path.len()
@@ -94,7 +107,7 @@ impl Graph<'_> {
     }
 
     pub(crate) fn dereferenced(&mut self, value: &Expr, path: &[Step]) -> Result<Bundle> {
-        let parent = self.expression(value)?;
+        let parent = self.reference_value(value)?;
         if self.current.is_empty() {
             return Ok(Bundle::new());
         }
@@ -125,7 +138,7 @@ impl Graph<'_> {
             | ExprKind::ElementBorrow { site, value, .. } => (*site, value),
             _ => unreachable!(),
         };
-        let parent = self.expression(value)?;
+        let parent = self.reference_value(value)?;
         if self.current.is_empty() {
             return Ok(Bundle::new());
         }
