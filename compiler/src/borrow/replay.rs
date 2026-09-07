@@ -97,6 +97,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         let entries = next.locals.len()
             + next.blocks.len()
             + next.calls.len()
+            + next.returns.len()
             + next.reborrows.len()
             + next.headers.len()
             + next.header_inputs.len()
@@ -109,6 +110,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         facts.locals.extend(next.locals);
         facts.blocks.extend(next.blocks);
         facts.calls.extend(next.calls);
+        facts.returns.extend(next.returns);
         facts.reborrows.extend(next.reborrows);
         facts.headers.extend(next.headers);
         facts.header_inputs.extend(next.header_inputs);

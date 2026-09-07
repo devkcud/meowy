@@ -295,7 +295,7 @@ impl<'a> Graph<'a> {
                         self.expression(value)?
                     };
                     let mut node = self.copied(&value, &result)?;
-                    node.barrier = Some(span);
+                    node.barrier = (self.output != Some(*target)).then_some(span);
                     self.append(node)?;
                 }
                 Stmt::If {

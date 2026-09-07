@@ -66,6 +66,7 @@ pub(crate) struct Facts {
     pub(crate) locals: BTreeMap<LocalId, State>,
     pub(crate) blocks: BTreeMap<BlockId, State>,
     pub(crate) calls: BTreeMap<CallId, State>,
+    pub(crate) returns: BTreeMap<CallId, Vec<crate::borrow_contract::returns::Transfer>>,
     pub(crate) reborrows: BTreeMap<ReborrowId, State>,
 }
 

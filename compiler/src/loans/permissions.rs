@@ -169,7 +169,11 @@ impl Graph<'_> {
                 .sum::<usize>();
             self.charge(weight.saturating_mul(access.regions.len() + 1))?;
             for region in &access.regions {
-                for origin in self.values[value].iter() {
+                for origin in self.values[value]
+                    .origins
+                    .iter()
+                    .chain(self.values[value].bounds.iter().filter(|_| exclusive))
+                {
                     let guard = self.guards.and(conflict, region.guard);
                     if Self::physical_overlap(&region.source, &origin.source)
                         && self.guards.overlap(guard, origin.guard)

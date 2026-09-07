@@ -204,7 +204,22 @@ impl Checker<'_> {
                     for (_, state) in &inputs {
                         self.live_argument(state, expr.span, entered)?;
                     }
-                    crate::borrow_contract::call(&expr.ty, &inputs, self.guards, expr.span)?
+                    if crate::borrow_contract::reference_call(
+                        &expr.ty,
+                        inputs.iter().map(|(ty, _)| *ty),
+                    ) {
+                        let (state, transfers) = crate::borrow_contract::returns::call(
+                            &expr.ty,
+                            &inputs,
+                            self.guards,
+                            expr.span,
+                        )?;
+                        self.reserve_origins(transfers.len() * 2 + 1, expr.span)?;
+                        self.facts.returns.insert(*site, transfers);
+                        state
+                    } else {
+                        crate::borrow_contract::call(&expr.ty, &inputs, self.guards, expr.span)?
+                    }
                 } else {
                     State::absent()
                 };

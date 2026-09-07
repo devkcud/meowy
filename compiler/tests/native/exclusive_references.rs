@@ -216,7 +216,7 @@ pub fn exclusive_lifetimes_and_mutability_keep_exact_diagnostics() {
 #[test]
 pub fn unsupported_shapes_and_shared_ancestry_crossings_stay_gated() {
     for source in [
-        "f<&!int32>:(p<&!int32>){->p}",
+        "f<{p<&!int32>}>:(p<&!int32>){->p:p}",
         "x:=1;p:&!x;h:{->p:p}",
         "x:=1;p:&!x;h:&p",
         "x:=1;p:&!x;s:&*p;h:&s",
@@ -226,8 +226,8 @@ pub fn unsupported_shapes_and_shared_ancestry_crossings_stay_gated() {
         "x:=1;p:&!x;t:(&*p).{->*self}",
         "x:=1;p:&!x;'again{'again.restart()}",
         "x:={->n:=1};p:&!x.n",
-        "f<&int32>:(s<&int32>){->s};x:=1;p:&!x;s:&*p;v:f(s)",
-        "f<&int32>:(s<&int32>){->s};x:=1;p:&!x;v:f(p)",
+        "f<&int32>:(s<&int32>,extra<string>){->s};x:=1;p:&!x;s:&*p;v:f(s,\"\")",
+        "f<&int32>:(s<&int32>,extra<string>){->s};x:=1;p:&!x;v:f(p,\"\")",
         "x:=1;p:&!x;q:&!*p;v:p==q",
     ] {
         rejects(source, "B001");

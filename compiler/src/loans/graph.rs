@@ -29,6 +29,7 @@ impl<'a> Graph<'a> {
             work: 0,
             origins: 0,
             merging: false,
+            output: None,
             missing_calls: Vec::new(),
             missing_reborrows: Vec::new(),
             missing_headers: Vec::new(),

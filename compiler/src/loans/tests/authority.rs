@@ -227,7 +227,7 @@ pub(crate) fn public_bounds_survive_joins_without_becoming_physical_access_regio
 #[test]
 pub(crate) fn calls_and_their_reborrow_descendants_keep_opaque_ancestry() {
     inspect(
-        "id<&int32>:(p<&int32>){->p};a:1;p:id(&a);q:&*p;r:q;v:*r",
+        "id<&int32>:(p<&int32>,unused<string>){->p};a:1;p:id(&a,\"\");q:&*p;r:q;v:*r",
         |graph, reach| {
             let child = graph
                 .loans

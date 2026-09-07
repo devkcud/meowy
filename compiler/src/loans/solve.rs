@@ -119,6 +119,11 @@ impl<'a> Graph<'a> {
 
     pub(crate) fn build(&mut self, block: &Block, params: &[LocalId]) -> Result<()> {
         self.merging = self.facts.merging.contains(&block.id);
+        self.output = crate::borrow_contract::reference_call(
+            &block.ty,
+            params.iter().map(|id| &self.program.locals[*id]),
+        )
+        .then_some(block.id);
         let scope = self.enter_scope(ScopeKind::Function)?;
         for id in params {
             let proof = self

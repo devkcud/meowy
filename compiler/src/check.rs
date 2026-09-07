@@ -126,15 +126,18 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
             checker.proofs.conditions = checker.guards;
             checker.proofs.tags = checker.tags;
             for function in &program.functions {
-                if function.result.has_exclusive()
-                    || (function
+                if (function.result.has_exclusive()
+                    || function
                         .params
                         .iter()
-                        .any(|id| program.locals[*id].has_exclusive())
-                        && !crate::borrow_contract::scalar_call(
-                            &function.result,
-                            function.params.iter().map(|id| &program.locals[*id]),
-                        ))
+                        .any(|id| program.locals[*id].has_exclusive()))
+                    && !(crate::borrow_contract::scalar_call(
+                        &function.result,
+                        function.params.iter().map(|id| &program.locals[*id]),
+                    ) || crate::borrow_contract::reference_call(
+                        &function.result,
+                        function.params.iter().map(|id| &program.locals[*id]),
+                    ))
                 {
                     return Err(vec![Diagnostic::unsupported(
                         "exclusive function signatures outside scalar arguments and results",

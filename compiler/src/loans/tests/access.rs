@@ -150,7 +150,8 @@ pub(crate) fn pointee_reads_keep_versions_and_never_resolve_public_bounds_as_sou
                     _ => None,
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(ids.len(), 2);
+            assert_eq!(ids.len(), 4);
+            let ids = &ids[2..];
             assert_ne!(ids[0], ids[1]);
             assert!(
                 graph.values[ids[0]]

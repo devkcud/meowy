@@ -126,7 +126,10 @@ impl<'a> Graph<'a> {
         ty: &Type,
     ) -> Result<Bundle> {
         self.charge(args.len() + 1)?;
-        let scalar = crate::borrow_contract::scalar_call(ty, args.iter().map(|arg| &arg.ty));
+        let returning = crate::borrow_contract::reference_call(ty, args.iter().map(|arg| &arg.ty));
+        let scalar =
+            returning || crate::borrow_contract::scalar_call(ty, args.iter().map(|arg| &arg.ty));
+        let mut inputs = Vec::new();
         let mut uses = Vec::new();
         let mut accesses = Vec::new();
         for arg in args {
@@ -143,7 +146,10 @@ impl<'a> Graph<'a> {
                 let access = self.pointee_access(&value, &[], kind, arg.span)?;
                 accesses.push(access);
             }
-            uses.extend(value.into_values());
+            uses.extend(value.values().copied());
+            if returning {
+                inputs.push(value);
+            }
             if self.current.is_empty() {
                 return Ok(Bundle::new());
             }
@@ -163,17 +169,26 @@ impl<'a> Graph<'a> {
         let mut node = Node {
             uses,
             barrier: (!scalar).then_some(span),
-            defs: value.values().copied().collect(),
+            defs: if returning {
+                Vec::new()
+            } else {
+                value.values().copied().collect()
+            },
             ..Node::default()
         };
-        for id in value.values() {
-            self.opaque_value(&mut node, *id)?;
+        if !returning {
+            for id in value.values() {
+                self.opaque_value(&mut node, *id)?;
+            }
         }
         let node = self.append(node)?;
         if state.is_none() {
             self.missing_calls.push((node, span));
         }
         self.assume(proof)?;
+        if returning {
+            self.returned(site, &inputs, &value, ty, span)?;
+        }
         Ok(value)
     }
 

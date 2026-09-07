@@ -42,6 +42,9 @@ pub(crate) fn check(
         .iter()
         .any(|id| program.locals[*id].has_exclusive())
         .then_some(Span::default());
+    if block.ty.has_exclusive() {
+        exclusive = Some(Span::default());
+    }
     let mut restarts = super::BTreeSet::new();
     while let Some((item, depth)) = pending.pop() {
         if !guards.spend(1) {

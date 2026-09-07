@@ -14,6 +14,7 @@ mod mutable_references;
 mod places;
 mod reference_temporaries;
 mod restarting_references;
+mod returns;
 mod temporaries;
 mod transitive;
 mod transitive_restarts;

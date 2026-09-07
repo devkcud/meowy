@@ -1,4 +1,5 @@
 mod call;
+pub(crate) mod returns;
 
 pub(crate) use call::call;
 
@@ -21,6 +22,16 @@ pub(crate) fn scalar_reference(ty: &Type) -> bool {
 
 pub(crate) fn scalar_call<'a>(result: &Type, params: impl IntoIterator<Item = &'a Type>) -> bool {
     scalar_value(result)
+        && params
+            .into_iter()
+            .all(|ty| scalar_value(ty) || scalar_reference(ty))
+}
+
+pub(crate) fn reference_call<'a>(
+    result: &Type,
+    params: impl IntoIterator<Item = &'a Type>,
+) -> bool {
+    scalar_reference(result)
         && params
             .into_iter()
             .all(|ty| scalar_value(ty) || scalar_reference(ty))

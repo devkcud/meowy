@@ -181,7 +181,7 @@ pub fn opaque_public_bounds_still_protect_call_dependencies() {
         "E302",
     );
     rejects(
-        "first<&int32>:(a<&int32>,b<&int32>){->a};f<null>:(p<&!int32>,q<&int32>){r:first(p,q);v:*r}",
+        "first<&int32>:(a<&int32>,b<string>){->a};f<null>:(p<&!int32>){r:first(p,\"\");v:*r}",
         "B001",
     );
 }
@@ -189,8 +189,8 @@ pub fn opaque_public_bounds_still_protect_call_dependencies() {
 #[test]
 pub fn excluded_result_shapes_and_restart_inputs_remain_gated() {
     for source in [
-        "f<&!int32>:(p<&!int32>){->p}",
-        "f<&int32>:(p<&!int32>){->&*p}",
+        "f<{p<&!int32>}>:(p<&!int32>){->p:p}",
+        "f<&int32>:(p<&!int32>,s<string>){->&*p}",
         "f<{n<int32>}>:(p<&!int32>){->n:*p}",
         "f<null>:(p<&!int32>,s<string>){}",
         "f<null>:(p<&!int32>){'again{'again.restart()}}",

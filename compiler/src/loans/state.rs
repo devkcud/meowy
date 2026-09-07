@@ -51,6 +51,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) work: usize,
     pub(crate) origins: usize,
     pub(crate) merging: bool,
+    pub(crate) output: Option<BlockId>,
     pub(crate) missing_calls: Vec<(usize, Span)>,
     pub(crate) missing_reborrows: Vec<(usize, Span)>,
     pub(crate) missing_headers: Vec<(usize, Guard)>,
