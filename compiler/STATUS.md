@@ -1,8 +1,9 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Guarded mutable-reference branch merging is complete.
+Updated: 2026-09-07. Forward leave-state merging is complete.
 Full v0.0.1 remains incomplete; source and validation are complete for this slice.
-Implementation: `5c55e44`; native coverage/example: `af3a868`.
+Emission-proof fix: `b3e875a`; Leave implementation: `4ddef85`; native/example: `cb4afaf`.
+Prior guarded merges: `5c55e44`, `af3a868`, `096ce78`.
 Prior mutable-reference versions: `32d093c`, `4b7d655`, `f16c30b`.
 Prior reference-bearing temporary support: `c325099`, `fb72c97`, `b10ba7f`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
@@ -13,17 +14,17 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: fixed shared-reference locals support matcher and short-circuit
-assignment merges. Each arm starts from the post-condition incoming environment;
-only returning states contribute, with origins, bounds, activity and proof masked
-by their returning guard. A skipped assignment keeps its old value. Earlier copies,
-operand evaluation order and physical cell identity stay unchanged.
+Completed: fixed shared-reference locals now preserve their versions across
+forward Leave. Each target records entry-surviving reference bindings and queues
+exit snapshots under their actual guards. Target completion merges exits with
+fallthrough before result proof/completeness, including leave-only paths and
+nested exits to outer targets. Capture/join performs no reference read.
 
-Origin/loan branch helpers isolate arm state and transfer merged demand without
-reading reference contents. Per-body Facts.merging keeps assignment-free loop
-behavior unchanged. Reference assignment with any leave/restart remains B001.
-Next is forward leave-state merging, then bounded restart propagation; mutable
-reference carriers and exclusive/owned work remain separate.
+Earlier RHS assignments survive an exit; unfinished stores, calls and index work
+do not execute. Old copies, physical cell loans, public bounds and source/slot/
+temporary lifetimes remain checked. A separate emission-proof correction prevents
+disjoint result branches from hiding retained loans. Reference assignment with
+Restart remains B001; bounded loop dataflow is the next slice.
 
 ## Resume here
 
@@ -50,10 +51,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 35 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 40 origin, 46 loan, 15 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 45 origin, 52 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 214 native groups, 4 harness tests and 32 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 222 native groups, 4 harness tests and 33 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -67,10 +68,11 @@ single native target by behavior while sharing one temp-directory counter.
 reads, `borrow_contract/call.rs` handles candidate substitution, and
 `loans/transitive.rs` connects summary transfers. Contract tests live beside their
 module; `check/temporaries.rs` owns temporary creation and statement metadata.
-`borrow/mutable.rs` owns the bounded assignment/exit capability scan.
+`borrow/mutable.rs` owns the bounded assignment/restart capability scan.
 `borrow/branches.rs` and `loans/branches.rs` own guarded environment restoration and
-returning-state joins; `loans/values.rs` owns immutable graph versions. Retain these
-module boundaries during further ownership work.
+returning-state joins. `borrow/exits.rs` owns target-entry and queued Leave snapshots;
+loan Scope captures target versions and exit predecessors. `loans/values.rs` owns
+immutable graph versions. Retain these module boundaries during further ownership work.
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -88,7 +90,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reference assignment exit/backedge joins, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, reference assignment backedge joins, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Remaining contextual constraints, finer alias precision, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -118,9 +120,27 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Facts.merging identifies each body using reference assignments. In that mode,
   returning expressions retain normal-completion proofs after nested scope closure.
   Assignment-free bodies keep the previous proof/loop path. The bounded scan rejects
-  reference assignment combined with any Leave/Restart, even unrelated nested
+  reference assignment combined with any Restart, even unrelated nested
   transfers; separate function bodies are independent. Mutable reference-bearing
   nullable/aggregate bindings and emitted fields remain B001.
+- Each active target in merging mode records the mutable-reference IDs already
+  present at entry. Leave captures only those surviving values under the actual
+  exit guard before branch/scope restoration. The exact target merges its queued
+  exits plus normal fallthrough and installs their union continuation before
+  result-slot proof/completeness, even if no mutable-reference IDs survive.
+- Outer-target exits remain queued across inner closes. They create no inner
+  continuation, and an unfinished assignment/call/index is not resumed. Target-local
+  bindings still end and temporary/slot ownership is never revived. An expired
+  captured version may be overwritten without reading; a later actual use is E303.
+- Loan targets retain entry versions and queued predecessor arms. Leave defers its
+  edge until the target joins those arms through the existing demand-only merge,
+  then reaches the original result-copy node. Real emitted result components retain
+  their own uses/loans; the exit snapshot itself adds no read. Target/exit snapshots
+  and lookup/merge work count toward existing persistent origin and work limits.
+- Emission assumptions are conjoined before masking the value by its retained
+  emission guard. Disjoint paths therefore contribute conditional proofs. Their
+  conjunction cannot make the entire result falsely unreachable and suppress
+  downstream lifetime/loan checks. The no-Leave E302 regression covers the prior bug.
 - Loan branch ends define merged versions with demand-only transfers for every
   component, including direct references. Merging creates no runtime read. Unchanged
   bundles are reused; changed origins are masked by actual completing CFG reach,
@@ -128,7 +148,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   the branch retain old IDs, while physical cell loans keep their original roots.
 - Snapshots, restoration, state/graph growth and completion-reach queries consume
   existing budgets. The initial implementation recomputes reach for changed joins:
-  64 repeated self-assignment joins pass, while 1,024 report loan-budget B001.
+  64 repeated self-assignment joins and 64 forward exits pass; 1,024 repeated
+  joins report loan-budget B001.
   Broader scaling remains unqualified; never replace budget rejection with incomplete
   origin or liveness evidence.
 - HIR Field contains name, type and mutable flag. Structural Eq/Ord/Hash and
@@ -459,32 +480,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - Final `python3 -B tools/verify.py --compiler`: all 10 selected checks pass on
-  frozen production source. This slice did not rerun editor/native-runtime checks;
-  their files, HIR, backend storage, runtime ABI and dependencies are unchanged.
-- Rust: 239 library and 214 native groups pass (453 total). New groups: 4 origin,
-  6 loan and 8 native. All 40 origin, 46 loan, 62 backend and 35 checker groups pass.
-  Formatting and Clippy `-D warnings` pass; 32 examples run in both native profiles.
-- Native coverage includes partial/complementary assignments, old copies, guarded
-  owner/cell conflicts, scoped/temporary and public-bound expiry, nullable pointees,
-  condition/argument effects, panic and nested short circuits. Independent review
-  passed 12 checks and 3 effect programs in both profiles (6 executions).
-- Five initial native groups failed at the previous conditional-assignment B001
-  gate as the expected baseline. Rustfmt caught one misplaced raw-string test block;
-  it was corrected before integration. All eight new groups passed first source
-  integration and the final gate. Obsolete conditional B001 rows now preserve the
-  remaining exit/backedge boundary. No reference fixture or REQUIRED changed.
+  frozen production source. Editor/native-runtime checks were not rerun; HIR,
+  backend storage, Facts shape, runtime ABI and dependencies are unchanged.
+- Rust: 250 library and 222 native groups pass (472 total). New groups: 4 Leave
+  origin groups, 1 independent emission-proof regression, 6 loan and 8 native.
+  All 45 origin, 52 loan, 62 backend and 35 checker groups pass. Formatting and
+  Clippy `-D warnings` pass; 33 examples execute in both native profiles.
+- Native cases cover nested/conditional targets, prior RHS assignments with skipped
+  stores/calls/index work, short circuits, initialized result emissions, old copies,
+  cell/public bounds and local/temporary/result-slot expiry. Independent review
+  passed 14 checks and 3 effect programs in both profiles (6 executions).
+- The prior compiler accepted the no-Leave disjoint-emission regression despite
+  later writes to both possible owners. After the independent proof-mask fix it
+  rejects E302. Four initial Leave groups failed at the old B001 gate as expected;
+  all eight groups passed first source integration and the final gate. Probe/test
+  corrections to use named-target emissions are retained in the step log.
 - Optimized compiler build passed. That binary built and ran
-  `examples/guarded-references.mwy` in the release profile: exit 0, exact stdout
-  `7\n7\n7\n9\n`, empty stderr. No new ELF/linkage qualification is claimed.
+  `examples/leave-references.mwy` in release: exit 0, exact stdout `11\n9\n`, empty
+  stderr. No reference fixture or REQUIRED changed; no new ELF/linkage claim.
 - Fresh Python evidence: 16 tooling and 4 compiler-harness groups (20 total).
-  Documentation checks 868 links in 86 Markdown files; schemas/catalog pass.
+  Documentation checks 869 links in 86 Markdown files; schemas/catalog pass.
   Static metadata validation remains separate from compiler execution.
 - Historical unchanged-runtime/editor evidence at `f16c30b`: Vim/Neovim, 15 runtime
   Python groups and native debug/release/sanitized checks passed. Runtime groups
   were 6 diagnostic, 14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned,
   with fatal, truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and
   expired fiber-local detection passed outside the sandbox. These are prior checks,
-  not reruns or new generated-cleanup/unwind qualification for this slice.
+  not reruns or generated-cleanup/unwind qualification for this slice.
 - Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
   language/release qualification remains open; generic temporary-borrow fixtures
   remain unsupported despite independently executed temporary-owner support.
@@ -495,15 +517,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Implement forward leave-state capture and target joins in `borrow/control.rs`,
-   `borrow/branches.rs`, `loans/control.rs` and `loans/branches.rs`. Capture surviving
-   mutable-reference versions under the exit guard, merge them with normal target
-   completion, and preserve source scope/temporary/result-slot lifetimes. Verify
-   conditional leaves, nested targets, skipped assignment RHS stores, old copies,
-   cell views and public call bounds before relaxing the per-body Leave gate.
-   Keep Restart excluded until an explicit bounded fixed point handles initial and
-   loop-carried versions with guard resets. Reference carriers/exclusive/owned work
-   remain separate. Preserve charged work or improve reach-query reuse as needed.
+1. Build bounded restart dataflow in `borrow/control.rs`, `borrow/exits.rs`,
+   `borrow/branches.rs`, `loans/control.rs` and `loans/branches.rs`. Join initial
+   and backedge reference versions at target headers with a bounded fixed point;
+   reset iteration-specific guards and expire iteration-local/statement sources.
+   Preserve surviving owner/cell loans, prior copies, transitive/public bounds and
+   initialized emitted storage. Verify first/later iterations, conditional restart,
+   nested targets and skipped RHS work before relaxing the per-body Restart gate.
+   Retain reference-carrier/exclusive/owned boundaries. Keep all work charged and
+   consider reach-query reuse if scaling requires it; incomplete proof stays B001.
 2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
    Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup

@@ -6,6 +6,97 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Forward leave-reference handoff complete
+
+- State: Emission-proof fix b3e875a, forward Leave implementation 4ddef85 and native/example evidence cb4afaf are complete. Exact-target snapshots preserve surviving reference values and skipped effects; initialized emissions retain their own guarded loans. Both current handoffs identify bounded restart dataflow as next.
+- Validation: All ten compiler checks passed with 472 Rust tests, 20 Python tests and 869 links. All 33 examples execute in debug/release. The optimized leave-references output and independent 14 checks/six executions passed. The previous false-acceptance proof defect now rejects E302. Final read-only handoff audit found no corrections; prior runtime/editor evidence is explicitly historical.
+- Blockers: No unfinished source work or failing check remains. Reference assignment with Restart, mutable reference carriers and exclusive/owned work remain unsupported; 13 conformance cases and full release qualification remain open.
+- Next steps: Build bounded initial/backedge reference-version joins at restart target headers, reset iteration guards and expire iteration-local/statement storage. Preserve old copies, surviving owner/cell loans, call bounds and initialized storage; verify conditional/nested restart and skipped RHS effects before relaxing the gate. Keep checks charged and retain the wider runtime/library/tool roadmap.
+
+### 2026-09-07 — Forward leave native coverage committed
+
+- State: Emission-proof fix b3e875a, forward Leave implementation 4ddef85 and native/example/README evidence cb4afaf are complete. Source, full compiler gate, optimized execution and independent review pass. Only final current handoffs and preserved checkpoint review remain.
+- Validation: All ten compiler checks pass: 472 Rust tests, 20 Python tests, 869 links, formatting, Clippy, schemas/catalog, build and conformance. The optimized example and 14 independent checks/six executions pass. Cached whitespace/scope checks pass for all three commits. Runtime/editor evidence was not rerun this slice.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize current STATUS files with exact Leave support, emission-proof correction, restart-only boundary and bounded loop analysis next steps. Preserve prior logs, check links/whitespace, commit the final handoff and confirm a clean Git tree.
+
+### 2026-09-07 — Forward leave implementation committed
+
+- State: Committed target-entry capture, queued exits, generalized state/loan joins, restart-only policy, focused source tests and old boundaries as 4ddef85. It follows emission-proof fix b3e875a. The optimized compiler builds and runs leave-references with exact output. Native/example/README and final trackers remain separate.
+- Validation: All ten compiler checks pass with 472 Rust and 20 Python tests. Optimized example exits 0 with exact 11, 9 lines and empty stderr; independent 14 checks/six executions pass. Both committed scopes pass cached whitespace checks. No HIR/backend/Facts/runtime ABI expansion.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native leave coverage, example and README, then finalize root/compiler STATUS with 45 origin, 52 loan, 62 backend, 222 native and 33 examples. Preserve history and actual current/historical evidence; next is bounded restart analysis.
+
+### 2026-09-07 — Conditional emission-proof fix committed
+
+- State: Committed the independent emission-proof correction and no-Leave E302 regression as b3e875a. Arm assumptions are now conditional on the retained emission path, preventing disjoint result emissions from erasing loans. Forward Leave implementation and its documentation/coverage remain for dependency-ordered commits.
+- Validation: The full compiler gate passed with 472 Rust tests and 20 Python tests; the old compiler reproduction had accepted the conflicting write, and both focused and independent current checks reject it with E302. Cached whitespace and staged scope checks pass. Optimized compiler build is in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish optimized smoke, commit Leave target-state implementation/old boundary updates, then native/example/README and final handoffs. Keep restart B001 and preserve all regression/failure history plus exact current validation.
+
+### 2026-09-07 — Forward leave compiler gate passed
+
+- State: All ten compiler checks pass on frozen production source, including the independent emission-proof fix and forward Leave state merging. Targets preserve exact exit versions, old copies, cell/slot lifetimes and initialized results while skipping unfinished effects. The optimized compiler build is running.
+- Validation: 250 library plus 222 native groups pass (472 Rust tests). Tooling 16 and compiler harness 4 pass, with 869 links, schemas/catalog, formatting, Clippy, build and conformance. All 33 examples run in debug/release. Conformance remains 10 passed, 13 unsupported, 0 failed. Historical runtime/editor checks were not rerun; sources and ABI are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized leave-references with exact output, then commit the emission-proof fix and regression separately before Leave implementation and old boundaries. Commit native/example/README evidence next, then final current handoffs and preserved logs. Next: bounded restart version fixed points.
+
+### 2026-09-07 — Forward leave source freeze
+
+- State: Forward leave-state capture/target joins and the conditional emission-proof correction are complete. Origin and loan modules are frozen, with shared charged capture/merge helpers and exact-target queued predecessors. Restart with reference reassignment remains B001; HIR/backend/Facts/runtime ABI are unchanged.
+- Validation: All 45 origin and 52 loan groups pass. Fourteen independent checks and six native profile executions pass, including the prior false-acceptance defect now rejecting E302. Eight new native groups, Clippy, formatting and whitespace checks pass. The full compiler gate is starting.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all ten compiler checks and optimized leave-references. Record exact current versus historical evidence, then commit the independent emission-proof fix, Leave implementation/old boundaries, native/example/README and final trackers. Next: bounded restart dataflow with iteration guard resets and initialization/lifetime checks.
+
+### 2026-09-07 — Forward leave independent checks passed
+
+- State: Independent validation passed all prepared leave programs plus the retained-result and prior no-Leave emission-proof regressions. Added leave-references.mwy and README support for target-specific forward leaves; initialized result loans and conditional proofs remain distinct from metadata-only exit capture.
+- Validation: Fourteen independent checks and six profile executions passed exact diagnostics/output. Both extra emission controls now report E302. Eight native groups, 52 loan groups and the focused origin/fix groups pass. The new example is covered by the existing both-profile examples group, pending the final gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish resource/docs review and source freeze, then run the full compiler gate and optimized example. Commit emissions.rs with its independent regression first, then Leave implementation/old boundaries, native/example/README and final handoffs. Next: bounded restart version propagation and reset guards.
+
+### 2026-09-07 — Forward leave native integration passed
+
+- State: All eight native leave groups pass. Nested targets, RHS/index/call/short-circuit exits retain completed assignments and skip unfinished effects; result-slot publication, old copies, guarded cells and source expiry remain checked. Updated old native B001 rows to the remaining restart boundary.
+- Validation: Eight native groups pass with both-profile execution and primary E302/E303/B001 checks. All 52 loan groups, four new origin groups and the separate no-Leave emission-proof regression pass. Independent target/lifetime and emission-defect probes are running. Remaining origin formatting/lookup-charge review is in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish independent review and origin freeze; add the leave-references example/README, run the full compiler gate and optimized smoke. Split the emission-proof correctness fix before the leave feature, then native/example evidence and final handoffs. Next borrowing work is bounded restart dataflow.
+
+### 2026-09-07 — Forward leave helpers integrated
+
+- State: Forward leave origin and loan cores compile. Targets capture only entry-surviving references before scope restoration; arbitrary exit/fallthrough predecessors reuse charged merge helpers and demand-only loan transfers before result continuation. Emission assumptions are now masked with their retained emission path, fixing the reproduced false-unreachable result proof.
+- Validation: Six new leave-loan groups pass against integrated origins. Root eight-group native run is starting; focused origin tests and full loan regression are finishing. No HIR/backend/Facts expansion was needed; restart with reassignment remains B001.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all eight native groups, ensure the independent no-Leave emission regression now rejects E302, finish focused tests and independent target/lifetime probes. Freeze code and run the compiler gate; keep the emission-proof fix separately reviewable before the Leave feature commit.
+
+### 2026-09-07 — Conditional emission proof bug reproduced
+
+- State: Confirmed a related checker defect in the prior compiler: disjoint guarded emissions into a named result could globally contradict their proofs, making later conflicting owner writes appear unreachable. The old compiler accepted a named-result reference followed by writes to both possible owners. Origin owner is applying emission assumptions before retained-path masking.
+- Validation: Read-only previous-compiler reproduction exited 0 where E302 is required. An initial probe used inner-block emissions and got E222; correcting it to explicit named-target emissions demonstrated the real defect. Native leave result cases now use correct named-target syntax. This is a real regression to fix, separate from the expected Leave B001 baseline.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix and regress conditional emission proof scoping, complete target-close continuation merge and run all eight native groups. Ensure both branch and leave result loans remain live without synthetic exit reads; then independent probes and full compiler validation.
+
+### 2026-09-07 — Leave merge design and extended native coverage prepared
+
+- State: Origin and loan designs use target-entry surviving versions and queued exit snapshots, merging exits plus genuine fallthrough before target result completion. The loan core compiles. Prepared eight native groups, including target-local/temporary/slot expiry, initialized emissions, retained result loans, skipped effects and panic; restart stays B001.
+- Validation: Four native groups have the expected old B001 baseline. New test file formats cleanly. Review identified a possible branch-emission proof-scoping hazard to investigate before the gate: disjoint arm assumptions must not globally erase a completed result proof.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish origin implementation and investigate conditional emission proofs; integrate all eight native groups. Verify target publication, deferred metadata versus actual result reads, body isolation and resource bounds before final compiler validation.
+
+### 2026-09-07 — Leave reference native baseline recorded
+
+- State: Added four native groups for conditional/nested targets, assignments before leave, RHS/call/index/short-circuit exits, skipped stores and guarded owner/cell conflicts. Exit capture and joins must remain metadata-only. Origin target continuation must merge before result-slot proof validation.
+- Validation: All four initial native groups fail at the existing assignment-with-leave B001 gate, as expected before implementation. Language contract confirms leave completes its named scope with initialized emissions while exiting inner scopes.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement charged target-entry snapshots and queued exits using shared merge helpers; preserve target-local/statement lifetime expiry and emitted results. Add source/temporary/slot/public-bound and panic coverage, then integrate and independently verify before enabling Leave.
+
+### 2026-09-07 — Forward leave-state merge investigation
+
+- State: Starting from clean 096ce78. Next slice captures surviving mutable-reference versions at forward leave edges and merges them with fallthrough at named targets. Origin and loan workers own separate modules; root owns native/example/docs integration and all trackers. Reference reassignment combined with restart remains B001.
+- Validation: Previous slice passed 453 Rust and 20 Python tests plus optimized example and independent checks. No new leave behavior has been implemented or validated yet. Current instructions/status were reread and existing work preserved.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree target-entry environment and exit-capture semantics, including nested targets, skipped RHS stores and lifetime expiry. Reuse bounded branch merge helpers, add native/source regression evidence, then relax only the Leave gate after integration proof.
+
 ### 2026-09-06 — Guarded mutable-reference handoff complete
 
 - State: Implementation 5c55e44 and native/example evidence af3a868 are complete. Guarded matcher and short-circuit assignments merge only returning versions, preserving old copies, physical cell loans and public bounds without synthetic reads. Both current handoffs identify forward leave-state capture/joins as next, with restart excluded.

@@ -1,45 +1,44 @@
 # Meowy project status
 
-Updated: 2026-09-06. This is the restart point for work across the repository.
+Updated: 2026-09-07. This is the restart point for work across the repository.
 The compiler has its detailed handoff in [compiler/STATUS.md](compiler/STATUS.md).
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `5c55e44` adds guarded assignment merges for fixed shared-reference
-  locals in matcher arms and short-circuit right operands. Each arm starts from
-  the values present after condition effects; only returning paths reach the join.
-  Skipped assignments preserve incoming values, and earlier copies stay fixed.
-- Origin/bound/activity proofs are masked by returning guards. Loan merges transfer
-  demand on each predecessor without adding reads; unchanged versions are reused
-  and duplicate origins are normalized. Physical reference cells keep their identity,
-  so guarded cell views and selected-owner writes retain E302 protection.
-- `Facts.merging` activates the new path per body. Assignment-free bodies retain
-  their existing loop behavior. Bodies combining reference reassignment with any
-  leave/restart remain B001 until exit states and loop fixed points are implemented.
-- `af3a868` adds eight native groups, `compiler/examples/guarded-references.mwy`
-  and README evidence. Four origin and six loan groups cover partial assignments,
-  nested guards, temporary/scoped expiry, public bounds, nullable pointees and panic.
-  Focused helpers keep the new analysis in `compiler/src/borrow/branches.rs` and
-  `compiler/src/loans/branches.rs`.
-- All ten compiler checks pass: 453 Rust tests, 20 Python tests, 868 local links,
-  schemas/catalog, formatting, Clippy, build and conformance. All 32 examples execute
-  in debug/release. The optimized compiler runs guarded-references with exact output;
-  12 independent checks and six profile executions pass.
-- Runtime/editor checks were not rerun this slice; their earlier evidence is retained
-  in the compiler handoff. HIR, backend storage, runtime ABI and dependencies are
-  unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- Branch work stays bounded: 64 repeated joins pass; 1,024 exceed the charged loan
-  work budget with B001. Next is forward leave-state merging, followed by restart
-  fixed points. Mutable reference carriers, exclusive/owned work and release
-  qualification remain open.
+- Compiler: `4ddef85` adds forward leave-state merges for fixed shared-reference
+  locals. Targets record the reference bindings that existed on entry; each leave
+  captures those surviving values before inner scope restoration. Captured exits
+  join normal fallthrough at the exact target before result completion is checked.
+- Nested leaves preserve completed assignments and skip unfinished stores, calls,
+  indices and short-circuit continuations. Capturing/joining adds no reference read.
+  Old copies, physical cell loans, public bounds and target-local/slot/temporary
+  expiry remain enforced. Reassignment combined with restart still reports B001.
+- `b3e875a` fixes conditional emission proofs: disjoint result paths no longer
+  cancel their proofs and hide conflicting writes. The previous compiler accepted
+  the regression; current checks report E302. This fix is committed independently.
+- `cb4afaf` adds eight native groups, `compiler/examples/leave-references.mwy`
+  and README evidence. Four Leave-origin groups, one independent proof regression
+  and six loan groups cover the implementation. `compiler/src/borrow/exits.rs` owns target
+  snapshots; origin and loan joins reuse their bounded branch helpers.
+- All ten compiler checks pass: 472 Rust tests, 20 Python tests, 869 local links,
+  schemas/catalog, formatting, Clippy, build and conformance. All 33 examples run
+  in debug/release. The optimized compiler runs leave-references with exact output;
+  14 independent checks and six profile executions pass.
+- Runtime/editor checks were not rerun; prior evidence is retained in the compiler
+  tracker. HIR, backend storage, Facts shape, runtime ABI and dependencies are unchanged.
+  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Next is bounded restart dataflow with initial/backedge versions, guard resets
+  and iteration-local expiry. Existing budgets still apply, including persistent
+  target/exit snapshots. Mutable reference carriers, exclusive/owned work, generated
+  cleanup and full release qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Guarded shared-reference versions and bounded transitive borrowing | Leave/restart state flow, exclusive ownership and cleanup |
+| Compiler | Guarded and forward-leave shared-reference versions | Restart dataflow, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -49,12 +48,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Model forward leave-state snapshots in `compiler/src/borrow/` and
-   `compiler/src/loans/`. Capture surviving reference versions at each leave edge,
-   merge them with fallthrough at the named target, and verify skipped RHS stores,
-   old copies, cell loans and target-owned/temporary lifetimes. Relax the leave gate
-   only after these paths are proved; keep restart B001 until a bounded fixed point
-   accounts for incoming and loop-carried versions with reset guards.
+1. Design bounded restart dataflow in `compiler/src/borrow/` and
+   `compiler/src/loans/`. Join initial and backedge reference versions at target
+   headers, reset iteration-specific guards, and expire iteration-local/temporary
+   sources without losing surviving owner/cell loans. Verify first/later iterations,
+   conditional restart, old copies, call bounds and initialization before relaxing
+   the restart gate; retain other unsupported storage/ownership forms explicitly.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and
