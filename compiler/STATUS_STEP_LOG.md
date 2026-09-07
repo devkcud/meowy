@@ -6,6 +6,68 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Owned exclusive element final validation complete
+
+- All ten compiler checks pass: 731 Rust groups (348 library, 383 native), 20 Python
+  groups, 45 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  928 local links in 93 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fifteen native groups and three graph proof groups pass. The example prints
+  index, 2, 2, 3. HIR/checker/analysis/backend changed; ABI/dependencies/fixtures did not.
+- Commits: `28ca2b0` implements owned scalar elements and tests; `cf4eca8` adds the
+  contract/example. Staged whitespace checks passed for both concerns.
+- Blockers: None for this slice. Next: Extend owned Place roots to mutable record
+  fields and exact-backed emitted lists, preserving reservation and target lifetimes.
+
+### 2026-09-07 — Owned exclusive element compiler gate passes
+
+- All ten compiler checks pass: 730 Rust groups (348 library, 382 native), 20 Python
+  groups, 44 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  921 links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Fourteen native groups and three graph proof groups pass, including initialized
+  length, signed/unsigned failures, zero capacity, no-authority reservations and
+  independent mutable-owner proof. Wider roots stay gated; ABI/fixtures unchanged.
+- Added final short-circuit acquisition coverage and the exclusive-elements example/
+  contract. Next: final validation, cohesive code/docs/handoff commits, then projected
+  and emitted owned-list places with canonical regions and reservation lifetime.
+
+### 2026-09-07 — Exclusive element native matrix passes
+
+- Thirteen new native groups pass in debug/release: actual storage and widths,
+  read-compatible index reservations, write conflicts, conservative owner/element
+  overlap, moves/children, calls/blocks, explicit copies, cancellation/conditional
+  exits, captured stores, signed/unsigned initialized bounds and capability gates.
+- A constant index within capacity but beyond mutable initialized length is not
+  statically rejected; runtime P001 validates the actual length, preserving existing
+  behavior. Added failing-index effects and zero-capacity coverage.
+- Migrated old B001 expectations after proof. Next: explicit reservation lifetime/
+  no-authority and missing mutable-owner evidence, then the full compiler gate.
+
+### 2026-09-07 — Owned scalar element paths integrated
+
+- Added ExclusiveElement HIR, mutable ordinary-owner proof, scalar-list typing,
+  lifetime construction, no-authority reservation and root exclusive acquisition.
+  Lowering captures the actual owner/length before the index and reuses P001 bounds.
+- Reservation demand ends at acquisition or is absent after a non-returning index;
+  it has no loan identity and cannot authorize writes. Wider roots stay gated.
+- Validation: Library run passes 343 and fails two obsolete immutable-list B001
+  expectations, now E305. Next: native mutation, read/write reservations, captures,
+  signed/unsigned bounds, cancellation, authority evidence and full compiler gate.
+
+### 2026-09-07 — Owned scalar list-element borrowing scoped
+
+- Use distinct ExclusiveElement HIR with an ordinary mutable local owner and index.
+  Capture length/address before index evaluation, retaining a no-authority storage
+  reservation through returning acquisition. Grant the final exclusive element loan
+  directly from owner proof, never from a shared reference or the reservation.
+- Reuse one-based bounds checks, conservative Element regions, scope/availability,
+  moves and parent permissions. Ordinary scalar lists only; aliases, field/indexed
+  roots, reference/temporary roots and wider elements remain gated.
+- Validation: Clean tree at 0638fd2; six mutation/index/immutability/bounds/cancel
+  baseline probes report B001. Read collection, memory and implementation contracts.
+- Next: Integrate HIR/checker/origin/loan/backend paths, prove effect order and
+  authority/bounds/cancellation with native tests, run full gate and commit.
+
 ### 2026-09-07 — Emitted record-field final validation complete
 
 - All ten compiler checks pass: 713 Rust groups (345 library, 368 native), 20 Python

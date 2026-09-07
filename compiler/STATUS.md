@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Emitted scalar record-field exclusive borrows integrated.
+Updated: 2026-09-07. Owned exclusive scalar list-element borrowing integrated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Owned exclusive scalar elements: `28ca2b0`; contract/example: `cf4eca8`.
 Exclusive emitted record fields: `12bee5a`; docs/example: `69353bd`.
 Exclusive emitted scalars: `94192da`; contract/example: `ec45d2e`.
 Exclusive scalar record fields: `55b3a1d`; contract/example: `59caddd`.
@@ -32,23 +33,24 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Mutable emitted reference-free Copy record aliases now support scalar-field exclusive
-borrows. Removing the projection-only gate reuses bounded paths, mutable crossed
-fields, scalar endpoint checks and Alias.exclusive validation of the complete backing
-record. Widening an unselected field still fails; shared union views retain support.
+ExclusiveElement HIR names an ordinary mutable scalar-list local and one index.
+Frontend, origin and loan analysis require explicit mutable-owner proof. Owner/length
+capture precedes index evaluation; the private whole-list reservation carries no
+loan identity or authority and is demanded only through returning acquisition.
+The final exclusive loan is rooted at Source::Local with Element projection.
 
-Existing Slot sources preserve target, canonical root, lexical view and nested field
-indexes. Sibling/primary disjointness, ancestor conflicts, target lifetime beyond
-alias scope, guarded identity, moves, calls/results, captured stores and cancellation
-need no new HIR or lowering. Cancelled records retain their declared fallback layout.
-Whole-record exclusive pointees, reference cells, indexed/union/reference paths,
-owning carriers and exclusive restart bodies remain gated.
+Lowering reuses existing signed/unsigned initialized-length P001 checks and list
+addressing after one index evaluation. E101 uses available length/capacity knowledge.
+A non-returning index creates no final loan or future reservation demand; completed
+side effects and old holder versions survive Leave/panic. Element/owner overlap is
+conservative, including owner metadata reads. No shared pointer grants exclusivity.
 
-All ten compiler checks pass: 713 Rust tests (345 library, 368 native), 20 Python
-tests, 44 debug/release examples, 921 local links, formatting, Clippy, build and
-schema/catalog/conformance checks. Fourteen new native groups and explicit nested
-projection/whole-record backing evidence pass. Contract: `EXCLUSIVE_SLOTS.md`. No backend, runtime ABI, dependency or
-reference fixture changed; runtime/editor/release qualification remain open.
+All ten compiler checks pass: 731 Rust tests (348 library, 383 native), 20 Python
+checks, 45 debug/release examples, 928 links, formatting, Clippy, build and schema/
+catalog/conformance checks. Fifteen native groups and three graph groups prove
+behavior, reservation lifetime/no-authority and independent owner proof. Contract:
+`EXCLUSIVE_ELEMENTS.md`. HIR/checker/analysis/backend changed; runtime ABI, dependencies
+and reference fixtures did not. Wider roots/elements and exclusive restarts stay gated.
 
 ## Prior implemented milestone
 
@@ -93,10 +95,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 127 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 368 native groups, 4 harness tests and 44 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 383 native groups, 4 harness tests and 45 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -110,6 +112,8 @@ single native target by behavior while sharing one temp-directory counter.
 reads, `borrow_contract/call.rs` handles candidate substitution, and
 `loans/transitive.rs` connects summary transfers; `loans/access.rs` owns access
 records, typed inspection paths, metadata charging and region resolution.
+`loans/elements.rs` owns exclusive element reservations/acquisition;
+`Proofs::exclusive_element_type` validates ordinary mutable scalar-list ownership.
 `loans/authority.rs` owns acquisition IDs, guarded provenance, opacity and parent checks.
 `loans/storage.rs` owns lifecycle events/scopes; `loans/init.rs` owns storage demand
 and forward guarded availability. `loans/permissions.rs` owns mode-aware access,
@@ -585,33 +589,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 345
-  library and 368 native groups (713 total); 20 Python tests; all 44 examples in
-  debug/release; formatting, Clippy, pinned build, schemas/catalog and 921 links in
-  92 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
-- Fourteen new native groups cover actual projected storage, widths, mutability,
-  sibling/primary access, ancestor conflicts, target lifetime, guarded views,
-  moves/children/calls, exact whole-record backing, captured stores, cancelled mixed
-  layouts, escape/bounds, copied records, sibling collections and panic.
-- A graph test proves nested canonical projections across different guarded views
-  with target-owned scope. A checker test rejects unrelated-field backing widening
-  at the borrow span while preserving the paired shared case. All 343 initial library
-  groups passed; source/native proof preceded old-boundary migration, and both full
-  gates pass. The example prints 7, 2, 2, 3 on separate lines.
-- No new HIR, backend operation, runtime ABI, dependency or reference fixture was
-  needed. Runtime/editor/optimized-compiler/host qualification were not rerun.
-  Historical evidence remains in the step log. Indexed exclusive borrowing,
-  generated cleanup and complete v0.0.1 qualification remain open.
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 348
+  library and 383 native groups (731 total); 20 Python tests; all 45 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 928 links in
+  93 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Fifteen native groups cover actual element storage/widths, once-only index effects,
+  read/write reservations, conservative overlap, moves/children, calls/blocks, explicit
+  copies, cancellation/conditional exits, captured stores, signed/unsigned initialized
+  bounds, zero capacity, scopes, wider roots and short-circuit acquisition.
+- Three graph groups prove reservations carry no authority and end at acquisition,
+  non-returning indices create no loan/future reservation demand, and mutable-owner
+  proof is required independently of storage shape in origin and loan analysis.
+- First library run passed 343 and failed two obsolete immutable-list B001 expectations
+  (now E305). Native proof preceded migration; the first full gate passed at 730 and
+  final example/short-circuit gate passed at 731. The example prints index, 2, 2, 3.
+- HIR/checker/origin/loan/backend paths changed. Runtime ABI, dependencies and reference
+  fixtures did not. Runtime/editor/optimized-compiler/host qualification were not rerun.
+  Wider list roots, generated cleanup and complete v0.0.1 qualification remain open.
 
 ## Next steps
 
-1. Design exclusive scalar element borrowing on ordinary mutable bounded lists in
-   `list.rs`, `loans/transitive.rs` and access/permission construction. Establish
-   owner authority independently of shared pointer provenance, capture owner/index
-   once, preserve bounds failures and conservative element overlap, and distinguish
-   a reservation from final acquisition. Prove live-owner/element conflicts, scoped
-   cancellation and call/block transfer before opening `&!items[index]`. Keep wider
-   collection paths, reference cells, owning payloads and restart bodies separate.
+1. Generalize ExclusiveElement from a local ID to an owned Place for mutable
+   record-field and exact-backed emitted lists. Reuse path mutability, alias backing,
+   canonical Local/Slot projections and target scope. Capture the selected list's
+   address/length once and retain a no-authority reservation through returning
+   acquisition. Prove disjoint owner fields, whole-list conflicts, cancellation and
+   call/block transfer before broadening roots; keep reference/temporary/nested-index
+   roots and owning elements separately gated.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle

@@ -11,19 +11,20 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented scalar-field exclusive borrows through mutable emitted reference-free
-  Copy records (`12bee5a`; docs/example `69353bd`). Existing field mutability and exact whole-record backing checks now
-  govern alias projections; even widening an unselected field remains B001.
-- Canonical Slot roots, nested field indexes and lexical views preserve target-owned
-  lifetime and guarded identity. Sibling/primary access, ancestor conflicts, moves,
-  calls/blocks, captured stores and cancelled fallback layouts reuse existing passes.
-- All ten compiler checks pass: 713 Rust tests (345 library, 368 native), 20 Python
-  tests, 44 debug/release examples, formatting, Clippy, build, schemas/catalog and
-  921 local links. Fourteen new native groups and canonical/backing evidence pass.
-- Whole-record exclusive pointees, reference cells, indexed/union/reference paths,
-  owning carriers and exclusive restart bodies remain gated. No backend, ABI,
-  dependency or reference fixture changed. Conformance remains 10 passed/13
-  unsupported/0 failed; runtime/editor suites were not rerun.
+- Implemented owned exclusive scalar list-element borrowing for ordinary mutable
+  local lists (`28ca2b0`; contract/example `cf4eca8`). A distinct HIR operation captures owner/length before one index
+  evaluation; a no-authority reservation protects returning acquisition. Mutable-
+  owner proof grants the final root element loan independently of shared references.
+- Existing Element regions conservatively overlap same-list elements and owner
+  access. Moves, reborrows, calls/results, scopes and cancelled indices preserve
+  current authority and lifetimes. Bounds reuse E101/P001 and initialized length.
+- All ten compiler checks pass: 731 Rust tests (348 library, 383 native), 20 Python
+  tests, 45 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  928 local links. Fifteen native groups and three graph proof groups pass.
+- Alias/field/indexed/reference/temporary roots, wider elements, whole-list exclusive
+  values and exclusive restart bodies remain gated. No runtime ABI, dependency or
+  reference fixture changed. Conformance remains 10 passed/13 unsupported/0 failed;
+  runtime/editor suites were not rerun.
 - Standard library/module loading, generated cleanup and complete v0.0.1
   qualification remain open.
 
@@ -31,7 +32,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Exclusive scalar locals and fields across ordinary/emitted storage | Scalar list-element borrows and wider ownership shapes |
+| Compiler | Owned scalar list elements plus prior scalar/field storage | Projected/emitted list owners and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -41,11 +42,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design exclusive scalar list-element borrows on ordinary mutable bounded lists.
-   Trace `compiler/src/list.rs`, `compiler/src/loans/transitive.rs` and collection
-   access regions. Prove owner authority, once-only index/bounds evaluation,
-   conservative element overlap, live-owner conflicts and cancellation before opening
-   `&!items[index]`. Do not infer exclusive permission from an internal shared view.
+1. Extend owned list borrowing to mutable record-field and exact-backed emitted
+   storage using canonical Place roots. Validate every mutable boundary and backing
+   type, capture the selected list address/length once, and reserve that list's whole
+   region through returning index evaluation. Keep reference-derived, temporary and
+   nested-index roots gated until their separate authority/lifetime proofs exist.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.
