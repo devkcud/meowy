@@ -338,10 +338,9 @@ pub enum ExprKind {
         value: Box<Expr>,
         fields: Vec<usize>,
     },
-    ExclusiveElement {
+    ExclusivePath {
         place: Place,
         path: Vec<WriteStep>,
-        index: Box<Expr>,
     },
     ElementBorrow {
         site: ReborrowId,

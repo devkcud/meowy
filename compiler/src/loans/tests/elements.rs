@@ -1,7 +1,7 @@
 use super::access::inspect_body;
 use crate::borrow::Source;
 use crate::flow::FALSE;
-use crate::hir::Program;
+use crate::hir::{Expr, ExprKind, IndexStep, Program, Type, WriteStep};
 use crate::loans::{Graph, Projection};
 
 #[test]
@@ -131,6 +131,18 @@ pub(crate) fn projected_reservations_retain_the_selected_local_or_slot_path() {
 
 #[test]
 pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
+    let span = crate::ast::Span { start: 0, end: 0 };
+    let path = [WriteStep::Index(IndexStep {
+        index: Expr {
+            kind: ExprKind::Int(1),
+            ty: Type::Int {
+                signed: true,
+                bits: 32,
+            },
+            span,
+        },
+        span,
+    })];
     for change in 0..4 {
         let tree = crate::parser::parse("r:{->row:={->xs:=[1]};p:&!row.xs[1];v:*p}").unwrap();
         let mut checker = crate::check::Checker::new();
@@ -150,6 +162,21 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
             .find(|(_, alias)| alias.field == "row")
             .map(|(id, _)| *id)
             .unwrap();
+        assert!(
+            checker
+                .proofs
+                .exclusive_path_type(
+                    &program,
+                    &crate::hir::Place {
+                        root: id,
+                        fields: vec![0]
+                    },
+                    &path,
+                    &mut checker.flow,
+                    span,
+                )
+                .is_some()
+        );
         let alias = checker.proofs.aliases.get_mut(&id).unwrap();
         match change {
             0 => alias.exclusive = None,
@@ -165,13 +192,13 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
         assert!(
             checker
                 .proofs
-                .exclusive_element_type(
+                .exclusive_path_type(
                     &program,
                     &crate::hir::Place {
                         root: id,
                         fields: vec![0]
                     },
-                    &[],
+                    &path,
                     &mut checker.flow,
                     crate::ast::Span { start: 0, end: 0 },
                 )

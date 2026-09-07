@@ -57,13 +57,11 @@ impl<'a> Generator<'a> {
         Ok(self.value(format!("load {}, ptr {ptr}", ir_type(element))))
     }
 
-    pub(crate) fn exclusive_element(
+    pub(crate) fn exclusive_path(
         &mut self,
         place: &Place,
         path: &[WriteStep],
-        index: &Expr,
         result: &Type,
-        span: Span,
     ) -> Result<String, String> {
         let (mut ptr, mut list) = self.place(place)?;
         for step in path {
@@ -100,21 +98,12 @@ impl<'a> Generator<'a> {
                 }
             }
         }
-        let element = list
-            .scalar_element()
-            .ok_or("exclusive elements require scalar list storage")?;
-        if result != &Type::Exclusive(Box::new(element.clone()))
-            && !(result == &Type::Never && index.ty == Type::Never)
+        if !matches!(list, Type::Bool | Type::Int { .. } | Type::Float { .. })
+            || result != &Type::Exclusive(Box::new(list))
         {
-            return Err("exclusive element result type mismatch".into());
+            return Err("exclusive path result type mismatch".into());
         }
-        let length = self.value(format!("load i64, ptr {ptr}"));
-        let position = self.expression(index)?;
-        if self.ended {
-            return Ok("undef".into());
-        }
-        let offset = self.list_offset(index, position, &length, span)?;
-        Ok(self.list_item(&list, &ptr, &offset))
+        Ok(ptr)
     }
 
     pub(crate) fn element_borrow(

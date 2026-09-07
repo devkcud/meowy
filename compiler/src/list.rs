@@ -532,12 +532,9 @@ impl Checker {
         } else {
             result
         };
+        path.push(hir::WriteStep::Index(hir::IndexStep { index, span }));
         Ok(hir::Expr {
-            kind: hir::ExprKind::ExclusiveElement {
-                place,
-                path,
-                index: Box::new(index),
-            },
+            kind: hir::ExprKind::ExclusivePath { place, path },
             ty,
             span,
         })

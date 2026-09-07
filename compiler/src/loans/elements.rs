@@ -5,17 +5,17 @@ use crate::borrow_value::Step;
 use crate::hir::{ReferenceMode, WriteStep};
 
 impl Graph<'_> {
-    pub(crate) fn exclusive_element(&mut self, expr: &Expr) -> Result<Bundle> {
-        let ExprKind::ExclusiveElement { place, path, index } = &expr.kind else {
+    pub(crate) fn exclusive_path(&mut self, expr: &Expr) -> Result<Bundle> {
+        let ExprKind::ExclusivePath { place, path } = &expr.kind else {
             return Err(Self::budget());
         };
         let element = self
             .proofs
-            .exclusive_element_type(self.program, place, path, self.guards, expr.span)
+            .exclusive_path_type(self.program, place, path, self.guards, expr.span)
             .ok_or_else(|| {
                 super::Diagnostic::unsupported("missing mutable scalar list owner proof", expr.span)
             })?;
-        let diverges = index.ty == Type::Never || path.iter().any(|step| {
+        let diverges = path.iter().any(|step| {
             matches!(step, crate::hir::WriteStep::Index(step) if step.index.ty == Type::Never)
         });
         if expr.ty != Type::Exclusive(Box::new(element.clone()))
@@ -56,23 +56,15 @@ impl Graph<'_> {
                 }
             }
         }
-        reservations.push(self.element_reservation(source.clone())?);
-        let index = self.expression(index)?;
-        if self.current.is_empty() {
-            return Ok(Bundle::new());
-        }
         let value = self.value(vec![Origin {
             component: Vec::new(),
-            source: source.project(&[Projection::Element]),
+            source,
             guard: TRUE,
         }])?;
         let result = Bundle::from([(Vec::new(), value)]);
         let access = self.pointee_access(&result, &[], Kind::Borrow, expr.span)?;
         let mut node = Node {
-            uses: reservations
-                .into_iter()
-                .chain(index.into_values())
-                .collect(),
+            uses: reservations,
             defs: vec![value],
             access: Some(access),
             ..Node::default()

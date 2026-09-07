@@ -40,7 +40,7 @@ pub(crate) struct Proofs {
 }
 
 impl Proofs {
-    pub(crate) fn exclusive_element_type<'a>(
+    pub(crate) fn exclusive_path_type<'a>(
         &self,
         program: &'a Program,
         place: &Place,
@@ -103,7 +103,13 @@ impl Proofs {
                 }
             }
         }
-        ty.scalar_element()
+        if path.iter().any(|step| matches!(step, WriteStep::Index(_)))
+            && matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
+        {
+            Some(ty)
+        } else {
+            None
+        }
     }
 
     pub(crate) fn source(&self, place: &Place) -> Source {

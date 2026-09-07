@@ -61,13 +61,13 @@ impl Checker<'_> {
                 let state = self.locals[&place.root].state.select(&path, self.guards);
                 state.borrowed(self.proofs.source(place), ty, self.guards, expr.span)?
             }
-            ExprKind::ExclusiveElement { place, path, index } => {
+            ExprKind::ExclusivePath { place, path } => {
                 let element = self
                     .proofs
-                    .exclusive_element_type(self.program, place, path, self.guards, expr.span)
+                    .exclusive_path_type(self.program, place, path, self.guards, expr.span)
                     .cloned()
                     .ok_or_else(|| Self::unsupported(expr.span))?;
-                let diverges = index.ty == Type::Never || path.iter().any(|step| {
+                let diverges = path.iter().any(|step| {
                     matches!(step, crate::hir::WriteStep::Index(step) if step.index.ty == Type::Never)
                 });
                 if expr.ty != Type::Exclusive(Box::new(element.clone()))
@@ -94,10 +94,6 @@ impl Checker<'_> {
                         }
                     }
                 }
-                if flow.next {
-                    flow.append(self.expression(index)?.flow);
-                }
-                source = source.project(&[Projection::Element]);
                 if flow.next {
                     self.live(&source, expr.span)?;
                     State::default().borrowed(source, &element, self.guards, expr.span)?

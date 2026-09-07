@@ -95,10 +95,11 @@ pub(crate) fn nested_owner_proof_checks_intermediate_types_mutability_and_budget
         }),
         WriteStep::Field(0),
     ];
+    path.push(path[0].clone());
     assert!(
         checker
             .proofs
-            .exclusive_element_type(&program, &place, &path, &mut checker.flow, span)
+            .exclusive_path_type(&program, &place, &path, &mut checker.flow, span)
             .is_some()
     );
     let WriteStep::Index(index) = &mut path[0] else {
@@ -108,7 +109,7 @@ pub(crate) fn nested_owner_proof_checks_intermediate_types_mutability_and_budget
     assert!(
         checker
             .proofs
-            .exclusive_element_type(&program, &place, &path, &mut checker.flow, span)
+            .exclusive_path_type(&program, &place, &path, &mut checker.flow, span)
             .is_none()
     );
     let WriteStep::Index(index) = &mut path[0] else {
@@ -128,7 +129,7 @@ pub(crate) fn nested_owner_proof_checks_intermediate_types_mutability_and_budget
     assert!(
         checker
             .proofs
-            .exclusive_element_type(&program, &place, &path, &mut checker.flow, span)
+            .exclusive_path_type(&program, &place, &path, &mut checker.flow, span)
             .is_none()
     );
     let Type::List { element, .. } = &mut program.locals[root] else {
@@ -141,14 +142,14 @@ pub(crate) fn nested_owner_proof_checks_intermediate_types_mutability_and_budget
     assert!(
         checker
             .proofs
-            .exclusive_element_type(&program, &place, &path, &mut checker.flow, span)
+            .exclusive_path_type(&program, &place, &path, &mut checker.flow, span)
             .is_some()
     );
     assert!(!checker.flow.spend(crate::flow::MAX_PROOF_WORK));
     assert!(
         checker
             .proofs
-            .exclusive_element_type(&program, &place, &path, &mut checker.flow, span)
+            .exclusive_path_type(&program, &place, &path, &mut checker.flow, span)
             .is_none()
     );
 }
