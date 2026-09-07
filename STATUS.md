@@ -7,38 +7,41 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `4ddef85` adds forward leave-state merges for fixed shared-reference
-  locals. Targets record the reference bindings that existed on entry; each leave
-  captures those surviving values before inner scope restoration. Captured exits
-  join normal fallthrough at the exact target before result completion is checked.
-- Nested leaves preserve completed assignments and skip unfinished stores, calls,
-  indices and short-circuit continuations. Capturing/joining adds no reference read.
-  Old copies, physical cell loans, public bounds and target-local/slot/temporary
-  expiry remain enforced. Reassignment combined with restart still reports B001.
-- `b3e875a` fixes conditional emission proofs: disjoint result paths no longer
-  cancel their proofs and hide conflicting writes. The previous compiler accepted
-  the regression; current checks report E302. This fix is committed independently.
-- `cb4afaf` adds eight native groups, `compiler/examples/leave-references.mwy`
-  and README evidence. Four Leave-origin groups, one independent proof regression
-  and six loan groups cover the implementation. `compiler/src/borrow/exits.rs` owns target
-  snapshots; origin and loan joins reuse their bounded branch helpers.
-- All ten compiler checks pass: 472 Rust tests, 20 Python tests, 869 local links,
-  schemas/catalog, formatting, Clippy, build and conformance. All 33 examples run
-  in debug/release. The optimized compiler runs leave-references with exact output;
-  14 independent checks and six profile executions pass.
-- Runtime/editor checks were not rerun; prior evidence is retained in the compiler
-  tracker. HIR, backend storage, Facts shape, runtime ABI and dependencies are unchanged.
-  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- Next is bounded restart dataflow with initial/backedge versions, guard resets
-  and iteration-local expiry. Existing budgets still apply, including persistent
-  target/exit snapshots. Mutable reference carriers, exclusive/owned work, generated
-  cleanup and full release qualification remain open.
+- Compiler: `89800dc` adds bounded restart analysis for mutable references to
+  reference-free pointees. Initial and feasible backedge source/bound sets grow
+  to a fixed point before the final facts publish. Fresh body passes discard
+  provisional facts and exit queues while sharing charged work and guard storage.
+- Canonical headers use direct source sets with guards reset to TRUE. Stable loan
+  header IDs receive demand-only transfers from initial/backedge predecessors;
+  old copies and pre-loop source precision stay separate. Header entry/reset
+  deliberately loses branch correlations, so some safe programs may be rejected.
+- In bodies using reference reassignment, every mutable reference at restarted
+  target entry must have reference-free T and surviving ancestor Local/Slot/Input
+  sources and bounds. Temporary and target/descendant-owned header sources remain
+  B001; reference-bearing carried pointees need further work. Iteration-local
+  rebindings that do not enter such headers retain existing support.
+- `ca037d3` adds eleven native groups, `compiler/examples/restart-references.mwy`
+  and README evidence. Four origin and six loan groups cover first/later values,
+  nested targets, old copies, cell/public bounds, ref-free aggregates and source
+  limits. Replay and header work live in focused origin/loan modules.
+- All ten compiler checks pass: 493 Rust tests, 20 Python tests, 870 local links,
+  schemas/catalog, formatting, Clippy, build and conformance. All 34 examples run
+  in debug/release. The optimized compiler runs restart-references with exact output;
+  twelve independent checks and six profile executions pass.
+- Replay has a 64-pass cap plus existing shared work, 4,096-part and 262,144 weighted
+  fact/cache limits. Retained/cloned header seeds and prior body facts are counted;
+  this is a logical budget, not a byte-accurate allocator peak. Facts gains internal
+  header metadata; HIR, backend storage, runtime ABI and dependencies are unchanged.
+- Runtime/editor checks were not rerun; historical evidence remains in the compiler
+  tracker. Conformance is still 10 passed, 13 unsupported, 0 failed in both profiles.
+  Next is canonical transitive header components, followed by guarded activity and
+  expired-iteration identities. Exclusive/owned work and release qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Guarded and forward-leave shared-reference versions | Restart dataflow, exclusive ownership and cleanup |
+| Compiler | Bounded restart headers for surviving direct references | Transitive/expired-source headers, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,12 +51,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design bounded restart dataflow in `compiler/src/borrow/` and
-   `compiler/src/loans/`. Join initial and backedge reference versions at target
-   headers, reset iteration-specific guards, and expire iteration-local/temporary
-   sources without losing surviving owner/cell loans. Verify first/later iterations,
-   conditional restart, old copies, call bounds and initialization before relaxing
-   the restart gate; retain other unsupported storage/ownership forms explicitly.
+1. Extend `compiler/src/borrow/restart.rs` and `compiler/src/loans/restarts.rs`
+   to canonical per-component sources/bounds, starting with non-union reference-bearing
+   pointees. Preserve Deref paths and lazy contents without inventing active variants
+   or losing call/cell bounds. Prove convergence before enabling transitive headers;
+   model guarded activity separately and retain Temporary/iteration-owned gates until
+   explicit expired identities prevent same-site storage revival.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

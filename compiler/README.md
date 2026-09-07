@@ -356,7 +356,7 @@ scopes remain B001 in these headers, even when an overwrite could precede the ne
 read. Rebinding local references created inside an iteration remains supported
 when they do not enter another restarted target's header.
 The analysis forgets header-entry and iteration guards, so programs needing finer
-iteration correlations may be rejected. Canonical source/bound sets converge within
+iteration correlations may be rejected. Canonical source/bound sets must converge within
 64 passes and the existing work/storage budgets; incomplete proof reports B001.
 Mutable reference carriers, mutable nullable reference bindings, transitive loop
 headers and direct reference formatting require future analysis. A panic during

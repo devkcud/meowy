@@ -6,6 +6,97 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Bounded restart-reference handoff complete
+
+- State: Implementation 89800dc and native/example evidence ca037d3 are complete. Direct canonical headers solve initial/backedge source-role sets before final Facts publish, while predecessor transfers preserve old copies and cell/call loans. Current handoffs identify transitive per-component headers next, with guarded activity and expired identities separate.
+- Validation: All ten compiler checks passed with 493 Rust tests, 20 Python tests and 870 links. All 34 examples execute in debug/release. Optimized restart-references output and independent twelve checks/six executions passed. Final documentation audit clarified the convergence requirement and forward-reach/backward-demand wording; no source changed after the gate.
+- Blockers: No unfinished source work or failing check remains. Header pointees containing references, Temporary header sources/bounds and target/descendant-owned carried storage remain B001. Fine iteration correlations, exclusive/owned work, 13 conformance cases and full release qualification remain open.
+- Next steps: Extend canonical headers to non-union transitive component paths while preserving lazy contents, source/bound roles, cell identity and call bounds. Add guarded activity only with a stable convergence model; retain expired-source gates until explicit identities prevent same-site revival and allow safe overwrite-before-use. Keep all analysis budgets and wider runtime/library/tool work visible.
+
+### 2026-09-07 — Restart native coverage committed
+
+- State: Bounded restart implementation is 89800dc; native/example/README evidence is ca037d3. Source, compiler gate, optimized example and independent review are complete. Only final current handoffs and preserved checkpoint review remain.
+- Validation: All ten compiler checks pass with 493 Rust tests, 20 Python tests and 870 links. Eleven new native groups and all 34 examples execute in debug/release. Optimized restart-references output is exact; independent twelve checks/six executions pass. Both focused commits pass cached whitespace/scope checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize STATUS with canonical direct headers, exact carried-source/type restrictions, logical budgets and historical runtime/editor evidence. Next extend per-component non-union transitive headers, then guarded activity and explicit expired-source identity. Preserve history, check links/whitespace, commit handoff and verify clean Git state.
+
+### 2026-09-07 — Bounded restart implementation committed
+
+- State: Committed bounded origin replay/canonical headers, stable graph header transfers, focused source tests, OWNERSHIP and old boundary updates as 89800dc. Optimized compiler build and restart-references execution pass. Native suite/example/README and final current handoffs remain separate commits.
+- Validation: All ten compiler checks pass with 493 Rust and 20 Python tests. Optimized example exits 0 with exact 7, 9, 7 lines and empty stderr. Independent twelve checks/six executions and resource tests pass. Cached whitespace/scope checks pass; HIR/backend/runtime ABI are unchanged, while Facts gains canonical headers.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit new native restart coverage, example and README, then refresh root/compiler STATUS with 49 origin, 58 loan, 62 backend, 233 native and 34 examples. Preserve exact domain gates and historical validation; next extend non-union transitive header components before guarded activity and expired identities.
+
+### 2026-09-07 — Restart compiler gate passed
+
+- State: All ten compiler checks pass on frozen restart source. Canonical direct origin/bound headers converge before final facts publish; initial/backedge transfers retain old copies and cell/call loans without adding reads. The optimized compiler build is running. First-slice carried-source/type gates remain explicit.
+- Validation: 260 library plus 233 native groups pass (493 Rust tests). Tooling 16 and compiler harness 4 pass, with 870 links, schemas/catalog, formatting, Clippy, build and conformance. All 34 examples run in both profiles. Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/editor checks are historical and were not rerun; their code/ABI is unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized restart-references with exact output, then split coupled implementation/old boundary changes from native/example/README evidence. Finalize current handoffs/logs with transitive per-component loop headers next and explicit Temporary/iteration-owned identity limits.
+
+### 2026-09-07 — Restart source freeze
+
+- State: Bounded canonical restart analysis is complete and frozen. Fresh body passes share guard/work accounting, count retained/cloned header seeds and prior-body facts, and publish only stable Facts.headers within 64 passes. Initial/backedge predecessor transfers define stable header IDs with reset guards and no synthetic reads. Unsupported carried domains stay B001.
+- Validation: Eleven native groups, 58 loan groups, independent twelve checks/six executions and final Clippy/format/whitespace checks pass. All 49 origin groups passed before the final accounting-only refinement; all four restart/resource groups were rerun afterward. The full compiler gate is starting.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all ten compiler checks on final source and optimized restart-references. Record exact counts/current versus historical evidence, then split implementation/old boundaries, native/example/README and final trackers. Next: canonical transitive per-component headers, with guarded activity and expired-source identity handled explicitly.
+
+### 2026-09-07 — Restart replay accounting tightened
+
+- State: Review tightened replay seed accounting: the retained canonical map and its cloned checker seed are both checked/reserved before cloning. Documentation calls this a logical fact/cache limit, not a byte-accurate allocator peak. The approved carried-source domain and runtime behavior are unchanged.
+- Validation: Four restart/source-budget origin groups pass after the accounting refinement; all 49 origin groups had passed before it. Eleven native groups, 58 loan groups and independent twelve checks/six executions pass. Final origin lint/freeze is in progress; the full gate will cover the final accounting change.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Freeze final source and run the full compiler gate, then the optimized restart-references example. Keep exact first-slice limits and historical runtime/editor evidence in handoffs; split implementation/old boundaries, native/example/README and final trackers.
+
+### 2026-09-07 — Restart independent review and example prepared
+
+- State: Independent replay/header audit found no blocker. Added restart-references.mwy and README explaining the exact first-slice domain: all mutable references present at restarted target entry need reference-free pointees and surviving Local/Slot/Input sources/bounds; Temporary and iteration-owned header sources remain B001. Header entry/reset deliberately forgets branch correlations.
+- Validation: Eleven native groups, all 58 loan groups, twelve independent checks and six executions pass. Native evidence covers ref-free aggregates/unions, stable public bounds, ancestor-slot survival and per-iteration reinitialization. The new example is in the both-profile examples group and awaits the full gate; origin documentation/checks are finishing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Freeze remaining origin edits, run all compiler checks and optimized example, then split implementation/old boundary changes, native/example/README and final handoffs. Next extend canonical headers to transitive per-component reference sources before tackling guarded activity and expired iteration identities.
+
+### 2026-09-07 — Restart native integration and extended domains passed
+
+- State: All eleven native restart groups pass, including scalar initial/backedge values, rotations/nested targets, ref-free record/list/union pointees, stable public-call bounds, ancestor result-slot survival, iteration-local rebinding and skipped RHS/call effects. Old blanket Restart B001 rows now cover explicit unsupported header domains.
+- Validation: Eleven groups pass in both native profiles; all 58 loan groups pass. Independent twelve checks and six executions passed exact outcomes, including no-resurrection B001 boundaries and initial/later/cell/bound E302 controls. Origin/resource documentation is finishing; provisional header convergence has not produced an integration failure.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish origin freeze and independent resource audit, add the restart-references example and exact domain docs, then run the full compiler gate and optimized smoke. Preserve historical runtime/editor validation, split implementation/boundaries from native/example evidence and final trackers.
+
+### 2026-09-07 — Restart origin and loan cores integrated
+
+- State: Canonical restart analysis compiles. Whole-body replay uses fresh checker state, shared guard/work budgets, aggregate origin accounting and a 64-pass cap; only stable header source-role sets publish. Graph headers use stable IDs and demand-only initial/backedge transfers. Temporary, iteration-owned and transitive carried domains remain B001.
+- Validation: Origin compile check passes. Eight native restart groups are now running; loan/source focused groups are starting. Initial B001 baseline remains recorded. Canonical headers preserve actual-origin versus input-bound roles; provisional facts are discarded and missing reachable graph proofs cannot pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve native integration issues, complete focused first/later/no-read/cell/resource tests and independent probes. Add ref-free aggregate/list/union and call-effect evidence, replace obsolete blanket Restart B001 rows, then freeze and run the compiler gate.
+
+### 2026-09-07 — Canonical restart fixed-point design selected
+
+- State: Approved whole-body origin replay with a fresh Checker per pass, shared charged Guards and canonical header source/bound sets. Only final stable Facts publish. Carried mutable &T requires reference-free T; Temporary header sources/bounds and target/descendant-owned carried sources/bounds remain B001. Nested target headers converge together. Stable graph header IDs use demand-only initial/backedge predecessor transfers with entry/reset widening.
+- Validation: Eight native groups are prepared, covering initial/later values, old copies, pre-loop precision, no synthetic reads, cell conflicts, rotating/nested headers and explicit iteration-owned/transitive boundaries. Four groups recorded the expected prior B001 baseline. Loan header core is written but awaits the origin Facts interface before compiling.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Land canonical Facts.headers and bounded replay, compile both layers, run eight native groups and focused source tests. Verify that entry reset remains conservative and dead predecessors stay unreachable; independently check carried-source and public-bound gates before final validation.
+
+### 2026-09-07 — Restart scalar-reference native baseline recorded
+
+- State: Prepared four native groups for initial/backedge pointer values, old copies, initial/future owner conflicts, iteration-local rebinding and RHS restart skipping the outer store. Loan design uses stable header IDs defined by demand-only initial/backedge predecessor transfers; old copied IDs remain separate.
+- Validation: All four groups fail at the current Restart B001 gate as expected, including the E302 control group until implementation exists. New test file formats cleanly. Origin replay isolation/header representation is still being finalized; no restart support is claimed yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize canonical origin header facts and bounded fixed-point passes, then implement matching loan predecessor transfers. Restrict unproved transitive and iteration-owned carried sources explicitly, run the four groups, and extend coverage for calls, nested targets and expiry before final validation.
+
+### 2026-09-07 — Restart header domain and replay hazards identified
+
+- State: The first useful domain is fixed shared references whose pointees contain no references: direct source/bound sets can converge independently of fresh variant/call guards. Both initial and backedge values must reach the header, with iteration-specific proof guards reset. Reused LocalId/Slot/StatementId storage must never revive prior-iteration references.
+- Validation: Read-only origin/CFG/state review complete; no new implementation or passing restart claim yet. Independent review supplied twelve safety probes. General transitive/nullable-pointee summaries and unproved carried iteration-owned sources may require explicit B001 boundaries in this first slice.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Choose bounded replay isolation and canonical header facts, then connect matching demand-only CFG header transfers. Preserve copied old values and metadata-only merges; prove initial/later owner conflicts, expired source handling and nested target restrictions before enabling the gate.
+
+### 2026-09-07 — Restart reference dataflow investigation
+
+- State: Starting from clean a9d688a. Investigating bounded restart dataflow for mutable shared-reference locals. Origin and loan workers are designing initial/backedge header states and transfers; independent review covers iteration guard resets and expiry. Root owns native/docs integration and both trackers/logs. Restart remains gated until the analysis is sound.
+- Validation: Prior slice passed 472 Rust tests, 20 Python tests and optimized/independent checks. No new restart behavior is implemented or validated. Current instructions, handoffs and clean Git state were verified.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Select a bounded origin fixed-point representation and matching loan-header transfers, including replay isolation and lifetime invalidation. If general reference-bearing/variant loops need broader infrastructure, define and prove a narrower usable subset with explicit B001 boundaries before code changes.
+
 ### 2026-09-07 — Forward leave-reference handoff complete
 
 - State: Emission-proof fix b3e875a, forward Leave implementation 4ddef85 and native/example evidence cb4afaf are complete. Exact-target snapshots preserve surviving reference values and skipped effects; initialized emissions retain their own guarded loans. Both current handoffs identify bounded restart dataflow as next.
