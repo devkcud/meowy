@@ -123,6 +123,32 @@ pub(crate) fn main() {
     args.push(runtime.display().to_string());
     run(CXX, &args);
     let runtime = archive(&dir, "meowy_runtime", &runtime);
+    for header in ["cleanup.hpp", "generated.hpp"] {
+        println!("cargo:rerun-if-changed=../runtime/include/meowy/{header}");
+    }
+    let source = args
+        .iter()
+        .position(|arg| arg == "native/runtime.cpp")
+        .unwrap();
+    let dest = args.len() - 1;
+    args.extend(["-I../runtime/include".into()]);
+    for name in ["cleanup", "generated"] {
+        let path = format!("../runtime/src/{name}.cpp");
+        println!("cargo:rerun-if-changed={path}");
+        let object = dir.join(format!("{name}.o"));
+        args[source] = path;
+        args[dest] = object.display().to_string();
+        run(CXX, &args);
+        run(
+            AR,
+            &[
+                "rcsD".into(),
+                runtime.display().to_string(),
+                object.display().to_string(),
+            ],
+        );
+    }
+
     println!("cargo:rustc-link-search=native={}", dir.display());
     println!("cargo:rustc-link-lib=static=meowy_bridge");
     for flag in output(LLVM, &["--ldflags", "--libs", "--system-libs"]).split_whitespace() {

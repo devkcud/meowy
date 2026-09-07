@@ -4,6 +4,7 @@ mod assignments;
 mod bridge;
 mod emitted_borrows;
 mod fields;
+mod generated_cleanup;
 mod immutable_aliases;
 mod lists;
 mod mixed_assignments;
@@ -143,15 +144,18 @@ pub(crate) fn native(parts: Vec<Expr>, release: bool, full: bool) -> Output {
 }
 
 pub(crate) fn native_program(program: &Program, release: bool, full: bool) -> Output {
+    native_ir(&emit_ir(program).unwrap(), release, full)
+}
+
+pub(crate) fn native_ir(ir: &str, release: bool, full: bool) -> Output {
     let dir = std::env::temp_dir().join(format!(
         "meowy-native-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
     std::fs::create_dir(&dir).unwrap();
-    let ir = emit_ir(program).unwrap();
     let object = dir.join("main.o");
-    emit_object(&ir, &object, release).unwrap_or_else(|error| panic!("{error}\n{ir}"));
+    emit_object(ir, &object, release).unwrap_or_else(|error| panic!("{error}\n{ir}"));
     let runtime = dir.join("runtime.a");
     std::fs::write(&runtime, RUNTIME_ARCHIVE).unwrap();
     let executable = dir.join("main");
