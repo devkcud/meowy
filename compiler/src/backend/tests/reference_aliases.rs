@@ -477,7 +477,7 @@ pub(crate) fn reference_alias_restart_reloads_the_current_referent() {
                 id: 3,
                 value: expr(ExprKind::Bool(false), Type::Bool),
             },
-            Stmt::Restart(1),
+            Stmt::Restart { target: 1, site: 0 },
         ],
         otherwise: Vec::new(),
     });

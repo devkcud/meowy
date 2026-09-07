@@ -1,6 +1,7 @@
 mod aliases;
 mod fields;
 mod paths;
+mod restarts;
 
 pub(crate) fn accepts(source: &str) {
     if let Err(errors) = crate::compile(source) {

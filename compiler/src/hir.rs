@@ -7,6 +7,7 @@ pub type EmitId = usize;
 pub type CallId = usize;
 pub type ReborrowId = usize;
 pub type StatementId = usize;
+pub type RestartId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Field {
@@ -214,7 +215,10 @@ pub enum Stmt {
         otherwise: Vec<Stmt>,
     },
     Leave(BlockId),
-    Restart(BlockId),
+    Restart {
+        target: BlockId,
+        site: RestartId,
+    },
     Expr(Expr),
 }
 

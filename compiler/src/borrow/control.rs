@@ -243,7 +243,7 @@ impl Checker<'_> {
                     }
                     result
                 }
-                Stmt::Leave(id) | Stmt::Restart(id) => {
+                Stmt::Leave(id) | Stmt::Restart { target: id, .. } => {
                     if self.merging && matches!(stmt, Stmt::Leave(_)) {
                         self.leave_target(*id, Span::default())?;
                     } else if self.merging {

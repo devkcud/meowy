@@ -283,7 +283,7 @@ pub(crate) fn restart_reinitializes_temporary_values_in_entry_allocated_cells() 
                 },
                 Stmt::If {
                     condition: binary("<", local(1, &int), integer(3, 32, true), Type::Bool),
-                    then: vec![Stmt::Restart(1)],
+                    then: vec![Stmt::Restart { target: 1, site: 0 }],
                     otherwise: vec![Stmt::Leave(1)],
                 },
                 message("unreachable"),

@@ -395,7 +395,7 @@ pub(crate) fn immutable_alias_defaults_and_restart_preserve_initializer_snapshot
                 id: 2,
                 value: expr(ExprKind::Bool(false), Type::Bool),
             },
-            Stmt::Restart(1),
+            Stmt::Restart { target: 1, site: 0 },
         ],
         otherwise: Vec::new(),
     });

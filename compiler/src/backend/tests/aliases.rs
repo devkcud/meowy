@@ -400,7 +400,7 @@ pub(crate) fn restart_reinitializes_alias_cells_and_discarded_defaults() {
                 id: 1,
                 value: expr(ExprKind::Bool(false), Type::Bool),
             },
-            Stmt::Restart(1),
+            Stmt::Restart { target: 1, site: 0 },
         ],
         otherwise: Vec::new(),
     });

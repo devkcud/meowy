@@ -327,7 +327,7 @@ pub(crate) fn restarted_reference_temporaries_replace_active_union_payloads() {
                         id: 1,
                         value: expr(ExprKind::Bool(false), Type::Bool),
                     },
-                    Stmt::Restart(1),
+                    Stmt::Restart { target: 1, site: 0 },
                 ],
                 otherwise: vec![Stmt::Leave(1)],
             },

@@ -262,7 +262,15 @@ impl Checker {
                     }
                     self.reach = FALSE;
                     return Ok(vec![if restart {
-                        hir::Stmt::Restart(target)
+                        if self.restarts >= 65_536 || !self.flow.spend(1) {
+                            return Err(Diagnostic::unsupported(
+                                "restart site budget exhausted",
+                                value.span,
+                            ));
+                        }
+                        let site = self.restarts;
+                        self.restarts += 1;
+                        hir::Stmt::Restart { target, site }
                     } else {
                         hir::Stmt::Leave(target)
                     }]);

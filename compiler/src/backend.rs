@@ -403,7 +403,7 @@ impl<'a> Generator<'a> {
                         self.label(&end);
                     }
                 }
-                Stmt::Leave(target) | Stmt::Restart(target) => {
+                Stmt::Leave(target) | Stmt::Restart { target, .. } => {
                     let target = self
                         .blocks
                         .get(target)

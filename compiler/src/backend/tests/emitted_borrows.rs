@@ -361,7 +361,7 @@ pub(crate) fn target_restart_reinitializes_borrowable_result_and_transient_cells
                     id: 1,
                     value: expr(ExprKind::Bool(false), Type::Bool),
                 },
-                Stmt::Restart(1),
+                Stmt::Restart { target: 1, site: 0 },
             ],
             otherwise: Vec::new(),
         });

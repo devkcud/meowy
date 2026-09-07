@@ -70,7 +70,7 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                     }
                     add(Item::Expression(condition))?;
                 }
-                Stmt::Restart(id) => {
+                Stmt::Restart { target: id, .. } => {
                     restarts.insert(*id);
                 }
                 Stmt::Leave(_) => {}

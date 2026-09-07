@@ -261,8 +261,8 @@ impl<'a> Graph<'a> {
                         |graph| graph.statements(otherwise),
                     )?;
                 }
-                Stmt::Leave(id) | Stmt::Restart(id) => {
-                    let restart = matches!(statement, Stmt::Restart(_));
+                Stmt::Leave(id) | Stmt::Restart { target: id, .. } => {
+                    let restart = matches!(statement, Stmt::Restart { .. });
                     if self.merging && restart {
                         self.restart(*id)?;
                         continue;
