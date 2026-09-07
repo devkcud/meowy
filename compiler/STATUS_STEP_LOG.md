@@ -6,6 +6,74 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Nested owner full validation complete
+
+- Integrated nested indexed owners and mixed mutable fields for scalar element
+  borrows. WriteStep traversal preserves source/effect order, per-list bounds spans,
+  exact emitted layout and target lifetime. Enclosing reservations carry no authority;
+  final acquisition and completed intermediate indexes demand the captured storage.
+- All ten compiler checks pass: 766 Rust (354 library, 412 native), 20 Python,
+  47 debug/release examples, 933 links, formatting, Clippy, build and schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed. Full language gate is open.
+- Added fifteen native groups, three graph groups and the nested example. One obsolete
+  nested-write B001 expectation failed the initial full gate and was migrated after
+  native proof. Final gate is green; no remaining slice blocker or unfinished edits.
+- Implementation: `d4cd292`; contract/example: `345cf64`.
+- Runtime/editor/optimized-compiler/host qualification were not rerun. Next: scalar
+  field leaves beneath indexed owners with reservation demand through acquisition;
+  retain reference/temporary/wider-pointee gates and generated cleanup/library tracking.
+
+### 2026-09-07 — Nested full-gate boundary migration
+
+- First full gate passed 354 library and 411 native groups, failing one obsolete
+  nested-write B001 expectation for an exclusive nested element. Removed that case
+  after the new native suite proved the supported behavior; no implementation fix.
+- Later gate checks did not run. Added exact outer/inner P001 byte-span comparisons
+  to the ordered-bounds test and clarified outer-sibling disjointness in the contract.
+- Full compiler gate rerunning. Next: record actual final results, split commits and
+  leave the next scalar-field-after-index extension bounded and resumable.
+
+### 2026-09-07 — Nested native and reservation proof
+
+- Twelve native groups pass in debug/release: nested/mixed storage, sibling regions,
+  once-only indexes, enclosing conflicts, per-index cancellation, old handles, bounds,
+  exact backing, target lifetime, discarded slots and unavailable ownership shapes.
+- Three graph groups pass: each enclosing reservation reaches final acquisition
+  without authority, later cancellation retains only completed-index demand, and
+  intermediate type/mutability/proof-budget failures reject owner evidence.
+- Removed two obsolete nested-index B001 expectations after successful native proof.
+  No test failures so far. Added guarded alias, captured-store and integer/empty-bounds
+  coverage; full gate pending along with the nested example and updated contract.
+- Next: run the complete compiler gate, record evidence, split commits and hand off
+  scalar fields beneath indexed owners as a separate authority-path extension.
+
+### 2026-09-07 — Nested owner traversal implementation
+
+- ExclusiveElement carries intermediate WriteStep indexes/fields. Frontend validates
+  reference-free Copy collection owners and every mutable field; exact backing intent
+  covers the original full owner. Never at any index makes the expression Never.
+- Backend captures/checks each list before the next index. Origin and loan traversal
+  preserve nested projections and target scope. Every returned intermediate index
+  consumes captured reservations; all remain demanded by final acquisition.
+- All 351 existing library tests pass. Native and new graph tests pending; no blocker.
+- Next: prove nested layouts, bounds/effect order, cancellation and reservation demand,
+  then update documented limits and run the full gate.
+
+### 2026-09-07 — Nested owner path investigation
+
+- Reuse WriteStep for intermediate indexes/fields beneath the existing owned Place.
+  Preserve the final scalar-list index and per-index spans, initialized-length checks
+  and source order. The leading Place identifies the outermost selected list.
+- Reserve each captured collection without authority through final acquisition.
+  Consume earlier reservations after successful intermediate indexes, so later
+  cancellation cannot erase already-needed bounds/capture protection. Final source
+  retains Element/Field prefixes; separate outer sibling storage remains disjoint.
+- Recheck reference-free Copy ownership, mutable fields and exact alias backing.
+  Keep scalar fields reached after a final index, reference/temporary roots and
+  non-scalar pointees separately gated. No new tests yet; no blocker found.
+- Next: implement HIR/checker/analysis/backend traversal, then prove bounds order,
+  cancellation at every index, whole-list conflicts, guarded aliases and lifetimes.
+
 ### 2026-09-07 — Projected element full validation complete
 
 - Integrated mutable record-field and emitted scalar list elements with canonical

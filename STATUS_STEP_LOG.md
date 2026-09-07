@@ -6,6 +6,23 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Nested exclusive element milestone
+
+- Integrated nested indexed owners and mixed mutable fields for scalar element
+  borrows. WriteStep traversal preserves source/effect order, per-list bounds spans,
+  exact emitted layout and target lifetime. Enclosing reservations carry no authority;
+  final acquisition and completed intermediate indexes demand the captured storage.
+- All ten compiler checks pass: 766 Rust (354 library, 412 native), 20 Python,
+  47 debug/release examples, 933 links, formatting, Clippy, build and schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed. Full language gate is open.
+- Added fifteen native groups, three graph groups and the nested example. One obsolete
+  nested-write B001 expectation failed the initial full gate and was migrated after
+  native proof. Final gate is green; no remaining slice blocker or unfinished edits.
+- Implementation: `d4cd292`; contract/example: `345cf64`.
+- Runtime/editor/optimized-compiler/host qualification were not rerun. Next: scalar
+  field leaves beneath indexed owners with reservation demand through acquisition;
+  retain reference/temporary/wider-pointee gates and generated cleanup/library tracking.
+
 ### 2026-09-07 — Projected and emitted element milestone
 
 - Integrated mutable record-field and emitted scalar list elements with canonical

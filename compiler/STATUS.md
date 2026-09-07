@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Projected and emitted exclusive list elements integrated.
+Updated: 2026-09-07. Nested-index exclusive scalar list elements integrated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Nested indexed elements: `d4cd292`; contract/example: `345cf64`.
 Projected/emitted elements: `bbd08b3`; contract/example: `8010888`.
 Owned exclusive scalar elements: `28ca2b0`; contract/example: `cf4eca8`.
 Exclusive emitted record fields: `12bee5a`; docs/example: `69353bd`.
@@ -34,26 +35,26 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-ExclusiveElement now stores an owned Place and one index. Mutable record-field and
-exact-backed emitted lists preserve canonical Local/Slot identity, named prefixes
-and target lifetime. Shared path resolution checks scalar shape before root
-immutability, every mutable field boundary, and reference-free Copy record owners.
-Origin/loan analysis independently requires mutable owner and alias backing evidence.
+ExclusiveElement now carries an owned Place, intermediate WriteStep indexes/fields,
+and a final scalar-element index. Reference-free Copy list/record owners require
+mutable roots and every mutable field boundary. Full alias backing stays exact.
+Canonical Local/Slot projections preserve nested Element/Field paths and target scope.
 
-Capture and the no-authority reservation cover the selected list before one index
-evaluation. Separate sibling fields/lists remain disjoint; same-list elements and
-ancestor access overlap conservatively. Returning acquisition grants a root exclusive
-Element loan. Leave/panic cancels acquisition and future reservation demand while
-preserving effects. Emitted pointers may outlive a lexical alias within its target.
-Exact backing covers the complete owner, including capacity and unrelated fields;
-proven discarded emissions keep their original storage layout.
+Backend capture, initialized-length bounds and address calculations run in index
+order, once each. Every enclosing list has a no-authority reservation before its
+index. A returned intermediate index demands captured reservations for its completed
+bounds/capture; final acquisition demands all reservations before granting a root
+exclusive scalar loan. Later cancellation cannot erase earlier completed-index demand.
+Cancellation inside an index skips that index's acquisition demand and later effects.
+Outer sibling storage remains disjoint; same-collection overlap stays conservative.
 
-All ten compiler checks pass: 748 Rust tests (351 library, 397 native), 20 Python
-checks, 46 debug/release examples, 931 links, formatting, Clippy, build and schema/
-catalog/conformance checks. Fourteen new native groups and three new graph groups
-cover projected/alias storage. Contract: `EXCLUSIVE_ELEMENTS.md`. Runtime ABI,
-dependencies and reference fixtures did not change. Nested-index/reference/temporary
-roots, wider elements, whole-list exclusive values and exclusive restarts stay gated.
+All ten compiler checks pass: 766 Rust tests (354 library, 412 native), 20 Python
+checks, 47 debug/release examples, 933 links, formatting, Clippy, build and schema/
+catalog/conformance checks. Fifteen new native groups and three new graph groups
+cover nested owner behavior. Contract: `EXCLUSIVE_ELEMENTS.md`. Runtime ABI,
+dependencies and reference fixtures did not change. Scalar field leaves after
+indexes, reference/temporary roots, non-scalar pointees, whole-list exclusive values
+and exclusive restart bodies remain gated.
 
 ## Prior implemented milestone
 
@@ -101,7 +102,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 397 native groups, 4 harness tests and 46 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 412 native groups, 4 harness tests and 47 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -116,7 +117,8 @@ reads, `borrow_contract/call.rs` handles candidate substitution, and
 `loans/transitive.rs` connects summary transfers; `loans/access.rs` owns access
 records, typed inspection paths, metadata charging and region resolution.
 `loans/elements.rs` owns exclusive element reservations/acquisition;
-`Proofs::exclusive_element_type` validates mutable owned Place paths and alias backing.
+`Proofs::exclusive_element_type` validates mutable owned Place/WriteStep paths,
+intermediate types and alias backing.
 `loans/authority.rs` owns acquisition IDs, guarded provenance, opacity and parent checks.
 `loans/storage.rs` owns lifecycle events/scopes; `loans/init.rs` owns storage demand
 and forward guarded availability. `loans/permissions.rs` owns mode-aware access,
@@ -592,32 +594,35 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 351
-  library and 397 native groups (748 total); 16 tooling and 4 compiler Python tests;
-  all 46 examples in debug/release; formatting, Clippy, pinned build, schemas/catalog
-  and 931 links in 93 Markdown files. Conformance: 10 passed, 13 unsupported, 0 failed.
-- Fourteen new native groups cover actual projected/emitted storage, sibling/primary
-  independence, index reservation conflicts, all mutable boundaries, whole-owner
-  backing, target-scope transfer, cancellation, bounds, guarded views and stores.
-- Three new graph groups prove Local/Slot projection prefixes, reservation lifetime
-  without authority, absent demand on cancelled indices, and required alias/field
-  evidence in owner proof and both analysis passes. Six element graph groups pass.
-- The first full gate found one obsolete alias B001 expectation and a whole-record
-  diagnostic-order regression; both were corrected. Test-development failures and
-  capacity-context findings are recorded in the adjacent step log.
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 354
+  library and 412 native groups (766 total); 16 tooling and 4 compiler Python tests;
+  all 47 examples in debug/release; formatting, Clippy, pinned build, schemas/catalog
+  and 933 links in 93 Markdown files. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Fifteen new native groups cover nested/mixed storage, external sibling regions,
+  ordered indexes, enclosing reservation conflicts, per-index cancellation, old
+  handles, first-failure bounds and exact spans, widths/empty lengths, alias layouts,
+  target lifetimes, guarded views and captured stores. The nested example prints
+  outer, inner, 2, 3, 4 in both profiles.
+- Three new graph groups prove reservation chains carry no authority and end at
+  acquisition, later cancellation retains only completed-index demand, and intermediate
+  type/mutability/work-budget failures invalidate owner proof. Nine element graph
+  groups pass across local/projected/nested ownership.
+- First full gate passed 354 library and 411 native groups, failing one stale nested
+  borrow B001 expectation in the indexed-write suite. It was removed after execution
+  proof; the final full gate passed. Earlier focused runs had no test failures.
 - HIR/checker/origin/loan/backend paths changed. Runtime ABI, dependencies and reference
   fixtures did not. Runtime/editor/optimized-compiler/host qualification were not rerun.
-  Nested owner paths, generated cleanup and complete v0.0.1 qualification remain open.
+  Indexed scalar field leaves, generated cleanup and full v0.0.1 qualification remain open.
 
 ## Next steps
 
-1. Define nested-index owned paths for ExclusiveElement in `hir.rs`, `list.rs` and
-   `check/references.rs`, reusing bounded write-path traversal where appropriate.
-   Establish capture/evaluation order and whole-collection reservation demand at
-   each indexed boundary before enabling support in origin/loan/backend passes.
-   Verify cancellation at each index, same-collection overlap, mutable field/alias
-   backing and target lifetimes. Keep reference-derived/temporary roots, wider
-   elements and whole-list exclusive values gated until their own proofs exist.
+1. Extend the owned indexed path model to scalar field leaves such as
+   `&!rows[i].value` in `hir.rs`, `check/references.rs` and `list.rs`. Keep scalar
+   leaf type/mutability checks and reuse intermediate WriteStep traversal. Establish
+   enclosing reservation demand through field acquisition without inventing a final
+   index. Prove mixed paths, per-index cancellation, parent/sibling overlap, exact
+   alias backing and target lifetime in origin/loan/backend passes before enabling.
+   Keep reference-derived/temporary roots and non-scalar pointees separately gated.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle
