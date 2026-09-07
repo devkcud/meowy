@@ -6,6 +6,69 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Transitive restart-header handoff complete
+
+- State: Implementation 34d2e7b and native/example evidence fa70eab are complete. Shared Shape checks typed reference paths and coverage; canonical component/source keys preserve distinct fields and layers in actual origins and bounds. Header transfers remain lazy, while stored activity and unsafe carried-source domains stay explicit.
+- Validation: All ten compiler checks passed with 511 Rust tests, 20 Python tests and 871 links. All 35 examples execute in debug/release. The optimized transitive-restarts output and independent twelve checks/six executions passed. Final read-only audit confirmed scope/evidence and removed one stale metadata adjective. The earlier E303 test-expectation correction remains recorded; no source change followed validation.
+- Blockers: No unfinished source work or failing check remains. Stored header variant activity, Temporary/iteration-owned carried sources, mutable reference carriers and exclusive/owned work remain unsupported. Thirteen conformance cases and full release qualification remain open.
+- Next steps: Add canonical active-member alternatives with stable replay identities and component/variant correlations. Missing optional-path transfers need proof of inactivity. Exercise initial/backedge null/ref transitions, tag-only reads, old copies, cells and public bounds before relaxing activity B001; retain expired-source gates until explicit identities prevent same-site revival. Preserve budgets and the wider runtime/library/tool roadmap.
+
+### 2026-09-07 — Transitive restart coverage committed
+
+- State: Shared shape/canonical implementation is 34d2e7b; native/example/README evidence is fa70eab. Source, compiler gate, optimized execution and independent review are complete. Only final current handoffs and checkpoint audit remain.
+- Validation: All ten compiler checks pass: 511 Rust tests, 20 Python tests and 871 links. All 35 examples execute in debug/release; optimized transitive-restarts output and independent twelve checks/six executions pass. Both focused commits pass cached whitespace/scope checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize STATUS with exact summary-shape support, typed path/source role identity, full coverage and lazy transfer invariants. Next: stable canonical header activity with proved absent-path handling. Preserve history and historical runtime/editor evidence, check docs/whitespace, commit final handoff and verify clean Git state.
+
+### 2026-09-07 — Transitive restart implementation committed
+
+- State: Committed shared Shape validation, canonical per-component origin/bound keys, focused source/graph tests, OWNERSHIP and old header-boundary updates as 34d2e7b. The optimized compiler builds and runs transitive-restarts with exact output. Native/example/README and final current handoffs remain separate commits.
+- Validation: All ten compiler checks pass with 511 Rust and 20 Python tests. Optimized example exits 0 with exact 7, 1, 9, 2, 7 lines and empty stderr. Independent twelve checks/six executions pass. Cached whitespace/scope checks pass; HIR, Facts shape, backend/runtime ABI and dependencies are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native transitive restart coverage, example and README, then finalize root/compiler STATUS with 53 origin, 64 loan, 62 backend, 241 native and 35 examples. Preserve old log history and exact activity/source gates; next is canonical guarded header activity with proved inactive-path transfers.
+
+### 2026-09-07 — Transitive restart compiler gate passed
+
+- State: All ten compiler checks pass on frozen source. Per-component canonical headers preserve nested cells/record fields, lazy demand and public bounds through restart. Shared Shape rejects stored activity while preserving reference-free union referents at the correct traversal cut points. Optimized compiler build is running.
+- Validation: 270 library plus 241 native groups pass (511 Rust tests). Tooling 16 and compiler harness 4 pass, with 871 links, schemas/catalog, formatting, Clippy, build and conformance. All 35 examples run in both profiles. Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/editor checks were not rerun; HIR, Facts shape, backend/runtime ABI and dependencies are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized transitive-restarts with exact bytes, then split shared shape/canonical implementation and old boundaries from native/example/README evidence. Finalize current handoffs/logs with guarded activity as next and Temporary/iteration-owned sources still B001.
+
+### 2026-09-07 — Transitive restart source freeze
+
+- State: Shared typed header shapes, per-component canonical origin/bound keys and complete-path validation are implemented and frozen. Restart headers now carry nested references and record summaries without stored activity. Existing lazy predecessor transfers and all-component source lifetime gates remain. Added transitive-restarts example and precise README shape rules.
+- Validation: All 53 origin and 64 loan groups, eight new native groups, independent twelve checks/six executions, Clippy, formatting and whitespace checks pass. One native expectation was corrected to preserve earlier E303 during invalid record emission; no production defect appeared. The full compiler gate will cover the new example and final old-boundary changes.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all ten compiler checks and optimized transitive-restarts; record exact evidence, then split implementation/old boundaries, native/example/README and final trackers. Next: canonical guarded header activity and proved inactive-path transfer behavior; retain Temporary/iteration-owned gates until explicit expiry identity.
+
+### 2026-09-07 — Transitive restart native integration complete
+
+- State: All eight transitive restart native groups pass. Nested cells, record fields, projected rotations, nested targets, lazy reads, physical cell conflicts and per-layer public bounds are covered. Snapshot-activity shapes and every nested Temporary/iteration-owned source/bound remain gated. Old native blanket transitive B001 rows now exercise active-variant carriers.
+- Validation: Eight groups passed after correcting the earlier-emission E303 expectation. Six new loan groups pass and full loan regression is running. Independent probes are in progress. Stable header transfer machinery required no change; graph validation now shares the charged Shape validator with origins.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish source/resource and independent review, add transitive-restarts example/README with precise shape semantics, then freeze and run all compiler checks plus optimized smoke. Split implementation/old boundaries from coverage/example and final handoffs; guarded header activity remains next.
+
+### 2026-09-07 — Transitive native boundary expectation corrected
+
+- State: Extended native integration passed seven groups and found one test expecting header B001 for a temporary reference already invalid during record emission. The compiler correctly reports E303 before reaching any restart header. Kept that earlier language error as its own regression and retained true nested header-source B001 cases.
+- Validation: Initial four groups passed; extended run was seven passed/one wrong diagnostic expectation. Only the test expectation changed; production behavior was correct. The eight-group rerun is in progress. Shared Shape checks typed paths/coverage and preserves nested refs to reference-free unions.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete the eight-group rerun and independent probes, finish focused source/graph tests, migrate old blanket header B001 rows, then add example/docs and run the full compiler gate before split commits.
+
+### 2026-09-07 — Transitive header shape and initial integration passed
+
+- State: Shared HeaderShape follows State completeness: Reference leaves and Record Slot paths descend through Deref only when stored reference contents exist. Snapshot activity/unions and ref-bearing lists remain B001; references through cells to reference-free unions stay supported. Canonical keys preserve component Path and Source with actual/bound roles separate.
+- Validation: Initial four native groups passed on integrated source: nested cells, distinct record fields/copies, lazy pointer/scalar reads and public bounds. No preimplementation baseline was run for these groups. Eight extended groups are now running, adding shape boundaries, rotations/nested targets, physical cell conflicts and all-component lifetime gates.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish focused origin/loan tests and independent probes, migrate old blanket transitive B001 expectations, add example/README and freeze source. Run the full compiler gate plus optimized example, then split implementation/coverage/handoff commits.
+
+### 2026-09-07 — Transitive restart header investigation
+
+- State: Starting from clean dc7be5b. Extending restart headers from direct references to canonical per-component origins/bounds for nested references and carrier records that need no header variant activity. Origin and loan workers coordinate a shared charged shape validator; root owns native/example/README and all trackers. Existing Temporary/iteration-owned source gates remain.
+- Validation: Prior slice passed 493 Rust and 20 Python tests with optimized/independent evidence. Current handoffs/instructions and clean Git state were verified. No new transitive restart behavior is implemented or validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Define admissible summary paths consistently with current State completeness, preserving already-supported reference-free union pointees. Canonical equality must include component paths and source/bound roles; graph transfers remain demand-only. Implement, add focused/native regression cases, then validate before relaxing gates.
+
 ### 2026-09-07 — Bounded restart-reference handoff complete
 
 - State: Implementation 89800dc and native/example evidence ca037d3 are complete. Direct canonical headers solve initial/backedge source-role sets before final Facts publish, while predecessor transfers preserve old copies and cell/call loans. Current handoffs identify transitive per-component headers next, with guarded activity and expired identities separate.
