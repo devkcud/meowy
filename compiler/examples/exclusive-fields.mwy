@@ -1,0 +1,15 @@
+debug:@"debug"
+increment<null>:(view<&!int32>){*view=*view+1}
+
+record:={->7;->left:=1;->nested:={->right:=2};->ready:=true}
+left:&!record.left
+right:&!record.nested.right
+primary<int32>:record
+debug.print(primary)
+increment(&!*left)
+*right=3
+debug.print(*left)
+debug.print(*right)
+ready:&!record.ready
+*ready=false
+debug.print(*ready)

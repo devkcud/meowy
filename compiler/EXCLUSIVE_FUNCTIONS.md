@@ -19,7 +19,7 @@ contract. No new syntax, ABI or LLVM alias promise is added.
 An exclusive argument moves its holder. Explicit `&!*p` delegates a child for the
 call and leaves `p` available afterward. An expected shared parameter reborrows `p`
 without moving it. Reborrowing may shorten the usable period; it does not extend the
-owner lifetime. Carrier results, reference cells, fields/collections,
+owner lifetime. Carrier results, reference cells, indexed/non-scalar pointees,
 exclusive dispatch blocks and restart bodies remain separate capabilities.
 Receiver syntax for direct functions uses the same argument contract.
 

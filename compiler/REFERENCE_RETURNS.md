@@ -83,6 +83,6 @@ remain enabled, and reference fixtures are unchanged.
 The [reference returns example](examples/reference-returns.mwy) demonstrates guarded
 exclusive selection, parent resumption and shared returned children. The compiler
 gate passes; full language conformance still has 13 unsupported cases. The next
-bounded extension is scalar-field exclusive borrowing with canonical overlap and
-mutability proofs. Wider carriers and generated cleanup need
+bounded extension is emitted scalar exclusive borrowing with exact backing types,
+canonical slot conflicts and target-block lifetime proofs. Wider carriers and generated cleanup need
 separate initialization, transfer and destruction contracts.

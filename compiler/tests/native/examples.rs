@@ -5,6 +5,10 @@ pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (include_str!("../../examples/hello.mwy"), "Hello, meowy!\n"),
         (
+            include_str!("../../examples/exclusive-fields.mwy"),
+            "7\n2\n3\nfalse\n",
+        ),
+        (
             include_str!("../../examples/reference-blocks.mwy"),
             "7\nready\n8\n9\n10\n",
         ),

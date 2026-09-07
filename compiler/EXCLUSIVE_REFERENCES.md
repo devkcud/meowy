@@ -27,8 +27,8 @@ until their transfer and lifetime proofs exist. Reject inferred forms as well as
 explicit annotations. Initial support excludes exclusive pointer equality and
 exclusive-valued carrier results. Anonymous scalar-reference blocks now transfer
 existing guarded authority and consume emitted holders. Ordinary scalar results computed through a reference remain
-supported. Selected record fields are a follow-up using the existing mutability
-and canonical-place rules; indexed exclusive access comes later.
+supported. [Scalar record fields](EXCLUSIVE_FIELDS.md) now use mutable-path and
+canonical-region checks; indexed exclusive access comes later.
 
 These exclusions also apply to authority derived from an exclusive loan when the
 type contains only shared references. For example, `id(&*p)` returning a shared
@@ -274,8 +274,8 @@ Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chai
 with B001 rather than publishing partial proofs. Existing shared-reference tests
 remain enabled; reference fixtures are unchanged.
 
-Next, extend one excluded shape at a time: scalar-field exclusive borrows need
-mutable path validation and canonical disjointness proof; fields and collections need
+Next, extend one excluded shape at a time: emitted scalar exclusive borrows need
+backing-type, target lifetime and canonical slot-conflict proof; fields and collections need
 projection-aware permission; carriers need non-Copy initialization and destruction;
 restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 

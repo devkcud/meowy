@@ -954,7 +954,7 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
   carry semantic boundary markers. Guarded ancestry checks reject exclusive-derived
   shared values crossing unsupported boundaries. Flat scalar direct calls use
   explicit entry accesses and guarded result transfer instead. Wider result contracts, carriers,
-  field/element roots, comparisons, carrier results and resolved restart bodies remain B001.
+  indexed/reference roots, comparisons, carrier results and resolved restart bodies remain B001.
 - Availability produces E301 for definite moves and E309 for uncertain storage;
   origin lifetime failures remain E303. Mutable owner requirements and shared scalar
   store rejection produce E305. Runtime cleanup and owned destruction are unproved.
@@ -1022,3 +1022,21 @@ Fifteen native groups and two graph evidence groups cover these paths, including
 guarded same-address acquisitions, missing cancellation evidence, dispatch boundaries
 and short-circuit availability. The standalone Never-operator fix preserves skipped
 block typing and actual non-returning effects without changing the backend.
+
+## Exclusive scalar record fields
+
+The [field contract](EXCLUSIVE_FIELDS.md) admits named scalar paths on ordinary
+mutable reference-free Copy records. `check/references.rs` produces the original
+root/field Place; shared mutable-field validation enforces every crossed boundary.
+The existing Borrow HIR, source lifetimes, loan modes and backend addresses are reused.
+
+Normalized fields prove sibling disjointness; whole-owner and ancestor accesses
+still conflict. `access_overlap` keeps Slot(0) primary components distinct from named
+descendants without excluding ancestor loans. Copies of the owner have separate
+storage. Calls, returns and block results preserve field roots and public bounds;
+captured stores keep the pointer chosen before RHS effects and only through a
+returning store. Field owners cannot escape their scope.
+
+Fourteen native groups plus projection/path-limit evidence cover these rules in both
+profiles where applicable. Aliases, indexed/union/reference paths, non-scalar exclusive
+pointees, owned carriers and generated cleanup remain separate capabilities.

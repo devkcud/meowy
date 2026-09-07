@@ -155,6 +155,9 @@ from conservative lifetime bounds.
 The [reference blocks example](examples/reference-blocks.mwy) moves an emitted
 child, completes through Leave and cancels another result without undoing its move.
 The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and scope.
+The [exclusive fields example](examples/exclusive-fields.mwy) mutates disjoint scalar
+fields while reading a primary value. The [field contract](EXCLUSIVE_FIELDS.md)
+describes mutable paths, owner lifetimes and remaining root restrictions.
 
 ## Implemented language
 
@@ -185,7 +188,10 @@ The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and s
   Mutable owners can be assigned after the last use of every overlapping shared
   reference. Live aliases, reference operands and retained block results protect
   their owners from writes; conflicting assignments report E302.
-- Exclusive references to mutable ordinary boolean, integer and float locals.
+- Exclusive references to mutable ordinary boolean, integer and float locals,
+  including scalar fields of mutable reference-free Copy records. Every crossed
+  field must be mutable. Sibling fields and primary projections are disjoint;
+  whole-owner/ancestor accesses conflict with live field loans.
   Immutable handles permit scalar stores; replacing a handle requires a mutable
   binding. Moves and reinitialization preserve authority; unavailable holders report
   E301 or E309. Shared/exclusive reborrows retain guarded parent relationships and
@@ -203,7 +209,7 @@ The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and s
   bounds protect storage without authorizing access. Exclusive results move; shared
   returned children permit compatible parent reads and suspend parent writes.
   Wider exclusive signatures/result shapes, carriers, cells, aliases,
-  dispatch blocks, fields, collections, carrier results, comparisons and restart bodies
+  dispatch blocks, indexed/reference paths, collections, carrier results, comparisons and restart bodies
   remain B001. Anonymous scalar-reference blocks preserve existing guarded loan
   identities and consume exclusive emissions. Retained results protect their owners
   through completion; proven cancellation preserves effects and moves without
