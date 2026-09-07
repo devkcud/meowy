@@ -159,10 +159,6 @@ d.print(owner.n)
             "B001",
         ),
         (
-            "owner:{->n:1};holder:{->view:&owner;->count:2};view:&holder.count",
-            "B001",
-        ),
-        (
             "view:{owner:{->n:1};holder:{->view:&owner};->&holder.view.n}",
             "E303",
         ),

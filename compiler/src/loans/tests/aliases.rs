@@ -1,6 +1,24 @@
 use super::{accepts, rejects};
 
 #[test]
+pub(crate) fn selected_reference_carrier_cells_do_not_read_unrelated_pointees() {
+    for source in [
+        "owner:=1;carrier:{->view:&owner;->n:2};p:&carrier.n;owner=3;v:*p",
+        "owner:=1;result:{->carrier:{->view:&owner;->n:2};p:&carrier.n;v:*p};owner=3",
+        "d:@\"debug\";owner:=1;'done{result:{->carrier:{->view:&owner;->n:2};p:&carrier.n;owner=3;d.print(*p);'done.leave()}}",
+    ] {
+        accepts(source);
+    }
+    for source in [
+        "owner:=1;carrier:{->view:&owner;->n:2};p:&carrier.n;owner=3;v:*p;copy:carrier",
+        "owner:=1;result:{->carrier:{->view:&owner;->n:2};p:&carrier.n;owner=3;v:*p}",
+        "owner:=1;result:{->view:&owner;owner=3;v:*view}",
+    ] {
+        rejects(source, "E302");
+    }
+}
+
+#[test]
 pub(crate) fn immutable_alias_activity_keeps_null_exclusion_and_reference_copy_origins() {
     accepts(
         "owner:=1;value:{->tag<int32><null>:null;->view<&int32><null>:{|tag<int32>|->&owner}};owner=2",

@@ -2,6 +2,7 @@ mod aggregates;
 mod boundaries;
 mod control;
 mod origins;
+mod reference_slots;
 mod slots;
 
 pub(crate) fn accepts(source: &str) {

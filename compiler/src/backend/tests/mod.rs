@@ -8,6 +8,7 @@ mod immutable_aliases;
 mod lists;
 mod mixed_assignments;
 mod nested_assignments;
+mod reference_aliases;
 mod references;
 mod scalars;
 

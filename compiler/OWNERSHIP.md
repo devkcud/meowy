@@ -11,9 +11,10 @@ implementation boundary; it does not change language rules.
   temporary. Distinct live locals retain distinct identities in both profiles.
 - Shared references are non-null target-width pointers and copy by value.
   Equality compares addresses; dereference copies the supported copyable referent.
-- Eligible roots include ordinary locals, reference-free by-value parameters and
-  dispatch receiver copies. Parameter/self addresses refer to their local storage,
-  not an original caller value. Reference-free emitted storage uses the slot model below.
+- Eligible roots include ordinary locals, by-value parameters and dispatch receiver
+  copies. The selected referent must be reference-free; concrete fields can be
+  selected from reference-bearing carriers. Parameter/self addresses refer to their
+  local storage, not an original caller value. Emitted storage uses the slot model below.
   A narrowed union payload is not an addressable record projection yet.
 - Each HIR emission has a unique ID, including generated record components and
   unreachable writes. Private tables associate those IDs and block IDs with the
@@ -61,10 +62,10 @@ implementation boundary; it does not change language rules.
   retains known full-record context through block operands instead of silently
   comparing their scalar primaries; scalar literals retain numeric-primary width.
 - Union wrappers containing references and omitted optional reference fields are
-  supported. Borrowing storage rooted in a reference-carrying record or union,
-  mutable carriers and indirect/capturing function contracts remain separate
-  work; shared reborrows inspect reference-free referents and do not borrow the
-  storage of a reference-bearing carrier.
+  supported. Concrete reference-free fields of a carrier can be borrowed without
+  reading its other reference components. Borrowing the whole carrier or a
+  reference-valued field, mutable carriers and indirect/capturing function contracts
+  remain separate work. Shared reborrows inspect reference-free referents.
 
 ## Active union variants
 
@@ -152,8 +153,9 @@ implementation boundary; it does not change language rules.
 
 ## Parameter and dispatch storage
 
-- Reference-free parameters may be borrowed within the function or its nested
-  blocks. Returning their addresses, directly or through another call/dispatch,
+- Reference-free parameters and reference-free fields of carrier parameters may be
+  borrowed within the function or its nested blocks. Returning their addresses,
+  directly or through another call/dispatch,
   is E303. Every definition is checked even when callers infer no normal return.
 - A by-value dispatch receiver is copied into an immutable `self` local before the
   body runs. Borrowing `self` or its concrete fields observes that copy. Changes
@@ -165,8 +167,9 @@ implementation boundary; it does not change language rules.
 - Receiver expressions and function arguments evaluate once in order. Source/native
   tests distinguish original versus copied addresses, nullable carrier dispatch,
   earlier argument copies, effectful receivers and enclosing-scope early leaves.
-- Taking the address of a reference-bearing holder is still B001. Shared dispatch
-  does not enable exclusive `self` mutation, captures or reference-bearing storage addresses.
+- Taking the address of a whole reference-bearing holder is still B001; its concrete
+  reference-free fields use the local copy's address. Shared dispatch does not enable
+  exclusive `self` mutation, captures or reference-bearing referent storage.
 
 ## Shared reborrows
 
@@ -177,7 +180,8 @@ implementation boundary; it does not change language rules.
   retain the original lifetime. Leading carrier fields may produce that reference,
   as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
   at the final field still requests holder storage (`&holder.view`) and is B001.
-  Borrowing a temporary owner or a holder's own scalar field remains B001.
+  A holder's own reference-free field uses its physical storage origin instead;
+  it does not inherit unrelated contained references. Temporary owners remain B001.
 - Pure address hints resolve types without lowering expressions or changing
   application control flow. Regression coverage includes effectful calls in
   equality and argument blocks that leave an enclosing scope before the call.
@@ -237,7 +241,7 @@ implementation boundary; it does not change language rules.
 
 ## Emitted slot aliases
 
-- A reference-free named emission evaluates its initializer once through the existing
+- A named emission evaluates its initializer once through the existing
   Bind/Emit sequence, then `SlotAlias` binds that lexical name to the actual target
   block field. The marker and private proof retain declared field mutability;
   real backing requires an exact mutability match. Reads and permitted mutable
@@ -280,9 +284,13 @@ implementation boundary; it does not change language rules.
   roots match alias assignment/reservation identities, preserving E302 and disjoint
   fields even when aliases arise in different guarded scopes. Slot/view metadata,
   projections and lifetime/type lookups consume existing weighted work/storage
-  limits. Reference-bearing emitted names retain their previous Bind/Emit copied
-  value and pointee-origin behavior without SlotAlias; borrowing those cells remains
-  B001. Exclusive references and mutable reference-bearing fields remain unavailable.
+  limits. Immutable reference-bearing emitted names also use actual slot cells.
+  Their copied value components preserve the initializer's pointee origins and
+  all-input bounds; copying a reference adds no dependency on its containing slot.
+  Borrowing a selected reference-free field instead creates only its physical Slot
+  origin. A contained reference crossed by `&carrier.view.field` keeps the existing
+  pointee reborrow path. Whole-carrier/reference-cell borrows, exclusive references
+  and mutable reference-bearing fields remain unavailable.
 - Only mutable alias IDs enter mutable proofs and omit initializer constant/length caches.
   Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
@@ -535,10 +543,10 @@ implementation boundary; it does not change language rules.
 6. Materialize temporary owners to complete-statement boundaries, with cleanup on
    normal, leave, restart and unwind edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
-7. Separate stored-value pointee origins from cell ownership for immutable
-   reference-bearing emitted aliases, preserving existing reads/reborrows before
-   enabling any new selected-field address. Whole carrier/reference-cell borrows
-   need explicit transitive referent handling. Add finer indexed disjointness,
+7. Model transitive pointee origins for whole-carrier/reference-cell shared borrows
+   before enabling their addresses. Dereference copies must recover each contained
+   reference's origins and bounds separately from the borrowed cell's owner, including
+   discarded slots and restart. Add finer indexed disjointness,
    exclusive references, slice/alias metadata and non-Copy state separately.
 
 ## Verification

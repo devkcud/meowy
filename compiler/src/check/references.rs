@@ -149,8 +149,19 @@ impl Checker {
     }
 
     pub(crate) fn address(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
+        let (place, ty) = self.address_storage(expr)?;
+        if ty.has_reference() {
+            return Err(Diagnostic::unsupported(
+                "borrowing reference-carrying storage",
+                expr.span,
+            ));
+        }
+        Ok((place, ty))
+    }
+
+    pub(self) fn address_storage(&self, expr: &ast::Expr) -> Result<(hir::Place, Type)> {
         match &expr.kind {
-            ExprKind::Group(value) => self.address(value),
+            ExprKind::Group(value) => self.address_storage(value),
             ExprKind::Name(name) => {
                 let Value::Local { id, ty, .. } = self.value(name, expr.span)? else {
                     return Err(Diagnostic::unsupported(
@@ -164,12 +175,6 @@ impl Checker {
                         expr.span,
                     ));
                 }
-                if ty.has_reference() {
-                    return Err(Diagnostic::unsupported(
-                        "borrowing reference-carrying storage",
-                        expr.span,
-                    ));
-                }
                 Ok((
                     hir::Place {
                         root: id,
@@ -179,7 +184,7 @@ impl Checker {
                 ))
             }
             ExprKind::Field { value, name } => {
-                let (mut place, ty) = self.address(value)?;
+                let (mut place, ty) = self.address_storage(value)?;
                 let Type::Record { fields, .. } = ty else {
                     return Err(Diagnostic::unsupported(
                         "borrowing fields outside concrete record storage",
