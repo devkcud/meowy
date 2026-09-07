@@ -11,6 +11,7 @@ pub(crate) mod examples;
 pub(crate) mod fields;
 pub(crate) mod function_borrows;
 pub(crate) mod guarded_references;
+pub(crate) mod header_activity;
 pub(crate) mod immutable_slots;
 pub(crate) mod leave_references;
 pub(crate) mod list_contexts;

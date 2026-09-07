@@ -1,0 +1,17 @@
+debug:@"debug"
+
+<Holder>:<{view<&int32><null>}>
+owner:7
+empty<Holder>:{}
+full<Holder>:{->view:&owner}
+current:=&empty
+count:=0
+'loop{
+    copy:*current
+    |copy.view<null>|debug.print("empty")
+    |copy.view<&int32>|debug.print(*copy.view<&int32>)
+    count=count+1
+    |count==1|current=&full
+    |count==2|current=&empty
+    |count<3|'loop.restart()
+}

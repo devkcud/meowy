@@ -127,6 +127,10 @@ pub fn examples_execute_in_both_profiles() {
             "7\n1\n9\n2\n7\n",
         ),
         (
+            include_str!("../../examples/header-activity.mwy"),
+            "empty\n7\nempty\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

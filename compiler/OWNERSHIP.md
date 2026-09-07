@@ -368,8 +368,8 @@ implementation boundary; it does not change language rules.
   iteration's view. A local source overwritten by surviving storage before the
   backedge need not be carried.
 - Each resolved restart has a stable RestartId. The final pass publishes initial
-  predecessor snapshots by target and restart snapshots by site, retaining the raw
-  incoming State and entered guard before widening/reset. Shared Shape inspection
+  predecessor snapshots by target and restart snapshots by site, retaining the
+  incoming State under its entered guard before widening/reset. Shared Shape inspection
   proves typed path activity on that predecessor; provisional snapshots never
   become published facts.
 - Loan headers use stable value IDs. Initial and backedge predecessors define them
