@@ -3,8 +3,9 @@
 This directory exercises explicit cleanup, owned payloads, guarded stack allocation
 and pinned context switching with bounded scheduling independently of the compiler. It uses C++20 and
 Clang 22.1.8 with exceptions and RTTI disabled. The
-compiler still links its existing scalar runtime; this prototype adds no Meowy
-syntax or runtime symbols to generated programs.
+compiler still emits its existing scalar runtime calls. Its archive now also includes
+an explicitly tested [private cleanup bridge](GENERATED_CLEANUP.md); normal Meowy
+code generation does not yet emit those calls or support owning resource/task syntax.
 
 ```sh
 python3 -B runtime/check.py
@@ -14,6 +15,7 @@ python3 -B -m unittest discover -s runtime/tests -p 'test_*.py'
 The runner builds debug, optimized release, and ASan/UBSan executables in a
 temporary directory. Each executes six owning-diagnostic groups and an exact
 fatal-truncation probe, plus 14 cleanup cases and two fatal subprocesses,
+plus six generated-cleanup bridge cases and two exact fatal subprocesses,
 plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an

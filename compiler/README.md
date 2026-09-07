@@ -173,6 +173,10 @@ in order and retains enclosing reservations only through their required uses.
 The [indexed fields example](examples/exclusive-indexed-fields.mwy) borrows a scalar
 field inside an emitted list and carries it beyond the lexical alias scope.
 
+The [private generated cleanup bridge](../runtime/GENERATED_CLEANUP.md) is available
+in the native archive and tested by LLVM callback probes. Automatic Meowy owner
+cleanup, task cancellation and DWARF unwinding remain implementation work.
+
 ## Implemented language
 
 - UTF-8 sources, original byte spans, retained lexer trivia, compact punctuation,
