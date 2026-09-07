@@ -47,6 +47,7 @@ compiler/target/debug/meowy run compiler/examples/temporary-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/reference-temporaries.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
+compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -115,6 +116,8 @@ reference while preserving an earlier copy and reads a borrowed reference cell
 for the last time before replacing its contents.
 The [guarded references example](examples/guarded-references.mwy) selects a reference
 in a matcher and updates only the owner that the selected view no longer borrows.
+The [leave references example](examples/leave-references.mwy) keeps an earlier RHS
+reassignment when leaving the target skips the unfinished outer assignment.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -220,6 +223,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   value, and panicking paths contribute no continuation. Earlier copies stay fixed.
   Merging does not read a reference: its lifetime and loan are checked when demanded.
   Owner writes and cell borrows retain their guards through nested branches.
+- Forward named-scope leaves with shared-reference reassignment. A leave captures
+  surviving reference values for its exact target, then joins them with normal
+  completion there. Nested exits preserve completed effects and skip unfinished
+  stores/calls. Exiting a target does not extend its local, slot or temporary storage.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -328,12 +335,16 @@ versions and merge only returning states under their actual guards. A skipped
 assignment preserves the old value; copying it before a branch preserves its old
 pointees and call bounds. Conditional lifetime checks do not revive expired values
 when the predicate later changes.
-Mutable reference carriers, mutable nullable reference bindings, exit/backedge
-joins and direct reference formatting require future analysis. An entry or function
-body combining reference reassignment with any `leave` or `restart` remains B001,
-even when those operations appear unrelated.
-This conservative boundary applies through nested expressions. A panic during the
-RHS skips the store; ordinary nested blocks and call arguments retain evaluation order.
+Forward `leave` paths capture the reference values that survive the named target,
+before inner scopes are discarded. Target completion merges these exits with
+fallthrough without adding reference reads. A leave from an RHS keeps earlier
+completed assignments and skips the unfinished store, call or index operation.
+Initialized result emissions retain their own loans and path-specific proofs.
+Mutable reference carriers, mutable nullable reference bindings, restart joins and
+direct reference formatting require future analysis. An entry or function body
+combining reference reassignment with any `restart` remains B001, even for an
+unrelated nested transfer. A panic during the RHS skips the store; nested blocks
+and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's
 storage. Whole-carrier and reference-cell borrows retain bounded summaries of their

@@ -115,6 +115,10 @@ pub fn examples_execute_in_both_profiles() {
             "7\n7\n7\n9\n",
         ),
         (
+            include_str!("../../examples/leave-references.mwy"),
+            "11\n9\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
