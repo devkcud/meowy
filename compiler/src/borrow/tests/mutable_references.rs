@@ -22,7 +22,7 @@ pub(crate) fn reference_assignment_expiry_tracks_the_current_value_only() {
 
 #[test]
 pub(crate) fn reference_assignments_keep_restart_boundary() {
-    rejects("a:1;b:2;p:=&a;'loop{p=&b;'loop.restart()}", "B001");
+    rejects("a:1;p:=&a;'loop{local:2;p=&local;'loop.restart()}", "B001");
     for source in [
         "a:1;b:2;p:=&a;'out{p=&b;'out.leave()}",
         "a:1;b:2;p:=&a;p=&b;'out{'out.leave()}",

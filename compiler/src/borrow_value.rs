@@ -16,7 +16,7 @@ pub(crate) enum Step {
     Deref,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Projection {
     Field(usize),
     Element,
@@ -29,7 +29,7 @@ pub(crate) struct Origin {
     pub(crate) guard: Guard,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Source {
     Temporary {
         id: LocalId,

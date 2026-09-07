@@ -1,5 +1,10 @@
-use super::{Block, Diagnostic, Expr, ExprKind, Guards, Program, Result, Span, State, Stmt, Type};
+use super::{Block, Expr, ExprKind, Guards, Program, Result, Span, State, Stmt, Type};
 use crate::hir::WriteStep;
+
+pub(crate) struct Plan {
+    pub(crate) merging: bool,
+    pub(crate) restarts: super::BTreeSet<super::BlockId>,
+}
 
 pub(crate) enum Item<'a> {
     Statement(&'a Stmt),
@@ -19,13 +24,13 @@ pub(crate) fn push<'a>(
     Ok(())
 }
 
-pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Result<bool> {
+pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Result<Plan> {
     let mut pending = Vec::new();
     for stmt in block.stmts.iter().rev() {
         push(&mut pending, Item::Statement(stmt), 0, guards)?;
     }
     let mut write = None;
-    let mut transfer = false;
+    let mut restarts = super::BTreeSet::new();
     while let Some((item, depth)) = pending.pop() {
         if !guards.spend(1) {
             return Err(State::budget(Span::default()));
@@ -65,7 +70,9 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                     }
                     add(Item::Expression(condition))?;
                 }
-                Stmt::Restart(_) => transfer = true,
+                Stmt::Restart(id) => {
+                    restarts.insert(*id);
+                }
                 Stmt::Leave(_) => {}
                 Stmt::SlotAlias { .. } => {}
             },
@@ -113,11 +120,8 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
             },
         }
     }
-    if transfer && let Some(span) = write {
-        return Err(Diagnostic::unsupported(
-            "shared-reference assignments in a body with restart",
-            span,
-        ));
-    }
-    Ok(write.is_some())
+    Ok(Plan {
+        merging: write.is_some(),
+        restarts,
+    })
 }

@@ -8,6 +8,7 @@ mod leaving_references;
 mod mutable_references;
 mod places;
 mod reference_temporaries;
+mod restarting_references;
 mod temporaries;
 mod transitive;
 mod values;

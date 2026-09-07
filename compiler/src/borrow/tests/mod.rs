@@ -6,6 +6,7 @@ mod leaves;
 mod mutable_references;
 mod origins;
 mod reference_slots;
+mod restarts;
 mod slots;
 mod temporaries;
 mod temporary_carriers;

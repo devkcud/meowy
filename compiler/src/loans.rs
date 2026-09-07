@@ -1,6 +1,7 @@
 pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod graph;
+pub(crate) mod restarts;
 pub(crate) mod solve;
 pub(crate) mod state;
 pub(crate) mod transitive;

@@ -5,6 +5,8 @@ pub(crate) mod exits;
 pub(crate) mod mutable;
 pub(crate) mod origins;
 pub(crate) mod pointee;
+pub(crate) mod replay;
+pub(crate) mod restart;
 pub(crate) mod state;
 pub(crate) mod value;
 use std::collections::{BTreeMap, BTreeSet};
@@ -30,67 +32,14 @@ pub(crate) fn check(
     guards: &mut Guards,
     proofs: &Proofs,
 ) -> std::result::Result<Facts, Vec<Diagnostic>> {
-    let mut checker = Checker {
-        targets: BTreeMap::new(),
-        merging: false,
-        program,
-        guards,
-        proofs,
-        locals: BTreeMap::new(),
-        blocks: Vec::new(),
-        types: BTreeMap::new(),
-        results: BTreeMap::new(),
-        writes: BTreeMap::new(),
-        scopes: Vec::new(),
-        facts: Facts::default(),
-        origins: 0,
-        assumed: TRUE,
-        assumed_scopes: Vec::new(),
-        inputs: BTreeSet::new(),
-        statements: BTreeMap::new(),
-    };
-    let result = (|| {
-        checker.merging = mutable::check(&program.body, program, checker.guards)?;
-        if checker.merging {
-            checker.facts.merging.insert(program.body.id);
-        }
-        checker.block(&program.body)?;
-        for function in &program.functions {
-            checker.merging = mutable::check(&function.body, program, checker.guards)?;
-            if checker.merging {
-                checker.facts.merging.insert(function.body.id);
-            }
-            checker.locals.clear();
-            checker.assumed = TRUE;
-            checker.inputs = function.params.iter().copied().collect();
-            for id in &function.params {
-                let span = Span { start: 0, end: 0 };
-                let ty = &program.locals[*id];
-                let mut state = crate::borrow_contract::input(*id, ty, checker.guards, span)?;
-                checker.link_tags(*id, ty, &mut state, span)?;
-                checker.complete(ty, &state, span)?;
-                checker.reserve_origins(state.weight() + 1, span)?;
-                checker.assumed = checker.guards.and(checker.assumed, state.proof);
-                checker.facts.locals.insert(*id, state.clone());
-                checker.locals.insert(
-                    *id,
-                    Storage {
-                        block: function.body.id,
-                        state,
-                    },
-                );
-            }
-            checker.block(&function.body)?;
-        }
-        Ok(())
-    })();
-    if checker.guards.exceeded() {
+    let result = replay::check(program, guards, proofs);
+    if guards.exceeded() {
         Err(vec![Diagnostic::unsupported(
             "control-flow proof budget exhausted",
             Span { start: 0, end: 0 },
         )])
     } else {
-        result.map(|()| checker.facts).map_err(|error| vec![error])
+        result.map_err(|error| vec![error])
     }
 }
 

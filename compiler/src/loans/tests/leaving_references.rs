@@ -101,7 +101,10 @@ pub(crate) fn leave_captures_allow_expired_values_to_be_replaced_without_reading
         "a:1;p:=&a;'out{{short:2;p=&short;'out.leave()}};v:*p",
         "E303",
     );
-    rejects("a:1;b:2;p:=&a;'again{p=&b;'again.restart()}", "B001");
+    rejects(
+        "a:1;cell:&a;p:=&cell;'again{p=&cell;'again.restart()}",
+        "B001",
+    );
 }
 
 #[test]

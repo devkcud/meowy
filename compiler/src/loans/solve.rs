@@ -136,6 +136,14 @@ impl<'a> Graph<'a> {
         }
         self.block(block)?;
         let reach = self.reach()?;
+        for node in &self.missing_headers {
+            if reach[*node] != FALSE {
+                return Err(Diagnostic::unsupported(
+                    "missing restart reference header or transfer proof",
+                    Span::default(),
+                ));
+            }
+        }
         for (node, span) in &self.missing_calls {
             if reach[*node] != FALSE {
                 return Err(Diagnostic::unsupported(

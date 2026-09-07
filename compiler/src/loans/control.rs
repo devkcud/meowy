@@ -3,11 +3,21 @@ use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
-        let incoming = if self.merging {
+        let mut incoming = if self.merging {
             self.versions()?
         } else {
             super::branches::Versions::new()
         };
+        let header = if self.merging {
+            self.restart_header(block.id, &incoming)?
+        } else {
+            None
+        };
+        let restarted = header.is_some();
+        if let Some(header) = header {
+            self.restore_versions(&header)?;
+            incoming = header;
+        }
         let origins: Vec<_> = self
             .facts
             .blocks
@@ -16,10 +26,12 @@ impl<'a> Graph<'a> {
             .unwrap_or_default();
         let result = self.bundle(origins.clone())?;
         let value = self.bundle(origins)?;
-        let start = self.append(Node {
+        let start = self.node(Node {
             defs: result.values().copied().collect(),
             ..Node::default()
         })?;
+        self.connect(start, TRUE, restarted);
+        self.current.push(start);
         let node = self.copied(&result, &value)?;
         let end = self.node(node)?;
         self.blocks.insert(
@@ -31,6 +43,7 @@ impl<'a> Graph<'a> {
                 ty: block.ty.clone(),
                 incoming,
                 leaves: Vec::new(),
+                restarted,
             },
         );
         self.statements(&block.stmts)?;
@@ -250,6 +263,10 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::Leave(id) | Stmt::Restart(id) => {
                     let restart = matches!(statement, Stmt::Restart(_));
+                    if self.merging && restart {
+                        self.restart(*id)?;
+                        continue;
+                    }
                     if self.merging && !restart {
                         self.charge(
                             self.blocks.get(id).expect("control target").incoming.len() + 1,

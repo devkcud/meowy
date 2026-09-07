@@ -27,6 +27,7 @@ pub(crate) struct Scope {
     pub(crate) ty: Type,
     pub(crate) incoming: Versions,
     pub(crate) leaves: Vec<Arm>,
+    pub(crate) restarted: bool,
 }
 
 pub(crate) struct Graph<'a> {
@@ -45,4 +46,5 @@ pub(crate) struct Graph<'a> {
     pub(crate) merging: bool,
     pub(crate) missing_calls: Vec<(usize, Span)>,
     pub(crate) missing_reborrows: Vec<(usize, Span)>,
+    pub(crate) missing_headers: Vec<usize>,
 }

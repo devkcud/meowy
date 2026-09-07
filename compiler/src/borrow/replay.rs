@@ -1,0 +1,112 @@
+use super::restart::{Headers, same, weight};
+use super::{
+    BTreeMap, Block, Checker, Facts, Guards, LocalId, Program, Proofs, Result, Span, State,
+    Storage, TRUE,
+};
+
+pub(crate) const MAX_PASSES: usize = 64;
+
+pub(crate) fn body(
+    program: &Program,
+    guards: &mut Guards,
+    proofs: &Proofs,
+    block: &Block,
+    params: &[LocalId],
+    used: usize,
+) -> Result<(Facts, usize)> {
+    let plan = super::mutable::check(block, program, guards)?;
+    let span = Span::default();
+    let mut headers = Headers::new();
+    for _ in 0..MAX_PASSES {
+        let size = weight(&headers);
+        let seeds = size.saturating_mul(2);
+        if used.saturating_add(seeds) > super::MAX_FACT_ORIGINS
+            || !guards.spend(size + plan.restarts.len() + 1)
+        {
+            return Err(State::budget(span));
+        }
+        let mut checker = Checker {
+            headers: headers.clone(),
+            restarts: plan.restarts.clone(),
+            targets: BTreeMap::new(),
+            merging: plan.merging,
+            program,
+            guards,
+            proofs,
+            locals: BTreeMap::new(),
+            blocks: Vec::new(),
+            types: BTreeMap::new(),
+            results: BTreeMap::new(),
+            writes: BTreeMap::new(),
+            scopes: Vec::new(),
+            facts: Facts::default(),
+            origins: used,
+            assumed: TRUE,
+            assumed_scopes: Vec::new(),
+            inputs: params.iter().copied().collect(),
+            statements: BTreeMap::new(),
+        };
+        checker.reserve_origins(seeds, span)?;
+        if checker.merging {
+            checker.facts.merging.insert(block.id);
+        }
+        for id in params {
+            let ty = &program.locals[*id];
+            let mut state = crate::borrow_contract::input(*id, ty, checker.guards, span)?;
+            checker.link_tags(*id, ty, &mut state, span)?;
+            checker.complete(ty, &state, span)?;
+            checker.reserve_origins(state.weight() + 1, span)?;
+            checker.assumed = checker.guards.and(checker.assumed, state.proof);
+            checker.facts.locals.insert(*id, state.clone());
+            checker.locals.insert(
+                *id,
+                Storage {
+                    block: block.id,
+                    state,
+                },
+            );
+        }
+        checker.block(block)?;
+        if same(&headers, &checker.headers, checker.guards, span)? {
+            checker.facts.headers = checker.headers;
+            return Ok((checker.facts, checker.origins));
+        }
+        headers = checker.headers;
+    }
+    Err(super::Diagnostic::unsupported(
+        "restart origin fixed-point budget exhausted",
+        span,
+    ))
+}
+
+pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> Result<Facts> {
+    let (mut facts, mut used) = body(program, guards, proofs, &program.body, &[], 0)?;
+    for function in &program.functions {
+        let (next, count) = body(
+            program,
+            guards,
+            proofs,
+            &function.body,
+            &function.params,
+            used,
+        )?;
+        used = count;
+        let entries = next.locals.len()
+            + next.blocks.len()
+            + next.calls.len()
+            + next.reborrows.len()
+            + next.headers.len()
+            + next.merging.len();
+        let lookup = program.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
+        if !guards.spend(entries.saturating_mul(lookup)) {
+            return Err(State::budget(Span::default()));
+        }
+        facts.locals.extend(next.locals);
+        facts.blocks.extend(next.blocks);
+        facts.calls.extend(next.calls);
+        facts.reborrows.extend(next.reborrows);
+        facts.headers.extend(next.headers);
+        facts.merging.extend(next.merging);
+    }
+    Ok(facts)
+}

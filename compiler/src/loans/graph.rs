@@ -26,6 +26,7 @@ impl<'a> Graph<'a> {
             merging: false,
             missing_calls: Vec::new(),
             missing_reborrows: Vec::new(),
+            missing_headers: Vec::new(),
         }
     }
 

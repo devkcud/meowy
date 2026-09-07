@@ -13,6 +13,9 @@ impl Checker<'_> {
         self.assumed_scopes.push(self.assumed);
         if self.merging {
             self.enter_target(block.id, Span::default())?;
+            if self.restarts.contains(&block.id) {
+                self.enter_restart(block.id, Span::default())?;
+            }
         }
         let mut flow = self.statements(&block.stmts)?;
         let span = Span { start: 0, end: 0 };
@@ -243,6 +246,8 @@ impl Checker<'_> {
                 Stmt::Leave(id) | Stmt::Restart(id) => {
                     if self.merging && matches!(stmt, Stmt::Leave(_)) {
                         self.leave_target(*id, Span::default())?;
+                    } else if self.merging {
+                        self.restart_target(*id, Span::default())?;
                     }
                     Flow {
                         next: false,

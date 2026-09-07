@@ -303,9 +303,8 @@ implementation boundary; it does not change language rules.
   paths and merges duplicate origins. Changed versions use charged completion-reach
   queries; repeated full-graph queries can reach the existing work limit.
 - `borrow/mutable.rs` performs one bounded HIR scan for each entry/function body.
-  A body containing both a reference assignment and any Restart is B001,
-  even when the transfer is in an unrelated nested expression. Separate function
-  bodies are checked independently.
+  It identifies reference assignments and restart targets; separate function bodies
+  are checked independently.
   Facts.merging records which bodies enable branch/continuation merging;
   assignment-free bodies preserve their existing loop/proof behavior.
 - Forward Leave uses `borrow/exits.rs`: each target records the mutable-reference
@@ -324,11 +323,55 @@ implementation boundary; it does not change language rules.
   slots retain their existing lifetimes. A surviving mutable reference may contain
   an expired source after Leave and can be overwritten safely; reading that current
   value remains E303. Emitted result components still require surviving origins.
-- The remaining gate excludes unproved backedge state, which needs a bounded
-  fixed point. The scan charges every push/pop and limits its frontier/depth.
+- The scan charges every push/pop and limits its frontier/depth.
   Snapshot copies, map lookups, guarded State merges and
   new value versions consume existing work, origin and graph budgets. Target entry
   snapshots and queued exit versions also count toward the persistent origin limit.
+
+## Bounded restart headers
+
+- Bodies with reference assignments use `borrow/replay.rs` to solve restarted
+  target headers. Each pass creates a fresh origin Checker over the existing HIR
+  and proofs, initializes normal body inputs, and collects initial/backedge states.
+  Provisional locals, calls, reborrows, results and exit queues are discarded;
+  only the final stable pass publishes Facts. Source effects are never lowered or
+  executed again during this analysis.
+- `borrow/restart.rs` canonicalizes each header into separate actual-origin and
+  lifetime-bound Source sets. Initial and feasible backedge sources accumulate
+  monotonically. Source order and guards do not affect convergence. The final
+  Facts.headers map contains every mutable-reference ID present at target entry,
+  including bindings that a particular iteration does not change.
+- This first domain requires fixed `&T` where T is reference-free, including
+  supported scalar, record, list and union referents. Header components are direct
+  paths with no Deref summaries or active-variant facts. Transitive carried
+  referents remain B001 until per-component sources and guarded activity have a
+  sound widening model. Iteration-local bindings can still use existing snapshots.
+- Header guards, presence and proof are widened to TRUE, and header entry resets
+  continuation assumptions. This deliberately loses entry/previous-iteration
+  predicate correlations. The final body pass still records current-iteration
+  branches, calls, leaves and result guards normally.
+- Every feasible carried origin and bound must be an Input source or live
+  Local/Slot storage strictly outside the restarted target. Target/descendant-owned
+  sources and all Temporary sources report B001. Rebinding the same static LocalId,
+  alias or statement therefore cannot revive a previous iteration's view. A local
+  source overwritten by surviving storage before the backedge need not be carried.
+- Loan headers use stable value IDs. Initial and backedge predecessors define them
+  through demand-only transfers from the versions captured on that predecessor,
+  then cross a reset edge. Before-entry copies retain initial-only precision;
+  header joins themselves read no reference. Nested targets and outer-target
+  restarts use their own header IDs and skip unfinished RHS work.
+- Replay shares one charged guard arena, has at most 64 passes per body, and counts
+  header cloning, source comparisons, deduplication and type/ownership walks.
+  Each header state respects the 4,096-part limit. Scratch passes include previously
+  committed facts and both retained/cloned seed maps in the 262,144 weighted-origin
+  cap before cloning; final body counters carry forward, preventing individually
+  small bodies from bypassing aggregate limits. This is a logical fact/cache budget,
+  not a byte-accurate allocator peak; transient working values retain their existing
+  per-value and shared-work limits.
+  Nonconvergence or exhausted work/storage reports B001.
+- Assignment-free bodies keep the previous single-pass loop behavior. Forward
+  Leave joins, physical cell loans, old copies, public call bounds and emitted-slot
+  lifetime checks remain independent of header convergence.
 
 ## Statement-owned Copy temporaries
 
@@ -533,7 +576,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, reference assignment backedge joins, owner moves, owned
+  references/reborrows, transitive/iteration-owned reference headers, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
