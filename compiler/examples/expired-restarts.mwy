@@ -1,0 +1,26 @@
+debug : @"debug"
+base : 7
+view := &0
+count := 0
+
+'loop {
+    local : count + 1
+    view = &local
+    debug.print(*view)
+    count = count + 1
+    | count < 3 | 'loop.restart()
+}
+
+view = &base
+debug.print(*view)
+
+(&9).{
+    current := self
+    count := 0
+    'inner {
+        debug.print(*current)
+        current = self
+        count = count + 1
+        | count < 2 | 'inner.restart()
+    }
+}

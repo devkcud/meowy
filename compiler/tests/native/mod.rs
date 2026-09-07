@@ -8,6 +8,7 @@ pub(crate) mod element_writes;
 pub(crate) mod emitted_borrows;
 pub(crate) mod emitted_slots;
 pub(crate) mod examples;
+pub(crate) mod expired_restarts;
 pub(crate) mod fields;
 pub(crate) mod function_borrows;
 pub(crate) mod guarded_references;

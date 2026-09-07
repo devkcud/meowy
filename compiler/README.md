@@ -51,6 +51,7 @@ compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
 compiler/target/debug/meowy run compiler/examples/transitive-restarts.mwy
 compiler/target/debug/meowy run compiler/examples/header-activity.mwy
+compiler/target/debug/meowy run compiler/examples/expired-restarts.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -245,6 +246,9 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   nested tagged records. Stable choices preserve parent/member relationships across
   analysis passes. A predecessor may omit a reference transfer only when its actual
   path is proved inactive; active missing paths still fail with B001.
+- Expired restart-carried sources and public bounds. A reference can be overwritten
+  before its next read; using an expired value reports E303 even after its original
+  storage site runs again. Live ancestor statement temporaries survive inner restarts.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -366,11 +370,14 @@ choices are stable across passes and children are conditioned on their parent me
 Traversal still stops at reference-free referents. Exact initial/restart predecessor
 proofs distinguish a null path from lost reference evidence; inactive paths add no
 loan, while active paths retain their actual source and public bounds.
-Every component's sources/bounds must belong to surviving ancestor storage or
-function inputs. Temporary sources and target/inner-scope storage remain B001 in
-these headers, even when an overwrite could precede the next read. Rebinding local
-references created inside an iteration remains supported when they do not enter
-another restarted target's header.
+Sources and bounds in surviving ancestor storage or function inputs stay live.
+Ended sources and storage owned by the restarted target or its descendants become
+terminal expired identities. Overwriting such a reference before reading it is
+accepted; actual expired use is E303. Reinitializing a Local, emitted slot or
+Temporary site never revives an old reference. An ancestor statement's temporary
+survives an inner restart while that statement remains active. The
+[expired restarts example](examples/expired-restarts.mwy) exercises fresh iteration
+storage, overwrite after loop exit and a surviving outer temporary.
 The analysis forgets header-entry and iteration guards, and may widen correlations
 between independent union fields or owners. Programs needing finer correlations may
 be rejected. Canonical source/bound sets and member activity must converge within

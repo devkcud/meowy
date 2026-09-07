@@ -131,6 +131,10 @@ pub fn examples_execute_in_both_profiles() {
             "empty\n7\nempty\n",
         ),
         (
+            include_str!("../../examples/expired-restarts.mwy"),
+            "1\n2\n3\n7\n9\n9\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
