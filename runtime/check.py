@@ -18,6 +18,7 @@ STACK_CASES = 10
 CONTEXT_CASES = 10
 SCHEDULER_CASES = 25
 OWNED_CASES = 14
+GENERATED_CASES = 6
 
 
 def invoke(args, timeout=60, env=None):
@@ -159,6 +160,16 @@ def check(clang, directory, sanitizers=True):
         check_fatal(invoke([str(binary), "--fatal-normal"], env=env), False)
         check_fatal(invoke([str(binary), "--fatal-panic"], env=env), True)
         print(f"PASS runtime cleanup: {name}; {CASES} cases and 2 fatal subprocesses", flush=True)
+        generated = directory / f"generated-{name}"
+        print(f"CHECK generated cleanup bridge: {name}", flush=True)
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/generated.cpp"),
+                        str(ROOT / "tests/generated.cpp"), "-o", str(generated)]))
+        check_cases(invoke([str(generated)], env=env), GENERATED_CASES, "generated cleanup")
+        check_fatal(invoke([str(generated), "--fatal-normal"], env=env), False)
+        check_fatal(invoke([str(generated), "--fatal-panic"], env=env), True)
+        print(f"PASS generated cleanup bridge: {name}; {GENERATED_CASES} cases and 2 fatal subprocesses", flush=True)
         stack = directory / f"stack-{name}"
         args = [clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                 "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"),
@@ -235,7 +246,7 @@ def check(clang, directory, sanitizers=True):
         print(f"PASS runtime owned values: {name}; {OWNED_CASES} cases and 4 fatal owned-cleanup probes", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
-    print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, compiler integration and DWARF unwinding remain pending.")
+    print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, Meowy owner lowering and DWARF unwinding remain pending; private generated cleanup ABI is tested.")
 
 
 def main():
