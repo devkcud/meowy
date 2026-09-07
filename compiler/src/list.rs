@@ -450,34 +450,7 @@ impl Checker {
         index: &ast::Expr,
         span: Span,
     ) -> Result<hir::Expr> {
-        let mut root = value;
-        while let ExprKind::Group(value) = &root.kind {
-            if !self.flow.spend(1) {
-                return Err(crate::borrow_value::State::budget(span));
-            }
-            root = value;
-        }
-        let ExprKind::Name(name) = &root.kind else {
-            return Err(Diagnostic::unsupported(
-                "exclusive elements require an ordinary local list",
-                span,
-            ));
-        };
-        let Value::Local {
-            id, ty, mutable, ..
-        } = self.value(name, root.span)?
-        else {
-            return Err(Diagnostic::unsupported(
-                "exclusive elements require local storage",
-                span,
-            ));
-        };
-        if !self.places.contains(&id) || self.proofs.aliases.contains_key(&id) {
-            return Err(Diagnostic::unsupported(
-                "exclusive element aliases and temporary roots",
-                span,
-            ));
-        }
+        let (place, ty) = self.exclusive_place(value, span, true)?;
         let Some(element) = ty.scalar_element() else {
             return Err(Diagnostic::unsupported(
                 "exclusive elements outside scalar bounded lists",
@@ -485,17 +458,14 @@ impl Checker {
             ));
         };
         let result = self.exclusive_type(element.clone(), span)?;
-        if !mutable {
-            return Err(Self::error(
-                "E305",
-                format!("binding `{name}` is immutable"),
-                span,
-            ));
-        }
         let Type::List { capacity, .. } = ty else {
             unreachable!();
         };
-        let length = self.lengths.get(&id).map(|fact| fact.length);
+        let length = if place.fields.is_empty() {
+            self.lengths.get(&place.root).map(|fact| fact.length)
+        } else {
+            None
+        };
         let index = self.list_position(index, length, capacity)?;
         let ty = if index.ty == Type::Never {
             Type::Never
@@ -504,7 +474,7 @@ impl Checker {
         };
         Ok(hir::Expr {
             kind: hir::ExprKind::ExclusiveElement {
-                id,
+                place,
                 index: Box::new(index),
             },
             ty,

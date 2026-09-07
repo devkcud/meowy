@@ -66,3 +66,137 @@ pub(crate) fn mutable_owner_proof_is_required_independently_of_storage_shape() {
         .unwrap();
     assert_eq!(errors[0].code, "B001");
 }
+
+#[test]
+pub(crate) fn projected_reservations_retain_the_selected_local_or_slot_path() {
+    for (source, slot) in [
+        ("r:={->xs:=[1];->ys:=[2]};p:&!r.xs[1];v:*p", false),
+        ("r:{->row:={->xs:=[1];->ys:=[2]};p:&!row.xs[1];v:*p}", true),
+    ] {
+        inspect_body(source, None, |graph, reach| {
+            graph.solve_authority(reach).unwrap();
+            assert_eq!(graph.loans.len(), 1);
+            let loan = &graph.loans[0];
+            assert!(loan.parent.is_none());
+            let element = &graph.values[loan.value].origins[0].source;
+            let owner = match element {
+                Source::Local { id, fields } if !slot => {
+                    assert_eq!(fields, &[Projection::Field(0), Projection::Element]);
+                    Source::Local {
+                        id: *id,
+                        fields: vec![Projection::Field(0)],
+                    }
+                }
+                Source::Slot {
+                    target,
+                    root,
+                    view,
+                    fields,
+                } if slot => {
+                    assert_eq!(fields, &[Projection::Field(0), Projection::Element]);
+                    Source::Slot {
+                        target: *target,
+                        root: *root,
+                        view: *view,
+                        fields: vec![Projection::Field(0)],
+                    }
+                }
+                _ => panic!("missing canonical owned element source"),
+            };
+            let reservation = graph.nodes[loan.node]
+                .uses
+                .iter()
+                .copied()
+                .find(|id| {
+                    graph.values[*id]
+                        .origins
+                        .iter()
+                        .any(|origin| origin.source == owner)
+                })
+                .unwrap();
+            assert!(graph.authority[reservation].loans.is_empty());
+            assert_eq!(graph.authority[reservation].opaque, FALSE);
+            let node = loan.node;
+            let live = graph.liveness(reach).unwrap();
+            assert!(live[node].contains_key(&reservation));
+            assert!(
+                !graph
+                    .outgoing(node, &live)
+                    .unwrap()
+                    .contains_key(&reservation)
+            );
+        });
+    }
+}
+
+#[test]
+pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
+    for change in 0..4 {
+        let tree = crate::parser::parse("r:{->row:={->xs:=[1]};p:&!row.xs[1];v:*p}").unwrap();
+        let mut checker = crate::check::Checker::new();
+        let body = checker.block(&tree, None, None).unwrap();
+        let mut program = Program {
+            body,
+            functions: checker.functions.into_iter().flatten().collect(),
+            locals: checker.locals,
+        };
+        checker.proofs.conditions = checker.guards;
+        checker.proofs.tags = checker.tags;
+        let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs).unwrap();
+        let id = checker
+            .proofs
+            .aliases
+            .iter()
+            .find(|(_, alias)| alias.field == "row")
+            .map(|(id, _)| *id)
+            .unwrap();
+        let alias = checker.proofs.aliases.get_mut(&id).unwrap();
+        match change {
+            0 => alias.exclusive = None,
+            1 => alias.backing = None,
+            2 => alias.mutable = false,
+            _ => {
+                let crate::hir::Type::Record { fields, .. } = &mut program.locals[id] else {
+                    unreachable!()
+                };
+                fields[0].mutable = false;
+            }
+        }
+        assert!(
+            checker
+                .proofs
+                .exclusive_element_type(
+                    &program,
+                    &crate::hir::Place {
+                        root: id,
+                        fields: vec![0]
+                    },
+                    &mut checker.flow,
+                    crate::ast::Span { start: 0, end: 0 },
+                )
+                .is_none()
+        );
+        let graph = Graph::new(&program, &facts, &checker.proofs, &mut checker.flow);
+        let error = graph.check(&program.body, &[]).unwrap_err();
+        assert_eq!(error.code, "B001");
+        let errors = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)
+            .err()
+            .unwrap();
+        assert_eq!(errors[0].code, "B001");
+    }
+}
+
+#[test]
+pub(crate) fn cancelled_projected_indices_have_no_acquisition_demand() {
+    for source in [
+        "r:={->xs:=[1]};'out{p:&!r.xs[{r.xs=[2];'out.leave()}]}",
+        "r:'out{->row:={->xs:=[1]};p:&!row.xs[{row.xs=[2];'out.leave()}]}",
+    ] {
+        inspect_body(source, None, |graph, reach| {
+            graph.solve_authority(reach).unwrap();
+            assert!(graph.loans.is_empty());
+            let live = graph.liveness(reach).unwrap();
+            assert!(live.iter().all(|values| values.is_empty()));
+        });
+    }
+}

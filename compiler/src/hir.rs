@@ -339,7 +339,7 @@ pub enum ExprKind {
         fields: Vec<usize>,
     },
     ExclusiveElement {
-        id: LocalId,
+        place: Place,
         index: Box<Expr>,
     },
     ElementBorrow {

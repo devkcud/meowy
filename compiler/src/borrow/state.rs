@@ -43,15 +43,43 @@ impl Proofs {
     pub(crate) fn exclusive_element_type<'a>(
         &self,
         program: &'a Program,
-        id: LocalId,
+        place: &Place,
+        guards: &mut crate::flow::Flow,
+        span: Span,
     ) -> Option<&'a Type> {
-        if !self.mutable.contains(&id)
-            || self.aliases.contains_key(&id)
-            || self.temporaries.contains_key(&id)
+        if !self.mutable.contains(&place.root)
+            || self.temporaries.contains_key(&place.root)
+            || !guards.spend(place.fields.len().saturating_mul(4) + 1)
         {
             return None;
         }
-        program.locals.get(id)?.scalar_element()
+        if let Some(alias) = self.aliases.get(&place.root)
+            && (!alias.mutable || alias.exclusive.is_none() || alias.backing.is_none())
+        {
+            return None;
+        }
+        let mut ty = program.locals.get(place.root)?;
+        if !place.fields.is_empty() {
+            let weight = crate::borrow_contract::type_weight(ty, guards, span).ok()?;
+            if !guards.spend(weight.saturating_mul(2))
+                || !matches!(ty, Type::Record { .. })
+                || ty.has_reference()
+                || !ty.is_copy()
+            {
+                return None;
+            }
+        }
+        for index in &place.fields {
+            let Type::Record { fields, .. } = ty else {
+                return None;
+            };
+            let field = fields.get(*index)?;
+            if !field.mutable {
+                return None;
+            }
+            ty = &field.ty;
+        }
+        ty.scalar_element()
     }
 
     pub(crate) fn source(&self, place: &Place) -> Source {

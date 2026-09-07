@@ -1,6 +1,6 @@
 use super::{Generator, ir_type};
 use crate::ast::Span;
-use crate::hir::{Expr, Type};
+use crate::hir::{Expr, Place, Type};
 
 impl<'a> Generator<'a> {
     pub(crate) fn list_item(&mut self, ty: &Type, ptr: &str, index: &str) -> String {
@@ -59,15 +59,12 @@ impl<'a> Generator<'a> {
 
     pub(crate) fn exclusive_element(
         &mut self,
-        id: usize,
+        place: &Place,
         index: &Expr,
         result: &Type,
         span: Span,
     ) -> Result<String, String> {
-        if self.aliases.contains_key(&id) {
-            return Err("exclusive element aliases are unsupported".into());
-        }
-        let (ptr, list) = self.local_place(id)?;
+        let (ptr, list) = self.place(place)?;
         let element = list
             .scalar_element()
             .ok_or("exclusive elements require scalar list storage")?;

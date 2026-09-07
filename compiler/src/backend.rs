@@ -464,8 +464,8 @@ impl<'a> Generator<'a> {
                 Ok(self.value(format!("extractvalue {} {result}, 0", ir_type(&value.ty))))
             }
             ExprKind::ListIndex { value, index } => self.list_index(value, index, expression.span),
-            ExprKind::ExclusiveElement { id, index } => {
-                self.exclusive_element(*id, index, &expression.ty, expression.span)
+            ExprKind::ExclusiveElement { place, index } => {
+                self.exclusive_element(place, index, &expression.ty, expression.span)
             }
             ExprKind::ElementBorrow { value, index, .. } => {
                 self.element_borrow(value, index, &expression.ty, expression.span)

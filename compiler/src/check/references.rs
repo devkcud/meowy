@@ -94,6 +94,21 @@ impl Checker {
                 span,
             });
         }
+        let (place, ty) = self.exclusive_place(expr, span, false)?;
+        let ty = self.exclusive_type(ty, span)?;
+        Ok(hir::Expr {
+            kind: hir::ExprKind::Borrow(place),
+            ty,
+            span,
+        })
+    }
+
+    pub(crate) fn exclusive_place(
+        &mut self,
+        expr: &ast::Expr,
+        span: Span,
+        indexed: bool,
+    ) -> Result<(hir::Place, Type)> {
         let mut root = expr;
         let mut steps = Vec::new();
         loop {
@@ -159,7 +174,14 @@ impl Checker {
             fields.push(index);
             ty = field;
         }
-        let ty = self.exclusive_type(ty, span)?;
+        let target = if indexed {
+            ty.scalar_element().ok_or_else(|| {
+                Diagnostic::unsupported("exclusive elements outside scalar bounded lists", span)
+            })?
+        } else {
+            &ty
+        };
+        self.exclusive_type(target.clone(), span)?;
         if !mutable {
             return Err(Self::error(
                 "E305",
@@ -175,11 +197,7 @@ impl Checker {
                 .exclusive
                 .get_or_insert(span);
         }
-        Ok(hir::Expr {
-            kind: hir::ExprKind::Borrow(hir::Place { root: id, fields }),
-            ty,
-            span,
-        })
+        Ok((hir::Place { root: id, fields }, ty))
     }
 
     pub(crate) fn address_root<'a>(expr: &'a ast::Expr, fields: &mut Vec<String>) -> &'a ast::Expr {
