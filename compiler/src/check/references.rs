@@ -115,7 +115,7 @@ impl Checker {
             if names.is_empty() {
                 return self.temporary_borrow(value, span);
             }
-            if !value.ty.has_reference() && self.address(root).is_err() {
+            if !matches!(value.ty, Type::Reference(_)) && self.address(root).is_err() {
                 self.temporary_borrow(value, root.span)?
             } else {
                 value

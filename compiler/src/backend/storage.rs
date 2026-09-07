@@ -24,10 +24,7 @@ impl<'a> Generator<'a> {
             .locals
             .get(id)
             .ok_or("missing temporary owner storage")?;
-        if owner.has_reference()
-            || owner != &value.ty
-            || result != &Type::Reference(Box::new(owner.clone()))
-        {
+        if owner != &value.ty || result != &Type::Reference(Box::new(owner.clone())) {
             return Err("temporary borrow type differs from its Copy owner storage".into());
         }
         let ty = ir_type(owner);

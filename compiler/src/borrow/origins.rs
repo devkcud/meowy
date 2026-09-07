@@ -100,8 +100,7 @@ impl Checker<'_> {
             } => {
                 if self.proofs.temporaries.get(id) != Some(statement)
                     || self.program.locals.get(*id).is_none_or(|ty| {
-                        ty.has_reference()
-                            || crate::borrow_contract::projected_type(ty, fields).is_none()
+                        crate::borrow_contract::projected_type(ty, fields).is_none()
                     })
                 {
                     return Err(Self::unsupported(span));

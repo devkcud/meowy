@@ -8,12 +8,6 @@ impl Checker {
         if value.ty == Type::Never {
             return Ok(value);
         }
-        if value.ty.has_reference() {
-            return Err(Diagnostic::unsupported(
-                "reference-bearing temporary owners",
-                span,
-            ));
-        }
         crate::borrow_contract::type_weight(&value.ty, &mut self.flow, span)?;
         let Some((statement, used)) = self.statement.last_mut() else {
             return Err(Diagnostic::unsupported(

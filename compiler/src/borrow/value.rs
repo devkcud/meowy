@@ -14,14 +14,13 @@ impl Checker<'_> {
                 if !flow.next {
                     State::absent()
                 } else {
-                    if value.ty.has_reference()
-                        || self.program.locals.get(*id) != Some(&value.ty)
+                    if self.program.locals.get(*id) != Some(&value.ty)
                         || self.proofs.temporaries.get(id) != Some(statement)
                         || !self.statements.contains_key(statement)
                     {
                         return Err(Self::unsupported(expr.span));
                     }
-                    State::default().borrowed(
+                    result.state.borrowed(
                         super::Source::Temporary {
                             id: *id,
                             statement: *statement,

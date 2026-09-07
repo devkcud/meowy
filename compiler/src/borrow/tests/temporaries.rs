@@ -37,14 +37,7 @@ pub(crate) fn temporary_borrows_do_not_extend_past_inner_statement_ends() {
 
 #[test]
 pub(crate) fn temporary_materialization_keeps_reference_and_checked_index_boundaries() {
-    for source in [
-        "owner:1;value:**(&(&owner))",
-        "owner:1;value:*(&{->view:&owner;->n:2}.n)",
-        "owner:1;value:*(&{->view:&owner})",
-        "value:&!(1+2)",
-    ] {
-        rejects(source, "B001");
-    }
+    rejects("value:&!(1+2)", "B001");
     rejects("value:*(&[1][2])", "E101");
     rejects("read<uint8>:(p<&uint8>){->*p};value:read(&1)", "E212");
     rejects("view<&uint8>:&1", "E207");

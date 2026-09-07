@@ -210,7 +210,6 @@ impl<'a> Graph<'a> {
                 self.charge(self.statements.len() + 1)?;
                 if !self.statements.contains(statement)
                     || self.proofs.temporaries.get(id) != Some(statement)
-                    || value.ty.has_reference()
                 {
                     return Err(Diagnostic::unsupported(
                         "missing temporary statement ownership proof",
@@ -222,21 +221,16 @@ impl<'a> Graph<'a> {
                     return Ok(Bundle::new());
                 }
                 let uses = self.direct(&value)?;
-                let pointer = self.value(vec![Origin {
-                    component: Vec::new(),
-                    source: super::Source::Temporary {
+                let result = self.referenced(
+                    super::Source::Temporary {
                         id: *id,
                         statement: *statement,
                         fields: Vec::new(),
                     },
-                    guard: super::TRUE,
-                }])?;
-                self.append(Node {
+                    value,
                     uses,
-                    defs: vec![pointer],
-                    ..Node::default()
-                })?;
-                Self::select(Bundle::from([(Vec::new(), pointer)]), path)
+                )?;
+                Self::select(result, path)
             }
             ExprKind::Borrow(place) => Self::select(self.borrowed(place)?, path),
             ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {

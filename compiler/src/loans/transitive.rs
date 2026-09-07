@@ -1,4 +1,4 @@
-use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Step, TRUE};
+use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Source, Step, TRUE};
 
 impl Graph<'_> {
     pub(crate) fn copied(&mut self, source: &Bundle, target: &Bundle) -> Result<Node> {
@@ -39,13 +39,24 @@ impl Graph<'_> {
             .map(|index| Step::Slot(index + 1))
             .collect::<Vec<_>>();
         let stored = Self::select(self.local(place.root)?, &path);
+        self.referenced(self.proofs.source(place), stored, Vec::new())
+    }
+
+    pub(crate) fn referenced(
+        &mut self,
+        source: Source,
+        stored: Bundle,
+        uses: Vec<usize>,
+    ) -> Result<Bundle> {
+        self.charge(stored.len() + uses.len() + 1)?;
         let pointer = self.value(vec![Origin {
             component: Vec::new(),
-            source: self.proofs.source(place),
+            source,
             guard: TRUE,
         }])?;
         let mut result = Bundle::from([(Vec::new(), pointer)]);
         let mut node = Node {
+            uses,
             defs: vec![pointer],
             ..Node::default()
         };

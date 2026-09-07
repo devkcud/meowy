@@ -181,10 +181,10 @@ pub fn temporary_borrow_operand_types_and_unsupported_owners_stay_explicit() {
         .runs(b"1\n");
     for (source, code) in [
         ("take<uint8>:(p<&uint8>){->*p};v:take(&1)", "E212"),
-        ("owner:1;p:&{->view:&owner}", "B001"),
+        ("owner:1;p:&{->view:&owner};v:*p.view", "E303"),
         (
-            "owner:1;id<&int32>:(p<&int32>){->p};cell:&id(&owner)",
-            "B001",
+            "owner:1;id<&int32>:(p<&int32>){->p};cell:&id(&owner);v:**cell",
+            "E303",
         ),
         ("p:&!1", "B001"),
     ] {

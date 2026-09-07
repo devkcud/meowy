@@ -32,8 +32,8 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans/reborrows and reference-bearing
-  temporary-owner borrows remain B001. Direct signatures and dispatch blocks can carry shared
+- Mutable reference-bearing bindings, exclusive loans/reborrows and owned-value
+  temporary borrows remain B001. Direct signatures and dispatch blocks can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
@@ -233,7 +233,7 @@ implementation boundary; it does not change language rules.
   as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
   at the final field instead requests its reference-cell storage (`&holder.view`).
   A holder's own reference-free field uses its physical storage origin instead;
-  it does not inherit unrelated contained references. Reference-free Copy temporary
+  it does not inherit unrelated contained references. Copy temporary
   owners use the statement lifetime model below.
 - Pure address hints resolve types without lowering expressions or changing
   application control flow. Regression coverage includes effectful calls in
@@ -263,11 +263,22 @@ implementation boundary; it does not change language rules.
 
 ## Statement-owned Copy temporaries
 
-- `TemporaryBorrow` materializes a reference-free Copy expression in a dedicated
+- `TemporaryBorrow` materializes a Copy expression in a dedicated
   typed LocalId cell, evaluates its initializer once, then returns that cell's
   address. A Never initializer produces no cell/source use. Equal constants at
   distinct sites retain distinct identities; constant folding cannot promote a
   temporary or extend its lifetime.
+- Reference-bearing temporary cells preserve the initializer's origins, bounds and
+  active variants beneath Deref. The physical Temporary origin remains separate.
+  Materialization copies directly stored reference components; deeper pointee
+  summaries transfer on demand. Calls inside the initializer still validate all
+  active input origins and bounds.
+- A direct dereference copies contents while the temporary cell is alive. The copy
+  can retain a surviving owner's reference afterward: `copy:*(&(&owner));value:*copy`.
+  Keeping the temporary-cell
+  address instead still expires at its statement boundary. Public call results
+  retain their all-input bounds, so calling through a temporary reference cell does
+  not gain the direct-copy lifetime exemption.
 - Materialization preserves ordinary operand typing. An unannotated integer
   literal defaults to int32, so `view<&uint8>:&1` reports E207; an incompatible
   function argument retains E212. Use a typed result such as
@@ -294,8 +305,8 @@ implementation boundary; it does not change language rules.
 - Leave, restart and panic end exited statement lifetimes. The current Copy-only
   subset has no owned destructor or observable cleanup action; its backend cells
   use existing entry allocas and initialize at the expression site. This does not
-  implement owned cleanup, moving temporaries or reference-bearing temporary
-  owners. Temporary write roots and exclusive borrows remain unavailable.
+  implement owned cleanup or moving non-Copy temporaries. Temporary write roots,
+  reference-bearing list elements and exclusive borrows remain unavailable.
 - Statement and temporary IDs each cap at 65,536, and metadata lookup, type walks,
   projections and temporary origins consume existing shared work/storage budgets.
 
@@ -453,8 +464,8 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, reference reassignment, owner moves, reference-bearing
-  temporary owners, indirect/capturing contracts and cleanup edges remain
+  references/reborrows, reference reassignment, owner moves, owned
+  temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
 ## Inline bounded lists
@@ -634,8 +645,8 @@ implementation boundary; it does not change language rules.
 5. Track copy/move capabilities and partial initialization; reject moved reads and
    moving owners out of borrowed storage. End references before moving/destroying
    their owner. Verify all-input returned-view contracts at functions and callers.
-6. Extend statement-owned temporaries to reference-bearing and owned values only
-   with transitive lifetime and cleanup proofs for normal, leave, restart and unwind
+6. Extend statement-owned temporaries to owned values only with move and cleanup
+   proofs for normal, leave, restart and unwind
    edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
 7. Extend storage and transitive summaries only alongside proved mutation, source
