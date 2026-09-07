@@ -8,6 +8,7 @@ mod references;
 mod refinement;
 mod scalars;
 mod statements;
+mod temporaries;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -105,6 +106,8 @@ pub(crate) struct Checker {
     pub(crate) owner: usize,
     pub(crate) calls: usize,
     pub(crate) reborrows: usize,
+    pub(crate) statements: usize,
+    pub(crate) statement: Vec<(hir::StatementId, bool)>,
     pub(crate) lengths: BTreeMap<usize, crate::list::Fact>,
     pub(crate) block_lengths: BTreeMap<usize, crate::list::Fact>,
     pub(crate) required: bool,
@@ -171,6 +174,8 @@ impl Checker {
             owner: 0,
             calls: 0,
             reborrows: 0,
+            statements: 0,
+            statement: Vec::new(),
             lengths: BTreeMap::new(),
             block_lengths: BTreeMap::new(),
             required: false,

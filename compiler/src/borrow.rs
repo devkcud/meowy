@@ -42,6 +42,7 @@ pub(crate) fn check(
         assumed: TRUE,
         assumed_scopes: Vec::new(),
         inputs: BTreeSet::new(),
+        statements: BTreeMap::new(),
     };
     let result = (|| {
         checker.block(&program.body)?;

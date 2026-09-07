@@ -68,6 +68,12 @@ impl Checker<'_> {
         span: Span,
     ) -> Result<Option<crate::hir::BlockId>> {
         let work = match source {
+            Source::Temporary { fields, .. } => {
+                fields.len()
+                    + self.statements.len().checked_ilog2().unwrap_or(0) as usize
+                    + self.proofs.temporaries.len().checked_ilog2().unwrap_or(0) as usize
+                    + 2
+            }
             Source::Local { fields, .. } => {
                 fields.len() + self.locals.len().checked_ilog2().unwrap_or(0) as usize + 1
             }
@@ -87,6 +93,31 @@ impl Checker<'_> {
             return Err(State::budget(span));
         }
         match source {
+            Source::Temporary {
+                id,
+                statement,
+                fields,
+            } => {
+                if self.proofs.temporaries.get(id) != Some(statement)
+                    || self.program.locals.get(*id).is_none_or(|ty| {
+                        ty.has_reference()
+                            || crate::borrow_contract::projected_type(ty, fields).is_none()
+                    })
+                {
+                    return Err(Self::unsupported(span));
+                }
+                self.statements
+                    .get(statement)
+                    .copied()
+                    .map(Some)
+                    .ok_or_else(|| {
+                        Diagnostic::new(
+                            "E303",
+                            "borrowed temporary has ended before this use",
+                            span,
+                        )
+                    })
+            }
             Source::Local { id, .. } => self
                 .locals
                 .get(id)

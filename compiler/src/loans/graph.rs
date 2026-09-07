@@ -19,6 +19,7 @@ impl<'a> Graph<'a> {
             values: Vec::new(),
             locals: BTreeMap::new(),
             blocks: BTreeMap::new(),
+            statements: Vec::new(),
             current: vec![0],
             work: 0,
             origins: 0,

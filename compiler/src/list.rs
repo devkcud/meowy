@@ -474,7 +474,12 @@ impl Checker {
         let value = if place && !matches!(hint, Some(Type::Reference(_) | Type::Never)) {
             self.borrowed(value, value.span)?
         } else {
-            self.expr(value, None)?
+            let value = self.expr(value, None)?;
+            if matches!(value.ty, Type::Reference(_) | Type::Never) {
+                value
+            } else {
+                self.temporary_borrow(value, span)?
+            }
         };
         if value.ty == Type::Never {
             return Ok(value);
@@ -522,6 +527,9 @@ impl Checker {
 
     pub(crate) fn borrowed_list_length(&self, value: &hir::Expr) -> Option<usize> {
         match &value.kind {
+            hir::ExprKind::TemporaryBorrow { value, .. } => {
+                self.list_fact(value).map(|fact| fact.length)
+            }
             hir::ExprKind::Borrow(place) if place.fields.is_empty() => {
                 self.lengths.get(&place.root).map(|fact| fact.length)
             }
@@ -686,7 +694,7 @@ mod tests {
     }
 
     #[test]
-    pub(crate) fn element_places_share_position_checks_and_reject_temporary_owners() {
+    pub(crate) fn element_places_and_temporaries_share_position_checks() {
         for source in [
             "a:[1,2];r:&a[1];value:*r",
             "a:[[1,2],[3,4]];r:&a[2][1];value:*r",
@@ -695,6 +703,9 @@ mod tests {
             "a:[1,2];p:&a;r:&(*p)[1];value:*r",
             "a:[1,2];holder:{->view:&a};r:&holder.view[1];value:*r",
             "get<&int32>:(a<&int32[0]>,i<int32>){->&a[i]}",
+            "value:*(&[1,2][1])",
+            "make<int32[2]>:(){->[1,2]};value:*(&make()[1])",
+            "a:[1,2];value:*(&a<int32[2]>[1])",
         ] {
             let result = crate::compile(source);
             assert!(result.is_ok(), "{source}: {result:?}");
@@ -707,14 +718,7 @@ mod tests {
         ] {
             rejects(source, "E101");
         }
-        for source in [
-            "r:&[1,2][1]",
-            "make<int32[2]>:(){->[1,2]};r:&make()[1]",
-            "a:[1,2];r:&a<int32[2]>[1]",
-            "a:[1,2];r:&!a[1]",
-        ] {
-            rejects(source, "B001");
-        }
+        rejects("a:[1,2];r:&!a[1]", "B001");
         rejects("a:[1,2];r:&a[true]", "E222");
     }
 

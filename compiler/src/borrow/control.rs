@@ -78,6 +78,15 @@ impl Checker<'_> {
                 break;
             }
             let next = match stmt {
+                Stmt::Statement { id, stmts } => {
+                    let owner = *self.blocks.last().expect("statement owner");
+                    if !self.guards.spend(1) || self.statements.insert(*id, owner).is_some() {
+                        return Err(State::budget(Span::default()));
+                    }
+                    let result = self.statements(stmts);
+                    self.statements.remove(id);
+                    result?
+                }
                 Stmt::Bind { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next {

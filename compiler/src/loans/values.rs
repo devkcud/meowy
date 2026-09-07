@@ -202,6 +202,42 @@ impl<'a> Graph<'a> {
     pub(crate) fn project(&mut self, expr: &Expr, path: &[Step]) -> Result<Bundle> {
         self.charge(path.len() + 1)?;
         let value = match &expr.kind {
+            ExprKind::TemporaryBorrow {
+                id,
+                statement,
+                value,
+            } => {
+                self.charge(self.statements.len() + 1)?;
+                if !self.statements.contains(statement)
+                    || self.proofs.temporaries.get(id) != Some(statement)
+                    || value.ty.has_reference()
+                {
+                    return Err(Diagnostic::unsupported(
+                        "missing temporary statement ownership proof",
+                        expr.span,
+                    ));
+                }
+                let value = self.expression(value)?;
+                if self.current.is_empty() {
+                    return Ok(Bundle::new());
+                }
+                let uses = self.direct(&value)?;
+                let pointer = self.value(vec![Origin {
+                    component: Vec::new(),
+                    source: super::Source::Temporary {
+                        id: *id,
+                        statement: *statement,
+                        fields: Vec::new(),
+                    },
+                    guard: super::TRUE,
+                }])?;
+                self.append(Node {
+                    uses,
+                    defs: vec![pointer],
+                    ..Node::default()
+                })?;
+                Self::select(Bundle::from([(Vec::new(), pointer)]), path)
+            }
             ExprKind::Borrow(place) => Self::select(self.borrowed(place)?, path),
             ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {
                 self.derived(expr, path)?

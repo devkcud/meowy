@@ -133,6 +133,9 @@ impl Checker {
                 }
                 if op == "*" {
                     let value = self.expr(value, None)?;
+                    if value.ty == Type::Never {
+                        return Ok(value);
+                    }
                     let Type::Reference(ty) = &value.ty else {
                         return Err(Self::error(
                             "E222",

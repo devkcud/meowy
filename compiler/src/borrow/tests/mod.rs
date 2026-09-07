@@ -4,6 +4,7 @@ mod control;
 mod origins;
 mod reference_slots;
 mod slots;
+mod temporaries;
 mod transitive;
 
 pub(crate) fn accepts(source: &str) {

@@ -1,7 +1,7 @@
 use crate::ast::Span;
 use crate::diagnostic::Diagnostic;
 use crate::flow::{FALSE, Flow, Guard, TRUE};
-use crate::hir::{BlockId, LocalId, Place, Type};
+use crate::hir::{BlockId, LocalId, Place, StatementId, Type};
 
 mod pointee;
 
@@ -31,6 +31,11 @@ pub(crate) struct Origin {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) enum Source {
+    Temporary {
+        id: LocalId,
+        statement: StatementId,
+        fields: Vec<Projection>,
+    },
     Local {
         id: LocalId,
         fields: Vec<Projection>,
@@ -64,9 +69,10 @@ impl Source {
     pub(crate) fn project(&self, path: &[Projection]) -> Self {
         let mut source = self.clone();
         let fields = match &mut source {
-            Self::Local { fields, .. } | Self::Slot { fields, .. } | Self::Input { fields, .. } => {
-                fields
-            }
+            Self::Local { fields, .. }
+            | Self::Slot { fields, .. }
+            | Self::Input { fields, .. }
+            | Self::Temporary { fields, .. } => fields,
         };
         fields.extend_from_slice(path);
         source
@@ -78,6 +84,7 @@ impl Origin {
         1 + self.component.len()
             + match &self.source {
                 Source::Local { fields, .. } => fields.len(),
+                Source::Temporary { fields, .. } => 2 + fields.len(),
                 Source::Slot { fields, .. } => 3 + fields.len(),
                 Source::Input {
                     component, fields, ..

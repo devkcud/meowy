@@ -42,7 +42,7 @@ pub fn shared_reference_scope_checks_run_before_native_lowering() {
         ("view:{owner:1;->&owner}", "E303"),
         ("bad:(){owner:1;ref:&owner;alias:ref;->alias}", "E303"),
         ("owner:=1;view:&!owner", "B001"),
-        ("view:&(1+2)", "B001"),
+        ("view:&(1+2);value:*view", "E303"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

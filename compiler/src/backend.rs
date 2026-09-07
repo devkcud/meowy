@@ -292,6 +292,7 @@ impl<'a> Generator<'a> {
                 break;
             }
             match statement {
+                Stmt::Statement { stmts, .. } => self.statements(stmts)?,
                 Stmt::Bind { id, value } | Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if !self.ended {
@@ -462,6 +463,9 @@ impl<'a> Generator<'a> {
                     return Err("borrow type differs from declared storage".into());
                 }
                 Ok(ptr)
+            }
+            ExprKind::TemporaryBorrow { id, value, .. } => {
+                self.temporary_borrow(*id, value, &expression.ty)
             }
             ExprKind::Reborrow { value, fields, .. } => {
                 let Type::Reference(target) = &value.ty else {

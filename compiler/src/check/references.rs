@@ -110,10 +110,16 @@ impl Checker {
             && op == "*"
         {
             self.expr(value, None)?
-        } else if !names.is_empty() {
-            self.expr(root, None)?
         } else {
-            return Err(error);
+            let value = self.expr(root, None)?;
+            if names.is_empty() {
+                return self.temporary_borrow(value, span);
+            }
+            if !value.ty.has_reference() && self.address(root).is_err() {
+                self.temporary_borrow(value, root.span)?
+            } else {
+                value
+            }
         };
         if value.ty == Type::Never {
             return Ok(value);

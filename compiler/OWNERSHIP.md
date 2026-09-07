@@ -32,8 +32,8 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans/reborrows and temporary-owner
-  borrows remain B001. Direct signatures and dispatch blocks can carry shared
+- Mutable reference-bearing bindings, exclusive loans/reborrows and reference-bearing
+  temporary-owner borrows remain B001. Direct signatures and dispatch blocks can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Nothing in this
@@ -133,6 +133,10 @@ implementation boundary; it does not change language rules.
   operands still run, and fresh record/block construction still has its normal
   result-transfer uses. Whole copies and equality consume their active payloads;
   projection after extraction reads only demanded components of the selected arm.
+  Origin inspection follows fields/coercions without validating their payloads,
+  but dereferencing a pointer to reach a tag still validates that physical owner.
+  This permits inspecting an expired reference's stored tag while rejecting a tag
+  load through an expired reference to the containing record.
 - Contextual record constructors infer an actual shape from completing named
   emissions and must select exactly one compatible union member. Candidate field
   and primary types supply literal widths; omitted nullable fields receive member
@@ -150,7 +154,7 @@ implementation boundary; it does not change language rules.
   definition is checked independently, including uncalled and mutually recursive
   definitions. No body choice weakens the public all-input lifetime contract.
 - Actual origins distinguish physical `Local` storage, target-owned emitted `Slot`
-  cells and symbolic `Input` sources. Each active parameter reference leaf gets its
+  cells, statement-owned `Temporary` cells and symbolic `Input` sources. Each active parameter reference leaf gets its
   own symbolic source;
   the parameter's stack copy is not its referent. A completed return must borrow
   from such input sources. Returning any local actual origin or dependency is
@@ -178,6 +182,11 @@ implementation boundary; it does not change language rules.
   references together at the call node and defines the returned components.
   An early argument exit prevents call consumption. Missing snapshots on a
   potentially reachable call are B001, not an invented empty result.
+- Call entry validates all active argument origins and bounds, including transitive
+  pointee summaries, even when the function returns only a scalar. This happens
+  after every argument returns and under the entered-call guard. A later argument's
+  leave or panic prevents call-entry validation; selected field reads and pointer
+  equality retain their narrower direct-component checks.
 - A completed reference result requires an active compatible input source under
   the currently supported capability set. Shared reborrows preserve those input
   sources or their concrete field/list-element descendants.
@@ -224,7 +233,8 @@ implementation boundary; it does not change language rules.
   as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
   at the final field instead requests its reference-cell storage (`&holder.view`).
   A holder's own reference-free field uses its physical storage origin instead;
-  it does not inherit unrelated contained references. Temporary owners remain B001.
+  it does not inherit unrelated contained references. Reference-free Copy temporary
+  owners use the statement lifetime model below.
 - Pure address hints resolve types without lowering expressions or changing
   application control flow. Regression coverage includes effectful calls in
   equality and argument blocks that leave an enclosing scope before the call.
@@ -250,6 +260,44 @@ implementation boundary; it does not change language rules.
 - Type walks, candidate frontiers, projected paths and snapshot expansion consume
   existing work/storage budgets. Many matching fields multiplied by returned
   reference components reject with B001 before unbounded contract expansion.
+
+## Statement-owned Copy temporaries
+
+- `TemporaryBorrow` materializes a reference-free Copy expression in a dedicated
+  typed LocalId cell, evaluates its initializer once, then returns that cell's
+  address. A Never initializer produces no cell/source use. Equal constants at
+  distinct sites retain distinct identities; constant folding cannot promote a
+  temporary or extend its lifetime.
+- Materialization preserves ordinary operand typing. An unannotated integer
+  literal defaults to int32, so `view<&uint8>:&1` reports E207; an incompatible
+  function argument retains E212. Use a typed result such as
+  `&{byte<uint8>:1;->byte}`. Borrowing and narrowing ascriptions do not convert a
+  cell's chosen storage type.
+- Each original source statement gets a StatementId. A HIR `Statement` wrapper
+  is emitted only when that statement materializes a temporary. Generated
+  Bind/Emit/SlotAlias operations stay inside the same wrapper. A matcher condition
+  and its controlled statement share the boundary; statements inside a nested
+  block get their own boundaries. Wrappers do not close ordinary local scopes.
+- `Source::Temporary` retains its materialization ID, owning StatementId and
+  physical field/element projections. Origin analysis tracks the active statement
+  independently of the enclosing block. Calls, reborrows and all-input bounds
+  preserve that source. Same-statement use is permitted; a later statement's use
+  reports E303. Storing a borrow does not extend the owner's lifetime.
+- An outer statement's temporary can be used by a nested call or dispatch chain.
+  A temporary created in an inner binding/emission statement cannot escape that
+  statement through the block's completed result. In particular, `*(&{->1})` is
+  valid, while `*({->&{->1}})` and `*({p:&1;->p})` report E303.
+- Field and index borrows keep the entire computed temporary root, then project
+  its actual storage. Static known list lengths retain E101; dynamic bounds keep
+  P001 and evaluate before address formation. Named places and shared-reference
+  reborrows continue to use their existing owners without materialization.
+- Leave, restart and panic end exited statement lifetimes. The current Copy-only
+  subset has no owned destructor or observable cleanup action; its backend cells
+  use existing entry allocas and initialize at the expression site. This does not
+  implement owned cleanup, moving temporaries or reference-bearing temporary
+  owners. Temporary write roots and exclusive borrows remain unavailable.
+- Statement and temporary IDs each cap at 65,536, and metadata lookup, type walks,
+  projections and temporary origins consume existing shared work/storage budgets.
 
 ## Mutable record fields
 
@@ -404,8 +452,8 @@ implementation boundary; it does not change language rules.
   it grows, and type comparison walks check each frontier push. Public-source
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
-- This graph currently enforces shared-loan/write conflicts only. Field writes,
-  exclusive references/reborrows, reference reassignment, owner moves,
+- This graph currently enforces shared-loan/write conflicts only. Exclusive
+  references/reborrows, reference reassignment, owner moves, reference-bearing
   temporary owners, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
@@ -514,8 +562,8 @@ implementation boundary; it does not change language rules.
   another reference use keeps it live.
 - `&values[index]` forms a checked shared reference into original list storage.
   Nested lists and concrete record fields compose element and field reborrows.
-  A temporary reference-valued parent is allowed; temporary owner lists and
-  copied/ascribed owner expressions remain B001. Borrowed copied parameters and
+  A temporary reference-valued parent is allowed. Computed or ascribed Copy lists
+  materialize for their complete statement. Borrowed copied parameters and
   dispatch `self` belong to their local storage and cannot escape (E303).
 - `ElementBorrow` evaluates its parent pointer and snapshots initialized length
   before checking its once-evaluated index. It shares integer/static E101 rules
@@ -586,8 +634,9 @@ implementation boundary; it does not change language rules.
 5. Track copy/move capabilities and partial initialization; reject moved reads and
    moving owners out of borrowed storage. End references before moving/destroying
    their owner. Verify all-input returned-view contracts at functions and callers.
-6. Materialize temporary owners to complete-statement boundaries, with cleanup on
-   normal, leave, restart and unwind edges. Construction cleans only initialized
+6. Extend statement-owned temporaries to reference-bearing and owned values only
+   with transitive lifetime and cleanup proofs for normal, leave, restart and unwind
+   edges. Construction cleans only initialized
    slots. Coordinate task joins before owner cleanup with the runtime prototype.
 7. Extend storage and transitive summaries only alongside proved mutation, source
    and lifetime rules. Preserve separate cell/pointee origins across future temporary

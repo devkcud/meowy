@@ -1,5 +1,5 @@
 use super::{Generator, ir_type};
-use crate::hir::{BlockId, Type};
+use crate::hir::{BlockId, Expr, Type};
 
 #[derive(Clone)]
 pub(crate) struct Alias {
@@ -9,6 +9,34 @@ pub(crate) struct Alias {
 }
 
 impl<'a> Generator<'a> {
+    pub(crate) fn temporary_borrow(
+        &mut self,
+        id: usize,
+        value: &Expr,
+        result: &Type,
+    ) -> Result<String, String> {
+        let value_result = self.expression(value)?;
+        if self.ended {
+            return Ok("undef".into());
+        }
+        let owner = self
+            .program
+            .locals
+            .get(id)
+            .ok_or("missing temporary owner storage")?;
+        if owner.has_reference()
+            || owner != &value.ty
+            || result != &Type::Reference(Box::new(owner.clone()))
+        {
+            return Err("temporary borrow type differs from its Copy owner storage".into());
+        }
+        let ty = ir_type(owner);
+        self.local(id);
+        let ptr = format!("%local{id}");
+        self.line(format!("store {ty} {value_result}, ptr {ptr}"));
+        Ok(ptr)
+    }
+
     pub(crate) fn result_alias(
         &mut self,
         id: usize,

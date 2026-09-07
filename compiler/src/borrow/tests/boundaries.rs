@@ -7,7 +7,6 @@ pub(crate) fn reference_mutation_and_exclusive_contracts_remain_explicit() {
         "a:1;flag:=true;r:={|flag|->&a}",
         "a:1;r:=&a",
         "a:=1;r:&!a",
-        "r:&(1+2)",
         "f<int32>:(r<&!int32>){->*r}",
     ] {
         rejects(source, "B001");

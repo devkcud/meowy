@@ -146,10 +146,10 @@ pub fn shared_reborrow_escapes_and_remaining_storage_boundaries_are_explicit() {
         ),
         ("owner:=1;parent:&owner;view:&!*parent", "B001"),
         (
-            "make<{value<int32>}>:(){->value:1};view:&make().value",
-            "B001",
+            "make<{value<int32>}>:(){->value:1};view:&make().value;copy:*view",
+            "E303",
         ),
-        ("view:&({->value:1}).value", "B001"),
+        ("view:&({->value:1}).value;copy:*view", "E303"),
     ] {
         let result = Case::new(source).command("check", &["--json"]);
         assert_eq!(result.status.code(), Some(1), "{source}");

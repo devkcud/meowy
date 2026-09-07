@@ -213,7 +213,6 @@ pub fn transitive_borrow_boundaries_stay_explicit() {
         "owner:1;holder:={->view:&owner}",
         "owner:1;cell:=&owner",
         "owner:=1;view:&!owner",
-        "view:&(1+2)",
         "owner:1;items:[&owner]",
     ] {
         let output = Case::new(source).command("build", &["--json"]);

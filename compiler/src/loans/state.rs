@@ -35,6 +35,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) values: Vec<Vec<Origin>>,
     pub(crate) locals: BTreeMap<LocalId, Bundle>,
     pub(crate) blocks: BTreeMap<BlockId, Scope>,
+    pub(crate) statements: Vec<crate::hir::StatementId>,
     pub(crate) current: Vec<usize>,
     pub(crate) work: usize,
     pub(crate) origins: usize,

@@ -103,7 +103,7 @@ impl<'a> Graph<'a> {
 
     pub(crate) fn overlap(place: &Place, source: &Source) -> bool {
         let (id, fields) = match source {
-            Source::Local { id, fields } => (*id, fields),
+            Source::Local { id, fields } | Source::Temporary { id, fields, .. } => (*id, fields),
             Source::Slot { root, fields, .. } => (*root, fields),
             _ => return false,
         };

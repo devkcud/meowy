@@ -124,11 +124,14 @@ pub fn element_borrows_enforce_bounds_lifetimes_and_remaining_boundaries() {
         ("view:{values:[1];->&values[1]}", "E303"),
         ("bad<&int32>:(values<int32[2]>){->&values[1]}", "E303"),
         ("values:[1];view:values.{->&self[1]}", "E303"),
-        ("view:&[1,2][1]", "B001"),
-        ("make<int32[2]>:(){->[1]};view:&make()[1]", "B001"),
+        ("view:&[1,2][1];copy:*view", "E303"),
+        (
+            "make<int32[2]>:(){->[1]};view:&make()[1];copy:*view",
+            "E303",
+        ),
         ("values:=[1];view:&!values[1]", "B001"),
         ("owner:1;values:[&owner];view:&values[1]", "B001"),
-        ("values:[{->1;->name:2}];view:&values[1]<int32>", "B001"),
+        ("values:[{->1;->name:2}];view:&values[1]<int32>", "E208"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

@@ -4,6 +4,35 @@ impl Checker<'_> {
     pub(crate) fn expression(&mut self, expr: &Expr) -> Result<Value> {
         let mut flow = Flow::new();
         let state = match &expr.kind {
+            ExprKind::TemporaryBorrow {
+                id,
+                statement,
+                value,
+            } => {
+                let result = self.expression(value)?;
+                flow = result.flow;
+                if !flow.next {
+                    State::absent()
+                } else {
+                    if value.ty.has_reference()
+                        || self.program.locals.get(*id) != Some(&value.ty)
+                        || self.proofs.temporaries.get(id) != Some(statement)
+                        || !self.statements.contains_key(statement)
+                    {
+                        return Err(Self::unsupported(expr.span));
+                    }
+                    State::default().borrowed(
+                        super::Source::Temporary {
+                            id: *id,
+                            statement: *statement,
+                            fields: Vec::new(),
+                        },
+                        &value.ty,
+                        self.guards,
+                        expr.span,
+                    )?
+                }
+            }
             ExprKind::Borrow(place) => {
                 if !self.locals.contains_key(&place.root) {
                     return Err(Self::unsupported(expr.span));
@@ -98,9 +127,12 @@ impl Checker<'_> {
             }
             ExprKind::Unary { value, .. }
             | ExprKind::StringSize(value)
-            | ExprKind::ListSize(value)
-            | ExprKind::TypeTest { value, .. } => {
+            | ExprKind::ListSize(value) => {
                 flow = self.expression(value)?.flow;
+                State::unknown(&expr.ty, self.guards, expr.span)?
+            }
+            ExprKind::TypeTest { value, .. } => {
+                flow = self.inspect(value)?;
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::List { values, .. } => {
@@ -147,17 +179,20 @@ impl Checker<'_> {
                     inputs.push((&arg.ty, value.state));
                     flow.append(value.flow);
                 }
-                let state = if flow.next {
-                    crate::borrow_contract::call(&expr.ty, &inputs, self.guards, expr.span)?
-                } else {
-                    State::absent()
-                };
                 let entered = self
                     .proofs
                     .calls
                     .get(site)
                     .copied()
                     .ok_or_else(|| Self::unsupported(expr.span))?;
+                let state = if flow.next {
+                    for (_, state) in &inputs {
+                        self.live_argument(state, expr.span, entered)?;
+                    }
+                    crate::borrow_contract::call(&expr.ty, &inputs, self.guards, expr.span)?
+                } else {
+                    State::absent()
+                };
                 let normal = self.guards.and(state.present, state.proof);
                 let post = self.guards.or(self.guards.not(entered), normal);
                 self.assumed = self.guards.and(self.assumed, post);

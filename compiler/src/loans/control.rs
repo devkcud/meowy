@@ -45,6 +45,12 @@ impl<'a> Graph<'a> {
                 break;
             }
             match statement {
+                Stmt::Statement { id, stmts } => {
+                    self.charge(self.statements.len() + 1)?;
+                    self.statements.push(*id);
+                    self.statements(stmts)?;
+                    self.statements.pop();
+                }
                 Stmt::Bind { id, value } => {
                     let value = self.expression(value)?;
                     let target = if self.program.locals[*id].has_reference() {

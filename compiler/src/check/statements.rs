@@ -6,6 +6,26 @@ use crate::hir::{self, Type};
 
 impl Checker {
     pub(crate) fn stmt(&mut self, stmt: &ast::Stmt) -> Result<Vec<hir::Stmt>> {
+        if self.statements >= 65_536 || !self.flow.spend(1) {
+            return Err(Diagnostic::unsupported(
+                "statement lifetime budget exhausted",
+                stmt.span,
+            ));
+        }
+        let id = self.statements;
+        self.statements += 1;
+        self.statement.push((id, false));
+        let result = self.stmt_inner(stmt);
+        let (_, used) = self.statement.pop().expect("statement lifetime");
+        let stmts = result?;
+        if used {
+            Ok(vec![hir::Stmt::Statement { id, stmts }])
+        } else {
+            Ok(stmts)
+        }
+    }
+
+    pub(crate) fn stmt_inner(&mut self, stmt: &ast::Stmt) -> Result<Vec<hir::Stmt>> {
         match &stmt.kind {
             StmtKind::Bind {
                 name,
@@ -178,7 +198,7 @@ impl Checker {
                     let skipped = self.flow.and(self.reach, absent);
                     self.reach = self.flow.and(self.reach, guard);
                     self.scopes.push(Scope::default());
-                    let then = self.stmt(body)?;
+                    let then = self.stmt_inner(body)?;
                     self.scopes.pop();
                     self.reach = self.flow.or(self.reach, skipped);
                     stmts.push(hir::Stmt::If {

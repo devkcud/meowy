@@ -11,6 +11,7 @@ mod nested_assignments;
 mod reference_aliases;
 mod references;
 mod scalars;
+mod temporaries;
 
 use super::*;
 use crate::ast::Span;

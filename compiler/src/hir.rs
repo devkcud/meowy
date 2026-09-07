@@ -6,6 +6,7 @@ pub type BlockId = usize;
 pub type EmitId = usize;
 pub type CallId = usize;
 pub type ReborrowId = usize;
+pub type StatementId = usize;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Field {
@@ -177,6 +178,10 @@ pub enum WriteStep {
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    Statement {
+        id: StatementId,
+        stmts: Vec<Stmt>,
+    },
     Bind {
         id: LocalId,
         value: Expr,
@@ -248,6 +253,11 @@ pub enum ExprKind {
     },
     Local(LocalId),
     Borrow(Place),
+    TemporaryBorrow {
+        id: LocalId,
+        statement: StatementId,
+        value: Box<Expr>,
+    },
     Reborrow {
         site: ReborrowId,
         value: Box<Expr>,
