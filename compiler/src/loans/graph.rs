@@ -23,6 +23,7 @@ impl<'a> Graph<'a> {
             current: vec![0],
             work: 0,
             origins: 0,
+            merging: false,
             missing_calls: Vec::new(),
             missing_reborrows: Vec::new(),
         }

@@ -114,6 +114,7 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
+        self.merging = self.facts.merging.contains(&block.id);
         for id in params {
             let proof = self
                 .facts

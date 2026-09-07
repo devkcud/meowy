@@ -88,6 +88,12 @@ impl<'a> Graph<'a> {
                         continue;
                     }
                     let target = if matches!(self.program.locals[*id], Type::Reference(_)) {
+                        if !self.merging {
+                            return Err(crate::diagnostic::Diagnostic::unsupported(
+                                "missing mutable-reference body proof",
+                                value.span,
+                            ));
+                        }
                         Some(self.version(&result)?)
                     } else {
                         None
@@ -220,14 +226,14 @@ impl<'a> Graph<'a> {
                     otherwise,
                 } => {
                     self.expression(condition)?;
-                    let (yes, no) = self.fork(self.condition(condition)?)?;
-                    self.current.push(yes);
-                    self.statements(then)?;
-                    let mut ends = std::mem::take(&mut self.current);
-                    self.current.push(no);
-                    self.statements(otherwise)?;
-                    ends.append(&mut self.current);
-                    self.current = ends;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    self.conditional(
+                        self.condition(condition)?,
+                        |graph| graph.statements(then),
+                        |graph| graph.statements(otherwise),
+                    )?;
                 }
                 Stmt::Leave(id) | Stmt::Restart(id) => {
                     let scope = self.blocks.get(id).expect("control target");

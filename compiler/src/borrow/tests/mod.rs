@@ -1,6 +1,7 @@
 mod aggregates;
 mod boundaries;
 mod control;
+mod guarded_references;
 mod mutable_references;
 mod origins;
 mod reference_slots;

@@ -21,14 +21,8 @@ pub(crate) fn reference_assignment_expiry_tracks_the_current_value_only() {
 }
 
 #[test]
-pub(crate) fn reference_assignments_require_linear_reaching_definitions() {
+pub(crate) fn reference_assignments_keep_scoped_transfer_boundaries() {
     for source in [
-        "a:1;b:2;p:=&a;|true|p=&b",
-        "a:1;b:2;p:=&a;|false|p=&b",
-        "f<null>:(flag<boolean>){a:1;b:2;p:=&a;skip:flag&&{p=&b;->true}}",
-        "f<null>:(flag<boolean>){a:1;b:2;p:=&a;skip:flag||{p=&b;->false}}",
-        "d:@\"debug\";a:1;b:2;p:=&a;d.print(true&&{p=&b;->true})",
-        "a:1;b:2;p:=&a;items:[1];value:items[{skip:false||{p=&b;->false};->1}]",
         "a:1;b:2;p:=&a;'out{p=&b;'out.leave()}",
         "a:1;b:2;p:=&a;p=&b;'out{'out.leave()}",
         "a:1;b:2;p:=&a;'loop{p=&b;'loop.restart()}",
@@ -36,6 +30,12 @@ pub(crate) fn reference_assignments_require_linear_reaching_definitions() {
         rejects(source, "B001");
     }
     for source in [
+        "a:1;b:2;p:=&a;|true|p=&b",
+        "a:1;b:2;p:=&a;|false|p=&b",
+        "f<null>:(flag<boolean>){a:1;b:2;p:=&a;skip:flag&&{p=&b;->true}}",
+        "f<null>:(flag<boolean>){a:1;b:2;p:=&a;skip:flag||{p=&b;->false}}",
+        "d:@\"debug\";a:1;b:2;p:=&a;d.print(true&&{p=&b;->true})",
+        "a:1;b:2;p:=&a;items:[1];value:items[{skip:false||{p=&b;->false};->1}]",
         "a:1;|true|{p:=&a;value:*p}",
         "a:1;p:=&a;count:=0;'loop{value:*p;count=count+1;|count<2|'loop.restart()}",
         "unused<null>:()'loop{'loop.restart()};a:1;b:2;p:=&a;p=&b;value:*p",

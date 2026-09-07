@@ -211,13 +211,23 @@ impl Checker<'_> {
                 } => {
                     let mut result = self.expression(condition)?.flow;
                     if result.next {
-                        let next = match &condition.kind {
-                            ExprKind::Bool(true) => self.branch(then)?,
-                            ExprKind::Bool(false) => self.branch(otherwise)?,
-                            _ => {
-                                let mut next = self.branch(then)?;
-                                next.merge(self.branch(otherwise)?);
-                                next
+                        let next = if self.merging {
+                            let guard = self.condition(condition)?;
+                            self.conditional(
+                                guard,
+                                condition.span,
+                                |checker| checker.statements(then),
+                                |checker| checker.statements(otherwise),
+                            )?
+                        } else {
+                            match &condition.kind {
+                                ExprKind::Bool(true) => self.branch(then)?,
+                                ExprKind::Bool(false) => self.branch(otherwise)?,
+                                _ => {
+                                    let mut next = self.branch(then)?;
+                                    next.merge(self.branch(otherwise)?);
+                                    next
+                                }
                             }
                         };
                         result.append(next);

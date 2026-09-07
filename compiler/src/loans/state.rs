@@ -39,6 +39,7 @@ pub(crate) struct Graph<'a> {
     pub(crate) current: Vec<usize>,
     pub(crate) work: usize,
     pub(crate) origins: usize,
+    pub(crate) merging: bool,
     pub(crate) missing_calls: Vec<(usize, Span)>,
     pub(crate) missing_reborrows: Vec<(usize, Span)>,
 }

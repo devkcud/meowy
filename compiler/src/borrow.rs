@@ -1,3 +1,4 @@
+pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod emissions;
 pub(crate) mod mutable;
@@ -29,6 +30,7 @@ pub(crate) fn check(
     proofs: &Proofs,
 ) -> std::result::Result<Facts, Vec<Diagnostic>> {
     let mut checker = Checker {
+        merging: false,
         program,
         guards,
         proofs,
@@ -46,10 +48,16 @@ pub(crate) fn check(
         statements: BTreeMap::new(),
     };
     let result = (|| {
-        mutable::check(&program.body, program, checker.guards)?;
+        checker.merging = mutable::check(&program.body, program, checker.guards)?;
+        if checker.merging {
+            checker.facts.merging.insert(program.body.id);
+        }
         checker.block(&program.body)?;
         for function in &program.functions {
-            mutable::check(&function.body, program, checker.guards)?;
+            checker.merging = mutable::check(&function.body, program, checker.guards)?;
+            if checker.merging {
+                checker.facts.merging.insert(function.body.id);
+            }
             checker.locals.clear();
             checker.assumed = TRUE;
             checker.inputs = function.params.iter().copied().collect();

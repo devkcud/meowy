@@ -3,6 +3,7 @@ mod budgets;
 mod control;
 mod fields;
 mod functions;
+mod guarded_references;
 mod mutable_references;
 mod places;
 mod reference_temporaries;

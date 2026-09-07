@@ -152,7 +152,21 @@ impl Checker<'_> {
             }
             ExprKind::Binary { op, left, right } => {
                 flow = self.expression(left)?.flow;
-                if flow.next {
+                if flow.next && self.merging && ["&&", "||"].contains(&op.as_str()) {
+                    let guard = self.condition(left)?;
+                    let guard = if op == "&&" {
+                        guard
+                    } else {
+                        self.guards.not(guard)
+                    };
+                    let next = self.conditional(
+                        guard,
+                        expr.span,
+                        |checker| Ok(checker.expression(right)?.flow),
+                        |_| Ok(Flow::new()),
+                    )?;
+                    flow.append(next);
+                } else if flow.next {
                     let skip = match (&left.kind, op.as_str()) {
                         (ExprKind::Bool(value), "&&") => Some(!value),
                         (ExprKind::Bool(value), "||") => Some(*value),
@@ -232,6 +246,10 @@ impl Checker<'_> {
         }
         if expr.ty == Type::Never {
             flow.next = false;
+        }
+        if self.merging && flow.next {
+            let normal = self.guards.and(state.present, state.proof);
+            self.assumed = self.guards.and(self.assumed, normal);
         }
         Ok(Value { state, flow })
     }

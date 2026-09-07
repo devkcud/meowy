@@ -58,6 +58,7 @@ impl Proofs {
 
 #[derive(Default)]
 pub(crate) struct Facts {
+    pub(crate) merging: BTreeSet<BlockId>,
     pub(crate) locals: BTreeMap<LocalId, State>,
     pub(crate) blocks: BTreeMap<BlockId, State>,
     pub(crate) calls: BTreeMap<CallId, State>,
@@ -106,6 +107,7 @@ pub(crate) struct Value {
 }
 
 pub(crate) struct Checker<'a> {
+    pub(crate) merging: bool,
     pub(crate) program: &'a Program,
     pub(crate) guards: &'a mut Guards,
     pub(crate) proofs: &'a Proofs,

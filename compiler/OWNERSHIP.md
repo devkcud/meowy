@@ -264,9 +264,10 @@ implementation boundary; it does not change language rules.
 
 ## Mutable shared-reference bindings
 
-- Ordinary mutable locals with a fixed `&T` type can be rebound in proved linear
-  flow. T may be any currently supported referent, including a record, union,
-  bounded list or nested reference. The binding itself cannot be a nullable union
+- Ordinary mutable locals with a fixed `&T` type can be rebound in straight-line
+  flow and guarded matcher/short-circuit paths. T may be any currently supported
+  referent, including a record, union, bounded list or nested reference.
+  The binding itself cannot be a nullable union
   or reference-bearing aggregate; mutable emitted reference fields remain B001.
 - The physical LocalId remains the same cell. Origin analysis preserves its
   current full State and replaces it only after a returning RHS; initial
@@ -281,16 +282,33 @@ implementation boundary; it does not change language rules.
   assignments preserve already evaluated operands and the final outer store wins.
   A panic RHS performs no store. Expired contents can be overwritten without
   reading them; a later read of an expired current origin or bound reports E303.
+- `borrow/branches.rs` snapshots the incoming mutable-reference environment after
+  condition effects. Each arm starts from that same snapshot under its condition;
+  only normally returning arm states contribute to the join. Origins, bounds,
+  activity and proofs are masked by each arm's returning guard before merging.
+  An unwritten arm retains the incoming version. The merge itself never reads a
+  reference, so expired versions can still be overwritten before any use.
+- Matcher arms and `&&`/`||` right operands share the same merge helper. Returning
+  expressions carry completion proofs into the continuation, excluding partial
+  panic paths even inside nested blocks. The join's continuation is the union of
+  returning guards, and arm-local assumptions do not constrain the opposite arm.
+- The loan graph merges fresh versions with demand-only predecessor transfers,
+  including direct reference components. A join adds no eager payload read;
+  ordinary assignments and value copies retain their runtime reads. Old operand
+  versions and physical cell loans keep their existing identity.
+  `loans/branches.rs` reuses unchanged versions, normalizes projected component
+  paths and merges duplicate origins. Changed versions use charged completion-reach
+  queries; repeated full-graph queries can reach the existing work limit.
 - `borrow/mutable.rs` performs one bounded HIR scan for each entry/function body.
-  Assignments under any If arm or short-circuit right operand are B001, including
-  syntactically guarded constant arms. A body containing both a reference
-  assignment and any Leave/Restart is also B001, even when the transfer is in an
-  unrelated nested expression. Separate function bodies are checked independently.
-  Declarations and reads without reassignment keep existing guarded/loop support.
-- These gates exclude unproved reaching-definition joins and backedge state.
-  They must remain until an explicit bounded forward merge/fixed-point model is
-  implemented. The scan charges every push/pop, limits its frontier/depth, and new
-  State/value versions consume existing origin and graph budgets.
+  A body containing both a reference assignment and any Leave/Restart is B001,
+  even when the transfer is in an unrelated nested expression. Separate function
+  bodies are checked independently.
+  Facts.merging records which bodies enable branch/continuation merging;
+  assignment-free bodies preserve their existing loop/proof behavior.
+- The remaining gate excludes unproved exit/backedge state. Leave needs explicit
+  exit-state merging; restart also needs a bounded fixed point. The scan charges every push/pop and
+  limits its frontier/depth. Snapshot copies, map lookups, guarded State merges and
+  new value versions consume existing work, origin and graph budgets.
 
 ## Statement-owned Copy temporaries
 
@@ -495,7 +513,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, general reference assignment joins, owner moves, owned
+  references/reborrows, reference assignment exit/backedge joins, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 

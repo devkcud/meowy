@@ -305,16 +305,20 @@ impl<'a> Graph<'a> {
             }
             ExprKind::Binary { op, left, right } if ["&&", "||"].contains(&op.as_str()) => {
                 self.expression(left)?;
+                if self.current.is_empty() {
+                    return Ok(Bundle::new());
+                }
                 let guard = self.condition(left)?;
                 let guard = if op == "&&" {
                     guard
                 } else {
                     self.guards.not(guard)
                 };
-                let (yes, no) = self.fork(guard)?;
-                self.current.push(yes);
-                self.expression(right)?;
-                self.current.push(no);
+                self.conditional(
+                    guard,
+                    |graph| graph.expression(right).map(|_| ()),
+                    |_| Ok(()),
+                )?;
                 Bundle::new()
             }
             ExprKind::Binary { left, right, .. } => {
