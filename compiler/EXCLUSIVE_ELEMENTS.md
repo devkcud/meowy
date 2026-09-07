@@ -1,27 +1,35 @@
 # Exclusive scalar list-element borrows
 
-`&!items[index]` now borrows an initialized scalar element of an ordinary mutable
-bounded-list local. Elements may be boolean, integer or float. This implements a
+`&!items[index]` borrows an initialized scalar element of mutable bounded-list
+storage: ordinary locals, named record fields and exact-backed emitted aliases. Elements may be boolean, integer or float. This implements a
 bounded slice of the existing [collection](../docs/reference/collections.md) and
 [memory](../docs/reference/memory.md) contracts, preserving one-based positions and
 initialized-length checks. Whole-list exclusive references remain unavailable.
 
 ## Owner authority and reservation
 
-`ExclusiveElement` HIR stores a local owner ID and one index expression. It is
-separate from shared ElementBorrow and names no parent reference. Frontend and
-analysis checks require an ordinary mutable scalar-list owner; a mutable binding
-holding a shared reference is not an owner proof. Aliases, field/indexed roots,
-temporaries, reference roots and non-scalar elements remain gated in this slice.
+`ExclusiveElement` HIR stores an owned Place (local view plus named-field path)
+and one index expression. It is separate from shared ElementBorrow and names no
+parent reference. Frontend and analysis require mutable owner proof. Every crossed
+field must be mutable; projected owners must be reference-free Copy records. A
+mutable binding holding a shared reference is not an owner proof. Temporary,
+reference-derived, nested-index roots and non-scalar elements remain gated.
 An explicit value copy into a new mutable local is a valid independent owner.
 
+Emitted aliases require exact backing for the complete list or containing record,
+including unrelated fields and list capacity. Slot annotations can contextualize
+list construction before borrowing; incompatible guarded completion layouts remain
+B001. Proven discarded emissions retain their original layout. Alias proofs carry
+explicit mutable/exclusive intent and completed backing evidence.
+
 The graph records an owner read and a private storage reservation before the index.
-The reservation names the complete list region but has no loan identity or authority.
+The reservation names the selected list region, including its named-field prefix,
+but has no loan identity or authority. Sibling fields and separate lists stay disjoint.
 It permits reads while blocking conflicting writes/exclusive acquisitions during
 returning index evaluation. This protects the captured address and initialized length.
 
-After the index returns, a fresh root exclusive loan names Source::Local with an
-Element projection. Its authority comes from mutable-owner proof, not from the
+After the index returns, a fresh root exclusive loan names Source::Local or
+Source::Slot with named-field prefixes followed by an Element projection. Its authority comes from mutable-owner proof, not from the
 reservation or a shared pointer. The final acquisition demands the reservation;
 afterward the reservation is dead. A non-returning index creates no exclusive loan
 and has no artificial future reservation demand. Existing work/storage limits cover
@@ -52,8 +60,9 @@ independent. This is not per-index disjointness or a complete two-phase borrow m
 Reference moves, shared/exclusive reborrows, parent suspension, direct scalar calls,
 guarded returns and anonymous block results retain existing authority and lifetimes.
 After the final use, the owner can be accessed again. Local owners cannot escape their
-scope through an element reference (E303). Moving a holder remains E301/E309; conflicting
-access is E302 and immutable owner borrowing is E305.
+scope through an element reference (E303). Emitted pointers may outlive their lexical
+alias while its target block lives, but cannot escape that target. Moving a holder
+remains E301/E309; conflicting access is E302 and immutable owner borrowing is E305.
 
 ## Evidence and next work
 
@@ -63,16 +72,23 @@ conservative overlap, moves/children, call/block transfer, explicit copied owner
 cancellation/conditional exits, captured stores, signed/unsigned initialized bounds,
 zero capacity, scopes, wider-root exclusions and short-circuit acquisition.
 
-Three graph groups prove reservation authority is empty and ends at acquisition,
+Six graph groups prove reservation authority is empty and ends at acquisition,
 non-returning indices create no loan or future demand, and mutable-owner proof is
-required independently of storage shape in both origin and loan analysis. Reference
-fixtures are unchanged. Full conformance still has 13 unsupported cases.
+required independently of storage shape in both origin and loan analysis. They also
+verify canonical Local/Slot field paths, cancellation, and missing alias/field proof.
+Fourteen additional native groups cover projected/alias storage, sibling regions,
+mutable paths, whole-owner backing, target scopes, cancellation, bounds, guarded views
+and captured stores. Reference fixtures are unchanged. Full conformance still has 13 unsupported cases.
 
 The [exclusive elements example](examples/exclusive-elements.mwy) reads an index while
 reserving its owner, mutates the actual element through a call and cancels a later
 acquisition without retaining the owner reservation.
 
-Next, generalize the owned-list place to existing mutable record fields and exact-backed
-emitted storage. Preserve canonical regions, every mutable boundary, actual selected
-list capture, reservation lifetime and target scope. Reference-derived, temporary
-and nested-index roots, owning elements and exclusive restart bodies remain separate.
+The [projected elements example](examples/exclusive-projected-elements.mwy) carries
+an emitted list-element pointer past its lexical alias, mutates a sibling list
+during index evaluation, and writes the actual target storage through a call.
+
+Next, define authority and reservation propagation for nested indexed owners before
+supporting those roots. Reference-derived and temporary roots, owning elements,
+whole-list exclusive values, generated cleanup and exclusive restart bodies remain
+separate work.

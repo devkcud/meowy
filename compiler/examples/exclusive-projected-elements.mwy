@@ -1,0 +1,16 @@
+debug:@"debug"
+bump<null>:(view<&!int32>){*view=*view+1}
+
+result:'out{
+    view:{
+        'out->row:={->items:=[1];->other:=[2]}
+        ->&!row.items[{
+            row.other[1]=3
+            ->row.items[1]
+        }]
+    }
+    bump(&!*view)
+    debug.print(*view)
+}
+debug.print(result.row.items[1])
+debug.print(result.row.other[1])

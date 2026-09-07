@@ -87,7 +87,7 @@ a checker test rejects unrelated-field widening while preserving a shared view.
 
 The [projected slots example](examples/exclusive-slot-fields.mwy) reads the primary
 and writes a sibling while carrying a nested-field pointer out of the alias scope.
-Ordinary local-list scalar elements now use owner authority and index reservations.
-Next, extend that place model to record-field and emitted list storage with exact
-backing, canonical regions and target lifetimes. Whole-record exclusive
+[Scalar list elements](EXCLUSIVE_ELEMENTS.md) now support ordinary local,
+record-field and emitted storage with exact backing, canonical regions, selected-list
+reservations and target lifetimes. Nested-index roots, whole-record exclusive
 pointees, non-Copy carriers and cleanup remain separate work.

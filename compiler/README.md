@@ -166,6 +166,8 @@ identity and target lifetime while accessing disjoint primary and sibling storag
 The [exclusive elements example](examples/exclusive-elements.mwy) reserves a local
 list during index evaluation and mutates its scalar element. The
 [element contract](EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
+The [projected elements example](examples/exclusive-projected-elements.mwy) preserves
+emitted target lifetime while reserving one list and mutating a sibling.
 
 ## Implemented language
 
@@ -229,13 +231,14 @@ list during index evaluation and mutates its scalar element. The
   through completion; proven cancellation preserves effects and moves without
   keeping a future result loan alive. Unsupported call/result/cell/dispatch-block crossings also reject
   shared values carrying exclusive ancestry.
-- Exclusive element borrows of ordinary mutable scalar bounded-list locals.
+- Exclusive element borrows of mutable scalar bounded-list locals, record fields
+  and exact-backed emitted storage.
   Owner/length capture precedes one index evaluation; a no-authority reservation
   protects returning acquisition, then mutable-owner proof grants the element loan.
   Bounds use initialized length and existing E101/P001 behavior. Same-list element
-  overlap remains conservative; field/alias/reference/temporary roots and wider
-  element types are gated. Moves, children, calls, block returns and scoped exits
-  preserve the existing ownership rules.
+  overlap remains conservative; sibling fields stay disjoint. Reference/temporary/
+  nested-index roots and wider element types are gated. Moves, children, calls, block
+  returns and scoped exits preserve the existing ownership rules.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their
