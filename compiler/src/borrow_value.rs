@@ -31,6 +31,9 @@ pub(crate) struct Origin {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Source {
+    Expired {
+        id: LocalId,
+    },
     Temporary {
         id: LocalId,
         statement: StatementId,
@@ -54,6 +57,15 @@ pub(crate) enum Source {
 }
 
 impl Source {
+    pub(crate) fn expired(&self) -> Option<Self> {
+        let id = match self {
+            Self::Expired { id } | Self::Local { id, .. } | Self::Temporary { id, .. } => *id,
+            Self::Slot { view, .. } => *view,
+            Self::Input { .. } => return None,
+        };
+        Some(Self::Expired { id })
+    }
+
     pub(crate) fn local(place: &Place) -> Self {
         Self::Local {
             id: place.root,
@@ -69,6 +81,7 @@ impl Source {
     pub(crate) fn project(&self, path: &[Projection]) -> Self {
         let mut source = self.clone();
         let fields = match &mut source {
+            Self::Expired { .. } => return source,
             Self::Local { fields, .. }
             | Self::Slot { fields, .. }
             | Self::Input { fields, .. }
@@ -83,6 +96,7 @@ impl Origin {
     pub(crate) fn weight(&self) -> usize {
         1 + self.component.len()
             + match &self.source {
+                Source::Expired { .. } => 1,
                 Source::Local { fields, .. } => fields.len(),
                 Source::Temporary { fields, .. } => 2 + fields.len(),
                 Source::Slot { fields, .. } => 3 + fields.len(),

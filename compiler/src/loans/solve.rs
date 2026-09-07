@@ -108,7 +108,7 @@ impl<'a> Graph<'a> {
         let (id, fields) = match source {
             Source::Local { id, fields } | Source::Temporary { id, fields, .. } => (*id, fields),
             Source::Slot { root, fields, .. } => (*root, fields),
-            _ => return false,
+            Source::Expired { .. } | Source::Input { .. } => return false,
         };
         place.root == id
             && place.fields.iter().zip(fields).all(|(index, field)| {

@@ -361,12 +361,20 @@ implementation boundary; it does not change language rules.
   widen conservatively. Entry/previous-iteration predicate correlations are lost.
   The final body pass still records current-iteration branches, calls, leaves and
   result guards normally.
-- Every feasible carried origin and bound, at every component path, must be an
-  Input source or live Local/Slot storage strictly outside the restarted target.
-  Target/descendant-owned sources and all Temporary sources report B001. Rebinding
-  the same static LocalId, alias or statement therefore cannot revive a previous
-  iteration's view. A local source overwritten by surviving storage before the
-  backedge need not be carried.
+- Every feasible carried origin and bound keeps its component and source role.
+  Input sources and live ancestor-owned Local/Slot/Temporary storage survive.
+  Ended sources and target/descendant-owned storage become Source::Expired, keyed
+  by the original LocalId, slot view or temporary site. Physical projections may
+  collapse only after expiry; the marker stays terminal under further projection
+  and repeated restarts. Reinitializing the same static site cannot revive it.
+  An enclosing statement's temporary survives an inner restart while its statement
+  remains active. Malformed-source and budget failures still report B001.
+- Header carriage adds no use: expired values may be overwritten before demand.
+  Direct reads and active public bounds report E303 without consulting newly
+  initialized storage. Transitive payloads retain lazy field/tag access, while full
+  copies and call entry validate the components they consume. Expired identities
+  never overlap physical storage; current predecessor values keep their live sources
+  and ordinary E302 conflicts before the boundary.
 - Each resolved restart has a stable RestartId. The final pass publishes initial
   predecessor snapshots by target and restart snapshots by site, retaining the
   incoming State under its entered guard before widening/reset. Shared Shape inspection
@@ -774,11 +782,10 @@ implementation boundary; it does not change language rules.
 2. Extend the existing graph with owned initialization, moves, scope ends,
    verified call effects and cleanup edges. Keep storage IDs distinct from values.
    Named leave/restart edges must preserve their exact target and owner lifetimes.
-3. Add explicit expired iteration identities before admitting target-owned or
-   Temporary sources in restart headers. Preserve active-path lifetime checks and
-   prevent a repeated static storage ID from reviving an earlier iteration's view.
-   Improve correlations across independent header alternatives only with bounded
-   temporal proofs.
+3. Preserve terminal expired identities when extending header storage shapes or
+   source kinds. Improve correlations across independent header alternatives only
+   with bounded temporal proofs; retain active-path lifetime checks and source-side
+   predecessor transfers.
 4. Check live shared/exclusive loans against overlapping places. Whole-owner access
    overlaps every field; different proven record fields can be disjoint. Reborrows
    suspend conflicting parent access. Dynamic indexing remains conservative.

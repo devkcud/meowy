@@ -49,8 +49,8 @@ pub(crate) fn leave_result_proofs_keep_disjoint_emissions_live() {
 }
 
 #[test]
-pub(crate) fn reference_assignment_backedges_remain_an_explicit_boundary() {
-    rejects("a:1;p:=&a;'loop{local:2;p=&local;'loop.restart()}", "B001");
-    rejects("a:1;p:=&a;p=&1;'loop{'loop.restart()}", "B001");
+pub(crate) fn reference_assignment_backedges_preserve_unread_expiry() {
+    accepts("a:1;p:=&a;'loop{local:2;p=&local;'loop.restart()}");
+    accepts("a:1;p:=&a;p=&1;'loop{'loop.restart()}");
     accepts("unused<null>:()'loop{'loop.restart()};a:1;b:2;p:=&a;'out{p=&b;'out.leave()};value:*p");
 }

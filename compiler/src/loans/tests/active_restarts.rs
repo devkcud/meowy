@@ -86,13 +86,11 @@ pub(crate) fn active_headers_keep_unreachable_transfer_and_lifetime_boundaries()
         "cell:&1;optional<&int32><null>:cell;p:=&optional;'again{p=&optional;'again.restart()}",
         "E303",
     );
-    rejects(
+    accepts(
         "a:1;empty<&int32><null>:null;p:=&empty;'again{local<&int32><null>:&a;p=&local;'again.restart()}",
-        "B001",
     );
-    rejects(
+    accepts(
         "<C>:<{view<&int32><null>}>;empty<C>:{};p:=&empty;'again{p=&{->view<&int32><null>:null};'again.restart()}",
-        "B001",
     );
 }
 

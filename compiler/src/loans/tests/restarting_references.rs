@@ -81,19 +81,12 @@ pub(crate) fn nested_restarts_use_their_own_headers_and_keep_completed_rhs_updat
 }
 
 #[test]
-pub(crate) fn restarted_carried_sources_cannot_reuse_iteration_storage() {
-    rejects(
-        "a:1;p:=&a;'again{local:2;p=&local;'again.restart()}",
-        "B001",
-    );
-    rejects(
-        "a:1;p:=&a;'again{->local:2;p=&local;'again.restart()}",
-        "B001",
-    );
-    rejects("a:1;p:=&a;'again{p=&2;'again.restart()}", "B001");
-    rejects(
+pub(crate) fn restarted_carried_sources_add_no_implicit_reads() {
+    accepts("a:1;p:=&a;'again{local:2;p=&local;'again.restart()}");
+    accepts("a:1;p:=&a;'again{->local:2;p=&local;'again.restart()}");
+    accepts("a:1;p:=&a;'again{p=&2;'again.restart()}");
+    accepts(
         "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'again{local:{->view<&int32><null>:&a};p=&local;'again.restart()}",
-        "B001",
     );
     accepts("a:1;i:=0;'again{local:2;p:=&local;p=&a;v:*p;i=i+1;|i<2|'again.restart()}");
 }

@@ -42,9 +42,12 @@ pub(crate) fn inactive_header_paths_do_not_create_bounds_but_active_paths_keep_t
         ),
         "E302",
     );
-    rejects(
+    accepts(
         "<C>:<{view<&int32><null>}>;full<C>:(&1).{->view:self};p:=&full;'loop{p=&full;'loop.restart()}",
-        "B001",
+    );
+    rejects(
+        "<C>:<{view<&int32><null>}>;full<C>:(&1).{->view:self};p:=&full;'loop{copy:*p;p=&full;'loop.restart()}",
+        "E303",
     );
 }
 

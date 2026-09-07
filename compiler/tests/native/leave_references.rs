@@ -225,7 +225,7 @@ d.print(*p)
 }
 
 #[test]
-pub fn panic_discards_leave_continuations_and_restart_limits_stay_explicit() {
+pub fn panic_discards_leave_continuations_and_restarts_preserve_unread_expiry() {
     let source = "d:@\"debug\";a:1;b:2;p:=&a;'out{p=&b;d.print(*p);d.panic(\"stop\");'out.leave()};d.print(\"after\")";
     let call = "d.panic(\"stop\")";
     let start = source.find(call).unwrap();
@@ -242,6 +242,12 @@ pub fn panic_discards_leave_continuations_and_restart_limits_stay_explicit() {
     for source in [
         "a:1;p:=&a;'loop{local:2;p=&local;'loop.restart()}",
         "a:1;p:=&a;'out{p=&2;'inner{'out.restart()}}",
+    ] {
+        let output = Case::new(source).command("check", &["--json"]);
+        assert!(output.status.success(), "{source}: {output:?}");
+        assert!(output.stderr.is_empty(), "{source}: {output:?}");
+    }
+    for source in [
         "a:1;holder:={->view:&a};'out{'out.leave()}",
         "a:1;p<&int32><null>:=&a;'out{'out.leave()}",
     ] {

@@ -206,17 +206,17 @@ d.print(*p)
 }
 
 #[test]
-pub fn reference_assignments_preserve_restart_header_boundaries() {
-    for source in [
-        "a:1;p<&int32><null>:=&a;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
-        "a:1;p:=&a;p=&2;'out{'out.restart()};v:*p",
-    ] {
-        let output = Case::new(source).command("check", &["--json"]);
-        assert_eq!(output.status.code(), Some(1), "{source}");
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("\"code\":\"B001\""),
-            "{source}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+pub fn reference_assignments_preserve_unreachable_reads_and_carrier_boundaries() {
+    let source = "a:1;p<&int32><null>:=&a;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}";
+    let output = Case::new(source).command("check", &["--json"]);
+    assert_eq!(output.status.code(), Some(1), "{source}");
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("\"code\":\"B001\""),
+        "{source}: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let output =
+        Case::new("a:1;p:=&a;p=&2;'out{'out.restart()};v:*p").command("check", &["--json"]);
+    assert!(output.status.success(), "{output:?}");
+    assert!(output.stderr.is_empty(), "{output:?}");
 }

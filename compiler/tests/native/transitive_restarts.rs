@@ -183,13 +183,13 @@ a:1;b:2;cell:=&a;p:=&cell;count:=0
 }
 
 #[test]
-pub fn every_nested_header_origin_and_bound_requires_surviving_storage() {
+pub fn nested_headers_allow_unread_expiry_but_reject_expired_values() {
     for source in [
         "cell:&1;p:=&cell;i:=0;'loop{p=&cell;i=i+1;|i<2|'loop.restart()}",
         "first<&int32>:(p<&int32>,text<&string>){->p};a:1;cell:first(&a,&\"short\");p:=&cell;i:=0;'loop{p=&cell;i=i+1;|i<2|'loop.restart()}",
         "a:1;initial:&a;p:=&initial;i:=0;'loop{local:2;cell:&local;p=&cell;i=i+1;|i<2|'loop.restart()}",
     ] {
-        rejects(source, "B001");
+        Case::new(source).runs(b"");
     }
     rejects(
         "holder:{->view:&1};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",

@@ -150,9 +150,12 @@ d.print(*p)
 }
 
 #[test]
-pub fn restart_carried_source_boundaries_prevent_iteration_identity_revival() {
-    for source in [
+pub fn restart_carried_expiry_allows_unread_values_without_reviving_storage() {
+    rejects(
         "d:@\"debug\";a:1;p:=&a;i:=0;'loop{local:i;|i>0|d.print(*p);p=&local;i=i+1;|i<2|'loop.restart()}",
+        "E303",
+    );
+    for source in [
         "a:1;p:=&a;i:=0;'loop{->n:2;p=&n;i=i+1;|i<2|'loop.restart()}",
         "a:1;p:=&a;i:=0;'loop{p=&2;i=i+1;|i<2|'loop.restart()}",
         "a:1;p:=&2;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
@@ -160,7 +163,7 @@ pub fn restart_carried_source_boundaries_prevent_iteration_identity_revival() {
         "first<&int32>:(p<&int32>,q<&string>){->p};a:1;p:=&a;i:=0;'loop{text:\"local\";p=first(&a,&text);i=i+1;|i<2|'loop.restart()}",
         "first<&int32>:(p<&int32>,q<&string>){->p};a:1;p:=first(&a,&\"short\");i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
     ] {
-        rejects(source, "B001");
+        Case::new(source).runs(b"");
     }
 }
 
@@ -229,8 +232,5 @@ d.print(*p)
 "#,
     )
     .runs(b"7\n7\n1\n");
-    rejects(
-        "a:1;p:=&a;i:=0;'owner{->n:7;p=&n;i=i+1;|i<2|'owner.restart()}",
-        "B001",
-    );
+    Case::new("a:1;p:=&a;i:=0;'owner{->n:7;p=&n;i=i+1;|i<2|'owner.restart()}").runs(b"");
 }

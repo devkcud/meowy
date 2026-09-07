@@ -179,7 +179,7 @@ text:="old";none:empty(&text);p:=&none;i:=0
 }
 
 #[test]
-pub fn activity_replay_keeps_call_effects_once_and_existing_source_limits() {
+pub fn activity_replay_keeps_call_effects_once_and_unread_expiry() {
     Case::new(
         r#"
 d:@"debug"
@@ -199,9 +199,10 @@ a:7;empty<H>:{->n:1};full<H>:{->view:&a;->n:2};p:=&empty;i:=0
     for source in [
         "<H>:<{view<&int32><null>}>;a:1;empty<H>:{};p:=&empty;i:=0;'loop{local:2;full<H>:{->view:&local};p=&full;i=i+1;|i<2|'loop.restart()}",
         "<H>:<{view<&int32><null>}>;first<&H>:(p<&H>,text<&string>){->p};a:1;full<H>:{->view:&a};p:=first(&full,&\"short\");i:=0;'loop{p=&full;i=i+1;|i<2|'loop.restart()}",
-        "a:1;p<&int32><null>:=&a",
-        "a:1;items:[&a]",
     ] {
+        Case::new(source).runs(b"");
+    }
+    for source in ["a:1;p<&int32><null>:=&a", "a:1;items:[&a]"] {
         rejects(source, "B001");
     }
 }

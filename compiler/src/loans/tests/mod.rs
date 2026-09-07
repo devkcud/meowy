@@ -2,6 +2,7 @@ mod active_restarts;
 mod aliases;
 mod budgets;
 mod control;
+mod expired_restarts;
 mod fields;
 mod functions;
 mod guarded_references;

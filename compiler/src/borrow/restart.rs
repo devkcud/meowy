@@ -80,15 +80,9 @@ impl Checker<'_> {
         source: &Source,
         target: BlockId,
         span: Span,
-    ) -> Result<()> {
+    ) -> Result<Source> {
         if !self.guards.spend(self.blocks.len().saturating_mul(2) + 1) {
             return Err(State::budget(span));
-        }
-        if matches!(source, Source::Temporary { .. }) {
-            return Err(Diagnostic::unsupported(
-                "temporary sources in restart headers",
-                span,
-            ));
         }
         let position = self
             .blocks
@@ -96,12 +90,13 @@ impl Checker<'_> {
             .position(|id| *id == target)
             .ok_or_else(|| Self::unsupported(span))?;
         match self.live(source, span) {
-            Ok(None) => Ok(()),
-            Ok(Some(owner)) if self.blocks[..position].contains(&owner) => Ok(()),
-            _ => Err(Diagnostic::unsupported(
-                "restart-carried sources outside surviving storage",
-                span,
-            )),
+            Ok(None) => Ok(source.clone()),
+            Ok(Some(owner)) if self.blocks[..position].contains(&owner) => Ok(source.clone()),
+            Ok(Some(_)) => source.expired().ok_or_else(|| Self::unsupported(span)),
+            Err(error) if error.code == "E303" => {
+                source.expired().ok_or_else(|| Self::unsupported(span))
+            }
+            Err(error) => Err(error),
         }
     }
 
@@ -197,8 +192,8 @@ impl Checker<'_> {
                     if !self.guards.overlap(origin.guard, present) {
                         continue;
                     }
-                    self.restart_source(&origin.source, id, span)?;
-                    let key = (origin.component.clone(), origin.source.clone());
+                    let source = self.restart_source(&origin.source, id, span)?;
+                    let key = (origin.component.clone(), source);
                     if !output.contains(&key) {
                         if count >= super::MAX_ORIGINS {
                             return Err(State::budget(span));

@@ -68,6 +68,7 @@ impl Checker<'_> {
         span: Span,
     ) -> Result<Option<crate::hir::BlockId>> {
         let work = match source {
+            Source::Expired { .. } => 1,
             Source::Temporary { fields, .. } => {
                 fields.len()
                     + self.statements.len().checked_ilog2().unwrap_or(0) as usize
@@ -93,6 +94,11 @@ impl Checker<'_> {
             return Err(State::budget(span));
         }
         match source {
+            Source::Expired { .. } => Err(Diagnostic::new(
+                "E303",
+                "borrowed storage expired before this iteration",
+                span,
+            )),
             Source::Temporary {
                 id,
                 statement,

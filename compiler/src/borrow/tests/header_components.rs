@@ -20,7 +20,7 @@ pub(crate) fn transitive_headers_preserve_nested_cells_and_selected_field_source
 }
 
 #[test]
-pub(crate) fn header_shapes_keep_reference_free_union_paths_and_temporary_gate() {
+pub(crate) fn header_shapes_keep_reference_free_union_paths_and_lazy_expiry() {
     for source in [
         "value<int32><null>:null;p:=&value;count:=0;'loop{p=&value;count=count+1;|count<2|'loop.restart()};copy:*p",
         "value<int32><null>:null;cell:&value;p:=&cell;count:=0;'loop{p=&cell;count=count+1;|count<2|'loop.restart()};copy:**p",
@@ -30,7 +30,11 @@ pub(crate) fn header_shapes_keep_reference_free_union_paths_and_temporary_gate()
     ] {
         accepts(source);
     }
-    rejects("cell:&1;p:=&cell;'loop{p=&cell;'loop.restart()}", "B001");
+    accepts("cell:&1;p:=&cell;'loop{p=&cell;'loop.restart()}");
+    rejects(
+        "cell:&1;p:=&cell;'loop{value:**p;p=&cell;'loop.restart()}",
+        "E303",
+    );
 }
 
 #[test]
