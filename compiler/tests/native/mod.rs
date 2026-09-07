@@ -11,6 +11,7 @@ pub(crate) mod examples;
 pub(crate) mod exclusive_fields;
 pub(crate) mod exclusive_functions;
 pub(crate) mod exclusive_references;
+pub(crate) mod exclusive_slots;
 pub(crate) mod expired_restarts;
 pub(crate) mod fields;
 pub(crate) mod function_borrows;

@@ -130,7 +130,8 @@ impl Checker {
                 span,
             ));
         };
-        if !self.places.contains(&id) || self.proofs.aliases.contains_key(&id) {
+        let alias = self.proofs.aliases.contains_key(&id);
+        if (!self.places.contains(&id) && !alias) || (alias && !steps.is_empty()) {
             return Err(Diagnostic::unsupported(
                 "exclusive borrowing of emitted storage",
                 span,
@@ -162,6 +163,14 @@ impl Checker {
                 format!("binding `{name}` is immutable"),
                 span,
             ));
+        }
+        if alias {
+            self.proofs
+                .aliases
+                .get_mut(&id)
+                .expect("emitted alias")
+                .exclusive
+                .get_or_insert(span);
         }
         Ok(hir::Expr {
             kind: hir::ExprKind::Borrow(hir::Place { root: id, fields }),

@@ -221,7 +221,7 @@ pub fn emitted_element_borrows_keep_checked_bounds_and_prior_effects() {
 pub fn emitted_borrows_keep_unrepresented_storage_boundaries_explicit() {
     for source in [
         "owner:1;value:{->view:=&owner}",
-        "value:{->n:=1;view:&!n}",
+        "value:{->n<int32><null>:=1;view:&!n}",
         "choose:(flag<boolean>)'out{|flag|{'out->n<int32><null>:=null;view:&n};|!flag|{'out->n:=\"text\"}}",
     ] {
         let case = Case::new(source);

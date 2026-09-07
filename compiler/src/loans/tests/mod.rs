@@ -6,6 +6,7 @@ mod blocks;
 mod budgets;
 mod control;
 mod exclusive_fields;
+mod exclusive_slots;
 mod expired_restarts;
 mod fields;
 mod functions;

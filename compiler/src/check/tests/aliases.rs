@@ -66,3 +66,13 @@ pub(crate) fn result_alias_metadata_stays_within_shared_work_bounds() {
     assert_eq!(errors[0].code, "B001");
     assert!(errors[0].message.contains("budget"));
 }
+
+#[test]
+pub(crate) fn exclusive_alias_backing_rejects_widening_without_restricting_shared_views() {
+    accepts("f:(flag<boolean>)'out{|flag|{'out->n:=1;p:&n;v:*p};|!flag|'out->n:=true}");
+    let source = "f:(flag<boolean>)'out{|flag|{'out->n:=1;p:&!n;v:*p};|!flag|'out->n:=true}";
+    let errors = crate::compile(source).unwrap_err();
+    assert_eq!(errors[0].code, "B001");
+    assert!(errors[0].message.contains("identical backing type"));
+    assert_eq!(&source[errors[0].span.start..errors[0].span.end], "&!n");
+}

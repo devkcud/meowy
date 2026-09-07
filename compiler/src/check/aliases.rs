@@ -42,6 +42,7 @@ impl Checker {
                 span,
                 backing: None,
                 borrowed: None,
+                exclusive: None,
             },
         );
         if mutable {
@@ -87,6 +88,14 @@ impl Checker {
                 })
             {
                 alias.backing = Some(Backing::Result);
+                if let Some(span) = alias.exclusive
+                    && field.ty != *local
+                {
+                    return Err(Diagnostic::unsupported(
+                        "exclusive emitted scalar borrow requires identical backing type",
+                        span,
+                    ));
+                }
                 if let Some(span) = alias.borrowed
                     && field.ty != *local
                     && !field.ty.members().contains(local)

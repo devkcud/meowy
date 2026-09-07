@@ -32,7 +32,7 @@ pub(crate) fn slot_borrow_representation_matches_the_lexical_view() {
         "B001",
     );
     accepts("r:{->n:1;p:&n}");
-    rejects("r:{->n:=1;p:&!n}", "B001");
+    accepts("r:{->n:=1;p:&!n}");
 }
 
 #[test]

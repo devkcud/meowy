@@ -21,6 +21,7 @@ pub(crate) struct Alias {
     pub(crate) span: Span,
     pub(crate) backing: Option<Backing>,
     pub(crate) borrowed: Option<Span>,
+    pub(crate) exclusive: Option<Span>,
 }
 
 #[derive(Default)]

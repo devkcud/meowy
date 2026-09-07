@@ -193,8 +193,9 @@ pub fn immutable_emitted_lists_keep_static_and_dynamic_bounds() {
 
 #[test]
 pub fn immutable_emitted_borrows_keep_unrepresented_storage_explicit() {
+    super::exclusive_references::rejects("value:{->n:1;view:&!n}", "E305");
     for source in [
-        "value:{->n:1;view:&!n}",
+        "value:{->row:{->n:=1};view:&!row.n}",
         "choose:(flag<boolean>)'out{|flag|{'out->n<int32><null>:null;view:&n};|!flag|{'out->n:\"text\"}}",
     ] {
         let case = Case::new(source);
