@@ -42,6 +42,7 @@ compiler/target/debug/meowy run compiler/examples/emitted-slots.mwy
 compiler/target/debug/meowy run compiler/examples/emitted-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/immutable-slots.mwy
 compiler/target/debug/meowy run compiler/examples/reference-slots.mwy
+compiler/target/debug/meowy run compiler/examples/transitive-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -98,6 +99,9 @@ fields and list elements while preserving constant and initialized-length facts.
 The [reference slots example](examples/reference-slots.mwy) distinguishes a borrowed
 field inside a result from a stored reference copied out of it. Each follows its
 own storage lifetime.
+The [transitive borrows example](examples/transitive-borrows.mwy) borrows a whole
+reference-carrying record and a reference-valued cell, then copies their contents
+while preserving the original pointee lifetimes.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -168,11 +172,17 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
   reference payloads. Copies and equality still consume every active reference.
-- Shared reborrows of reference-free referents: `&*view`, `&view.field` and nested
+- Shared reborrows: `&*view`, `&view.field` and nested
   parenthesized paths, including reference-valued prefixes such as
   `&holder.view.field`. Reference-valued calls/blocks evaluate once. Derived
-  function results retain all active input lifetime bounds. Union payload addresses,
-  reference-bearing pointees and exclusive reborrows remain unavailable.
+  function results retain all active input lifetime bounds. Union payload addresses
+  and exclusive reborrows remain unavailable.
+- Whole-carrier and reference-cell shared borrows, including nested dereference
+  copies and reborrows through stored references. Bounded pointee summaries preserve
+  contained origins, nullable activity and call bounds. A direct dereference copy
+  may outlive the outer cell while its contained pointees survive. Public function
+  results retain all-input bounds through later dereferences. Field and tag reads
+  consume only the selected contents; pointer equality does not read pointees.
 - Scope-local references to by-value parameters and dispatch `self` bindings.
   Their addresses cannot escape their storage scopes. Shared-reference and
   reference-carrier dispatch retain original origins and all-input bounds.
@@ -230,7 +240,7 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
 borrows of temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
-fields, mutable primary slots, whole reference-bearing storage borrows and alias
+fields, mutable primary slots and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
@@ -281,7 +291,9 @@ record and union components and direct-function signatures. Mutable reference ca
 reference reassignment and direct reference formatting require future analysis.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's
-storage. Whole carriers and reference-valued cells cannot themselves be borrowed yet.
+storage. Whole-carrier and reference-cell borrows retain bounded summaries of their
+contents. Direct dereference copies preserve contained origins independently of the
+outer cell; existing function-call bounds continue to constrain copied references.
 Field addresses of copied parameters and receivers cannot escape those local copies.
 Missing origin proofs or exhausted analysis budgets produce B001.
 Borrow liveness follows branches and named loop edges. An assignment evaluates its
@@ -302,14 +314,19 @@ When an emission is proved discarded, an initialized local cell preserves its
 remaining effects without projecting into an absent or incompatible result field.
 Borrows of slot storage use the target block as their owner even when the alias name
 was declared in an inner scope. Discarded cells are retained as target-owned partial
-result storage. A slot borrow needs a reference-free selected referent and backing
-that matches the alias type or one concrete union member. Proper subunion views
+result storage. A slot borrow needs backing that matches the alias type or one
+concrete union member, including a complete summary for reference-bearing referents. Proper subunion views
 remain B001 because borrowing cannot retag a copied value.
 References may pass through inner results, but escaping their target's publication
 reports E303. Live overlapping writes report E302, including uses across an inner
 restart. Restarting the target ends its iteration's storage. Mutable aliases publish
 unknown variant activity, preventing stale initializer facts from hiding a conflict.
 Immutable aliases retain their constant, variant and initialized-length facts.
+References can nest through at most 64 layers in this bootstrap; exceeding that
+construction limit reports B001 before deeper type/state cloning. Summary parts,
+paths, transfers and candidate expansion also consume the existing shared budgets.
+Nested reference types use separate `&` tokens, as in `<& &int32>`, or type aliases;
+`&&` remains the logical operator token.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the

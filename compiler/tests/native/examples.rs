@@ -95,6 +95,10 @@ pub fn examples_execute_in_both_profiles() {
             "3\n7\n7\n3\n",
         ),
         (
+            include_str!("../../examples/transitive-borrows.mwy"),
+            "7\ntrue\n7\n7\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

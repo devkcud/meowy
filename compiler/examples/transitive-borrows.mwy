@@ -1,0 +1,11 @@
+debug:@"debug"
+
+owner:7
+holder:{->view:&owner;->count:3}
+outer:&holder
+debug.print(*outer.view)
+cell:&outer.view
+debug.print(cell==&holder.view)
+debug.print(**cell)
+copy:{local:{->view:&owner};borrowed:&local;->*borrowed}
+debug.print(*copy.view)
