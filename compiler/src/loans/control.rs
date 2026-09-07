@@ -3,6 +3,11 @@ use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
+        let incoming = if self.merging {
+            self.versions()?
+        } else {
+            super::branches::Versions::new()
+        };
         let origins: Vec<_> = self
             .facts
             .blocks
@@ -24,11 +29,19 @@ impl<'a> Graph<'a> {
                 end,
                 result,
                 ty: block.ty.clone(),
+                incoming,
+                leaves: Vec::new(),
             },
         );
         self.statements(&block.stmts)?;
+        let mut scope = self.blocks.remove(&block.id).expect("completed scope");
+        if self.merging {
+            self.charge(scope.incoming.len() + 1)?;
+            let ids = scope.incoming.keys().copied().collect::<Vec<_>>();
+            scope.leaves.push(self.surviving_arm(&ids)?);
+            self.merge_versions(scope.incoming, scope.leaves)?;
+        }
         self.connect(end, TRUE, false);
-        self.blocks.remove(&block.id);
         self.current.push(end);
         if let Some(state) = self.facts.blocks.get(&block.id) {
             self.assume(state.proof)?;
@@ -236,8 +249,21 @@ impl<'a> Graph<'a> {
                     )?;
                 }
                 Stmt::Leave(id) | Stmt::Restart(id) => {
-                    let scope = self.blocks.get(id).expect("control target");
                     let restart = matches!(statement, Stmt::Restart(_));
+                    if self.merging && !restart {
+                        self.charge(
+                            self.blocks.get(id).expect("control target").incoming.len() + 1,
+                        )?;
+                        let ids = self.blocks[id].incoming.keys().copied().collect::<Vec<_>>();
+                        let arm = self.surviving_arm(&ids)?;
+                        self.blocks
+                            .get_mut(id)
+                            .expect("control target")
+                            .leaves
+                            .push(arm);
+                        continue;
+                    }
+                    let scope = self.blocks.get(id).expect("control target");
                     self.connect(if restart { scope.start } else { scope.end }, TRUE, restart);
                 }
                 Stmt::Expr(value) => {

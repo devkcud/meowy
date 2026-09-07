@@ -85,6 +85,21 @@ impl Checker<'_> {
         self.assumed_scopes.push(assumed);
         let flow = run(self)?;
         let normal = if flow.next { self.assumed } else { FALSE };
+        let result = self.capture_versions(values, normal, span)?;
+        self.close_scope();
+        Ok(Arm {
+            values: result,
+            normal,
+            flow,
+        })
+    }
+
+    pub(crate) fn capture_versions(
+        &mut self,
+        values: &Values,
+        normal: Guard,
+        span: Span,
+    ) -> Result<Values> {
         let mut result = Vec::new();
         if normal != FALSE {
             let lookup = self.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
@@ -103,12 +118,50 @@ impl Checker<'_> {
                 result.push((*id, state.clone().under(normal, self.guards)));
             }
         }
-        self.close_scope();
-        Ok(Arm {
-            values: result,
-            normal,
-            flow,
-        })
+        Ok(result)
+    }
+
+    pub(crate) fn merge_versions(
+        &mut self,
+        incoming: &Values,
+        arms: &[Arm],
+        span: Span,
+    ) -> Result<Guard> {
+        self.restore_versions(incoming, span)?;
+        if !self.guards.spend(arms.len()) {
+            return Err(State::budget(span));
+        }
+        let mut normal = FALSE;
+        for arm in arms {
+            normal = self.guards.or(normal, arm.normal);
+        }
+        for (index, (id, _)) in incoming.iter().enumerate() {
+            let mut state = State::absent();
+            for arm in arms {
+                if !self.guards.spend(1) {
+                    return Err(State::budget(span));
+                }
+                if arm.normal != FALSE {
+                    let (source, value) = arm
+                        .values
+                        .get(index)
+                        .ok_or_else(|| Self::unsupported(span))?;
+                    if source != id || !self.guards.spend(value.weight()) {
+                        return Err(State::budget(span));
+                    }
+                    state.merge(value.clone(), self.guards, span)?;
+                }
+            }
+            if normal != FALSE {
+                self.reserve_origins(state.weight() + 1, span)?;
+                self.locals
+                    .get_mut(id)
+                    .ok_or_else(|| Self::unsupported(span))?
+                    .state = state;
+            }
+        }
+        self.assumed = normal;
+        Ok(normal)
     }
 
     pub(crate) fn conditional(
@@ -122,31 +175,9 @@ impl Checker<'_> {
         let assumed = self.assumed;
         let yes = self.arm(&incoming, assumed, guard, span, yes)?;
         let no = self.arm(&incoming, assumed, self.guards.not(guard), span, no)?;
-        self.restore_versions(&incoming, span)?;
-        let normal = self.guards.or(yes.normal, no.normal);
-        for (index, (id, _)) in incoming.iter().enumerate() {
-            let mut state = State::absent();
-            if yes.normal != FALSE {
-                if !self.guards.spend(yes.values[index].1.weight()) {
-                    return Err(State::budget(span));
-                }
-                state.merge(yes.values[index].1.clone(), self.guards, span)?;
-            }
-            if no.normal != FALSE {
-                if !self.guards.spend(no.values[index].1.weight()) {
-                    return Err(State::budget(span));
-                }
-                state.merge(no.values[index].1.clone(), self.guards, span)?;
-            }
-            if normal != FALSE {
-                self.reserve_origins(state.weight() + 1, span)?;
-                self.locals
-                    .get_mut(id)
-                    .ok_or_else(|| Self::unsupported(span))?
-                    .state = state;
-            }
-        }
-        self.assumed = normal;
+        let arms = [yes, no];
+        let normal = self.merge_versions(&incoming, &arms, span)?;
+        let [yes, no] = arms;
         let mut flow = yes.flow;
         flow.merge(no.flow);
         flow.next = normal != FALSE;

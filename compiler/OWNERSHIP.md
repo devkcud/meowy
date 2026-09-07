@@ -26,6 +26,9 @@ implementation boundary; it does not change language rules.
 - Completion proofs include named leave and exclude discarded restart, panic and
   enclosing-leave paths. Discarded emissions retain operand evaluation and effects.
   Constant-unreachable results do not manufacture lifetime errors.
+- Emission assumptions enter the value proof before it is masked by the retained
+  emission guard. Disjoint arms therefore contribute conditional proofs; merging
+  their results cannot globally conjoin incompatible arm assumptions and erase loans.
 - Conditional results may choose different surviving roots in each component.
   Missing per-component origin coverage or more than 4,096 alternatives/components
   in one result reports B001. Guard budget
@@ -300,15 +303,32 @@ implementation boundary; it does not change language rules.
   paths and merges duplicate origins. Changed versions use charged completion-reach
   queries; repeated full-graph queries can reach the existing work limit.
 - `borrow/mutable.rs` performs one bounded HIR scan for each entry/function body.
-  A body containing both a reference assignment and any Leave/Restart is B001,
+  A body containing both a reference assignment and any Restart is B001,
   even when the transfer is in an unrelated nested expression. Separate function
   bodies are checked independently.
   Facts.merging records which bodies enable branch/continuation merging;
   assignment-free bodies preserve their existing loop/proof behavior.
-- The remaining gate excludes unproved exit/backedge state. Leave needs explicit
-  exit-state merging; restart also needs a bounded fixed point. The scan charges every push/pop and
-  limits its frontier/depth. Snapshot copies, map lookups, guarded State merges and
-  new value versions consume existing work, origin and graph budgets.
+- Forward Leave uses `borrow/exits.rs`: each target records the mutable-reference
+  IDs that existed at its entry. A Leave captures only those surviving versions
+  under its actual exit guard before scopes or branches restore their environments.
+  Capture and merge do not read reference contents.
+- At target completion, captured exits merge with actual fallthrough using the
+  shared guarded State helper. Their union continuation is installed before result
+  slot proof/completeness, including when no mutable-reference IDs survive. An
+  outer-target exit remains queued across inner block closes; it creates no inner
+  continuation and cannot execute an unfinished RHS store.
+- The loan Scope keeps its entry versions and queued Leave predecessors. Capturing
+  an exit defers the edge until its target joins all predecessors through the same
+  demand-only merge used by branches, then reaches the existing result-copy node.
+- Target-local bindings are still removed, and statement-owned temporaries/result
+  slots retain their existing lifetimes. A surviving mutable reference may contain
+  an expired source after Leave and can be overwritten safely; reading that current
+  value remains E303. Emitted result components still require surviving origins.
+- The remaining gate excludes unproved backedge state, which needs a bounded
+  fixed point. The scan charges every push/pop and limits its frontier/depth.
+  Snapshot copies, map lookups, guarded State merges and
+  new value versions consume existing work, origin and graph budgets. Target entry
+  snapshots and queued exit versions also count toward the persistent origin limit.
 
 ## Statement-owned Copy temporaries
 
@@ -513,7 +533,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, reference assignment exit/backedge joins, owner moves, owned
+  references/reborrows, reference assignment backedge joins, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 

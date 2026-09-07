@@ -1,3 +1,4 @@
+use super::branches::{Arm, Versions};
 use super::{
     BTreeMap, BlockId, Bundle, Facts, Flow, Guard, LocalId, Origin, Place, Program, Proofs, Span,
     Type,
@@ -24,6 +25,8 @@ pub(crate) struct Scope {
     pub(crate) end: usize,
     pub(crate) result: Bundle,
     pub(crate) ty: Type,
+    pub(crate) incoming: Versions,
+    pub(crate) leaves: Vec<Arm>,
 }
 
 pub(crate) struct Graph<'a> {

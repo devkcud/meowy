@@ -65,7 +65,8 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                     }
                     add(Item::Expression(condition))?;
                 }
-                Stmt::Leave(_) | Stmt::Restart(_) => transfer = true,
+                Stmt::Restart(_) => transfer = true,
+                Stmt::Leave(_) => {}
                 Stmt::SlotAlias { .. } => {}
             },
             Item::Expression(expr) => match &expr.kind {
@@ -114,7 +115,7 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
     }
     if transfer && let Some(span) = write {
         return Err(Diagnostic::unsupported(
-            "shared-reference assignments in a body with leave or restart",
+            "shared-reference assignments in a body with restart",
             span,
         ));
     }

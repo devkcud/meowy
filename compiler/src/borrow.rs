@@ -1,6 +1,7 @@
 pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod emissions;
+pub(crate) mod exits;
 pub(crate) mod mutable;
 pub(crate) mod origins;
 pub(crate) mod pointee;
@@ -30,6 +31,7 @@ pub(crate) fn check(
     proofs: &Proofs,
 ) -> std::result::Result<Facts, Vec<Diagnostic>> {
     let mut checker = Checker {
+        targets: BTreeMap::new(),
         merging: false,
         program,
         guards,

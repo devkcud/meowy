@@ -21,15 +21,11 @@ pub(crate) fn reference_assignment_expiry_tracks_the_current_value_only() {
 }
 
 #[test]
-pub(crate) fn reference_assignments_keep_scoped_transfer_boundaries() {
+pub(crate) fn reference_assignments_keep_restart_boundary() {
+    rejects("a:1;b:2;p:=&a;'loop{p=&b;'loop.restart()}", "B001");
     for source in [
         "a:1;b:2;p:=&a;'out{p=&b;'out.leave()}",
         "a:1;b:2;p:=&a;p=&b;'out{'out.leave()}",
-        "a:1;b:2;p:=&a;'loop{p=&b;'loop.restart()}",
-    ] {
-        rejects(source, "B001");
-    }
-    for source in [
         "a:1;b:2;p:=&a;|true|p=&b",
         "a:1;b:2;p:=&a;|false|p=&b",
         "f<null>:(flag<boolean>){a:1;b:2;p:=&a;skip:flag&&{p=&b;->true}}",

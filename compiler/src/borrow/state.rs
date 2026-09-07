@@ -107,6 +107,7 @@ pub(crate) struct Value {
 }
 
 pub(crate) struct Checker<'a> {
+    pub(crate) targets: BTreeMap<BlockId, super::exits::Target>,
     pub(crate) merging: bool,
     pub(crate) program: &'a Program,
     pub(crate) guards: &'a mut Guards,

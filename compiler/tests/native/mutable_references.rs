@@ -206,11 +206,10 @@ d.print(*p)
 }
 
 #[test]
-pub fn reference_assignments_reject_unproved_exit_and_backedge_state_merges() {
+pub fn reference_assignments_reject_unproved_backedge_state_merges() {
     for source in [
         "a:1;b:2;p:=&a;i:=0;'loop{p=&b;i=i+1;|i<2|'loop.restart()};v:*p",
-        "a:1;b:2;p:=&a;'out{p={ 'out.leave();->&b}};v:*p",
-        "a:1;b:2;p:=&a;p=&b;'out{'out.leave()};v:*p",
+        "a:1;b:2;p:=&a;p=&b;'out{'out.restart()};v:*p",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");

@@ -11,8 +11,14 @@ impl Checker<'_> {
         self.results.insert(block.id, State::absent());
         self.scopes.push(Vec::new());
         self.assumed_scopes.push(self.assumed);
+        if self.merging {
+            self.enter_target(block.id, Span::default())?;
+        }
         let mut flow = self.statements(&block.stmts)?;
         let span = Span { start: 0, end: 0 };
+        if self.merging {
+            self.complete_target(block.id, flow.next, span)?;
+        }
         let complete = self
             .proofs
             .completions
@@ -234,14 +240,19 @@ impl Checker<'_> {
                     }
                     result
                 }
-                Stmt::Leave(id) | Stmt::Restart(id) => Flow {
-                    next: false,
-                    exits: BTreeSet::from([if matches!(stmt, Stmt::Leave(_)) {
-                        Exit::Leave(*id)
-                    } else {
-                        Exit::Restart(*id)
-                    }]),
-                },
+                Stmt::Leave(id) | Stmt::Restart(id) => {
+                    if self.merging && matches!(stmt, Stmt::Leave(_)) {
+                        self.leave_target(*id, Span::default())?;
+                    }
+                    Flow {
+                        next: false,
+                        exits: BTreeSet::from([if matches!(stmt, Stmt::Leave(_)) {
+                            Exit::Leave(*id)
+                        } else {
+                            Exit::Restart(*id)
+                        }]),
+                    }
+                }
                 Stmt::Expr(value) => self.expression(value)?.flow,
             };
             flow.append(next);

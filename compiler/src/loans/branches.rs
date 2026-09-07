@@ -62,6 +62,24 @@ impl Graph<'_> {
         })
     }
 
+    pub(crate) fn surviving_arm(&mut self, ids: &[LocalId]) -> Result<Arm> {
+        let lookup = self.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
+        self.charge(ids.len().saturating_mul(lookup) + 1)?;
+        let mut versions = Versions::new();
+        if !self.current.is_empty() {
+            for id in ids {
+                let value = self.locals.get(id).ok_or_else(Self::budget)?;
+                let work = value.keys().map(|path| path.len() + 1).sum::<usize>();
+                self.charge(work)?;
+                versions.insert(*id, self.locals[id].clone());
+            }
+        }
+        Ok(Arm {
+            ends: std::mem::take(&mut self.current),
+            versions,
+        })
+    }
+
     pub(crate) fn conditional(
         &mut self,
         guard: Guard,
@@ -88,10 +106,11 @@ impl Graph<'_> {
         self.current.push(right);
         no(self)?;
         let right = self.arm()?;
-        self.merge_versions(incoming, [left, right])
+        self.merge_versions(incoming, vec![left, right])
     }
 
-    pub(crate) fn merge_versions(&mut self, incoming: Versions, arms: [Arm; 2]) -> Result<()> {
+    pub(crate) fn merge_versions(&mut self, incoming: Versions, arms: Vec<Arm>) -> Result<()> {
+        self.charge(arms.len() + 1)?;
         let mut changed = Vec::new();
         for (id, value) in &incoming {
             self.charge(value.keys().map(|path| path.len() + 1).sum::<usize>() + 1)?;
@@ -113,7 +132,7 @@ impl Graph<'_> {
             return Ok(());
         }
         let reach = self.reach()?;
-        let mut guards = [FALSE; 2];
+        let mut guards = vec![FALSE; arms.len()];
         for (index, arm) in arms.iter().enumerate() {
             self.charge(arm.ends.len())?;
             for end in &arm.ends {
@@ -123,8 +142,8 @@ impl Graph<'_> {
         let mut merged = Versions::new();
         for id in changed {
             let mut state = State::absent();
-            for (arm, guard) in arms.iter().zip(guards) {
-                if guard == FALSE {
+            for (arm, guard) in arms.iter().zip(&guards) {
+                if *guard == FALSE {
                     continue;
                 }
                 let mut part = State::default();
@@ -136,7 +155,7 @@ impl Graph<'_> {
                     self.charge(weight)?;
                     for mut origin in self.values[*value].clone() {
                         origin.component = path.clone();
-                        origin.guard = self.guards.and(origin.guard, guard);
+                        origin.guard = self.guards.and(origin.guard, *guard);
                         if origin.guard != FALSE {
                             part.origins.push(origin);
                         }
