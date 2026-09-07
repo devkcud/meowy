@@ -7,38 +7,39 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `32d093c` adds straight-line reassignment of ordinary fixed `&T` locals.
-  Each returning assignment updates the current origin state and creates fresh
-  loan value IDs; the physical cell keeps its LocalId. Earlier copies preserve
-  their old pointees, transitive summaries and public call bounds.
-- A live `&binding` view blocks reassignment with E302. Its final read may happen
-  in the RHS. Overwriting expired contents without reading them is allowed; using
-  expired current origins/bounds reports E303. Nested RHS effects and already
-  evaluated call arguments retain their actual values and evaluation order.
-- `compiler/src/borrow/mutable.rs` keeps unproved control flow explicit: assignments in matcher
-  arms or short-circuit right operands are B001. An entry/function body combining
-  reference assignment with any leave/restart is also B001. Separate function
-  bodies are checked independently; panic RHS paths skip the store.
-- `4b7d655` adds eight native groups, `compiler/examples/mutable-references.mwy`
-  and README evidence. Three origin, four loan and one backend group cover the
-  implementation. Existing HIR, storage lowering, runtime ABI and dependencies
-  are unchanged. Temporary-owner and bounded transitive borrowing support remains.
-- All 14 check categories have passing evidence across the combined run and final
-  compiler rerun: 435 Rust tests, 35 Python tests, 867 links, editors, schemas,
-  formatting, Clippy, build and conformance. Runtime debug/release/sanitized checks
-  pass. One obsolete native B001 expectation was corrected before the compiler rerun.
-- The optimized compiler runs mutable-references with exact output; 12 independent
-  checks and six profile executions pass. Source and verification are complete.
-  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- Next: bounded guarded branch merges for mutable reference values, preserving
-  earlier copies and cell loans. Mutable reference-bearing nullable/aggregate bindings, reference
-  lists, exclusive references, owned cleanup and full release qualification remain open.
+- Compiler: `5c55e44` adds guarded assignment merges for fixed shared-reference
+  locals in matcher arms and short-circuit right operands. Each arm starts from
+  the values present after condition effects; only returning paths reach the join.
+  Skipped assignments preserve incoming values, and earlier copies stay fixed.
+- Origin/bound/activity proofs are masked by returning guards. Loan merges transfer
+  demand on each predecessor without adding reads; unchanged versions are reused
+  and duplicate origins are normalized. Physical reference cells keep their identity,
+  so guarded cell views and selected-owner writes retain E302 protection.
+- `Facts.merging` activates the new path per body. Assignment-free bodies retain
+  their existing loop behavior. Bodies combining reference reassignment with any
+  leave/restart remain B001 until exit states and loop fixed points are implemented.
+- `af3a868` adds eight native groups, `compiler/examples/guarded-references.mwy`
+  and README evidence. Four origin and six loan groups cover partial assignments,
+  nested guards, temporary/scoped expiry, public bounds, nullable pointees and panic.
+  Focused helpers keep the new analysis in `compiler/src/borrow/branches.rs` and
+  `compiler/src/loans/branches.rs`.
+- All ten compiler checks pass: 453 Rust tests, 20 Python tests, 868 local links,
+  schemas/catalog, formatting, Clippy, build and conformance. All 32 examples execute
+  in debug/release. The optimized compiler runs guarded-references with exact output;
+  12 independent checks and six profile executions pass.
+- Runtime/editor checks were not rerun this slice; their earlier evidence is retained
+  in the compiler handoff. HIR, backend storage, runtime ABI and dependencies are
+  unchanged. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Branch work stays bounded: 64 repeated joins pass; 1,024 exceed the charged loan
+  work budget with B001. Next is forward leave-state merging, followed by restart
+  fixed points. Mutable reference carriers, exclusive/owned work and release
+  qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Fixed shared-reference local versions and bounded shared borrowing | Guarded reference-version joins, exclusive ownership and cleanup |
+| Compiler | Guarded shared-reference versions and bounded transitive borrowing | Leave/restart state flow, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,11 +49,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Add bounded guarded branch merges in `compiler/src/borrow/` and
-   `compiler/src/loans/`. Snapshot incoming versions for each arm, merge returning
-   states under their guards and attach loan transfers at the correct branch ends.
-   Verify selected/unselected owners, old copies, cell loans and nested effects.
-   Keep leave/restart combinations B001 until explicit exit/backedge state is modeled.
+1. Model forward leave-state snapshots in `compiler/src/borrow/` and
+   `compiler/src/loans/`. Capture surviving reference versions at each leave edge,
+   merge them with fallthrough at the named target, and verify skipped RHS stores,
+   old copies, cell loans and target-owned/temporary lifetimes. Relax the leave gate
+   only after these paths are proved; keep restart B001 until a bounded fixed point
+   accounts for incoming and loop-carried versions with reset guards.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

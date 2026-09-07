@@ -6,6 +6,90 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Guarded mutable-reference handoff complete
+
+- State: Implementation 5c55e44 and native/example evidence af3a868 are complete. Guarded matcher and short-circuit assignments merge only returning versions, preserving old copies, physical cell loans and public bounds without synthetic reads. Both current handoffs identify forward leave-state capture/joins as next, with restart excluded.
+- Validation: All ten compiler checks passed with 453 Rust tests, 20 Python tests and 868 links. All 32 examples execute in debug/release; the optimized guarded-references output and independent 12 checks/six executions passed. Final read-only documentation audit found no corrections. Current checks are separated from historical runtime/editor evidence; prior log history is preserved.
+- Blockers: No unfinished source work or failing check remains. Reference reassignment with leave/restart, mutable reference carriers and exclusive/owned work remain unsupported; 13 conformance cases and full release qualification remain open.
+- Next steps: Capture reference versions on forward leave edges and merge them at named targets with fallthrough. Prove skipped stores, cell loans, copied values, call bounds and temporary/result-slot lifetimes before relaxing Leave. Retain Restart until bounded loop-carried state and guard resets are modeled; preserve charged work and the wider runtime/library/tool roadmap.
+
+### 2026-09-06 — Guarded reference native coverage committed
+
+- State: Implementation is committed as 5c55e44; native coverage, guarded-references example and README are af3a868. Source, compiler gate, optimized execution and independent review are complete. Only final current handoffs and preserved checkpoint review remain.
+- Validation: All ten compiler checks pass: 453 Rust tests, 20 Python tests, 868 links, formatting, Clippy, metadata, build and conformance. Optimized example output is exact. Both focused commits pass cached whitespace/scope checks. Runtime/editor evidence is from the prior unchanged-source checkpoint, not rerun here.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize root/compiler STATUS with guarded matchers and short circuits, precise current versus historical validation, and forward leave-state merges before restart fixed points. Preserve step-log history, check links/whitespace, commit the final handoff and verify clean Git state.
+
+### 2026-09-06 — Guarded reference implementation committed
+
+- State: Committed guarded origin/loan helpers, per-body continuation mode, simplified policy scan, focused tests and old native boundary updates as 5c55e44. The optimized compiler builds and runs guarded-references with exact output. Native suite/example/README and final handoffs remain separate commits.
+- Validation: All ten compiler checks passed with 453 Rust tests, 20 Python tests and 868 links. Optimized example exits 0 with exact 7, 7, 7, 9 lines and empty stderr. Independent 12 checks/six executions and charged resource controls pass. Cached whitespace and staged scope checks pass; no HIR/backend/runtime ABI change.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit new native guarded-reference coverage, example and README. Refresh current handoffs with 40 origin, 46 loan, 62 backend, 214 native and 32 examples; preserve history and mark forward leave-state merging as next while restart remains B001.
+
+### 2026-09-06 — Guarded reference compiler gate passed
+
+- State: All ten compiler checks pass on frozen production source. Guarded matcher and short-circuit assignments preserve current versions, old copies, guarded lifetimes and physical cell loans; only returning paths merge. Optimized compiler build is running. Documentation records charged completion-reach scaling and separate future leave/restart work.
+- Validation: 239 library plus 214 native groups pass (453 Rust tests). Tooling 16 and compiler harness 4 pass, with 868 links, schemas/catalog, formatting, Clippy, build and conformance. All 32 examples run in both profiles. Conformance remains 10 passed, 13 unsupported, 0 failed. Earlier runtime/editor checks were not rerun this slice; their sources and ABI are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized guarded-references with exact output, then split implementation/old boundaries from native/example/README evidence. Refresh current STATUS/logs with actual current validation and forward leave-state merges as next work; keep restart and mutable reference carriers unsupported.
+
+### 2026-09-06 — Guarded reference source freeze
+
+- State: Guarded matcher and short-circuit reference merging is complete. Origin/loan helpers own snapshot restoration, returning guards and predecessor transfers; old copies/cell identities remain distinct. Obsolete conditional-policy plumbing is removed, and Facts.merging isolates the new mode per body. Source and OWNERSHIP are frozen.
+- Validation: Four new origin groups, all 46 loan groups, eight native groups and independent 12 checks/six executions pass. Formatting/Clippy were clean in the loan review; final compiler gate is starting. Resource controls accept 64 repeated joins and reject 1024 with explicit loan-budget B001. HIR/backend/runtime ABI are unchanged.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all ten compiler gate checks and the optimized guarded-references example. Record exact counts and any failure; prior runtime/editor checks remain historical because those files are unchanged. Then split implementation/old boundaries, native/example/README and final handoffs. Next: forward leave-state merges while keeping restart unsupported.
+
+### 2026-09-06 — Guarded reference independent review passed
+
+- State: Independent review confirms guarded state restoration, normal-return masking, demand-only predecessor transfers, old-copy preservation and body-mode isolation. No unsafe acceptance or must-fix issue was found. The bounded HIR policy still excludes any body combining reference reassignment with leave/restart.
+- Validation: All 12 independent checks and six executions (three programs in debug/release) passed exact outcomes/output/P006 spans. Eight native integration groups pass. Resource review confirms charged snapshot/restore/merge and normal-reach solving with existing state/value/origin/node/live limits; focused library tests are finishing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Freeze production and focused test edits, format and run the full compiler gate plus optimized guarded-references example. Keep prior runtime/editor evidence explicitly historical if not rerun. Split source/old boundaries, native/example/README and final handoff commits; next target is forward leave-state merging before restart fixed points.
+
+### 2026-09-06 — Guarded reference native integration passed
+
+- State: All eight new native groups pass after integrating matcher and short-circuit version merges. Partial assignments keep skipped values, complementary overwrites remove expired versions, old copies stay fixed, guarded owner/cell conflicts remain enforced and panicking arms contribute no continuation. README and guarded-references example describe the new scope.
+- Validation: Eight native groups pass with debug/release accepted execution and primary E302/E303 checks. Independent probes and focused origin/loan/resource groups are in progress. The earlier B001 baseline and corrected raw-string test edit remain recorded; no production failure has appeared.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish focused tests and independent review, remove obsolete policy-scan guard plumbing, then freeze source. Run the compiler gate and optimized example; preserve prior runtime/editor qualification boundaries and split implementation, native/example evidence and final trackers.
+
+### 2026-09-06 — Guarded origin and loan helpers integrated
+
+- State: Origin and loan branch helpers compile. Matcher arms and short-circuit RHS share snapshot/restore/merge handling; origin continuation assumptions and graph completion reach exclude diverging paths. Facts.merging activates the new path only for bodies containing reference assignments. Assignment-free bodies retain their previous loop behavior.
+- Validation: Cargo checks pass and the previous 40 loan groups passed before the merge. Root eight-group native integration is running. Merged loan origins are normalized to actual component paths and branch-end nodes transfer all components only on demand; unchanged bundles avoid new merges.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve any native integration failures, finish focused origin/loan/resource cases and independent probes. Keep leave/restart combinations B001, update exact scope docs, freeze production source and run the compiler gate plus optimized example.
+
+### 2026-09-06 — Guarded reference coverage and example prepared
+
+- State: Prepared eight native groups plus guarded-references.mwy, and replaced old conditional B001 rows with the remaining exit/backedge boundary group. Reference merges, demand-only liveness, copies, cell reads, expiry, public bounds and short-circuit effects are covered. Production helpers are being implemented.
+- Validation: Five initial groups had the expected preimplementation B001 baseline. Rustfmt caught a test insertion inside a raw source string; moved that test block outside the string and formatting now passes. No production source defect or passing new behavior is claimed yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish origin/loan integration, run all eight guarded native groups and focused library tests, then independently probe scope/guard/normal-return edges. Preserve the leave/restart exclusion and record actual remaining limits before final validation and split commits.
+
+### 2026-09-06 — Guarded merge design selected
+
+- State: Both matcher arms and short-circuit RHS paths will share charged snapshot/restore/merge helpers. Origin states are masked by arm/normal guards; only returning paths contribute. Loan branch-end transfers are demand-only, with unchanged versions reused and duplicate origins normalized. Bodies with reference assignments retain the leave/restart exclusion.
+- Validation: Eight native groups are prepared, including complementary expired-value overwrites, nested short circuits and carrier/public-bound joins. Five initial groups failed at the previous B001 gate as the expected baseline. A malformed patch was rejected before changing files and corrected; no source failure resulted.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement the agreed helpers and continuation assumptions without changing assignment-free loop behavior. Integrate eight native groups, replace obsolete conditional B001 expectations, independently probe panic/proof/guard boundaries, then run the compiler gate.
+
+### 2026-09-06 — Guarded reference native baseline recorded
+
+- State: Added five native groups for partial/nested assignments, preserved copies, guarded owner writes, cell views, scoped/temporary and call-bound expiry, condition/argument effects and panic. Branch merge must be metadata-only so unused references do not acquire synthetic join reads.
+- Validation: Focused native baseline failed all five groups at the existing conditional-assignment B001 gate, as expected before implementation. Origin State.under/merge and graph transfers were reviewed; snapshots must be masked by arm guards and taken after condition effects.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement independently restored origin/loan branch environments with charged snapshots and demand-only merge transfers. Retain current leave/restart gate, decide shared short-circuit support, then run the new native groups and explicit safe/unsafe controls.
+
+### 2026-09-06 — Guarded mutable-reference merge investigation
+
+- State: Starting from clean f16c30b. Next slice is guarded matcher branch merging for fixed shared-reference locals, preserving old copies and physical cell loans. Origin and loan workers own separate modules; root owns native/example/docs integration and all trackers. Short-circuit RHS support will reuse the merge only if its proof is sound; leave/restart combinations remain B001.
+- Validation: Previous slice passed 435 Rust and 35 Python tests with recorded runtime/editor and optimized execution evidence. No new branch behavior is implemented or validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree guarded state and loan transfer semantics, including partial writes and diverging arms. Implement bounded snapshot/restore/merge helpers, add branch/effect/expiry diagnostics, then run focused integration before relaxing the policy gates.
+
 ### 2026-09-06 — Mutable shared-reference local handoff complete
 
 - State: Implementation 32d093c and native/example coverage 4b7d655 are complete. Fixed shared-reference locals support linear reassignment with frozen prior copies and physical cell loans. Current handoffs document guarded branches and per-body leave/restart exclusions, with explicit branch-version merging as the next slice.
