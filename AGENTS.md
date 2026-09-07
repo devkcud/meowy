@@ -25,5 +25,9 @@
   when practical, and retain the existing checks across each move.
 - Run checks appropriate to changed behavior. Never count unsupported features,
   missing tools or crashes as successful conformance rejections.
-- Split requested commits by coherent behavior and dependencies. Do not push,
-  publish or send messages to others without explicit authorization.
+- After completing and validating a task, commit the changes you made unless the
+  user requests otherwise. Split distinct features, fixes, refactors or other
+  concerns into separate, cohesive commits ordered by dependency. Do not combine
+  unrelated work or include changes made by the user or other agents outside your
+  assigned task. Use short, clear commit messages describing each change.
+- Do not push, publish or send messages to others without explicit authorization.

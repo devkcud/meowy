@@ -6,6 +6,13 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Automatic focused commits required
+
+- Findings: Root AGENTS.md now requires agents to commit their completed, validated task changes and split distinct concerns into dependency-ordered commits. Compiler rules are aligned; unrelated user/agent work is excluded and pushing/publication still requires authorization.
+- Validation: Independent review confirms both instruction files agree. Git whitespace and staged-diff checks pass; only this workflow change is staged. Compiler execution evidence is unchanged.
+- Blockers: None.
+- Next steps: Apply this commit policy to subsequent tasks, preserving the current compiler continuation and its recorded validation.
+
 ### 2026-09-07 — Stored activity handoff complete
 
 - State: Restart-site metadata b0c9756, activity implementation 1df163b and native/example coverage 74fac7c are complete. Both current handoffs record supported stored activity, stable convergence, source-guarded predecessor transfers and the expired-source boundary. Final independent handoff review found no stale claim or missing continuation; wider runtime/library/tool work remains visible.

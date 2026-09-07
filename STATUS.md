@@ -1,5 +1,9 @@
 # Meowy project status
 
+Repository workflow: agents commit their completed, validated task changes by
+coherent feature, fix, refactor or other concern, ordered by dependency, unless the
+user requests otherwise. Unrelated changes stay outside those commits.
+
 Updated: 2026-09-07. This is the restart point for work across the repository.
 The compiler has its detailed handoff in [compiler/STATUS.md](compiler/STATUS.md).
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).

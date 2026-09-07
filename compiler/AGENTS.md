@@ -62,6 +62,9 @@ These instructions apply to this directory and all descendants.
 ## Scope and permissions
 
 - Keep this implementation in `compiler/` unless an integration change outside it is necessary.
-- Do not commit, publish, deploy, or contact other people unless the user requests it.
+- Commit completed, validated changes following the root AGENTS.md rule: split
+  distinct features, fixes, refactors or other concerns into cohesive commits ordered
+  by dependency, unless the user requests otherwise. Include only your task's changes.
+- Do not push, publish, deploy, or contact other people without explicit authorization.
 - Do not add dependencies before the owning component needs them. Keep the dependency graph locked and bootstrap inputs explicit.
 - Keep permission requests limited to actual environment restrictions or actions outside the authorized task.

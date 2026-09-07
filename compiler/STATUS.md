@@ -1,5 +1,9 @@
 # Compiler handoff and work tracker
 
+Repository workflow: agents commit their completed, validated task changes by
+coherent feature, fix, refactor or other concern, ordered by dependency, unless the
+user requests otherwise. Unrelated changes stay outside those commits.
+
 Updated: 2026-09-07. Stored restart-header activity is implemented and validated.
 Full v0.0.1 remains incomplete; no unfinished source edits or failing checks remain.
 Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
