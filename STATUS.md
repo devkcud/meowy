@@ -11,6 +11,18 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- Completed the [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md)
+  in `939c914`.
+  The first slice covers ordinary scalar owners, local moves/reinitialization,
+  shared/exclusive reborrows, conditional availability and named leaves. Explicit
+  access events, stable authority and forward initialization are prerequisites;
+  source-level `&!` remains B001. Derived shared values cannot bypass the first
+  slice's call/carrier/reference-cell gates.
+- Frontend and loan reviews pass. All 43 new current-boundary probes pass: 39 B001,
+  E302/E303/E305 and one accepted shared control. These establish current parsing
+  and capability boundaries, not planned exclusive execution. No production source
+  changed; prior compiler/runtime test evidence was not rerun. Documentation checks
+  pass 879 links in 87 files, and Git whitespace checks pass.
 - Implemented terminal expired source identities for restart-carried shared
   references and public lifetime bounds. Ended Local/Slot/Temporary sources cannot
   revive when the same static storage site runs again. Safe overwrite-before-read
@@ -20,7 +32,8 @@ The full documented v0.0.1 release remains incomplete.
   Header transfers add no read; raw predecessor snapshots retain physical loans
   and current-iteration E302 conflicts. Generated storage, runtime ABI and dependencies
   are unchanged. Prior guarded activity is `1df163b` with RestartId `b0c9756`.
-- All ten compiler checks pass: 550 Rust tests, 20 Python tests, 873 local links,
+- Prior expiry validation passed all ten compiler checks: 550 Rust tests, 20 Python
+  tests, 873 local links,
   schemas/catalog, formatting, Clippy, build and conformance. All 37 examples run
   in debug/release, including `compiler/examples/expired-restarts.mwy`.
   Independent audit passes twelve checks and ten profile executions.
@@ -40,7 +53,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Guarded restart headers with terminal source expiry | Exclusive-reference initialization/reborrow model and cleanup |
+| Compiler | Restart expiry implemented; exclusive-reference design reviewed | Explicit read/write access events, then authority and initialization |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,13 +63,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design the first exclusive-reference and initialization slice in
-   `compiler/OWNERSHIP.md`, `compiler/src/check/mutation.rs`, `compiler/src/borrow_value.rs`
-   and `compiler/src/loans/`. Define move/reborrow state, parent suspension and scope
-   exits before enabling source-level exclusive references or mutable reference
-   carriers. Preserve first-collection conflicts, canonical slot identity, terminal
-   expiry and source-guarded header transfers; prove acceptance and rejection in both
-   profiles before relaxing B001.
+1. Implement the first step of `compiler/EXCLUSIVE_REFERENCES.md`: record explicit
+   physical accesses in `compiler/src/loans/state.rs`, `values.rs`, `control.rs` and
+   a focused `access.rs` module. Preserve scalar/tag/projection evaluation order,
+   shared last-use checks, canonical slots and first-collection reservations. Keep
+   `&!` gated; validate access evidence and existing compiler/native regressions.
+   Then add guarded authority alternatives and forward initialized/moved state on
+   the same CFG before enabling the complete scalar exclusive-reference slice.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

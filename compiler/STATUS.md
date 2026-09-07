@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Terminal expired restart sources are implemented and validated.
+Updated: 2026-09-07. Exclusive-reference design is reviewed; access-event work is next.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
 Expiry implementation: `7906333`; native coverage/example: `324e9ae`.
 Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
@@ -21,6 +21,23 @@ This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider pro
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
+
+Completed the [exclusive-reference implementation design](EXCLUSIVE_REFERENCES.md)
+in `939c914`.
+The first slice admits ordinary scalar owners and local reference moves, replacement,
+reborrows, branches and named Leave only after explicit accesses, guarded authority
+alternatives and forward initialized/moved state exist. Authority remains distinct
+from physical origins, public bounds and immutable value IDs. Shared values derived
+from exclusive loans must not bypass the call/carrier/reference-cell gates. Bodies
+combining exclusive values and restarts stay B001 until both dataflows distinguish repeated borrow sites
+without a dynamic counter. The design specifies the owning files and future matrix.
+
+Frontend/loan reviews and 43 current-boundary probes pass. This is a design-only
+step: no production code, grammar, runtime ABI or supported capability changed.
+Planned exclusive E301/E302/E303/E305/E309 behavior is not yet implemented. Next add
+physical access events to the current CFG, then authority and forward availability.
+
+## Prior implemented milestone
 
 Completed: restart headers retain terminal Source::Expired identities for ended or
 iteration-owned Local/Slot/Temporary sources and public lifetime bounds. Each marker
@@ -549,12 +566,19 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
+- Current design step: 43 standalone `check --json` probes pass on the unchanged
+  pinned compiler: 39 B001, one each E302/E303/E305 and one accepted shared control.
+  These establish parsing and existing capability gates only. No exclusive native
+  program ran. Frontend/loan review passes; one bad documentation anchor was fixed.
+  Documentation checks pass 879 links in 87 Markdown files; staged Git whitespace
+  checks pass. Production code and reference fixtures are unchanged. Prior full test evidence
+  below was not rerun for this design step.
 - Commit-only follow-up: implementation `7906333`, native coverage/example `324e9ae`.
   All 26 non-tracker files match their pre-split content hashes in both the working
   tree and commits. Staged/per-commit whitespace checks pass; historical checkpoints
   are preserved. Compiler/runtime tests were not rerun for the split.
 
-- Final `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+- Prior expiry `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
   Rust: 292 library and 258 native groups (550 total). All 37 examples execute in
   debug/release; expired-restarts output is exactly `1\n2\n3\n7\n9\n9\n`.
   Formatting, Clippy `-D warnings`, pinned build and schemas/catalog pass.
@@ -600,25 +624,34 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Design the first exclusive-reference and initialization slice in `OWNERSHIP.md`,
-   `src/check/mutation.rs`, `src/borrow_value.rs` and `src/loans/`. Define move/reborrow
-   state, parent suspension and scope exits before enabling source-level exclusive
-   references or mutable reference-bearing carriers. Preserve canonical slots,
-   first-collection conflicts, terminal expiry and source-side predecessor activity.
-   Prove accepted execution and relevant lifetime/loan rejections in both profiles
-   before relaxing any capability gate.
-2. Define generated payload/diagnostic layouts and scope cleanup using runtime
+1. Implement explicit physical accesses in `src/loans/state.rs`, `values.rs`,
+   `control.rs` and a focused `access.rs` module, following EXCLUSIVE_REFERENCES.md.
+   Record ordinary scalar reads, tag/projection reads and existing writes without
+   altering source evaluation order or adding synthetic merge reads. Reuse canonical
+   places and first-collection reservations; charge retained events/paths before
+   allocation. Keep exclusive gates unchanged. Verify access-order evidence and
+   existing shared E302/E303 behavior, then run the compiler gate.
+2. Add guarded authority alternatives and parent relationships separate from value
+   IDs and origins/bounds; add forward initialized/moved state on the same CFG.
+   Prove moves, reinitialization, shared-child copies, parent suspension, conditional
+   paths, short circuits and exact-target Leave. Preserve budget exhaustion and
+   terminal expiry. Gate hidden exclusive ancestry at calls/carriers/reference cells.
+3. Integrate explicit reference mode and consuming contexts through checker, origin
+   traversal, loans and scalar indirect stores. Capture targets once and retain
+   demand only through returning stores. Enable the complete scalar slice after
+   native debug/release and exact-code criteria pass; keep exclusive restart bodies,
+   fields, aliases, containers, signatures and owned payloads gated as designed.
+4. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.
-3. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
+5. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
    with explicit scope/dependency models and unchanged effect order. Add
    static/intrinsic sources and new projections only with updated lifetime
    contracts/no-return assumptions. Extend diagnostic source identities and evidence
    without treating bootstrap byte-span text as a complete replay artifact.
-4. Implement required evaluation, specialization and the project/module graph;
+6. Implement required evaluation, specialization and the project/module graph;
    enable fixtures only after actual support, then progress libraries and tools.
-5. Keep both handoffs/logs current; run the combined gate after wider integrations.
+7. Keep both handoffs/logs current; run the combined gate after wider integrations.
    Do not rerun green compiler checks without a new change or concern. Strict
    conformance needs zero unsupported cases and still covers only part of v0.0.1
-   qualification. Expiry source/tests and native/example documentation are committed;
-   preserve this handoff and its execution evidence.
+   qualification. Preserve implemented expiry and its prior execution evidence.

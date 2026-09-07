@@ -6,6 +6,28 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Exclusive-reference design committed and handoff finalized
+
+- Findings: Design commit 939c914 defines the bounded scalar slice and the implementation order; OWNERSHIP.md links it and no longer lists completed iteration-owned shared headers as missing. Final frontend/loan review found no remaining material ambiguity after guarded-authority and derived-shared boundary fixes. Current handoffs name explicit CFG access events as the next implementation action.
+- Validation: Forty-three current-boundary probes pass (39 B001, E302/E303/E305 and one accepted shared control). Documentation checks pass 879 links in 87 files; Git whitespace passes. No production source changed, no exclusive native program executed, and prior compiler/runtime suites were not rerun. Preserve the distinction between planned ownership diagnostics and current capability rejections.
+- Blockers: No blocker to the next implementation step. Exclusive-reference support, owned cleanup and full v0.0.1 qualification remain incomplete.
+- Next steps: Implement physical read/write access events on the existing loan CFG with bounded storage/work and unchanged shared behavior; then add authority alternatives and forward initialization before enabling the designed scalar exclusive slice. Commit handoffs and verify clean Git state.
+
+### 2026-09-07 — Exclusive-reference design and boundary proof completed
+
+- Findings: Added EXCLUSIVE_REFERENCES.md with a scalar-only first slice, explicit CFG accesses, separate storage/value/authority identities, guarded alternative parents, forward move/initialization state, reborrow suspension and indirect-store ordering. Calls/carriers/reference cells containing exclusive-derived shared authority remain gated too. Fixed an obsolete iteration-owned shared-header limitation in OWNERSHIP.md.
+- Validation: All 43 current-boundary probes pass: 39 B001, one each E302/E303/E305, and one accepted shared control. These check current parsing/gates, not planned exclusive behavior. Links pass 877/877 and Git whitespace passes. One incorrect link anchor was corrected. Prior compiler tests were not rerun; no production source changed.
+- Review: Frontend/loan reviews identified guarded parent alternatives and hidden ancestry in otherwise shared shapes; the design now addresses both. Added grouped/ascribed moves, short circuits, shared-child copies and target capture across handle replacement to planned criteria.
+- Blockers: No environmental blocker. Source-level exclusivity remains unimplemented; first access-event and forward availability work is next.
+- Next steps: Finish independent review, refresh current handoffs with the first concrete implementation action, commit design separately from tracker/history updates and verify clean Git state.
+
+### 2026-09-07 — Exclusive-reference prerequisites mapped
+
+- Findings: Parser syntax already exists, but shared-only HIR, copied reference value versions and write-only conflict events cannot implement non-Copy exclusive references. Stable loan authority must remain distinct from physical origins, public bounds and immutable value IDs. Initialization/move state needs forward dataflow across scoped control before the current gates can relax.
+- Validation: Read current source and language contracts; clean Git state at c417004. Existing compiler evidence is unchanged and was not rerun. Parallel frontend/loan design reviews are in progress.
+- Blockers: No environmental blocker; source-level exclusive references remain B001 until the complete access/move/reborrow model is implemented.
+- Next steps: Write a bounded first-slice design with exact code ownership and acceptance/rejection cases, verify current capability diagnostics, review lifetime/control/cleanup obligations, then commit design and refreshed handoffs separately.
+
 ### 2026-09-07 — Expired-source split handoff finalized
 
 - Findings: Split complete by responsibility: 7906333 implements expiry with source tests and legacy expectation migrations; 324e9ae adds native coverage, example and README; this checkpoint records the handoff. Automatic commit policy remains separately recorded in 206fb3e.
