@@ -152,6 +152,9 @@ The [reference returns example](examples/reference-returns.mwy) carries a select
 exclusive loan through a call and resumes its parent after the returned view ends.
 The [return contract](REFERENCE_RETURNS.md) keeps guarded input authority separate
 from conservative lifetime bounds.
+The [reference blocks example](examples/reference-blocks.mwy) moves an emitted
+child, completes through Leave and cancels another result without undoing its move.
+The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and scope.
 
 ## Implemented language
 
@@ -164,7 +167,8 @@ from conservative lifetime bounds.
 - Immutable and mutable local bindings; checked integer arithmetic, bitwise
   operations, comparisons, and short-circuit boolean operators.
   Unary operators keep their operand type before the result enters an expected
-  union, preserving checked widths and boolean operations.
+  union, preserving checked widths and boolean operations. Non-returning operands
+  propagate through scalar operators while preserving evaluation order and prefixes.
 - Blocks with primary and named emissions, record composition,
   scalar-primary projection, dispatch, and duplicate/uninitialized slot checks.
 - Normalized scalar/record unions, nullable field and primary defaults, and
@@ -199,8 +203,11 @@ from conservative lifetime bounds.
   bounds protect storage without authorizing access. Exclusive results move; shared
   returned children permit compatible parent reads and suspend parent writes.
   Wider exclusive signatures/result shapes, carriers, cells, aliases,
-  dispatch blocks, fields, collections, block results, comparisons and restart bodies
-  remain B001. Unsupported call/result/cell/dispatch-block crossings also reject
+  dispatch blocks, fields, collections, carrier results, comparisons and restart bodies
+  remain B001. Anonymous scalar-reference blocks preserve existing guarded loan
+  identities and consume exclusive emissions. Retained results protect their owners
+  through completion; proven cancellation preserves effects and moves without
+  keeping a future result loan alive. Unsupported call/result/cell/dispatch-block crossings also reject
   shared values carrying exclusive ancestry.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access

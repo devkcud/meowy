@@ -63,8 +63,8 @@ writing through a suspended parent afterward reports E302. Emitting a moved hold
 and reading it later reports E301. Callee-local owners cannot escape the root.
 
 Named Leave and guarded emissions may select returning inputs. Nested and recursive
-calls use the same checked signature contract. Exclusive reference-valued nested
-blocks, shared descendants escaping through arbitrary block results, carriers,
+calls use the same checked signature contract. Anonymous scalar-reference nested blocks now preserve the same identities under the
+[block-result contract](REFERENCE_BLOCKS.md). Named results and carriers,
 reference cells, dispatch blocks and exclusive restart bodies remain B001. No
 cleanup ABI, allocation, runtime destruction or LLVM alias promise was added.
 
@@ -83,6 +83,6 @@ remain enabled, and reference fixtures are unchanged.
 The [reference returns example](examples/reference-returns.mwy) demonstrates guarded
 exclusive selection, parent resumption and shared returned children. The compiler
 gate passes; full language conformance still has 13 unsupported cases. The next
-bounded extension is scalar-reference block results with explicit consumption,
-retained slot demand and scoped exits. Wider carriers and generated cleanup need
+bounded extension is scalar-field exclusive borrowing with canonical overlap and
+mutability proofs. Wider carriers and generated cleanup need
 separate initialization, transfer and destruction contracts.

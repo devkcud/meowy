@@ -25,8 +25,8 @@ Keep exclusive-bearing records, unions, lists, reference cells, emitted aliases,
 temporary owners, dispatch blocks, wider result contracts and captures B001
 until their transfer and lifetime proofs exist. Reject inferred forms as well as
 explicit annotations. Initial support excludes exclusive pointer equality and
-effectful exclusive-valued block results rather than passing them through the
-existing Copy paths. Ordinary scalar results computed through a reference remain
+exclusive-valued carrier results. Anonymous scalar-reference blocks now transfer
+existing guarded authority and consume emitted holders. Ordinary scalar results computed through a reference remain
 supported. Selected record fields are a follow-up using the existing mutability
 and canonical-place rules; indexed exclusive access comes later.
 
@@ -253,7 +253,7 @@ holder only under `!flag`. A child created after conditional owner replacement
 must suspend exactly the guarded parent alternatives, preserving safe writes to
 the other owner.
 
-Retain B001 for exclusive loops, signatures/results, inferred carriers and
+Retain B001 for exclusive loops, wider signatures/result shapes, inferred carriers and
 reference cells. Once those forms are implemented, moving a non-Copy referent
 through a borrow must use E304; do not claim that diagnostic is proved while the
 containing shape is still unsupported. Shared scalar indirect writes report E305; wider indirect stores remain B001.
@@ -274,8 +274,8 @@ Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chai
 with B001 rather than publishing partial proofs. Existing shared-reference tests
 remain enabled; reference fixtures are unchanged.
 
-Next, extend one excluded shape at a time: scalar-reference block results need
-explicit consumption, retained slot demand and scoped-exit proof; fields and collections need
+Next, extend one excluded shape at a time: scalar-field exclusive borrows need
+mutable path validation and canonical disjointness proof; fields and collections need
 projection-aware permission; carriers need non-Copy initialization and destruction;
 restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 

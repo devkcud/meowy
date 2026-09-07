@@ -954,7 +954,7 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
   carry semantic boundary markers. Guarded ancestry checks reject exclusive-derived
   shared values crossing unsupported boundaries. Flat scalar direct calls use
   explicit entry accesses and guarded result transfer instead. Wider result contracts, carriers,
-  field/element roots, comparisons, block results and resolved restart bodies remain B001.
+  field/element roots, comparisons, carrier results and resolved restart bodies remain B001.
 - Availability produces E301 for definite moves and E309 for uncertain storage;
   origin lifetime failures remain E303. Mutable owner requirements and shared scalar
   store rejection produce E305. Runtime cleanup and owned destruction are unproved.
@@ -995,11 +995,30 @@ checking proves the body; callers conservatively consider every compatible argum
 Result loans are created only after normal return. Missing/incomplete evidence or
 invalid argument indexes are B001. Equal physical addresses never merge distinct
 argument authority. Caller entry still validates every argument's maximum access.
-Root-function emissions retain demand until exit; later conflicting parent access
+Scalar-reference emissions retain demand until target completion; later conflicting parent access
 is E302. Exclusive emissions and returned handles consume their holders.
 
 Public bounds include every borrow-carrying input, including ignored or incompatible
 pointee types. They retain scope and write/acquisition protection, but cannot become
 actual result addresses, authorize access or prohibit a read solely because the
-result is exclusive. Wider calls retain opaque ancestry. Nested block results,
-carriers and generated destruction remain separate contracts.
+result is exclusive. Wider calls retain opaque ancestry. Anonymous scalar-reference blocks now retain guarded identity and consuming
+emissions. Carriers and generated destruction remain separate contracts.
+
+## Anonymous scalar-reference blocks
+
+The [block-result contract](REFERENCE_BLOCKS.md) permits ordinary anonymous scalar
+reference results and known cancelled anonymous emissions. `loans/control.rs` checks
+result type or explicit cancellation evidence; dispatch BlockIds and named fields
+retain their boundaries. Missing emission/completion evidence is B001.
+
+Existing copy links transfer the same guarded loan IDs; they do not copy exclusive
+ownership. Availability consumes emitted holders immediately, and retained result
+demand protects loans through target completion. Own-target Leave returns the value;
+ancestor Leave/panic may cancel it without undoing moves or earlier effects.
+Local scalar owners still cannot escape their block. Block-valued indirect targets
+are captured once and retained only through a returning final store.
+
+Fifteen native groups and two graph evidence groups cover these paths, including
+guarded same-address acquisitions, missing cancellation evidence, dispatch boundaries
+and short-circuit availability. The standalone Never-operator fix preserves skipped
+block typing and actual non-returning effects without changing the backend.
