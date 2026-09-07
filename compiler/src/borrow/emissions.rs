@@ -53,11 +53,10 @@ impl Checker<'_> {
         if !destination.accepts(ty) {
             return Ok(());
         }
-        let mut state = value
-            .convert(ty, destination, self.guards, span)?
-            .under(retained, self.guards);
+        let mut state = value.convert(ty, destination, self.guards, span)?;
         let assumptions = self.assumptions();
         state.proof = self.guards.and(state.proof, assumptions);
+        state = state.under(retained, self.guards);
         self.complete(destination, &state, span)?;
         let key = (target, field.clone());
         let prior = self.writes.get(&key).copied().unwrap_or(FALSE);

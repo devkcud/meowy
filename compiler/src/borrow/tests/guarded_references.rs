@@ -1,6 +1,14 @@
 use super::{accepts, rejects};
 
 #[test]
+pub(crate) fn disjoint_emission_proofs_do_not_erase_result_loans() {
+    rejects(
+        "f<int32>:(flag<boolean>){a:=1;b:=2;p:=&a;value:'out{|flag|{p=&b;'out->p};|!flag|->p};a=3;b=3;->*value}",
+        "E302",
+    );
+}
+
+#[test]
 pub(crate) fn guarded_assignments_keep_partial_baselines_and_complementary_overwrites() {
     for source in [
         "f<null>:(flag<boolean>){a:1;b:2;p:=&1;|flag|p=&a;|!flag|p=&b;value:*p}",
