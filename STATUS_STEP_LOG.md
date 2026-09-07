@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Transitive shared-borrow handoff
+
+- State: Bounded whole-carrier/reference-cell shared borrows are complete in 6ecda19, with native/example/README evidence in fda28b9. Flat Deref summaries preserve contained origins and activity; conditional loan transfers maintain backward dependencies without reading unrelated pointees. Recursive call contracts retain all active input bounds at every returned reference layer. Source and reviews are complete.
+- Validation: All 14 checks pass: 200 library and 181 native Rust tests, 35 Python tests, 864 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitizers. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized transitive-borrows output is exact. Twelve independent cases and scoped source audit pass; both focused commits pass cached whitespace checks.
+- Blockers: No unfinished source work or failing checks. Shared temporary-owner borrows, exclusive references, mutable reference carriers, reference-bearing list elements, owned cleanup and full release qualification remain open. Reference depth is bounded at 64 layers with existing summary/fanout/work limits.
+- Next steps: Commit this handoff and verify clean Git state. Then add explicit statement/temporary identities for shared borrowing of reference-free Copy temporaries, preserving one evaluation and full-statement lifetimes across calls, dispatch, matcher conditions/bodies and reborrows. Verify later-use E303, last-use E302 and leave/restart/panic before enabling the capability. Keep runtime/library/tooling progress visible.
+
+### 2026-09-06 — Transitive shared-borrow native coverage commit
+
+- State: Committed eight native groups, transitive-borrows example and README as fda28b9. Coupled implementation is 6ecda19. Source, optimized execution and independent review are complete; only final handoffs remain.
+- Validation: All 14 checks pass with 381 Rust and 35 Python tests. Optimized example output is exact. Both focused commits pass cached whitespace checks; no source changes followed validation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current root/compiler STATUS with bounded transitive support, actual evidence and statement-scoped Copy temporary next steps. Preserve all old logs, check final links/whitespace, commit handoffs and verify clean Git state.
+
+### 2026-09-06 — Transitive shared-borrow implementation commit
+
+- State: Committed the coupled pointee-state, input/call-contract, conditional-loan-transfer and capability changes as 6ecda19, with library evidence, ownership documentation and obsolete boundary updates. Native/example/README evidence remains separate.
+- Validation: All 14 checks and optimized exact-output example passed before the commit. Cached whitespace and staged dependency boundaries pass. No source changes followed verification.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit transitive native coverage and example/README separately, then finalize current handoffs and temporary-Copy-borrow next steps. Preserve step-log history, check links/whitespace and confirm clean Git state.
+
+### 2026-09-06 — Transitive shared-borrow optimized smoke
+
+- State: Optimized transitive-borrows build and execution passed with exact output. Source, independent review and native evidence are complete; no source changes followed the full gate. New modules keep pointee state, contract substitution and loan transfers organized.
+- Validation: Release-profile example exited 0 with exact 7,true,7,7 lines and empty stderr. All 14 checks pass: 200 library/181 native Rust tests and 35 Python tests. Whole-reference support remains bounded at 64 reference layers and existing summary/work limits.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect and commit the coupled transitive implementation with obsolete boundaries, then native/example/README evidence. Finalize current handoffs and preserved logs; next is statement-scoped shared borrowing of reference-free Copy temporaries, separate from exclusive/owned work.
+
+### 2026-09-06 — Transitive shared-borrow combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on frozen source. Whole-carrier and reference-cell shared borrows preserve transitive origins, selected demand, call bounds, nullable activity and bounded construction. Optimized compiler build is running for the final example.
+- Validation: 200 library and 181 native Rust tests, 35 Python tests, 864 local links, Clippy, formatting, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Independent 12-case review is clean.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized transitive-borrows with exact output, inspect complete source/test changes and split coherent implementation and native evidence commits. Finalize current handoffs, preserved history and remaining borrowing priorities before final Git checks.
+
+### 2026-09-06 — Transitive shared-borrow combined gate started
+
+- State: Source and tests are frozen. Independent audit confirms conditional transfers preserve hidden loans, selected fields avoid unrelated pointees, call results keep bounds at every reference layer and nullable candidate snapshots remain correlated. The full repository/compiler/runtime gate is running outside the sandbox.
+- Validation: All 181 native groups, 15 contract groups, 32 loan groups and 12 independent cases pass. Formatting is clean and the early 64-layer limit is verified. The combined gate has passed tooling, 864 local links, schemas/catalog and is continuing through runtime/compiler checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect final gate results, run optimized transitive-borrows with exact output, then split implementation/old boundary updates from native/example/README evidence. Finalize STATUS/logs with remaining borrowing work and preserved history.
+
+### 2026-09-06 — Transitive shared-borrow source freeze
+
+- State: The transitive implementation is complete: flat Deref summaries, demand-driven loan transfers, nested input/call substitution and all-input bounds work with native pointers. Whole-carrier/reference-cell borrows are supported; mutable reference-bearing storage, exclusive references, temporary owners and reference-bearing list elements remain separate.
+- Validation: All 181 native groups, 32 loan groups, 24 origin groups, 35 existing checker groups and 15 contract groups pass. New reference-depth control accepts 64 layers and rejects deeper construction with B001. Independent 12-case execution passes; final scoped review is finishing. Old B001 rows were updated only for supported forms.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete final review, run Clippy/format and all 14 repository checks on frozen source, then optimized transitive-borrows example. Split coherent implementation, native/example/README evidence and current handoff commits; preserve all prior logs.
+
+### 2026-09-06 — Transitive native integration and legacy boundaries
+
+- State: All 32 loan groups pass with conditional summary transfers, including dependencies before and after outer borrows, selected-field precision, pointer/tag inspection and loop liveness. Eight new native groups are integrated; old whole-carrier/reference-cell B001 rows are removed where support now exists.
+- Validation: First new native run passed 7 groups; the remaining fixture used two integer comparisons without a proven complementary relationship and hit E205. It now binds one Boolean and uses its negation. An earlier unit E208 was likewise a predicate/ascription fixture issue. Full native regression is running after corrections.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect full native results and any remaining obsolete boundaries, complete contract-specific/independent review, add the runnable transitive example, then freeze all source for Clippy/format/full repository checks and split commits.
+
+### 2026-09-06 — Transitive state and loan integration
+
+- State: Step::Deref flattens bounded pointee summaries into existing origin/activity paths. Root added conditional value-transfer edges so summaries carry loans backward only when later contents are demanded; actual pointer/value reads remain explicit uses. Borrow, dereference, reborrow, bindings and block results use the shared transfer rules.
+- Validation: Core transitive filter passed four groups, including projection precision and bounded depth. Three new loan groups are written. Their run is temporarily paused because the contract worker is landing a new call module; current E0583 is incomplete integration, not a conformance result.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish contract module integration, run transitive loan/origin/call groups, resolve actual failures, then exercise native pointer identity, copy escapes, all-input bounds and field precision before the combined gate.
+
+### 2026-09-06 — Transitive shared-borrow implementation started
+
+- State: Starting bounded transitive pointee summaries for whole-carrier and reference-cell shared borrows. Value/origin/checker work and function-contract adaptation are delegated separately; root owns loan consumers, native evidence and all STATUS/logs. Independent review will challenge lifetime, mutable facts and budget boundaries.
+- Validation: Tree starts clean at d744eb0. Read current State, contract and loan consumers: dereference currently discards pointee states, and unsupported nested referents remain B001. Existing shared borrowing provides the storage identities and lifetime checks to reuse.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree on a bounded transitive state representation and snapshot interfaces, preserve current ordinary borrowing behavior, implement consumers before opening capability gates, then run focused positive/E302/E303/budget cases and full checks with split commits.
+
 ### 2026-09-06 — Reference-bearing emitted-slot handoff
 
 - State: Reference-bearing immutable emitted aliases and selected carrier-field borrows are complete in 0c6492b, with native/example/README evidence in 888c67e. Stored reference origins and bounds remain separate from cell ownership; selected addresses do not consume unrelated reference fields. Source and reviews are complete. Older alias commit history remains in this log instead of accumulating in the current compiler header.

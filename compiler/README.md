@@ -171,7 +171,8 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 - Immutable reference-bearing unions and optional fields. Injection, widening and
   proven narrowing preserve the active member's borrow origins. Absent reference
   fields carry no loan; type predicates inspect the discriminant without copying
-  reference payloads. Copies and equality still consume every active reference.
+  reference payloads. Copies and equality consume active references directly
+  contained in the value.
 - Shared reborrows: `&*view`, `&view.field` and nested
   parenthesized paths, including reference-valued prefixes such as
   `&holder.view.field`. Reference-valued calls/blocks evaluate once. Derived
@@ -315,8 +316,8 @@ remaining effects without projecting into an absent or incompatible result field
 Borrows of slot storage use the target block as their owner even when the alias name
 was declared in an inner scope. Discarded cells are retained as target-owned partial
 result storage. A slot borrow needs backing that matches the alias type or one
-concrete union member, including a complete summary for reference-bearing referents. Proper subunion views
-remain B001 because borrowing cannot retag a copied value.
+concrete union member, including a complete summary for reference-bearing referents.
+Proper subunion views remain B001 because borrowing cannot retag a copied value.
 References may pass through inner results, but escaping their target's publication
 reports E303. Live overlapping writes report E302, including uses across an inner
 restart. Restarting the target ends its iteration's storage. Mutable aliases publish

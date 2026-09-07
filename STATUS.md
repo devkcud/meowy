@@ -7,38 +7,40 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `0c6492b` extends actual SlotAlias cells to immutable emitted references
-  and reference-carrying records/unions. Existing component states retain pointee
-  origins, input bounds and tag facts; copied references gain no dependency on the
-  containing slot's lifetime.
-- Concrete reference-free fields can be borrowed from locals, copied parameters/
-  receivers and emitted carriers. A pure storage-path walk validates the selected
-  type; crossing a stored reference still uses the existing pointee reborrow path.
-  Selected field addresses follow their Local/Slot owner and report E303 on escape.
-- Selected addresses do not read unrelated reference payloads. Pending result
-  emissions still retain their contained references, preserving E302 conflicts.
-  Outer/discarded target lifetimes, widening and restart use the existing storage
-  machinery. Whole-carrier/reference-cell borrows remain B001.
-- `888c67e` adds nine native groups, `compiler/examples/reference-slots.mwy`
-  and README evidence. Four semantic and five backend groups distinguish physical
-  cell ownership from stored references. Production changes fit two existing
-  checker modules; backend lowering, runtime ABI and dependencies are unchanged.
-- All 14 combined checks pass: 360 Rust tests, 35 Python tests, 863 local links,
+- Compiler: `6ecda19` enables whole-carrier and reference-cell shared borrows with
+  bounded transitive pointee summaries. Flat Deref paths distinguish each borrowed
+  cell from the references and variant activity reachable through it.
+- Direct dereference copies may outlive their outer cell while contained pointees
+  remain alive. Nested field/reborrow operations load stored pointers once. Mutable
+  reference-free pointee reads keep fresh unknown activity; immutable carrier
+  snapshots preserve nullable and variant facts.
+- Conditional loan transfers carry nested dependencies backward through borrows,
+  copies, bindings, emissions and block returns only when later contents are used.
+  Actual pointer/value reads stay eager. Whole copies use every contained reference;
+  selected fields and pointer/tag inspection avoid unrelated pointee loans.
+- Recursive function contracts select guarded input snapshots and attach all active
+  input bounds at every returned reference layer. Public call bounds survive later
+  dereferences. Reference construction is capped at 64 layers; summary parts,
+  candidate fanout, paths and transfer work retain the existing shared budgets.
+- `fda28b9` adds eight native groups, `compiler/examples/transitive-borrows.mwy`
+  and README evidence. Thirteen new library groups cover origins, transfers and
+  call contracts. New focused modules keep state, contract and loan work separate.
+- All 14 combined checks pass: 381 Rust tests, 35 Python tests, 864 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs reference-slots with exact output. Twelve independent
-  origin/lifetime/boundary cases and source review pass. No unfinished source work,
-  active workers or failing checks remain; modular organization is preserved.
-- Whole-carrier/reference-cell borrows need transitive pointee summaries before
-  being enabled. Mutable reference carriers, exclusive references, temporary owners,
-  owned cleanup, modules and full release qualification remain open.
+- The optimized compiler runs transitive-borrows with exact output. Twelve
+  independent cases and source review pass; no unfinished source work, active
+  workers or failing checks remain. Runtime ABI and dependencies are unchanged.
+- Shared temporary-owner borrows, exclusive references, mutable reference carriers,
+  reference-bearing lists, owned cleanup and full release qualification remain open.
+  Next is statement-scoped storage for shared borrows of reference-free Copy temporaries.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Reference-bearing emitted slots and selected carrier-field borrows | Transitive carrier borrows, exclusive ownership and cleanup |
+| Compiler | Bounded nested references and whole-carrier shared borrows | Copy temporary lifetimes, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,10 +50,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Model transitive pointee summaries before whole-carrier/reference-cell borrows.
-   Dereference copies must recover every contained origin and input bound separately
-   from the borrowed cell's lifetime. Verify nested references, selected fields,
-   copied inputs, widened/discarded slots and restart; keep B001 until proved.
+1. Materialize reference-free Copy temporary owners with explicit statement lifetime
+   and storage identities. Preserve once-only evaluation through calls, dispatch,
+   reborrows and matcher condition/body boundaries. Verify same-statement acceptance,
+   later-use E303, last-use E302 and leave/restart/panic paths before enabling them.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

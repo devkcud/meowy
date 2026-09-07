@@ -1,8 +1,8 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Reference-bearing emitted-slot aliases pass the final gate.
+Updated: 2026-09-06. Bounded transitive shared borrows pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `0c6492b`; native coverage/example: `888c67e`.
+Implementation: `6ecda19`; native coverage/example: `fda28b9`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
@@ -11,16 +11,17 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: immutable named emissions carrying references now use actual SlotAlias
-cells while their existing component states preserve original pointee origins,
-input bounds and immutable activity. Copying a stored reference does not acquire a
-dependency on the containing slot; selected field borrows do follow that cell owner.
+Completed: whole-carrier/reference-cell shared borrows, nested dereference copies
+and reborrows use flat bounded Deref summaries. Direct pointer origins remain
+separate from contained references and activity. Selected fields consume only their
+required contents; direct copies can shed the outer cell lifetime, while public
+function all-input bounds remain attached through later dereferences.
 
-Concrete reference-free fields of Local/Slot carriers and copied parameters/self
-can be borrowed. Storage-path resolution stops at stored references, preserving
-existing reborrows through their pointees. Unrelated reference payloads are not read
-by selected addresses; pending result emissions still retain their own reference
-bundles. Whole-carrier/reference-cell borrowing and mutable carriers remain B001.
+Conditional loan transfers connect summaries across value flow without eagerly
+reading every pointee. Input and call contracts preserve nested candidates and
+nullable correlations. Reference construction is capped at 64 layers. Temporary
+owners, exclusive references, mutable reference carriers, reference-bearing list
+elements, owned cleanup and full release qualification remain open.
 
 ## Resume here
 
@@ -47,10 +48,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 35 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_contract.rs`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 20 origin, 29 loan, 9 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 24 origin, 32 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 53 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 173 native groups, 4 harness tests and 27 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 181 native groups, 4 harness tests and 28 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -60,6 +61,10 @@ preserve these responsibility boundaries during feature work. `src/parser/`
 separates statements, expressions, types, strings and tree bounds. `src/borrow/`
 and `src/loans/` separate state, traversal and solving. `tests/native/` groups the
 single native target by behavior while sharing one temp-directory counter.
+`borrow_value/pointee.rs` transforms summaries, `borrow/pointee.rs` resolves demanded
+reads, `borrow_contract/call.rs` handles candidate substitution, and
+`loans/transitive.rs` connects summary transfers. Contract tests live beside their
+module; retain these boundaries during further ownership work.
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -115,9 +120,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   requires compatible type and matching field mutability, or proves the emission
   cannot reach target completion. Alias IDs remain outside ordinary places; resolved
   alias metadata explicitly permits borrowed addresses. Actual borrow sites, not
-  address hints, request late layout validation. Selected referents must be
-  reference-free; alias backing must match its type or one exact union member.
-  Proper subunion storage views remain unsupported.
+  address hints, request late layout validation. Alias backing must match its type
+  or one exact union member; reference-bearing referents require complete bounded
+  summaries. Proper subunion storage views remain unsupported.
 - `backend/storage.rs` resolves whole-cell reads/stores with final-slot/local type
   conversion, and matching concrete union payloads for SetPath addresses. Actual
   result cells remain backing storage when type and mutability match; only
@@ -145,11 +150,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   component states and CFG bundles retain original pointee origins, inherited bounds
   and active variants. A copied reference gains no dependency on its containing cell;
   it may outlive that cell while every actual origin and input bound still survives.
-- `address_storage` resolves only concrete inline paths; `address` rejects final
-  selected types carrying references. This permits reference-free fields of ordinary
-  carriers, copied parameters/receivers and emitted slots. Crossing Reference stops
-  the inline walk and preserves the existing `&carrier.view.field` reborrow path.
-- Selected-field Borrow creates only the physical Local/Slot origin, without reading
+- `address_storage` resolves concrete inline paths. Whole carriers/reference cells
+  now use transitive summaries, while selected fields can keep narrower demands.
+  Crossing a stored reference loads it once through Deref/Field HIR and continues
+  the pointee reborrow path; it does not confuse reference-cell and referent addresses.
+- A reference-free selected-field Borrow creates only the physical Local/Slot origin,
+  without reading
   unrelated stored reference components. A discarded carrier's scalar view may
   survive an unrelated pointee's scope while the target cell lives. Retained result
   emission bundles still protect every contained reference until completion.
@@ -256,43 +262,40 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   mixed steps before allocation, with parser depth limits also applying. Typed
   walks, field lookup, region construction and conflict work use existing budgets;
   no list capacity is expanded into per-element paths.
-- Ordinary locals, parameters and copied dispatch self bindings have local storage;
-  a borrowed whole value or selected concrete field must be reference-free. Parameter
-  and self addresses may be used in nested scopes but cannot escape their region. Shared self instead contains a reference
-  value, so returning/reborrowing it preserves the original Local/Slot/Input origins.
-- Reference-bearing record/union dispatch uses ordinary component/variant facts;
-  it does not invent a function-style lifetime contract. Inherited call bounds still
-  survive. Receiver/argument expressions evaluate once and in order.
-- A leading carrier field can produce the reference used by `&holder.view.field`.
-  The reference prefix is copied once, then reborrowed. `&holder.view` remains B001;
-  The holder's reference-free fields instead use physical storage origins. Temporary
-  owners, whole reference-bearing storage/pointees, union-payload/primary-ascription
-  addresses, exclusive borrows and mutable reference carriers remain unsupported.
+- Locals, parameters and copied dispatch self bindings have local storage. Their
+  cell addresses cannot escape that region, while direct copies of contained
+  references retain their separate pointee origins. Shared self retains its original
+  Local/Slot/Input origins and inherited call bounds.
+- Reference-bearing record/union dispatch preserves component/variant facts and
+  evaluates receivers/arguments once. `&holder.view` borrows a reference cell;
+  `&holder.view.field` can load that reference then reborrow its pointee field.
+  Temporary owners, arbitrary union-payload/primary-ascription addresses, exclusive
+  borrows and mutable reference carriers remain unsupported.
 - Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
   field indices while inherited bounds stay unchanged. Lowering evaluates the parent
   once and derives addresses without record copies. Address hints perform no lowering;
   effectful equality operands and argument early leaves have native regressions.
-- Function input leaves use symbolic Input sources, distinct from the parameter's
-  stack copy. Separate referent paths identify storage reached through each input.
-  Calls substitute compatible whole referents, named descendants and typed element
-  regions, attaching every active input origin/transitive bound to returned leaves.
-  Ignored heterogeneous inputs still constrain lifetime and caller writes. Scalar
-  results and scalar-only projections release these loans after consumption.
+- Function input components can descend through Deref, distinct from physical
+  Field/Element projections. Recursive call substitution chooses guarded candidate
+  pointee snapshots, preserving active union/null facts. Unrelated arguments add
+  bounds without inventing contents. Every returned reference layer retains all
+  active input/transitive bounds, including the outer borrowed cell where applicable.
+  Scalar results and scalar-only projections release loans after consumption.
 - Contract facts use unique call-site IDs and entered guards captured after argument
   evaluation. Call arguments remain live together until consumed; an early argument
   exit skips the call. Result proofs apply only on the returning edge. Every body,
   including uncalled and recursive definitions, must prove its own return sources.
-- Under the current capabilities, a reference result needs an active compatible
-  borrowed input referent or typed named/element descendant; otherwise that path cannot return. Nullable results may
-  still return null. Extend this rule before adding static safe-reference sources,
-  additional addressable projections or reference-producing intrinsic contracts. Existing string values are
-  literal-backed static views, not local storage dependencies merely by value.
+- A reference result needs an active compatible input reference, a typed field/element
+  projection, or a contained reference reachable from one. Without a valid source
+  that path cannot return; nullable results may return null. Extend this rule before
+  static sources or reference-producing intrinsics. String values remain literal-backed
+  static views rather than local storage dependencies merely by value.
 - Every active retained reference component must outlive its receiving block,
   even when a later consumer ignores it. A safe-field projection may leave a local
   carrier; returning the whole carrier validates all active references. Discarded
   emissions retain operand effects without escaping on discarded paths.
-- Copies read every active reference. Field/scalar-primary projections read only
-  selected leaves; tag predicates inspect discriminants without copying payloads.
+- Value copies read every directly contained active reference. Field/scalar-primary
+  projections read only selected leaves; tag predicates inspect discriminants without copying payloads.
   Fresh block/record construction still retains result-slot loans to completion.
   Reference formatting needs explicit dereference. Record equality keeps full
   shape; compatible scalar comparisons project the primary. Union equality needs
@@ -306,6 +309,18 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   Predicate assignments invalidate prior facts. Safe programs needing stronger
   temporal relationships may still receive conservative E302/E303; reads may
   overlap shared loans. No global assumption is reapplied after a reset.
+- Step::Deref flattens pointee origins, bounds and activity into existing component
+  paths. Borrow prefixes the immutable stored summary; direct dereference selects
+  one subtree and drops only the outer access. Reference-free pointee reads remain
+  fresh unknown states so mutable initial tags cannot become stale proofs.
+- Graph Node transfers propagate destination demand back to source summary IDs
+  before definitions are killed. Borrow/copy/bind/emission/block-return paths use
+  these links; eager direct uses model actual pointer/value reads. Field and tag
+  inspection avoid unrelated contents, while whole copies consume them. Missing
+  reborrow summary links fail B001 instead of inventing untracked references.
+- Shared reference construction uses a charged type walk and a 64-layer limit,
+  including inferred and type-alias chains. Nested type prefixes remain separate
+  tokens (`<& &int32>` or an alias); no parser/token grammar was changed.
 - Values are capped at 4,096 origin/activity parts. Persistent facts and CFG origin
   storage each cap 262,144 weighted entries, counting active tags and path lengths.
   Shared snapshot/variant work is capped at 4,194,304 charged steps; CFG nodes,
@@ -375,30 +390,27 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 187 library and 173 native groups pass. New coverage adds 3 origin, 1 loan,
-  5 backend and 9 native groups. Clippy `-D warnings` and formatting pass. The
-  optimized compiler builds/runs `examples/reference-slots.mwy` in release with
-  exact stdout `3\n7\n7\n3\n` and empty stderr.
-- All nine native groups passed on first integration: carried-reference identity,
-  safe copies after slot exit, selected Local/Slot/parameter/self fields, unrelated
-  pointee independence, retained-emission E302, E303 escapes, widening/restart,
-  all-input bounds, whole-carrier boundaries and exact P001 index effects.
-- All 53 backend groups pass. Five new groups include 28 debug/release executions
-  verifying actual result-cell reads, external pointer/reborrow identity, selected
-  field addresses, widened ref/carrier unions, discarded backing and restart.
-  No production backend, runtime ABI or dependency change was needed.
-- Twelve independent origin/lifetime/boundary cases and source review pass. Baseline
-  checks established B001 for a selected carrier-field address and accepted copied
-  reference returns before editing. Existing shared budgets pass; whole-carrier
-  transitive dereference remains explicitly unsupported.
+- Rust: 200 library and 181 native groups pass. New groups: 4 origin, 3 loan,
+  6 contract and 8 native. Existing checker coverage also verifies reference depth.
+  Clippy `-D warnings` and formatting pass. The optimized compiler builds/runs
+  `examples/transitive-borrows.mwy` with exact stdout `7\ntrue\n7\n7\n` and empty stderr.
+- Native cases cover nested pointer identity, whole-carrier and reference-cell
+  addresses, direct versus call-bound copies, hidden loans before/after borrowing,
+  selected fields/tag inspection, nullable candidate snapshots, restart and E302/E303.
+  Old B001 rows were removed only for supported forms; no reference fixture or
+  REQUIRED changed. Initial E208/E205 fixture mistakes were corrected and recorded.
+- All 32 loan, 24 origin and 15 contract groups pass. Inferred reference chains stop
+  at the early limit; 64 layers accept and deeper construction reports B001.
+  Existing summary, fanout and liveness budgets pass. Twelve independent cases and
+  scoped source review found no blocker. No production backend/ABI/dependency change.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 863 local links; schemas/catalog and Vim/Neovim pass.
+  checks 864 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime sources/ABI are unchanged. Debug/release/sanitized profiles pass 6 diagnostic,
   14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned groups with fatal,
   truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and the expired
   fiber local negative diagnosis pass.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. No
-  reference fixture or REQUIRED was changed; full language qualification remains open.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
+  language/release qualification remains open.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -406,12 +418,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Add transitive pointee summaries in `borrow_value.rs`, `borrow/`, contracts and
-   loan consumers before enabling whole-carrier/reference-cell addresses. Dereference
-   copies must recover contained origins and input bounds separately from cell
-   ownership; current State::unknown for dereference cannot prove that behavior.
-   Test nested references, selected projections, copied parameters, widened/discarded
-   cells and restart. Keep B001 until all consumers preserve those dependencies.
+1. Add explicit temporary/statement storage identities in HIR, origin and loan
+   scopes for shared borrows of reference-free Copy temporary owners. Preserve one
+   evaluation and actual backing through calls/dispatch/reborrows; matcher condition
+   and controlled statement follow the documented full-statement lifetime. Verify
+   same-statement use, later-use E303, last-use E302 and nested leave/restart/panic
+   paths. Keep B001 until those boundaries are represented; Copy-only owners need
+   no owned cleanup. Reference-bearing lists and exclusive borrowing stay separate.
 2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
    Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup

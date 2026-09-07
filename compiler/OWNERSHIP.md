@@ -54,8 +54,8 @@ implementation boundary; it does not change language rules.
   components a later caller might ignore. Escaping any local referent is E303.
 - The loan graph gives each reference component its own value ID. Projecting
   `pair.left` reads only that component; reading `pair.count` reads no reference
-  components. A whole-record copy or equality operand consumes every contained
-  reference, even if a later use selects only one component of the copy.
+  components. A whole-record copy or equality operand consumes every directly
+  contained active reference, even if a later use selects only one component.
 - Numeric/scalar contexts and formatting project the primary before loan analysis.
   Formatting a scalar primary does not keep named reference fields live. A primary
   reference still requires explicit dereference for formatting. Record equality
