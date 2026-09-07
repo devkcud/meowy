@@ -11,49 +11,35 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Completed the [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md)
-  in `939c914`.
-  The first slice covers ordinary scalar owners, local moves/reinitialization,
-  shared/exclusive reborrows, conditional availability and named leaves. Explicit
-  access events, stable authority and forward initialization are prerequisites;
-  source-level `&!` remains B001. Derived shared values cannot bypass the first
-  slice's call/carrier/reference-cell gates.
-- Frontend and loan reviews pass. All 43 new current-boundary probes pass: 39 B001,
-  E302/E303/E305 and one accepted shared control. These establish current parsing
-  and capability boundaries, not planned exclusive execution. No production source
-  changed; prior compiler/runtime test evidence was not rerun. Documentation checks
-  pass 879 links in 87 files, and Git whitespace checks pass.
-- Implemented terminal expired source identities for restart-carried shared
-  references and public lifetime bounds. Ended Local/Slot/Temporary sources cannot
-  revive when the same static storage site runs again. Safe overwrite-before-read
-  is accepted; actual expired use reports E303.
-- Live ancestor-owned sources, including enclosing-statement temporaries, survive
-  inner restarts. Structural component paths and active variants remain distinct.
-  Header transfers add no read; raw predecessor snapshots retain physical loans
-  and current-iteration E302 conflicts. Generated storage, runtime ABI and dependencies
-  are unchanged. Prior guarded activity is `1df163b` with RestartId `b0c9756`.
-- Prior expiry validation passed all ten compiler checks: 550 Rust tests, 20 Python
-  tests, 873 local links,
-  schemas/catalog, formatting, Clippy, build and conformance. All 37 examples run
-  in debug/release, including `compiler/examples/expired-restarts.mwy`.
-  Independent audit passes twelve checks and ten profile executions.
-- New coverage adds three origin, six loan and nine native groups. Obsolete B001
-  carriage assertions now check acceptance or actual-use E303. Initial test/gate
-  failures and corrections are preserved in the step logs. No failing check remains.
-  Implementation is `7906333`; native coverage/example is `324e9ae`. No push or
-  publication was requested. The split preserved all 26 non-tracker files exactly;
-  Git integrity checks pass. Compiler tests were not rerun for this commit-only step.
-- Existing replay/work/storage limits remain. Independent field/owner and temporal
-  correlations can widen conservatively. Mutable reference carriers, exclusive/owned
-  work and generated cleanup remain open. Conformance is 10 passed, 13 unsupported,
-  0 failed in both profiles. Runtime/editor checks were not rerun; historical
-  evidence at `f16c30b` remains in the compiler handoff.
+- Implemented bounded access records in `698e4b1` on the existing loan CFG: direct reads,
+  stored-tag inspections, shared acquisitions and writes. Direct targets retain
+  canonical storage, lexical views and typed paths; pointee targets retain exact
+  immutable pointer value IDs. Public bounds are not converted into physical reads.
+- Existing write conflicts and last-use behavior are preserved. Tag-only paths do
+  not consume payloads; static type predicates create no invented tag reads.
+  Branches keep their guards and header/reset transfers add no accesses. Missing
+  pointee evidence is allowed only on unreachable paths; reachable gaps remain B001.
+- All ten compiler checks pass: 562 Rust tests (304 library, 258 native), 20 Python
+  tests, 879 local links, schemas/catalog, formatting, Clippy, build and conformance.
+  All 37 examples execute in debug/release. Twelve new graph groups prove ordering,
+  paths, aliases, pointer versions, guards, resets, missing evidence and budgets.
+- The [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md) remains the
+  continuation. Access records are the implemented foundation; stable authority,
+  parent suspension and forward availability are still required. `&!` and indirect
+  writes remain B001. Backend code, runtime ABI and dependencies did not change.
+- Terminal expiry remains implemented in `7906333`, with native/example evidence
+  in `324e9ae`. Existing replay/work/storage limits remain; access metadata counts
+  toward the current graph-origin/work limits. Complete source changes and checks
+  are recorded in the adjacent logs, including initial failures and corrections.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+  Runtime/editor suites were not rerun; their historical evidence at `f16c30b`
+  remains in the compiler handoff. Complete v0.0.1 qualification is still open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Restart expiry implemented; exclusive-reference design reviewed | Explicit read/write access events, then authority and initialization |
+| Compiler | Bounded access records and terminal restart expiry | Guarded authority and forward initialization on the current CFG |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -63,13 +49,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Implement the first step of `compiler/EXCLUSIVE_REFERENCES.md`: record explicit
-   physical accesses in `compiler/src/loans/state.rs`, `values.rs`, `control.rs` and
-   a focused `access.rs` module. Preserve scalar/tag/projection evaluation order,
-   shared last-use checks, canonical slots and first-collection reservations. Keep
-   `&!` gated; validate access evidence and existing compiler/native regressions.
-   Then add guarded authority alternatives and forward initialized/moved state on
-   the same CFG before enabling the complete scalar exclusive-reference slice.
+1. Add guarded authority alternatives and parent relationships in
+   `compiler/src/borrow_value.rs` and `compiler/src/loans/`, distinct from physical
+   sources, public bounds and immutable value IDs. Resolve direct/pointee access
+   regions through that authority, then add forward initialized/moved state on the
+   same CFG. Prove reinitialization, child copies, parent suspension, guarded joins
+   and exact Leave behavior before enabling the designed scalar `&!` slice. Keep
+   inferred carriers, derived shared call/cell crossings and exclusive restarts gated.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

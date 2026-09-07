@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Exclusive-reference design is reviewed; access-event work is next.
+Updated: 2026-09-07. Bounded loan access records are implemented and validated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Access implementation/tests/docs: `698e4b1`.
 Expiry implementation: `7906333`; native coverage/example: `324e9ae`.
 Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
 Prior transitive headers: `34d2e7b`; native/example: `fa70eab`.
@@ -22,20 +23,24 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Completed the [exclusive-reference implementation design](EXCLUSIVE_REFERENCES.md)
-in `939c914`.
-The first slice admits ordinary scalar owners and local reference moves, replacement,
-reborrows, branches and named Leave only after explicit accesses, guarded authority
-alternatives and forward initialized/moved state exist. Authority remains distinct
-from physical origins, public bounds and immutable value IDs. Shared values derived
-from exclusive loans must not bypass the call/carrier/reference-cell gates. Bodies
-combining exclusive values and restarts stay B001 until both dataflows distinguish repeated borrow sites
-without a dynamic counter. The design specifies the owning files and future matrix.
+Completed bounded access records in `loans/access.rs` on the existing CFG (`698e4b1`). Node.access
+replaces the write-only field; the shared E302 solver still uses the same write places.
+Direct reads retain canonical roots, lexical views and typed component paths. Pointee
+reads and shared acquisitions retain exact pointer value IDs instead of flattening
+public bounds into fictitious sources. Scalar, primary, field and stored-tag reads
+follow HIR evaluation order. Static predicates without tags add no tag accesses.
 
-Frontend/loan reviews and 43 current-boundary probes pass. This is a design-only
-step: no production code, grammar, runtime ABI or supported capability changed.
-Planned exclusive E301/E302/E303/E305/E309 behavior is not yet implemented. Next add
-physical access events to the current CFG, then authority and forward availability.
+Access records add no liveness requirements beyond the original operations. Existing
+returning-index/RHS reservations, guarded branches, reset transfers and terminal
+expiry are preserved. Missing pointee evidence is rejected on reachable nodes only.
+Retained access weights and path/validation work use the existing graph budgets.
+All ten compiler checks pass, including twelve new access groups and all examples in
+both profiles. Backend code, runtime ABI and dependencies are unchanged.
+
+The [exclusive-reference design](EXCLUSIVE_REFERENCES.md) now marks this foundation
+implemented. Guarded authority alternatives, parent relationships, consuming contexts
+and forward initialized/moved state remain next. Exclusive modes and indirect writes
+stay B001; current access metadata is not authorization or a public artifact format.
 
 ## Prior implemented milestone
 
@@ -80,7 +85,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 77 loan, 15 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 89 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
 | Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 258 native groups, 4 harness tests and 37 covered examples |
@@ -95,7 +100,8 @@ and `src/loans/` separate state, traversal and solving. `tests/native/` groups t
 single native target by behavior while sharing one temp-directory counter.
 `borrow_value/pointee.rs` transforms summaries, `borrow/pointee.rs` resolves demanded
 reads, `borrow_contract/call.rs` handles candidate substitution, and
-`loans/transitive.rs` connects summary transfers. Contract tests live beside their
+`loans/transitive.rs` connects summary transfers; `loans/access.rs` owns access
+records, typed inspection paths, metadata charging and reach-checked evidence. Contract tests live beside their
 module; `check/temporaries.rs` owns temporary creation and statement metadata.
 `borrow/mutable.rs` owns the bounded assignment/restart target scan.
 `borrow/branches.rs` and `loans/branches.rs` own guarded environment restoration and
@@ -566,18 +572,30 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current design step: 43 standalone `check --json` probes pass on the unchanged
-  pinned compiler: 39 B001, one each E302/E303/E305 and one accepted shared control.
-  These establish parsing and existing capability gates only. No exclusive native
-  program ran. Frontend/loan review passes; one bad documentation anchor was fixed.
-  Documentation checks pass 879 links in 87 Markdown files; staged Git whitespace
-  checks pass. Production code and reference fixtures are unchanged. Prior full test evidence
-  below was not rerun for this design step.
-- Commit-only follow-up: implementation `7906333`, native coverage/example `324e9ae`.
-  All 26 non-tracker files match their pre-split content hashes in both the working
-  tree and commits. Staged/per-commit whitespace checks pass; historical checkpoints
-  are preserved. Compiler/runtime tests were not rerun for the split.
-
+- Current `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+  Rust: 304 library and 258 native groups (562 total); 20 Python tests pass. All 37
+  examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
+  schemas/catalog and 879 documentation links in 87 files pass. Conformance remains
+  10 passed, 13 unsupported, 0 failed across both profiles.
+- Twelve new access graph groups pass. They cover read/store order, field/primary/
+  variant paths, pointer snapshots and public bounds, acquisition spans, canonical
+  aliases, skipped stores, first-collection regions, complementary guards, reset
+  transfers, missing evidence, static tag elimination and resource caps. Existing
+  loan coverage is now 89 groups. Reference fixtures and REQUIRED are unchanged.
+- The first integration run passed 283 library groups and failed nine unreachable
+  nullable/never-returning cases because pointer evidence was requested eagerly.
+  Missing access targets now defer to final reach; reachable gaps remain B001. All
+  292 existing library groups then passed. Two new test cases needed source-context
+  corrections for narrowing and named emission ownership; final coverage is green.
+- Access events and paths count toward the existing 262,144 graph-origin metadata
+  cap and graph-work ledger. No new epoch/authority model, capability gate change,
+  runtime dependency or backend change was introduced. Runtime/editor suites and
+  optimized compiler/ELF qualification were not rerun for this slice. Older evidence
+  below remains explicitly historical.
+- Prior design evidence: 43 capability probes passed (39 B001, E302/E303/E305 and
+  one accepted shared control). They checked existing syntax/gates, not exclusive
+  native behavior. The design was reviewed in the prior step; no independent agent
+  review was performed during the current access implementation.
 - Prior expiry `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
   Rust: 292 library and 258 native groups (550 total). All 37 examples execute in
   debug/release; expired-restarts output is exactly `1\n2\n3\n7\n9\n9\n`.
@@ -624,15 +642,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Implement explicit physical accesses in `src/loans/state.rs`, `values.rs`,
-   `control.rs` and a focused `access.rs` module, following EXCLUSIVE_REFERENCES.md.
-   Record ordinary scalar reads, tag/projection reads and existing writes without
-   altering source evaluation order or adding synthetic merge reads. Reuse canonical
-   places and first-collection reservations; charge retained events/paths before
-   allocation. Keep exclusive gates unchanged. Verify access-order evidence and
-   existing shared E302/E303 behavior, then run the compiler gate.
-2. Add guarded authority alternatives and parent relationships separate from value
-   IDs and origins/bounds; add forward initialized/moved state on the same CFG.
+1. Add guarded authority alternatives and parent relationships separate from value
+   IDs and physical origins/public bounds in `borrow_value.rs`, `loans/state.rs`,
+   `loans/access.rs` and `loans/transitive.rs`. Normalize direct and exact-version
+   pointee regions through authority without treating lifetime bounds as permission.
+   Keep lexical views, component paths, guard partitions and resource caps explicit.
+2. Add forward initialized/moved state on the same CFG, alongside backward demand.
    Prove moves, reinitialization, shared-child copies, parent suspension, conditional
    paths, short circuits and exact-target Leave. Preserve budget exhaustion and
    terminal expiry. Gate hidden exclusive ancestry at calls/carriers/reference cells.

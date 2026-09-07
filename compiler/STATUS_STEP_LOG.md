@@ -6,6 +6,41 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Access records committed and handoff finalized
+
+- Findings: Commit 698e4b1 contains access representation/traversal, unchanged shared-write conflict behavior, twelve graph groups and ownership/design documentation. Current handoffs identify guarded authority alternatives and forward initialization as the next steps; exclusive gates remain closed.
+- Validation: All ten compiler checks passed before committing: 562 Rust tests, 20 Python tests, 37 examples in both profiles, 879 links, formatting, Clippy, schemas/catalog, build and conformance 10 passed/13 unsupported/0 failed. Staged whitespace passed. No source changes followed the gate. Initial Git staging hit a read-only index sandbox restriction; the authorized escalated retry succeeded, then the implementation commit completed.
+- Blockers: None for this slice. Complete v0.0.1, exclusive-reference execution and generated ownership cleanup remain unqualified.
+- Next steps: Commit the current handoffs/history, verify clean Git state, then implement guarded authority and forward availability on the existing CFG with exact source/bound and parent relationships.
+
+### 2026-09-07 — Access-event compiler gate passed
+
+- Findings: Bounded access metadata, write-solver integration and twelve new graph groups are complete. Direct canonical roots/views/paths and exact-version pointees preserve evaluation and source distinctions. Static predicates without stored tags create no access; unreachable missing evidence remains separate from reachable B001 failure.
+- Validation: All ten compiler checks pass: 562 Rust tests (304 library, 258 native), 20 Python tests, 879 links, schemas/catalog, formatting, Clippy, build and conformance. All 37 examples execute in both profiles. Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/editor/optimized-compiler checks were not rerun; no backend or runtime changes.
+- Blockers: None for this slice. Exclusive authority, forward availability, generated cleanup and complete v0.0.1 qualification remain open.
+- Next steps: Commit implementation/tests/ownership documentation, finalize current commit references and handoffs, verify history/whitespace and clean Git state. Next implement guarded authority alternatives and forward initialization on the same CFG before enabling exclusive references.
+
+### 2026-09-07 — Access-event focused proof complete
+
+- Findings: Twelve graph groups validate source-order reads/stores, direct primary/field/variant paths, pointer snapshots, public-bound separation, acquisition spans, canonical aliases, skipped stores, indexed regions, guard partitions, reset transfers and budget/missing-evidence boundaries. Static predicates without stored union tags create no invented tag read. Updated ownership/design documentation to distinguish implemented access records from future exclusive authority.
+- Validation: All twelve focused groups pass; the prior integration run passed all 292 existing library groups. Two initial test cases needed correction: predicate context treated an explicit ascription as a boolean test, and unlabeled inner emissions belonged to distinct blocks. Corrected cases use established narrowing and exact target labels. Full compiler gate is next.
+- Blockers: None beyond pending complete validation. Source-level exclusivity and initialization analysis remain unimplemented.
+- Next steps: Run all compiler checks on frozen code/tests, review any failure, finalize handoff evidence and commit implementation/tests/docs separately from trackers.
+
+### 2026-09-07 — Bounded access records integrated
+
+- Findings: Added access.rs and replaced Node.write with access metadata. Direct reads preserve canonical root, lexical view and component path; indirect reads/acquisitions preserve exact pointer value IDs. Writes retain the existing physical region/E302 scan. Metadata adds no liveness demand and is charged under graph origin/work caps.
+- Validation: All 292 existing library tests pass. First integration passed 283 and failed nine inactive/never-returning cases because pointer evidence was requested eagerly; missing targets are now rejected only when reachable, preserving existing nullable proofs without fabricating sources.
+- Blockers: New access-specific tests and full compiler validation are pending. Exclusive gates remain unchanged.
+- Next steps: Add source-grounded graph tests for order, canonical paths/aliases, guards, missing evidence and budgets; validate native execution and all compiler checks, then update documentation and split commits.
+
+### 2026-09-07 — Access-event implementation mapped
+
+- Findings: Node currently records only writes; scalar Local reads and tag paths vanish in loan traversal. Add bounded access metadata for direct canonical storage and exact-version indirect pointees, preserving view/component identity and evaluation order. Public bounds stay liveness dependencies rather than invented pointee reads. Existing write checks will consume the new access records.
+- Validation: Inspected current HIR, loan traversal, shared contracts and exclusive-reference design; working tree was clean at d6fa397. No changed-source checks yet.
+- Blockers: None. Exclusive modes/authority and forward initialization remain subsequent work.
+- Next steps: Implement the access representation and traversal, prove ordering/path/reset/budget cases, run the full compiler gate, update documentation and commit cohesive changes.
+
 ### 2026-09-07 — Exclusive-reference design committed and handoff finalized
 
 - Findings: Design commit 939c914 defines the bounded scalar slice and the implementation order; OWNERSHIP.md links it and no longer lists completed iteration-owned shared headers as missing. Final frontend/loan review found no remaining material ambiguity after guarded-authority and derived-shared boundary fixes. Current handoffs name explicit CFG access events as the next implementation action.
