@@ -1038,7 +1038,7 @@ captured stores keep the pointer chosen before RHS effects and only through a
 returning store. Field owners cannot escape their scope.
 
 Fourteen native groups plus projection/path-limit evidence cover these rules in both
-profiles where applicable. Record aliases, indexed/union/reference paths, non-scalar exclusive
+profiles where applicable. Indexed/union/reference paths, non-scalar exclusive
 pointees, owned carriers and generated cleanup remain separate capabilities.
 
 ## Exclusive mutable emitted scalars
@@ -1058,5 +1058,24 @@ after RHS completion; pointers may outlive the alias scope but not their target.
 Fourteen native groups and canonical-storage/backing evidence cover exact types,
 mutation, widths, conflicts, guards, initialization, target lifetimes, cancellation
 and panic. Supported self-containing shared views and direct escapes are E303;
-exclusive carriers remain B001. Projected record aliases and generated cleanup
-remain separate contracts.
+exclusive carriers remain B001. Named scalar-field paths through mutable emitted
+reference-free Copy records now reuse the same strict owner-backing check. Indexed
+paths and generated cleanup remain separate contracts.
+
+## Exclusive emitted record fields
+
+Mutable emitted record aliases support named scalar-field paths through the same
+bounded resolver used for ordinary records. Every crossed field must be mutable;
+Alias.exclusive validates the complete backing record, not only the selected scalar.
+A different unselected field still makes widened backing unsupported. Shared union
+views retain their existing compatibility rule.
+
+Existing Slot sources append concrete field indexes while retaining target, canonical
+root and lexical view. Sibling/primary disjointness, ancestor conflicts, target-owned
+lifetime, captured stores, cancellation and call/block transfer reuse existing
+analysis and lowering. Cancelled records keep their declared fallback layout.
+
+Fourteen new native groups plus canonical nested-projection and whole-record backing
+evidence cover these paths. No new HIR, backend operation, runtime ABI or dependency
+was needed. Indexed/union/reference paths, whole-record exclusive pointees, owning
+carriers and generated cleanup remain separate capabilities.

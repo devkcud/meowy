@@ -161,6 +161,8 @@ describes mutable paths, owner lifetimes and remaining root restrictions.
 The [exclusive slots example](examples/exclusive-slots.mwy) borrows initialized
 emitted scalars beyond their alias scope while their target block remains alive.
 The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
+The [projected slots example](examples/exclusive-slot-fields.mwy) keeps nested-field
+identity and target lifetime while accessing disjoint primary and sibling storage.
 
 ## Implemented language
 
@@ -214,8 +216,10 @@ The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
   Direct mutable emitted scalar aliases also support exclusive borrowing after
   initialization when their completed backing type is identical. Canonical slot
   identity and target-block lifetime survive lexical alias scope and guarded views.
-  Immutable aliases report E305; widened backing remains B001.
-  Wider exclusive signatures/result shapes, carriers, cells, projected record aliases,
+  Immutable aliases report E305; widened backing remains B001. Mutable emitted
+  reference-free Copy records also permit scalar-field projections with exact
+  whole-record backing and mutable crossed fields.
+  Wider exclusive signatures/result shapes, carriers, cells, widened record backing,
   dispatch blocks, indexed/reference paths, collections, carrier results, comparisons and restart bodies
   remain B001. Anonymous scalar-reference blocks preserve existing guarded loan
   identities and consume exclusive emissions. Retained results protect their owners

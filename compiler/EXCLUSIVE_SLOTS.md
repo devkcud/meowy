@@ -1,7 +1,9 @@
-# Exclusive borrows of mutable emitted scalars
+# Exclusive borrows of emitted scalar storage
 
 After `->name:=value` initializes a boolean, integer or float slot, `&!name` may
-borrow its actual storage exclusively. This extends the [field contract](EXCLUSIVE_FIELDS.md)
+borrow its actual storage exclusively. Mutable emitted reference-free Copy records
+also permit scalar-field paths such as `&!row.inner.n`, with every crossed field
+mutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)
 and follows the existing [emission](../docs/reference/values-and-blocks.md) and
 [memory rules](../docs/reference/memory.md). No new HIR operation, backend addressing,
 allocation or runtime cleanup ABI is introduced.
@@ -10,18 +12,20 @@ allocation or runtime cleanup ABI is introduced.
 
 The emitted name enters scope after its initializer returns. Its initializer can
 still resolve an outer binding of the same name. An unknown or not-yet-introduced
-name reports E201. Immutable scalar aliases report E305. This slice accepts only a
-direct mutable Bool/Int/Float alias; record aliases, projected paths, indexed storage,
-non-scalar pointees and exclusive-reference carriers remain gated.
+name reports E201. Immutable aliases or crossed fields report E305. The pointee
+must be Bool/Int/Float, either a direct scalar alias or a named path through a
+reference-free Copy record. Indexed/union/reference paths, non-scalar exclusive
+pointees and exclusive-reference carriers remain gated.
 
 `Alias.exclusive` records the first exclusive-borrow span. When the target block's
 completed field type is known, `check/aliases.rs` requires it to equal the alias's
-declared scalar type. Widening to a union reports B001 even when the scalar is an
-exact union member. Shared alias borrowing retains its existing compatible-member
+declared owner type. For a field borrow this means the complete record, including
+unselected fields and their mutability. Widening to a union reports B001 even when
+the local owner is an exact union member or the selected scalar field is unchanged. Shared alias borrowing retains its existing compatible-member
 support; the new restriction is specific to exclusive access.
 
 If the target result is discarded, existing emission/completion proof permits its
-scalar fallback cell. That cell already has the declared local type. Discarding a
+scalar or record fallback cell. That cell already has the declared local type. Discarding a
 result does not skip its initializer or undo successful mutation and other effects.
 No union payload is reinterpreted as exclusive scalar storage.
 
@@ -40,7 +44,7 @@ Supported direct escapes and self-containing shared views report E303; exclusive
 reference carriers remain B001 rather than gaining carrier support. Reinitializing
 a moved pointer holder after target completion is allowed when its new owner lives.
 
-The emitted scalar remains Copy. Only the exclusive reference holder moves. Parent
+The emitted scalar or record owner remains Copy. Only the exclusive reference holder moves. Parent
 suspension, reborrows, guarded choices, direct calls, returned references, anonymous
 block results and all-input lifetime bounds reuse the existing authority machinery.
 Conflicts report E302, definite moved uses E301 and uncertain availability E309.
@@ -53,8 +57,10 @@ while preserving earlier mutations and moves. Own-target Leave publishes an
 initialized result; ancestor Leave can discard it and retain only completed effects.
 
 Exclusive restart bodies remain gated, including iteration-local scalar aliases.
-Record aliases and field/index projections through aliases require their own exact
-backing and region contracts. Existing shared slot, record and collection support is
+Named record fields use the same canonical Slot root plus concrete field indexes.
+Sibling and primary access are disjoint from a named descendant; ancestor and
+whole-owner access still overlap. Indexed/union/reference paths require further
+authority and region contracts. Existing shared slot, record and collection support is
 unchanged; generated destruction and owning payloads remain separate work.
 
 ## Evidence and next work
@@ -72,6 +78,15 @@ from an inner lexical scope, passes a child through a call and mutates discarded
 storage. Reference fixtures are unchanged. Full conformance still has 13 unsupported
 cases and does not qualify a complete language release.
 
-Next, design scalar-field projections through mutable emitted record aliases, with
-exact record backing, per-field mutability, disjoint regions and target lifetimes.
-Do not broaden this into exclusive whole-record pointees or non-Copy carriers.
+Fourteen additional native groups cover emitted record-field mutation, nested
+mutability, sibling/primary access, ancestor conflicts, target lifetime, guarded
+views, moves/children/calls, exact whole-record backing, captured stores, cancelled
+mixed layouts, escapes/bounds, copied records, sibling collections and panic.
+A graph test verifies canonical nested projections across distinct guarded views;
+a checker test rejects unrelated-field widening while preserving a shared view.
+
+The [projected slots example](examples/exclusive-slot-fields.mwy) reads the primary
+and writes a sibling while carrying a nested-field pointer out of the alias scope.
+Next, design exclusive scalar list-element borrowing with owner authority, once-only
+index/bounds evaluation and conservative element overlap. Whole-record exclusive
+pointees, non-Copy carriers and cleanup remain separate work.

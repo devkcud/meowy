@@ -20,7 +20,7 @@ a canonical Place with the original local root and concrete field indexes; the
 existing Borrow HIR carries a scalar exclusive type. The owner is not copied into
 temporary storage. Copying a record before borrowing creates independent storage.
 
-Record aliases, temporary/call roots, indexed paths, union-payload paths, reference
+Temporary/call roots, indexed paths, union-payload paths, reference
 indirection and non-scalar exclusive pointees remain B001. This does not enable
 exclusive references to whole records, lists, strings or reference cells. Existing
 purely shared field and collection operations retain their support.
@@ -72,7 +72,7 @@ live while reading the record's primary and mutating through a function call.
 Reference fixtures and existing checks are preserved. Full conformance still has
 13 unsupported cases; this does not qualify a complete language release.
 
-[Mutable emitted scalars](EXCLUSIVE_SLOTS.md) now require exact backing/declared
-types, target-block lifetime and canonical slot conflicts. The next bounded extension
-is scalar-field projection through mutable emitted record aliases.
+[Mutable emitted storage](EXCLUSIVE_SLOTS.md) also supports scalar-field paths with
+exact whole-record backing, mutable fields, target lifetime and canonical Slot
+projections. Exclusive scalar list-element borrowing is the next bounded extension.
 Owned carriers and generated destruction remain separate contracts.
