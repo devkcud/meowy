@@ -6,6 +6,70 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Scalar function-argument final validation complete
+
+- All ten compiler checks pass: 626 Rust groups (334 library, 292 native), 20 Python
+  groups, 39 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  888 local links in 88 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor suites and release-host qualification were not rerun.
+- The new example prints 9, 9, 10 and 5 on separate lines in both profiles. The
+  argument contract/docs now distinguish direct receiver-call syntax from gated
+  dispatch blocks. No backend, runtime ABI, dependency or reference fixture changed.
+- Commits: `c7af472` implements the argument contract and tests; `d72d5d0` adds
+  the contract docs and native example. Staged whitespace checks passed.
+- Blockers: None for the scalar argument slice. Next: Design guarded reference-result
+  authority preserving captured input loans, caller parents and all-input bounds.
+
+### 2026-09-07 — Scalar function-input compiler gate passes
+
+- All ten compiler checks pass: 626 Rust groups (334 library, 292 native), 20 Python
+  groups, 38 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  884 local links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Seventeen new function-call groups cover direct receiver syntax, mutable fact
+  invalidation and shared-only restart callees alongside the original call matrix.
+  No production backend, ABI, dependency or reference fixture change was needed.
+- Added the exclusive-functions example and updated capability/ownership docs;
+  final validation of that example/docs is next, followed by focused commits.
+  Guarded reference-return authority and generated cleanup remain open.
+
+### 2026-09-07 — Exclusive function native matrix passes
+
+- Fourteen new native groups pass in debug/release: scalar mutation, direct/nested/
+  recursive calls, symbolic parents, guarded moves/arguments, suspended parents,
+  public bounds, Leave/panic and remaining reference-result/carrier/restart gates.
+- Migrated obsolete B001 expectations after execution proof. Receiver syntax for
+  an ordinary direct function uses the same argument path; dispatch blocks remain
+  gated. Added final regressions for that distinction, mutation invalidating caller
+  facts and a shared-only restart callee receiving a shared reborrow.
+- Next: Run the full compiler gate, finish capability/example docs, update handoffs
+  with exact evidence and commit the completed slice by concern.
+
+### 2026-09-07 — Scalar function entry and symbolic inputs integrated
+
+- Added bounded primitive-result signature classification, call-entry Read/Write
+  accesses after all arguments return, mode-aware input grants and symbolic Input
+  overlap. All captured arguments remain demanded until call entry. Mutating calls
+  invalidate mutable refinements; unused exclusive parameters trigger restart gates.
+- Validation: Library run passed 332 groups and failed two obsolete signature B001
+  expectations. No native execution of the new behavior yet. Removed the obsolete
+  shared-only grant wrapper; existing resource test uses explicit Shared mode.
+- Next: Native execution for direct/nested/recursive calls, simultaneous argument
+  conflicts, guarded moves/aliases, no-return arguments and remaining result gates;
+  migrate prior B001 cases after proof, then run the full compiler gate.
+
+### 2026-09-07 — Scalar exclusive function-input contract scoped
+
+- Findings: Support direct scalar-reference arguments with primitive results.
+  Argument acquisitions alone miss a moved suspended parent at call entry; add
+  maximum-access checks after all arguments return and retain all argument demand.
+  Symbolic Input roots need mode-aware overlap and input grants. Unused exclusive
+  parameters must still trigger the restart gate.
+- Validation: Clean tree at 99ea9ba; eight baseline source checks report B001.
+  Read the language contract, current implementation and lean-build skill.
+- Blockers: None for the bounded input slice; reference-return authority remains
+  unsupported. Next: integrate entry access, input mode/overlap, native acceptance
+  and exact diagnostic tests, then the full compiler gate and focused commits.
+
 ### 2026-09-07 — Scalar exclusive final compiler gate passes
 
 - Findings: Source-level scalar exclusive references, moves, child permissions and

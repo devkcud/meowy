@@ -11,29 +11,28 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented scalar exclusive references (`3fe8715`, example/docs `87e7926`)
-  to ordinary mutable boolean/integer/float
-  locals: moves, reinitialization, shared/exclusive reborrows and indirect stores.
-  Guarded availability reports E301/E309; lifetime and mutability remain E303/E305.
-- Mode-aware LoanIds and bounded ancestor walks enforce parent suspension and E302
-  conflicts. Stores capture their pointer before RHS work and finish only on returning
-  paths. Conditional moves, short circuits, named Leave and panic are covered.
-- Exclusive signatures, carriers, cells, aliases, fields/collections, comparisons,
-  block results, dispatch and restart bodies remain B001. Shared values retaining
-  exclusive ancestry cannot cross call/result/cell/dispatch boundaries.
-- All ten compiler checks pass: 609 Rust tests (334 library, 275 native), 20 Python
-  tests, 38 examples in debug/release, formatting, Clippy, 881 local links, schemas,
-  catalog, build and conformance. Seventeen new native groups cover the exclusive
-  slice. Reference fixtures and runtime ABI remain unchanged.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-  Runtime/editor suites were not rerun; their historical evidence remains in the
-  compiler handoff. Complete v0.0.1 qualification remains open.
+- Implemented scalar exclusive arguments for direct functions with primitive
+  results (`c7af472`; contract/example `d72d5d0`). Calls capture arguments once and validate shared/exclusive access at
+  entry, including suspended parents and conflicting arguments that are otherwise
+  unused. Passing a holder moves it; explicit or implicit reborrows preserve parents.
+- Symbolic input loans retain mode, physical overlap and guarded parent permissions
+  through nested and recursive calls. Later argument Leave/panic skips call entry
+  while keeping completed moves. Mutating calls invalidate caller refinements.
+- All ten compiler checks pass: 626 Rust tests (334 library, 292 native), 20 Python
+  tests, 39 examples in debug/release, formatting, Clippy, build, schema/catalog checks
+  and 888 local links. Seventeen new native groups cover the function-argument slice.
+- Reference-return exclusive contracts, wider signatures, carriers, fields/cells,
+  dispatch blocks and exclusive restart bodies remain B001. Scalar-local references
+  remain in `3fe8715`, example/docs `87e7926`; reference fixtures and runtime ABI
+  are unchanged. Full conformance remains 10 passed/13 unsupported/0 failed.
+- Runtime/editor suites were not rerun. Standard library/module loading, generated
+  cleanup and complete v0.0.1 qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar exclusive references, moves and guarded permissions | Exclusive function contracts and wider ownership shapes |
+| Compiler | Scalar exclusive locals and direct function arguments | Guarded reference-result authority and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -43,11 +42,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Preserve the first scalar exclusive slice and its native matrix. Design explicit
-   exclusive function contracts in `compiler/src/borrow_contract/` and
-   `compiler/src/loans/permissions.rs`: prove symbolic input overlap, guarded authority
-   transfer and conservative public bounds before opening those gates. Extend other
-   excluded shapes one at a time; keep unsupported source forms explicit.
+1. Design guarded reference-result authority in `compiler/src/borrow_contract/`
+   and `compiler/src/loans/values.rs`. A returned view needs an explicit relationship
+   to the captured input loan, including parent suspension and all-input lifetime
+   bounds. Do not infer authority from matching addresses or public bounds. Prove
+   identity/shared reborrow/guarded selection cases before opening return gates;
+   preserve the scalar-local and function-argument matrices.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. First scalar exclusive-reference slice implemented.
+Updated: 2026-09-07. Scalar exclusive direct-function arguments implemented.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Scalar function arguments/native matrix: `c7af472`; contract/example: `d72d5d0`.
 Scalar exclusive implementation/native matrix: `3fe8715`; example/docs: `87e7926`.
 Lifecycle/taking intent/availability: `d72b413`.
 Shared provenance/value roles/regions: `ebc8ebe`.
@@ -26,31 +27,30 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Implemented scalar `&!` references to ordinary mutable Bool/Int/Float locals.
-`Type::Exclusive` is non-Copy; consuming contexts move the holder, while dereference
-and reborrow inspect it. Reinitialization preserves actual continuing predecessors.
-Definite moved use is E301; uncertain availability is E309; expired origins remain
-E303. Owner mutability and shared scalar store rejection report E305.
+Direct functions now accept scalar exclusive parameters with primitive results and
+primitive/scalar-reference arguments. Caller Read/Write accesses occur after all
+arguments return and retain every captured reference through entry. This rejects
+suspended-parent moves and conflicting arguments even when parameters are unused.
+Exclusive arguments consume holders; `&!*p` delegates a child and expected shared
+parameters reborrow without moving the parent.
 
-LoanIds now retain shared/exclusive mode. Bounded guarded ancestor walks preserve
-parent authority through moves and copies, permit compatible shared children and
-reject overlapping external/parent/sibling access with E302. Public bounds still
-protect dependencies without authorizing access. Indirect stores capture the pointer
-before RHS effects, retain it through a returning store only, and preserve earlier
-RHS moves/replacements when Leave or panic skips that store.
+Callee input grants retain mode on symbolic Source::Input roots. Same-root access
+checks preserve parent suspension; different scalar inputs are independent for
+exclusive access because every direct caller validates disjoint arguments. Input
+referents remain distinct from local pointer cells. Nested/recursive calls and
+receiver syntax for direct functions use this contract without new LLVM promises.
 
-Exclusive function contracts, carriers, cells, emitted aliases, fields/collections,
-comparisons, block results, dispatch and bodies with resolved restarts remain B001.
-Boundary metadata also rejects shared-only values with exclusive ancestry crossing
-calls, emissions, reference-bearing storage/temporaries or dispatch receivers.
-Runtime ABI, cleanup, dependencies and reference fixtures are unchanged.
+Later argument Leave/panic skips entry without undoing earlier effects or moves;
+non-returning callees still validate entry. Mutating calls invalidate caller facts.
+Unused exclusive parameters trigger the restart gate. Shared-only restart callees
+remain valid for shared reborrows. Reference results, wider exclusive signatures,
+carriers, fields/cells, dispatch blocks and exclusive restart bodies remain B001.
 
-Seventeen new native groups pass in debug/release, including captured child targets,
-conditional moves/parents and a bounded parent-chain acceptance/rejection pair.
-The final compiler gate passes all ten checks: 609 Rust groups (334 library,
-275 native), 20 Python groups and 38 examples in both profiles. Formatting, Clippy,
-881 local links, schema/catalog checks, build and conformance all pass.
-See [EXCLUSIVE_REFERENCES.md](EXCLUSIVE_REFERENCES.md) and `loans/permissions.rs`.
+Seventeen native groups pass in both profiles. All ten compiler checks pass: 626 Rust
+checks (334 library, 292 native), 20 Python tests, 39 debug/release examples and
+888 local links, plus formatting, Clippy, build, schema/catalog and conformance checks.
+No reference fixture, dependency, backend or runtime ABI change was needed. Contracts are in `EXCLUSIVE_FUNCTIONS.md`; preserve
+`EXCLUSIVE_REFERENCES.md` and the prior local-scalar matrix.
 
 ## Prior implemented milestone
 
@@ -95,10 +95,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive permissions; 60 origin, 119 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 119 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 275 native groups, 4 harness tests and 38 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 292 native groups, 4 harness tests and 39 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -586,7 +586,24 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 334
+  library and 292 native groups (626 total); 20 Python tests; all 39 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 888 links in
+  88 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Seventeen new function-argument groups cover scalar widths/boolean mutation,
+  explicit/implicit reborrows, moves/reinitialization, symbolic parents, nested and
+  recursive calls, receiver syntax, guarded choices, public bounds, no-return entry
+  and argument-side Leave/panic. Maximum entry access is checked even for unused
+  parameters. Mutable-refinement and shared-only restart-callee regressions pass.
+- The first library run passed 332 and failed two obsolete signature B001 groups.
+  Fourteen native groups then passed; final review added three more and migrated
+  obsolete boundaries. Two full compiler gates passed, the final one including the
+  new example output `9\n9\n10\n5\n`. No source capability was enabled on a crash
+  or unsupported rejection, and no reference fixture changed.
+- No backend/runtime ABI change or dependency was needed. Runtime/editor suites,
+  optimized compiler builds and release-host qualification were not rerun. Returned
+  reference authority and generated cleanup remain unimplemented.
+- Prior scalar-local `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
   Rust: 334 library and 275 native groups (609 total); 20 Python tests pass. All 38
   examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
   schemas/catalog and 881 links in 87 Markdown files pass. Conformance remains
@@ -680,12 +697,14 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Preserve the scalar exclusive matrix in `tests/native/exclusive_references.rs`
-   and `EXCLUSIVE_REFERENCES.md`. For the next ownership extension, design scalar
-   exclusive function input/result contracts in `borrow_contract/` and
-   `loans/permissions.rs`: symbolic Input overlap, guarded authority transfer and
-   public-bound separation must be proved before opening signature/call gates.
-   Retain unsupported carriers, fields, aliases, reference cells and restart bodies.
+1. Design explicit guarded reference-result authority in `borrow_contract/` and
+   `loans/values.rs`. The result must identify captured input loans separately from
+   its actual source and conservative all-input bounds. Preserve caller parent
+   suspension through returned exclusive/shared views and guarded input selection;
+   matching physical origins alone must not create authority. Add native identity,
+   shared reborrow, multiple-input and exact move/lifetime/conflict cases before
+   opening any result gate. Keep wider signatures, carriers, fields/cells, dispatch
+   blocks and exclusive restart bodies gated until their own contracts are proved.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle
