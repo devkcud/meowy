@@ -74,5 +74,6 @@ Reference fixtures and existing checks are preserved. Full conformance still has
 
 [Mutable emitted storage](EXCLUSIVE_SLOTS.md) also supports scalar-field paths with
 exact whole-record backing, mutable fields, target lifetime and canonical Slot
-projections. Exclusive scalar list-element borrowing is the next bounded extension.
+projections. Ordinary scalar list-element borrowing is implemented; extending its
+owned place to record fields and emitted storage is the next bounded slice.
 Owned carriers and generated destruction remain separate contracts.

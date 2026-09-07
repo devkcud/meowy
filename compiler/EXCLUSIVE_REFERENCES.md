@@ -28,7 +28,8 @@ explicit annotations. Initial support excludes exclusive pointer equality and
 exclusive-valued carrier results. Anonymous scalar-reference blocks now transfer
 existing guarded authority and consume emitted holders. Ordinary scalar results computed through a reference remain
 supported. [Scalar record fields](EXCLUSIVE_FIELDS.md) now use mutable-path and
-canonical-region checks; indexed exclusive access comes later.
+canonical-region checks. [Scalar local-list elements](EXCLUSIVE_ELEMENTS.md) now
+use owned authority and an explicit reservation; wider indexed roots remain gated.
 
 These exclusions also apply to authority derived from an exclusive loan when the
 type contains only shared references. For example, `id(&*p)` returning a shared
@@ -274,8 +275,8 @@ Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chai
 with B001 rather than publishing partial proofs. Existing shared-reference tests
 remain enabled; reference fixtures are unchanged.
 
-Next, extend one excluded shape at a time: indexed scalar exclusive borrows need
-owner authority, once-only index/bounds evaluation and conservative overlap proof; fields and collections need
+Next, extend one excluded shape at a time: projected/emitted list-element borrows
+need canonical owner places, exact backing and captured-list reservation proof; fields and collections need
 projection-aware permission; carriers need non-Copy initialization and destruction;
 restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 

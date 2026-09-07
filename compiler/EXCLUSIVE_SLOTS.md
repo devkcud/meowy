@@ -87,6 +87,7 @@ a checker test rejects unrelated-field widening while preserving a shared view.
 
 The [projected slots example](examples/exclusive-slot-fields.mwy) reads the primary
 and writes a sibling while carrying a nested-field pointer out of the alias scope.
-Next, design exclusive scalar list-element borrowing with owner authority, once-only
-index/bounds evaluation and conservative element overlap. Whole-record exclusive
+Ordinary local-list scalar elements now use owner authority and index reservations.
+Next, extend that place model to record-field and emitted list storage with exact
+backing, canonical regions and target lifetimes. Whole-record exclusive
 pointees, non-Copy carriers and cleanup remain separate work.

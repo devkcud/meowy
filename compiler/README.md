@@ -163,6 +163,9 @@ emitted scalars beyond their alias scope while their target block remains alive.
 The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
 The [projected slots example](examples/exclusive-slot-fields.mwy) keeps nested-field
 identity and target lifetime while accessing disjoint primary and sibling storage.
+The [exclusive elements example](examples/exclusive-elements.mwy) reserves a local
+list during index evaluation and mutates its scalar element. The
+[element contract](EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
 
 ## Implemented language
 
@@ -220,12 +223,19 @@ identity and target lifetime while accessing disjoint primary and sibling storag
   reference-free Copy records also permit scalar-field projections with exact
   whole-record backing and mutable crossed fields.
   Wider exclusive signatures/result shapes, carriers, cells, widened record backing,
-  dispatch blocks, indexed/reference paths, collections, carrier results, comparisons and restart bodies
+  dispatch blocks, wider indexed/reference paths, collections, carrier results, comparisons and restart bodies
   remain B001. Anonymous scalar-reference blocks preserve existing guarded loan
   identities and consume exclusive emissions. Retained results protect their owners
   through completion; proven cancellation preserves effects and moves without
   keeping a future result loan alive. Unsupported call/result/cell/dispatch-block crossings also reject
   shared values carrying exclusive ancestry.
+- Exclusive element borrows of ordinary mutable scalar bounded-list locals.
+  Owner/length capture precedes one index evaluation; a no-authority reservation
+  protects returning acquisition, then mutable-owner proof grants the element loan.
+  Bounds use initialized length and existing E101/P001 behavior. Same-list element
+  overlap remains conservative; field/alias/reference/temporary roots and wider
+  element types are gated. Moves, children, calls, block returns and scoped exits
+  preserve the existing ownership rules.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their

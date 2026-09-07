@@ -1077,5 +1077,23 @@ analysis and lowering. Cancelled records keep their declared fallback layout.
 
 Fourteen new native groups plus canonical nested-projection and whole-record backing
 evidence cover these paths. No new HIR, backend operation, runtime ABI or dependency
-was needed. Indexed/union/reference paths, whole-record exclusive pointees, owning
+was needed. Wider indexed/union/reference paths, whole-record exclusive pointees, owning
 carriers and generated cleanup remain separate capabilities.
+
+## Owned exclusive scalar elements
+
+The [element contract](EXCLUSIVE_ELEMENTS.md) introduces ExclusiveElement HIR for
+ordinary mutable scalar-list locals. The origin and loan passes require explicit
+mutable-owner proof, excluding aliases, temporaries and reference roots. A private
+whole-list reservation has no authority and exists only through returning acquisition.
+Index reads remain compatible; conflicting writes cannot invalidate captured length.
+
+The final root exclusive loan uses the existing conservative Element projection and
+is not derived from a shared reference. Non-returning indices create no loan or future
+reservation demand. Lowering captures the actual list/length before one index evaluation
+and reuses initialized-length bounds and element addressing. No runtime ABI changed.
+
+Fifteen native groups and three graph proof groups cover ownership, order, bounds,
+cancellation, scopes and exclusions. Element overlap and owner metadata access remain
+conservative; projected/emitted roots, reference/temporary roots, wider elements and
+exclusive restart bodies require later contracts.

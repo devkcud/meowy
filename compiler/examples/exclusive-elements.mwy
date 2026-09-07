@@ -1,0 +1,15 @@
+debug:@"debug"
+bump<null>:(view<&!int32>){*view=*view+1}
+
+items:=[1,2]
+view:&!items[{
+    debug.print("index")
+    ->items[1]
+}]
+bump(&!*view)
+debug.print(*view)
+debug.print(items[2])
+'done{
+    discarded:&!items[{items=[3,4];'done.leave()}]
+}
+debug.print(items[1])
