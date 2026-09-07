@@ -71,3 +71,26 @@ pub(crate) fn field_assignment_requires_each_owning_mutable_boundary() {
         rejects(source, code);
     }
 }
+
+#[test]
+pub(crate) fn exclusive_field_path_limits_apply_before_root_resolution() {
+    let span = crate::ast::Span::default();
+    let mut value = crate::ast::Expr {
+        kind: crate::ast::ExprKind::Name("absent".into()),
+        span,
+    };
+    for _ in 0..=crate::list::MAX_WRITE_PATH {
+        value = crate::ast::Expr {
+            kind: crate::ast::ExprKind::Field {
+                value: Box::new(value),
+                name: "inner".into(),
+            },
+            span,
+        };
+    }
+    let error = crate::check::Checker::new()
+        .exclusive_borrow(&value, span)
+        .unwrap_err();
+    assert_eq!(error.code, "B001");
+    assert!(error.message.contains("exclusive borrow path budget"));
+}

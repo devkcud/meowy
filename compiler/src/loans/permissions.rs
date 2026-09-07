@@ -67,6 +67,31 @@ impl Graph<'_> {
         left == right && Self::projection_overlap(a, b)
     }
 
+    pub(crate) fn access_overlap(region: &super::Origin, source: &Source) -> bool {
+        if !Self::physical_overlap(&region.source, source) {
+            return false;
+        }
+        if region.component.first() != Some(&super::Step::Slot(0)) {
+            return true;
+        }
+        let (base, fields) = match (&region.source, source) {
+            (Source::Input { fields: base, .. }, Source::Input { fields, .. }) => {
+                (base.as_slice(), fields.as_slice())
+            }
+            _ => {
+                let (Some((_, base)), Some((_, fields))) = (
+                    Self::physical_region(&region.source),
+                    Self::physical_region(source),
+                ) else {
+                    return true;
+                };
+                (base, fields)
+            }
+        };
+        !(fields.starts_with(base)
+            && matches!(fields.get(base.len()), Some(super::Projection::Field(_))))
+    }
+
     pub(crate) fn projection_overlap(a: &[super::Projection], b: &[super::Projection]) -> bool {
         a.iter().zip(b).all(|(a, b)| {
             a == b
@@ -175,7 +200,7 @@ impl Graph<'_> {
                     .chain(self.values[value].bounds.iter().filter(|_| exclusive))
                 {
                     let guard = self.guards.and(conflict, region.guard);
-                    if Self::physical_overlap(&region.source, &origin.source)
+                    if Self::access_overlap(region, &origin.source)
                         && self.guards.overlap(guard, origin.guard)
                     {
                         return Err(Diagnostic::new(

@@ -91,15 +91,39 @@ impl Checker {
                 span,
             });
         }
-        let ExprKind::Name(name) = &expr.kind else {
+        let mut root = expr;
+        let mut steps = Vec::new();
+        loop {
+            if !self.flow.spend(1) {
+                return Err(Diagnostic::unsupported(
+                    "exclusive borrow path budget exhausted",
+                    span,
+                ));
+            }
+            match &root.kind {
+                ExprKind::Group(value) => root = value,
+                ExprKind::Field { value, name } => {
+                    if steps.len() == crate::list::MAX_WRITE_PATH {
+                        return Err(Diagnostic::unsupported(
+                            "exclusive borrow path budget exhausted",
+                            span,
+                        ));
+                    }
+                    steps.push((name, root.span));
+                    root = value;
+                }
+                _ => break,
+            }
+        }
+        let ExprKind::Name(name) = &root.kind else {
             return Err(Diagnostic::unsupported(
-                "exclusive borrowing of fields or temporaries",
+                "exclusive borrowing outside ordinary named storage",
                 span,
             ));
         };
         let Value::Local {
             id, ty, mutable, ..
-        } = self.value(name, expr.span)?
+        } = self.value(name, root.span)?
         else {
             return Err(Diagnostic::unsupported(
                 "exclusive borrowing outside local storage",
@@ -112,6 +136,25 @@ impl Checker {
                 span,
             ));
         }
+        if !steps.is_empty() {
+            let weight = crate::borrow_contract::type_weight(&ty, &mut self.flow, span)?;
+            if !self.flow.spend(weight.saturating_mul(2)) {
+                return Err(crate::borrow_value::State::budget(span));
+            }
+            if !matches!(ty, Type::Record { .. }) || ty.has_reference() || !ty.is_copy() {
+                return Err(Diagnostic::unsupported(
+                    "exclusive field borrowing requires reference-free Copy record storage",
+                    span,
+                ));
+            }
+        }
+        let mut ty = ty;
+        let mut fields = Vec::new();
+        for (name, span) in steps.into_iter().rev() {
+            let (index, field) = self.mutable_field(ty, name, span)?;
+            fields.push(index);
+            ty = field;
+        }
         let ty = self.exclusive_type(ty, span)?;
         if !mutable {
             return Err(Self::error(
@@ -121,10 +164,7 @@ impl Checker {
             ));
         }
         Ok(hir::Expr {
-            kind: hir::ExprKind::Borrow(hir::Place {
-                root: id,
-                fields: Vec::new(),
-            }),
+            kind: hir::ExprKind::Borrow(hir::Place { root: id, fields }),
             ty,
             span,
         })

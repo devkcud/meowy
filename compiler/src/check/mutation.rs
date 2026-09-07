@@ -4,6 +4,39 @@ use crate::diagnostic::Diagnostic;
 use crate::hir::{self, Type};
 
 impl Checker {
+    pub(crate) fn mutable_field(
+        &mut self,
+        ty: Type,
+        name: &str,
+        span: ast::Span,
+    ) -> Result<(usize, Type)> {
+        let Type::Record { fields, .. } = ty else {
+            return Err(Diagnostic::unsupported(
+                "mutable field access requires concrete record storage",
+                span,
+            ));
+        };
+        if !self.flow.spend(fields.len().saturating_mul(name.len() + 1)) {
+            return Err(Diagnostic::unsupported(
+                "mutable field lookup budget exhausted",
+                span,
+            ));
+        }
+        let (index, field) = fields
+            .into_iter()
+            .enumerate()
+            .find(|(_, field)| field.name == name)
+            .ok_or_else(|| Self::error("E201", format!("unknown record field `{name}`"), span))?;
+        if !field.mutable {
+            return Err(Self::error(
+                "E305",
+                format!("field `{name}` is immutable"),
+                span,
+            ));
+        }
+        Ok((index, field.ty))
+    }
+
     pub(crate) fn write_path(
         &mut self,
         target: &ast::Expr,
@@ -78,37 +111,12 @@ impl Checker {
             }
             match &step.kind {
                 ExprKind::Field { name, .. } => {
-                    let Type::Record { fields, .. } = ty else {
-                        return Err(Diagnostic::unsupported(
-                            "field assignment requires concrete record paths",
-                            step.span,
-                        ));
-                    };
-                    if !self.flow.spend(fields.len().saturating_mul(name.len() + 1)) {
-                        return Err(Diagnostic::unsupported(
-                            "field assignment lookup budget exhausted",
-                            step.span,
-                        ));
-                    }
-                    let (index, field) = fields
-                        .into_iter()
-                        .enumerate()
-                        .find(|(_, field)| &field.name == name)
-                        .ok_or_else(|| {
-                            Self::error("E201", format!("unknown record field `{name}`"), step.span)
-                        })?;
-                    if !field.mutable {
-                        return Err(Self::error(
-                            "E305",
-                            format!("field `{name}` is immutable"),
-                            step.span,
-                        ));
-                    }
+                    let (index, field) = self.mutable_field(ty, name, step.span)?;
                     path.push(hir::WriteStep::Field(index));
                     if !indexed {
-                        names.push(field.name);
+                        names.push(name.clone());
                     }
-                    ty = field.ty;
+                    ty = field;
                 }
                 ExprKind::Index { index, .. } => {
                     let Type::List { element, capacity } = ty else {

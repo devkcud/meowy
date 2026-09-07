@@ -225,7 +225,7 @@ pub fn unsupported_shapes_and_shared_ancestry_crossings_stay_gated() {
         "x:=1;p:&!x;t:p.{->*self}",
         "x:=1;p:&!x;t:(&*p).{->*self}",
         "x:=1;p:&!x;'again{'again.restart()}",
-        "x:={->n:=1};p:&!x.n",
+        "x:={->n:=1};p:&!x",
         "f<&int32>:(s<&int32>,extra<string>){->s};x:=1;p:&!x;s:&*p;v:f(s,\"\")",
         "f<&int32>:(s<&int32>,extra<string>){->s};x:=1;p:&!x;v:f(p,\"\")",
         "x:=1;p:&!x;q:&!*p;v:p==q",
