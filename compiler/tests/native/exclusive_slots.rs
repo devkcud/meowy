@@ -177,12 +177,11 @@ pub fn exclusive_slot_backing_types_must_remain_exact() {
 }
 
 #[test]
-pub fn immutable_and_projected_alias_boundaries_remain_explicit() {
+pub fn immutable_and_wider_alias_boundaries_remain_explicit() {
     rejects("r:{->n:1;p:&!n}", "E305");
     rejects("p:&!n;r:{->n:=1}", "E201");
     for source in [
         "r:{->row:={->n:=1};p:&!row}",
-        "r:{->row:={->n:=1};p:&!row.n}",
         "r:{->items:=[1];p:&!items[1]}",
         "r:{->label:=\"x\";p:&!label}",
         "r:{->n:=1;p:&!n;'again{'again.restart()}}",

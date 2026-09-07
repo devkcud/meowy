@@ -92,7 +92,7 @@ impl Checker {
                     && field.ty != *local
                 {
                     return Err(Diagnostic::unsupported(
-                        "exclusive emitted scalar borrow requires identical backing type",
+                        "exclusive emitted borrow requires identical backing type",
                         span,
                     ));
                 }

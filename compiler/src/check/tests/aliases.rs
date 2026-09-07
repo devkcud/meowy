@@ -76,3 +76,15 @@ pub(crate) fn exclusive_alias_backing_rejects_widening_without_restricting_share
     assert!(errors[0].message.contains("identical backing type"));
     assert_eq!(&source[errors[0].span.start..errors[0].span.end], "&!n");
 }
+
+#[test]
+pub(crate) fn exclusive_projection_requires_exact_backing_beyond_the_selected_field() {
+    accepts(
+        "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&row.n;v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}",
+    );
+    let source = "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&!row.n;v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}";
+    let errors = crate::compile(source).unwrap_err();
+    assert_eq!(errors[0].code, "B001");
+    assert!(errors[0].message.contains("identical backing type"));
+    assert_eq!(&source[errors[0].span.start..errors[0].span.end], "&!row.n");
+}

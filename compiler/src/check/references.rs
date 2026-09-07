@@ -131,7 +131,7 @@ impl Checker {
             ));
         };
         let alias = self.proofs.aliases.contains_key(&id);
-        if (!self.places.contains(&id) && !alias) || (alias && !steps.is_empty()) {
+        if !self.places.contains(&id) && !alias {
             return Err(Diagnostic::unsupported(
                 "exclusive borrowing of emitted storage",
                 span,

@@ -43,3 +43,53 @@ pub(crate) fn guarded_alias_views_share_target_storage_and_keep_distinct_loans()
         },
     );
 }
+
+#[test]
+pub(crate) fn projected_alias_views_keep_canonical_fields_and_target_scope() {
+    inspect_body(
+        "f<null>:(flag<boolean>){r:'out{|flag|{'out->row:={->inner:={->n:=1}};p:&!row.inner.n;v:*p};|!flag|{'out->row:={->inner:={->n:=2}};p:&!row.inner.n;v:*p}}}",
+        Some(0),
+        |graph, reach| {
+            graph.solve_authority(reach).unwrap();
+            assert_eq!(graph.loans.len(), 2);
+            let first = &graph.values[graph.loans[0].value].origins[0].source;
+            let second = &graph.values[graph.loans[1].value].origins[0].source;
+            let Source::Slot {
+                target,
+                root,
+                view: a,
+                fields,
+            } = first
+            else {
+                panic!("projected slot");
+            };
+            let Source::Slot {
+                target: other,
+                root: same,
+                view: b,
+                fields: projected,
+            } = second
+            else {
+                panic!("projected slot");
+            };
+            assert_eq!((target, root), (other, same));
+            assert_ne!(a, b);
+            assert_eq!(
+                fields,
+                &[
+                    crate::borrow::Projection::Field(0),
+                    crate::borrow::Projection::Field(0)
+                ]
+            );
+            assert_eq!(fields, projected);
+            assert!(crate::loans::Graph::physical_overlap(first, second));
+            let scope = graph.stores[root].scope;
+            assert_eq!(graph.scopes[scope.0].kind, ScopeKind::Block(*target));
+            assert!(
+                !graph
+                    .guards
+                    .overlap(reach[graph.loans[0].node], reach[graph.loans[1].node])
+            );
+        },
+    );
+}
