@@ -1,23 +1,20 @@
 # Exclusive-reference implementation design
 
-This is the next implementation slice after terminal restart-source expiry
-(`7906333`, native coverage `324e9ae`). It specifies an implementation of the existing
+This documents the implemented first scalar slice of the existing
 [memory rules](../docs/reference/memory.md),
 [reference conversions](../docs/reference/types.md#inference-and-assignment), and
 [ownership diagnostics](../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
-Bounded access records, shared ancestry, lifecycle events and forward availability
-are implemented. Exclusive source modes and permission enforcement remain unimplemented.
-`&!value`, `<&!T>` and indirect assignment remain
-bootstrap capabilities gated by B001. Planned rejections below are not current
-conformance results.
+Bounded access records, guarded ancestry, lifecycle events, forward availability,
+exclusive permissions and scalar indirect stores are integrated. Native execution
+and exact-code tests cover the matrix below; the wider language remains incomplete.
 
 ## First supported slice
 
-Enable exclusive references to initialized, mutable ordinary locals containing
+Support exclusive references to initialized, mutable ordinary locals containing
 booleans, integers or floats. Support local reference bindings, moves between
 bindings, replacement of mutable reference bindings, scalar dereference reads and
 writes, and shared/exclusive reborrows of those scalars. Include conditional paths,
-short-circuit evaluation, nested blocks and named `leave` before opening the gate.
+short-circuit evaluation, nested blocks and named `leave`.
 An immutable reference binding can mutate its referent through `&!T`; changing the
 reference value itself still requires a mutable binding.
 
@@ -45,25 +42,23 @@ earlier execution. Other bodies retain all existing shared-reference restart
 support. Relax this gate only after forward availability and backward authority
 demand both solve bounded loop fixed points.
 
-## What exists and what is missing
+## Implementation map
 
-| Owner | Existing behavior | Required change |
-| --- | --- | --- |
-| `parser/expressions.rs`, `parser/types.rs`, `parser/statements.rs` | Parse `&!`, `<&!T>` and dereference assignment | Keep the existing grammar |
-| `check/expressions.rs`, `check/names.rs` | Reject exclusive expressions/types | Open gates only after all downstream proofs exist |
-| `hir.rs` | Shared `Type::Reference`; reference reads are Copy | Explicit reference mode, Copy classification, consuming access and indirect-store representation |
-| `check/references.rs`, `check/mutation.rs`, `check/statements.rs` | Resolve addresses, direct writes and mutability | Separate reference inspection from consumption; validate pointee access independently of pointer-cell mutability |
-| `borrow_value.rs`, `borrow_value/pointee.rs` | Component origins, public bounds, activity and expiry | Carry authority separately without changing the meaning of Source or bounds |
-| `borrow/value.rs`, `borrow/origins.rs`, `borrow/control.rs`, `borrow/mutable.rs`, `borrow/branches.rs`, `borrow/exits.rs` | Shared-only origin traversal, version restoration and Facts production | Propagate guarded authority without treating exclusive reads as copies; reject excluded authority crossings |
-| `loans/access.rs`, `loans/state.rs`, `loans/values.rs`, `loans/control.rs` | Bounded reads, stored-tag inspections, shared acquisitions and writes, alongside reference uses/defs/transfers | Add consumption and guarded authority for indirect access on the same CFG |
-| `loans/solve.rs`, `loans/branches.rs` | Backward demand and guarded reach/joins | Forward initialized/moved state plus shared/exclusive conflicts |
-| `loans/transitive.rs` | Summary transfers for shared reborrows | Explicit parent authority and bounded descendant demand |
-| `backend.rs`, `backend/storage.rs`, `backend/aggregate.rs` | IR types, operation dispatch, cells, pointer loads and scalar stores | Preserve reference mode checks; capture an indirect target once and store only on its returning edge |
+| Owner | Responsibility |
+| --- | --- |
+| `hir.rs` | Shared/exclusive types, exhaustive Copy classification, explicit Store statement |
+| `check/references.rs`, `check/statements.rs`, `check/expressions.rs` | Scalar roots, mutability, reborrows, expected shared conversion and store typing |
+| `borrow/mutable.rs`, `check/blocks.rs` | Bounded capability scan and dispatch-receiver metadata |
+| `borrow/`, `borrow_value.rs`, `borrow_contract.rs` | Origin lifetime, component traversal and guarded local-version facts |
+| `loans/access.rs`, `loans/values.rs`, `loans/control.rs` | Physical accesses, taking intent, captured pointers and returning stores |
+| `loans/authority.rs`, `loans/transitive.rs` | Mode-bearing LoanIds, copy identity, guarded parents and opacity |
+| `loans/storage.rs`, `loans/init.rs` | Scoped cells and demand-driven forward availability |
+| `loans/permissions.rs`, `loans/solve.rs` | Bounded ancestor walks, parent suspension, boundary gates and live dependency conflicts |
+| `backend.rs`, `backend/storage.rs` | Pointer loads, mode validation and once-captured scalar stores |
 
-Use focused `loans/access.rs` and `loans/init.rs` modules if these responsibilities
-outgrow their owners. Extend the existing CFG instead of constructing a second
-one. `check/functions.rs`, `check/blocks.rs`, `check/temporaries.rs` and collection
-construction must preserve the first-slice exclusions even when a type is inferred.
+The existing CFG and budgets are shared by availability, liveness and permission
+checks. Native tests are in `tests/native/exclusive_references.rs`; the runnable
+example is [exclusive-references.mwy](examples/exclusive-references.mwy).
 
 ## Storage, values and authority
 
@@ -107,9 +102,9 @@ tag read. Shared acquisitions now have graph-local LoanIds and guarded parent
 alternatives; copies preserve identity independently of value versions. Call results
 and restart bodies retain explicit opaque ancestry. Restart-erased source/tag
 correlations may also leave explicit unresolved-region guards; these cannot authorize
-access. Non-restarting accesses still require actual-origin coverage. This provenance does not yet
-implement exclusive permission or source-level moves. Lifecycle events now retain
-taking intent, and forward availability handles Copy and internal non-Copy states. Preserve source access evidence through future folding,
+access. Non-restarting accesses still require actual-origin coverage. Mode-bearing provenance now
+enforces scalar exclusive permissions and parent suspension. Lifecycle events retain
+taking intent, and forward availability handles source-level non-Copy references. Preserve source access evidence through future folding,
 and distinguish accessing a reference cell from accessing its referent.
 
 | Active loan | External read/shared acquisition | External write/exclusive acquisition | Access through that loan |
@@ -134,7 +129,7 @@ collection retain the existing conservative overlap boundary.
 
 Forward guarded availability is implemented on the existing graph, independently
 of backward reference liveness. It tracks ready, moved, uninitialized and ended
-alternatives demanded by lifecycle events; currently all source types are Copy.
+alternatives demanded by lifecycle events; exclusive references are non-Copy.
 An unused variable is not thereby moved, and a live reference does not prove its
 holder initialized. Every read, borrow or move requires availability on its actual
 entered guard.
@@ -160,14 +155,14 @@ entered guard.
   the scalar referent. No nontrivial destructor is introduced by this slice.
   Ending actual borrowed storage still invalidates all surviving views with E303.
 
-Proposed authority-transfer policy: moving a parent handle while a child borrows
+Implemented authority-transfer policy: moving a parent handle while a child borrows
 the referent transfers the same suspended parent authority to the destination.
 The child retains its original owner lifetime and parent relationship; no lifetime
 bound on the old handle cell is invented. The moved source is unavailable, and
 the destination regains conflicting access only after child demand ends. This is
 an implementation choice consistent with the existing owner-lifetime rules, not
-an already-tested language feature. If transfer cannot be proved, retain B001 for
-that combination. An actual `&p` reference-cell borrow is a distinct later case.
+a general rule for unsupported owned payloads. Scalar transfer is covered by native
+execution; future containing shapes still need separate proof. An actual `&p` reference-cell borrow is a distinct later case.
 
 ## Indirect stores and scoped exits
 
@@ -191,8 +186,8 @@ this design does not qualify generated cleanup or unwinding.
 
 ## Acceptance matrix for implementation
 
-These are future acceptance conditions. All rows containing an exclusive reference
-currently stop with B001 before ownership semantics are checked.
+These are implemented scalar acceptance conditions, covered by source checks and
+native regression groups in both profiles. Wider excluded shapes remain B001.
 
 | Expected after implementation | Source |
 | --- | --- |
@@ -222,7 +217,7 @@ currently stop with B001 before ownership semantics are checked.
 | E301 through ascription | `x:=1;p:&!x;q:p<&!int32>;v:*p` |
 
 Use scalar function parameters for unknown branch conditions. The first program
-must become E309; reinitializing `p` after the move inside that branch must accept:
+reports E309; reinitializing `p` after the move inside that branch must accept:
 
 ```meowy
 f<null>:(flag<boolean>) {
@@ -232,7 +227,7 @@ f<null>:(flag<boolean>) {
 }
 ```
 
-The following must also become E309: the early Leave carries moved state, while
+The following also reports E309: the early Leave carries moved state, while
 normal completion initializes a new value. Moving and reinitializing before an
 unconditional Leave must accept.
 
@@ -257,8 +252,7 @@ the other owner.
 Retain B001 for exclusive loops, signatures/results, inferred carriers and
 reference cells. Once those forms are implemented, moving a non-Copy referent
 through a borrow must use E304; do not claim that diagnostic is proved while the
-containing shape is still unsupported. Shared indirect writes should become E305
-when the new access checker can validate their otherwise supported scalar path.
+containing shape is still unsupported. Shared scalar indirect writes report E305; wider indirect stores remain B001.
 
 ## Validation and delivery order
 
@@ -270,24 +264,16 @@ current gates and source parsing only, not the planned exclusive behavior. The
 disposable probe sources/results are in `/tmp/meowy-exclusive-probes/` for this
 session. No production source or reference conformance fixture changed.
 
-1. Access records are implemented on the current CFG, including direct storage,
-   exact-version pointees, tag paths and shared acquisitions. Preserve shared
-   diagnostics, evaluation order and demand-only transfers while extending them.
-   Keep weighted metadata/work charging and reach-checked missing evidence.
-2. Shared LoanIds, guarded ancestry and actual-source region resolution are
-   implemented, with explicit call/restart opacity. Lifecycle events and forward
-   availability now preserve taking intent and exact scope/Leave behavior. Internal
-   non-Copy transition tests pass; integrate real source modes and permission
-   enforcement before admitting source-level exclusivity.
-3. Integrate reference mode, consuming contexts and scalar indirect stores across
-   checker, origin/loan passes and backend. Reject excluded inferred forms before
-   partial facts reach later phases. Keep parser grammar and runtime ABI unchanged.
-4. Enable only the complete first slice; convert the matrix into native execution
-   and exact-code regressions. Test each accepted program in debug/release, including
-   old shared loops, first-collection reservations, canonical aliases, expired
-   sources, once-only effects and skipped stores. Run the full compiler gate.
-5. Extend fields, reference cells, signatures/returns, aggregate initialization and
-   restarts as separate proof-bearing slices; connect owned cleanup afterward.
+Current implementation: seventeen native groups cover accepted scalar execution,
+exact move/permission/lifetime/mutability diagnostics, guarded choices, target capture,
+Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chain
+with B001 rather than publishing partial proofs. Existing shared-reference tests
+remain enabled; reference fixtures are unchanged.
+
+Next, extend one excluded shape at a time: scalar exclusive function contracts need
+symbolic-input overlap and explicit authority transfer; fields and collections need
+projection-aware permission; carriers need non-Copy initialization and destruction;
+restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 
 Reuse existing node, value, origin, liveness and shared-work limits. Authority
 registries, parent edges, availability alternatives, access events and clone/merge

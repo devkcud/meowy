@@ -140,6 +140,10 @@ must remain available. It uses the host libc development files at link time.
 It is not yet a portable compiler distribution with a bundled sysroot, and has
 not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 
+The [exclusive references example](examples/exclusive-references.mwy) moves a scalar
+reference, reborrows it and captures an indirect store target before replacing the
+holder. Shared/exclusive children preserve their parent authority through last use.
+
 ## Implemented language
 
 - UTF-8 sources, original byte spans, retained lexer trivia, compact punctuation,
@@ -168,6 +172,17 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   Mutable owners can be assigned after the last use of every overlapping shared
   reference. Live aliases, reference operands and retained block results protect
   their owners from writes; conflicting assignments report E302.
+- Exclusive references to mutable ordinary boolean, integer and float locals.
+  Immutable handles permit scalar stores; replacing a handle requires a mutable
+  binding. Moves and reinitialization preserve authority; unavailable holders report
+  E301 or E309. Shared/exclusive reborrows retain guarded parent relationships and
+  reject overlapping external or suspended-parent access with E302. Expected shared
+  scalar-reference types create a reborrow without moving the exclusive holder.
+  Indirect stores capture the pointer before RHS effects and complete only on
+  returning paths. Named Leave, short circuits and conditional moves are supported.
+  Exclusive signatures, carriers, cells, aliases, dispatch, fields, collections,
+  block results, comparisons and restart bodies remain B001. Call/result/cell/dispatch
+  crossings also reject shared values carrying exclusive ancestry.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their
@@ -203,7 +218,7 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   parenthesized paths, including reference-valued prefixes such as
   `&holder.view.field`. Reference-valued calls/blocks evaluate once. Derived
   function results retain all active input lifetime bounds. Union payload addresses
-  and exclusive reborrows remain unavailable.
+  remain unavailable; scalar exclusive reborrows follow the rules above.
 - Whole-carrier and reference-cell shared borrows, including nested dereference
   copies and reborrows through stored references. Bounded pointee summaries preserve
   contained origins, nullable activity and call bounds. A direct dereference copy
@@ -300,7 +315,7 @@ exits with status 1. These are bootstrap text diagnostics, not the
 release panic artifact format or a recovery/unwind implementation.
 
 Unavailable constructs report **B001**, including slices, named list positions,
-reference/owned list elements, other collection APIs, exclusive borrows,
+reference/owned list elements, other collection APIs, non-scalar exclusive borrows,
 borrows of owned temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable nullable
 reference bindings, mutable reference-bearing fields, mutable primary slots and alias
@@ -524,7 +539,7 @@ the fixture catalog and does not execute the compiler.
 | `src/borrow.rs`, `src/borrow/` | Shared borrow facts, origin validation, value/control traversal and result transfers |
 | `src/borrow_contract.rs` | Symbolic function inputs, caller origin substitution and all-input lifetime bounds |
 | `src/borrow_value.rs` | Active union variants, component paths, coercions and bounded value snapshots |
-| `src/loans.rs`, `src/loans/` | Shared graph state, value/control construction, liveness and write conflicts |
+| `src/loans.rs`, `src/loans/` | Guarded storage availability, value/control construction, authority and access conflicts |
 | `src/diagnostic.rs`, `src/driver.rs`, `src/main.rs` | Diagnostics, commands, build publication and process launch |
 | `src/backend.rs`, `src/backend/` | Bridge and generator core, aggregate/list/arithmetic/output lowering and focused native tests |
 | `native/bridge.cpp` | LLVM verification, optimization and object emission |

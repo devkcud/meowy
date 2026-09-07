@@ -451,7 +451,7 @@ implementation boundary; it does not change language rules.
   subset has no owned destructor or observable cleanup action; its backend cells
   use existing entry allocas and initialize at the expression site. This does not
   implement owned cleanup or moving non-Copy temporaries. Temporary write roots,
-  reference-bearing list elements and exclusive borrows remain unavailable.
+  reference-bearing list elements and exclusive temporary borrows remain unavailable.
 - Statement and temporary IDs each cap at 65,536, and metadata lookup, type walks,
   projections and temporary origins consume existing shared work/storage budgets.
 
@@ -608,17 +608,17 @@ implementation boundary; it does not change language rules.
   it grows, and type comparison walks check each frontier push. Public-source
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
-- This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, exclusive reference headers, owner moves, owned
-  temporary values, indirect/capturing contracts and cleanup edges remain
-  unimplemented. Ordinary scalar/record reads may overlap shared references.
+- The graph enforces shared loans and scalar exclusive permissions. Exclusive
+  reference headers, owned payload moves/temporaries, indirect/capturing contracts
+  and generated cleanup remain unimplemented. Ordinary scalar/record reads may
+  overlap shared references. See [the scalar design](EXCLUSIVE_REFERENCES.md).
 
 ## Loan access records
 
 - `loans/access.rs` owns bounded Read, Tag, Borrow and Write records on the existing
   CFG. `Node.access` replaces the previous write-only field. The shared conflict
   solver consumes the same physical write places and retains its E302 behavior.
-  Reads and acquisitions do not yet implement exclusive authority or moves.
+  Reads and acquisitions participate in scalar exclusive permission checks.
 - Direct storage accesses retain the canonical Place and original lexical LocalId
   view plus typed component paths. Primary, named fields and narrowed union members
   remain distinct. Alias reads and writes agree on their canonical root without
@@ -628,7 +628,7 @@ implementation boundary; it does not change language rules.
   with component paths for selected pointees. They do not flatten public bounds
   into fictitious physical reads. These IDs identify snapshots, not exclusive loan
   authority. Shared provenance now has separate LoanIds and guarded parents as
-  described below; exclusive permission checking remains unimplemented.
+  described below; mode-aware permission checks consume this provenance.
 - Tag traversal maps coercions back to original storage paths and adds no payload
   demand. Static predicates on types with no stored union tag create no tag read.
   Pointer evaluation required to reach a pointee still retains its existing uses.
@@ -642,18 +642,18 @@ implementation boundary; it does not change language rules.
 - Twelve focused graph groups cover read/store order, field/primary/tag paths,
   pointer versions/public bounds, acquisitions, aliases, skipped stores, indexed
   regions, complementary guards, reset edges, missing evidence and resource limits.
-  Exclusive modes, parent permission and indirect writes remain
-  later stages; forward availability is described below; access metadata is not source-level `&!` support or a public artifact.
+  Scalar exclusive mode, parent permission and indirect writes are implemented
+  on these records. The metadata is private, not a public replay artifact.
 
-## Shared authority provenance
+## Guarded authority provenance
 
 - `loans/values.rs::Value` preserves actual origins and public bounds separately
   through facts ingestion, copies, guarded merges, headers, calls and dereferences.
   The existing dependency iterator still visits both roles for last-use checks.
   A public lifetime bound therefore still blocks conflicting writes with E302 but
   never supplies an actual access region or acquisition identity.
-- `loans/authority.rs` allocates bounded, graph-local LoanIds for shared acquisitions
-  and shared input components. Ordinary value copies keep those identities; distinct
+- `loans/authority.rs` allocates bounded, graph-local LoanIds for shared/exclusive acquisitions
+  and shared input components. Each loan retains its reference mode. Ordinary value copies keep those identities; distinct
   acquisitions remain distinct even at the same address. These are internal analysis
   IDs, not runtime epochs, persistent source identities or public replay artifacts.
 - Metadata-only copy links propagate guarded LoanId alternatives through bindings,
@@ -663,8 +663,8 @@ implementation boundary; it does not change language rules.
   with guarded parent alternatives from the captured parent value version.
 - Parent alternatives stay fixed when a reference holder is replaced; copied shared
   children retain their ancestry. Parent graphs are checked for cycles and invalid
-  IDs with charged work. This records provenance only: exclusive mode and suspension enforcement remain
-  unimplemented. Lifecycle taking intent and forward availability are described below.
+  IDs with charged work. Scalar permission checks walk guarded parents to preserve
+  delegated access while suspending incompatible parent and sibling operations.
 - Call result ancestry is opaque because current signatures do not describe loan
   transfer. Opacity propagates through copies and derived loans. Every reachable
   restart body is also opaque for authority purposes, so a repeated static site
@@ -687,8 +687,8 @@ implementation boundary; it does not change language rules.
 - Fifteen graph groups cover identity through copies, separate acquisitions,
   parent chains, holder replacement, guard/Leave/short-circuit joins, public bounds,
   opaque calls and restarts, copied carriers, normalized fields/slots, input cells,
-  expiry and resource/cycle rejection. Exclusive references remain gated until
-  mode-aware permission checks integrate with availability for the scalar slice.
+  expiry and resource/cycle rejection. Seventeen native groups additionally cover
+  scalar exclusive permissions, availability and remaining capability gates.
 
 ## Storage lifecycle and forward availability
 
@@ -703,11 +703,12 @@ implementation boundary; it does not change language rules.
   closes its target at the common completion; restart closes target/descendant scopes
   before reentering the target. Panic marks active scopes ended. These are analysis
   events, not generated cleanup or a proof of destructor order within a scope.
-- HIR Copy classification is explicit and exhaustive. All currently supported source
-  storage is Copy. Value contexts retain taking intent through groups/ascriptions,
+- HIR Copy classification is explicit and exhaustive. Supported source
+  scalar exclusive reference storage is non-Copy; other supported storage is Copy.
+  Value contexts retain taking intent through groups/ascriptions,
   while pointer evaluation for dereference/reborrow and tag inspection do not take
-  the holder. Copy taking leaves storage initialized; an internal non-Copy take
-  transitions it to moved. Source-level non-Copy modes are still gated.
+  the holder. Copy taking leaves storage initialized; an exclusive reference take
+  transitions its holder to moved. Other non-Copy shapes remain gated.
 - `loans/init.rs` computes backward storage demand, then forward guarded availability
   for demanded cells/scopes. Reference definitions do not initialize storage, and
   reference liveness does not establish availability. Scope entry starts cells
@@ -731,10 +732,10 @@ implementation boundary; it does not change language rules.
   guarded/short-circuit/Leave state, statement/slot ownership, restart, panic, sparse
   demand and budget rejection. Internal tests vary cell Copy metadata explicitly;
   they do not establish source-level exclusive reference or move support.
-- Indirect permission checking, parent suspension, partial-cell initialization and
-  runtime cleanup remain unimplemented. First-slice exclusive references still need
-  mode-aware frontend/backend integration and permission checks over provenance;
-  opaque ancestry or unresolved regions must not authorize access.
+- Scalar indirect permission and parent suspension now use this availability
+  alongside guarded provenance. Partial-cell initialization and runtime cleanup
+  remain unimplemented. Opaque ancestry or unresolved regions cannot authorize
+  exclusive access.
 
 ## Inline bounded lists
 
@@ -935,3 +936,24 @@ in debug and release. Check complementary owner selections, aliases, discarded
 emissions and all possible escaping roots. Check unsupported ownership boundaries,
 shadowing and storage provenance. Preserve all scalar/union checks. No reference
 fixture depending on `bytes` becomes supported just from pointer lowering.
+
+## Scalar exclusive access
+
+- `Type::Exclusive` holds an ordinary mutable Bool/Int/Float local address. Moving
+  its handle preserves LoanId identity. `&*p`, `&!*p` and dereference inspect the
+  handle; expected shared-reference conversion creates a shared child loan.
+- `loans/permissions.rs` walks guarded parent edges within the work/metadata caps.
+  Live descendants retain ancestors. An actor can use its own loan or delegated
+  ancestors; shared descendants suspend parent writes and exclusive descendants
+  suspend parent reads too. External overlapping access reports E302. Public bounds
+  remain conservative dependencies and never authorize a store.
+- Store captures the pointer before RHS evaluation and retains it only through a
+  returning final store. Completed RHS moves/replacements survive skipped stores.
+  The backend evaluates each operand once and preserves scalar storage layout.
+- Calls, emissions, reference-bearing cells/temporaries and dispatch receivers
+  carry semantic boundary markers. Guarded ancestry checks reject exclusive-derived
+  shared values crossing them. Exclusive signatures, carriers, field/element roots,
+  comparisons, block results and resolved restart bodies remain B001.
+- Availability produces E301 for definite moves and E309 for uncertain storage;
+  origin lifetime failures remain E303. Mutable owner requirements and shared scalar
+  store rejection produce E305. Runtime cleanup and owned destruction are unproved.
