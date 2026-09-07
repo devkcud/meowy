@@ -215,7 +215,6 @@ pub fn nested_writes_check_depth_types_and_unsupported_owner_boundaries() {
         ("a:=[{->items:[1]}];a[1].items[1]=2", "E305"),
         ("a:=[[{->x:1}]];a[1][1].x=2", "E305"),
         ("[[1]][1][1]=2", "B001"),
-        ("a:=[[1]];r:&!a[1][1]", "B001"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

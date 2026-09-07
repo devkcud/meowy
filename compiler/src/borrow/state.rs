@@ -3,7 +3,7 @@ use super::{
     State, Tags, Type,
 };
 use crate::borrow_value::{Projection, Source};
-use crate::hir::Place;
+use crate::hir::{Place, WriteStep};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Backing {
@@ -44,12 +44,13 @@ impl Proofs {
         &self,
         program: &'a Program,
         place: &Place,
+        path: &[WriteStep],
         guards: &mut crate::flow::Flow,
         span: Span,
     ) -> Option<&'a Type> {
         if !self.mutable.contains(&place.root)
             || self.temporaries.contains_key(&place.root)
-            || !guards.spend(place.fields.len().saturating_mul(4) + 1)
+            || !guards.spend((place.fields.len() + path.len()).saturating_mul(4) + 1)
         {
             return None;
         }
@@ -59,10 +60,10 @@ impl Proofs {
             return None;
         }
         let mut ty = program.locals.get(place.root)?;
-        if !place.fields.is_empty() {
+        if !place.fields.is_empty() || !path.is_empty() {
             let weight = crate::borrow_contract::type_weight(ty, guards, span).ok()?;
             if !guards.spend(weight.saturating_mul(2))
-                || !matches!(ty, Type::Record { .. })
+                || !matches!(ty, Type::Record { .. } | Type::List { .. })
                 || ty.has_reference()
                 || !ty.is_copy()
             {
@@ -78,6 +79,29 @@ impl Proofs {
                 return None;
             }
             ty = &field.ty;
+        }
+        for step in path {
+            match step {
+                WriteStep::Field(index) => {
+                    let Type::Record { fields, .. } = ty else {
+                        return None;
+                    };
+                    let field = fields.get(*index)?;
+                    if !field.mutable {
+                        return None;
+                    }
+                    ty = &field.ty;
+                }
+                WriteStep::Index(step) => {
+                    let Type::List { element, .. } = ty else {
+                        return None;
+                    };
+                    if !matches!(step.index.ty, Type::Int { .. } | Type::Never) {
+                        return None;
+                    }
+                    ty = element;
+                }
+            }
         }
         ty.scalar_element()
     }

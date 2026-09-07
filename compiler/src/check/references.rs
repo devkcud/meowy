@@ -174,14 +174,20 @@ impl Checker {
             fields.push(index);
             ty = field;
         }
-        let target = if indexed {
-            ty.scalar_element().ok_or_else(|| {
-                Diagnostic::unsupported("exclusive elements outside scalar bounded lists", span)
-            })?
+        if indexed {
+            let weight = crate::borrow_contract::type_weight(&ty, &mut self.flow, span)?;
+            if !self.flow.spend(weight.saturating_mul(2)) {
+                return Err(crate::borrow_value::State::budget(span));
+            }
+            if !matches!(ty, Type::List { .. }) || ty.has_reference() || !ty.is_copy() {
+                return Err(Diagnostic::unsupported(
+                    "exclusive elements require reference-free Copy list storage",
+                    span,
+                ));
+            }
         } else {
-            &ty
-        };
-        self.exclusive_type(target.clone(), span)?;
+            self.exclusive_type(ty.clone(), span)?;
+        }
         if !mutable {
             return Err(Self::error(
                 "E305",

@@ -61,20 +61,43 @@ impl Checker<'_> {
                 let state = self.locals[&place.root].state.select(&path, self.guards);
                 state.borrowed(self.proofs.source(place), ty, self.guards, expr.span)?
             }
-            ExprKind::ExclusiveElement { place, index } => {
+            ExprKind::ExclusiveElement { place, path, index } => {
                 let element = self
                     .proofs
-                    .exclusive_element_type(self.program, place, self.guards, expr.span)
+                    .exclusive_element_type(self.program, place, path, self.guards, expr.span)
                     .cloned()
                     .ok_or_else(|| Self::unsupported(expr.span))?;
+                let diverges = index.ty == Type::Never || path.iter().any(|step| {
+                    matches!(step, crate::hir::WriteStep::Index(step) if step.index.ty == Type::Never)
+                });
                 if expr.ty != Type::Exclusive(Box::new(element.clone()))
-                    && !(expr.ty == Type::Never && index.ty == Type::Never)
+                    && !(expr.ty == Type::Never && diverges)
                 {
                     return Err(Self::unsupported(expr.span));
                 }
-                let source = self.proofs.source(place).project(&[Projection::Element]);
+                let mut source = self.proofs.source(place);
                 self.live(&source, expr.span)?;
-                flow = self.expression(index)?.flow;
+                for step in path {
+                    if !self.guards.spend(place.fields.len() + path.len() + 1) {
+                        return Err(State::budget(expr.span));
+                    }
+                    if !flow.next {
+                        break;
+                    }
+                    match step {
+                        crate::hir::WriteStep::Field(index) => {
+                            source = source.project(&[Projection::Field(*index)]);
+                        }
+                        crate::hir::WriteStep::Index(step) => {
+                            flow.append(self.expression(&step.index)?.flow);
+                            source = source.project(&[Projection::Element]);
+                        }
+                    }
+                }
+                if flow.next {
+                    flow.append(self.expression(index)?.flow);
+                }
+                source = source.project(&[Projection::Element]);
                 if flow.next {
                     self.live(&source, expr.span)?;
                     State::default().borrowed(source, &element, self.guards, expr.span)?

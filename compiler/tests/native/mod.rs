@@ -11,6 +11,7 @@ pub(crate) mod examples;
 pub(crate) mod exclusive_elements;
 pub(crate) mod exclusive_fields;
 pub(crate) mod exclusive_functions;
+pub(crate) mod exclusive_nested_elements;
 pub(crate) mod exclusive_projected_elements;
 pub(crate) mod exclusive_references;
 pub(crate) mod exclusive_slot_fields;

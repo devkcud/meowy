@@ -170,12 +170,11 @@ pub fn projected_bounds_use_initialized_length_after_one_index_evaluation() {
 }
 
 #[test]
-pub fn projected_reference_temporary_and_indexed_owners_remain_gated() {
+pub fn projected_reference_and_temporary_owners_remain_gated() {
     for source in [
         "r:={->xs:=[1]};view:=&r;p:&!view.xs[1]",
         "r:={->xs:=[1]};view:&r;p:&!(*view).xs[1]",
         "p:&!({->xs:=[1]}).xs[1]",
-        "r:={->xs:=[[1]]};p:&!r.xs[1][1]",
         "x:1;r:={->xs:=[1];->view:&x};p:&!r.xs[1]",
         "r:{->xs:=[1];p:&!xs[1];'again{'again.restart()}}",
     ] {

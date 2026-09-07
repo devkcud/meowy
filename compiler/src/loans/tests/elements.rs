@@ -171,6 +171,7 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
                         root: id,
                         fields: vec![0]
                     },
+                    &[],
                     &mut checker.flow,
                     crate::ast::Span { start: 0, end: 0 },
                 )

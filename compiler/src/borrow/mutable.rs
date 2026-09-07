@@ -134,9 +134,14 @@ pub(crate) fn check(
                     | ExprKind::ListSize(value)
                     | ExprKind::Coerce { value }
                     | ExprKind::TypeTest { value, .. } => add(Item::Expression(value))?,
-                    ExprKind::ExclusiveElement { index, .. } => {
+                    ExprKind::ExclusiveElement { path, index, .. } => {
                         exclusive.get_or_insert(expr.span);
                         add(Item::Expression(index))?;
+                        for step in path.iter().rev() {
+                            if let WriteStep::Index(step) = step {
+                                add(Item::Expression(&step.index))?;
+                            }
+                        }
                     }
                     ExprKind::ElementBorrow { value, index, .. }
                     | ExprKind::ListIndex { value, index }

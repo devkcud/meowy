@@ -15,6 +15,7 @@ mod guarded_references;
 mod init;
 mod leaving_references;
 mod mutable_references;
+mod nested_elements;
 mod places;
 mod reference_temporaries;
 mod restarting_references;

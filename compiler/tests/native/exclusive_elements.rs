@@ -214,7 +214,6 @@ pub fn broader_roots_and_reference_upgrades_remain_gated() {
         "xs:=[1];view:=&xs;p:&!view[1]",
         "xs:=[1];view:&xs;p:&!(*view)[1]",
         "p:&![1][1]",
-        "xs:=[[1]];p:&!xs[1][1]",
         "xs:=[{->n:=1}];p:&!xs[1].n",
         "xs:=[{->n:=1}];p:&!xs[1]",
         "xs:=[\"text\"];p:&!xs[1]",

@@ -1,6 +1,6 @@
 use super::{Generator, ir_type};
 use crate::ast::Span;
-use crate::hir::{Expr, Place, Type};
+use crate::hir::{Expr, Place, Type, WriteStep};
 
 impl<'a> Generator<'a> {
     pub(crate) fn list_item(&mut self, ty: &Type, ptr: &str, index: &str) -> String {
@@ -60,11 +60,46 @@ impl<'a> Generator<'a> {
     pub(crate) fn exclusive_element(
         &mut self,
         place: &Place,
+        path: &[WriteStep],
         index: &Expr,
         result: &Type,
         span: Span,
     ) -> Result<String, String> {
-        let (ptr, list) = self.place(place)?;
+        let (mut ptr, mut list) = self.place(place)?;
+        for step in path {
+            match step {
+                WriteStep::Field(index) => {
+                    let Type::Record { fields, .. } = &list else {
+                        return Err("exclusive owner field requires a record".into());
+                    };
+                    let field = fields
+                        .get(*index)
+                        .ok_or("missing exclusive owner field")?
+                        .ty
+                        .clone();
+                    ptr = self.value(format!(
+                        "getelementptr {}, ptr {ptr}, i32 0, i32 {}",
+                        ir_type(&list),
+                        index + 1
+                    ));
+                    list = field;
+                }
+                WriteStep::Index(step) => {
+                    let Type::List { element, .. } = &list else {
+                        return Err("exclusive indexed owner requires a list".into());
+                    };
+                    let element = *element.clone();
+                    let length = self.value(format!("load i64, ptr {ptr}"));
+                    let position = self.expression(&step.index)?;
+                    if self.ended {
+                        return Ok("undef".into());
+                    }
+                    let offset = self.list_offset(&step.index, position, &length, step.span)?;
+                    ptr = self.list_item(&list, &ptr, &offset);
+                    list = element;
+                }
+            }
+        }
         let element = list
             .scalar_element()
             .ok_or("exclusive elements require scalar list storage")?;
