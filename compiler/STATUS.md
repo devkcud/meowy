@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Stored restart-header activity is implemented and validated.
-Full v0.0.1 remains incomplete; no unfinished source edits or failing checks remain.
+Updated: 2026-09-07. Terminal expired restart sources are implemented and validated.
+Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Expiry implementation: `7906333`; native coverage/example: `324e9ae`.
 Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
 Prior transitive headers: `34d2e7b`; native/example: `fa70eab`.
 Prior direct restart implementation: `89800dc`, `ca037d3`, `dc7be5b`.
@@ -21,26 +22,28 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Completed: restart headers carry stored nullable/tagged member activity through
-nested references and record pointees. Observed members grow monotonically; stable
-choice identities and parent-conditioned activity make convergence meaningful.
-Origins and lifetime bounds retain distinct component/source roles under their
-structural activation. Independent union-field/owner correlations may widen.
+Completed: restart headers retain terminal Source::Expired identities for ended or
+iteration-owned Local/Slot/Temporary sources and public lifetime bounds. Each marker
+keeps the original local, slot-view or temporary site ID; physical projections may
+collapse only after expiry. Reinitializing that static site cannot revive an old
+reference. Overwrite-before-read is accepted; actual expired use reports E303.
 
-Stable RestartId metadata identifies exact backedges. Final-pass predecessor States
-are captured under their entered guards before header widening/reset. Loan transfers
-apply source-path activity after resetting future demand; inactive paths may be
-absent only with proof. Old copies, lazy pointee reads, physical cells and active
-public bounds retain their existing rules. Backend storage and runtime ABI did not
-change. Temporary and iteration-owned carried sources/bounds remain B001; explicit
-expired identities are next.
+Live ancestor owners, including an enclosing statement's temporary, survive inner
+restarts. Component paths, source/bound roles and parent-conditioned activity remain
+intact. Exact initial/backedge predecessor snapshots preserve incoming sources before
+boundary expiry and retain entered guards; demand-only transfers preserve physical
+loans. Expired markers are nonphysical in overlap checks. Raw malformed-source and
+budget errors remain B001. Generated storage, runtime ABI and dependencies did not
+change. Old copies, lazy pointee access and full call-entry validation retain their
+existing rules. Independent field/owner and temporal correlations may still widen.
 
 ## Resume here
 
 1. Read this file, `README.md`, `AGENTS.md`, and `../COMPILER.md`.
 2. Inspect `git status --short` and recent commits; preserve existing work.
-3. Run `python3 -B tools/verify.py --compiler` from the root; it pins the build target
-   and actual compiler path for all compiler checks.
+3. After new changes or an unresolved concern, run
+   `python3 -B tools/verify.py --compiler` from the root; it pins the build target
+   and actual compiler path. Otherwise preserve the green evidence below.
 4. Direct conformance uses `python3 -B compiler/tests/conformance.py --compiler
    compiler/target/x86_64-unknown-linux-gnu/debug/meowy`; 13 unsupported cases remain.
 5. Consult the validation evidence below before claiming any gate passed.
@@ -60,10 +63,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 57 origin, 71 loan, 15 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 77 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 249 native groups, 4 harness tests and 36 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 258 native groups, 4 harness tests and 37 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -82,7 +85,7 @@ module; `check/temporaries.rs` owns temporary creation and statement metadata.
 returning-state joins. `borrow/exits.rs` owns target-entry and queued Leave snapshots;
 loan Scope captures target versions and exit predecessors. `loans/values.rs` owns
 immutable graph versions. `borrow/replay.rs` isolates body passes and fact publication;
-`borrow/restart.rs` owns canonical header/source gates; `borrow/header.rs` supplies
+`borrow/restart.rs` owns canonical headers and source expiry; `borrow/header.rs` supplies
 the shared charged Shape validator to origin and loan analysis. `borrow/activity.rs`
 owns member partitions and path activation. `loans/restarts.rs` owns stable header
 IDs and source-guarded predecessor transfers. `check/statements.rs` assigns bounded
@@ -104,7 +107,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, expired-source restart headers, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Remaining contextual constraints, finer alias precision, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -152,12 +155,17 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   referents remain traversal cut points, including scalar unions behind nested
   references. Reference-bearing lists and mutable reference-bearing nullable or
   aggregate bindings remain B001; unsupported activity is never erased to admit a type.
-- Every feasible carried source/bound at every component must be an Input or live
-  Local/Slot strictly outside the restarted target. Temporary and target/descendant
-  storage remain B001, even where overwrite could precede the next read. Rebinding
-  a static LocalId/alias/statement cannot revive an earlier iteration's view.
-  Ancestor slots can survive inner restarts; noncarried iteration-local bindings
-  can be reinitialized/rebound normally.
+- Every feasible carried source/bound keeps its structural component and role.
+  Inputs and live ancestor-owned Local/Slot/Temporary sources survive. Ended or
+  target/descendant-owned sources become terminal Source::Expired site identities;
+  further projections and repeated restarts cannot revive them. Physical projections
+  may collapse only after expiry. Overwrite-before-read adds no lifetime use; actual
+  expired reads report E303 before current storage lookup. Live ancestor statement
+  temporaries survive inner restarts. Genuine unsupported/budget errors stay B001.
+- Expired sources are nonphysical in loan overlap. Initial/backedge predecessor
+  snapshots retain their original sources and activity, so current-iteration writes,
+  old copies, physical cells and public bounds still enforce E302. Transitive payload
+  reads stay lazy; whole copies and full call entry validate demanded components.
 - Origin replay creates a fresh Checker for each body pass, reinitializing inputs
   and discarding tentative locals/calls/reborrows/results/exits/predecessors.
   Headers grow monotonically and compare canonical source roles and member activity
@@ -541,83 +549,76 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Final `python3 -B tools/verify.py --compiler`: all 10 selected checks pass on
-  frozen production source. HIR gained RestartId and internal Facts gained exact
-  predecessor snapshots; generated storage, runtime ABI and dependencies did not
-  change. Editor/native-runtime checks were not rerun.
-- Rust: 283 library and 249 native groups pass (532 total). Added 2 checker,
-  4 origin, 7 loan and 8 native groups. All 37 checker, 57 origin, 71 loan and
-  62 backend groups pass. Formatting and Clippy `-D warnings` pass; all 36 examples
-  execute in both native profiles.
-- Coverage includes observed member convergence, parent-conditioned nested
-  activity, null/full/null transitions, optional fields, inactive transfer proofs,
-  active missing evidence, lazy/tag-only versus payload reads, old copies, cells,
-  public bounds and once-only calls. Reset-sensitive E302 tests prevent an initial
-  or future payload read from hiding a conflicting write behind a different tag.
-  Source tests also reject overlapping/incomplete/unknown activity and lifetime
-  bounds substituted for missing active origins.
-- The previous compiler rejected the prepared nullable-header probe with B001;
-  no full pre-change run of the new native module was made. First integration
-  passed all eight new groups, but the substring filter selected a ninth legacy
-  group with an obsolete activity B001 expectation. Those rows now check acceptance;
-  corrected selection is 9/9 and the full gate passes. Remaining old B001 rows now
-  exercise Temporary/iteration-owned sources or mutable reference-bearing bindings.
-  A needless test visibility warning and invalid test ascription were corrected
-  during focused work; final Clippy and all tests pass.
-- Independent review passed 12 exact-code checks and 3 programs in both profiles
-  (6 executions). Source/resource and documentation reviews found no blocker.
-  Documentation states that member activity participates in convergence and that
-  predecessor States are captured under entered guards, before widening/reset.
-- Optimized compiler build passed. That binary built and ran
-  `examples/header-activity.mwy` in release: exit 0, exact stdout
-  `empty\n7\nempty\n`, empty stderr. No reference fixture or REQUIRED changed;
-  no new ELF/linkage qualification is claimed.
-- Existing fixed-point/resource coverage remains, including the 80-binding
-  source-budget rejection and 64-join/64-forward-exit successes. Restart-site
-  exhaustion rejects without ID reuse. Shape/activity/source guards and retained
-  header/choice/snapshot weights remain charged under existing logical caps.
-- Fresh Python evidence: 16 tooling and 4 compiler-harness groups (20 total).
-  Documentation checks 872 links in 86 Markdown files; schemas/catalog pass.
-  Final handoff review and the repeated link check pass; prior log history is
-  preserved exactly. Static metadata validation remains separate from execution.
-- Historical unchanged-runtime/editor evidence at `f16c30b`: Vim/Neovim, 15 runtime
-  Python groups and native debug/release/sanitized checks passed. Runtime groups
-  were 6 diagnostic, 14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned,
-  with fatal, truncation, lifetime, guard and admission probes. ASan/UBSan/LSan and
-  expired fiber-local detection passed outside the sandbox. These are prior checks,
-  not reruns or generated-cleanup/unwind qualification for this slice.
-- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
-  language/release qualification remains open; generic temporary-borrow fixtures
-  remain unsupported despite independently executed temporary-owner support.
-- Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
+- Commit-only follow-up: implementation `7906333`, native coverage/example `324e9ae`.
+  All 26 non-tracker files match their pre-split content hashes in both the working
+  tree and commits. Staged/per-commit whitespace checks pass; historical checkpoints
+  are preserved. Compiler/runtime tests were not rerun for the split.
+
+- Final `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+  Rust: 292 library and 258 native groups (550 total). All 37 examples execute in
+  debug/release; expired-restarts output is exactly `1\n2\n3\n7\n9\n9\n`.
+  Formatting, Clippy `-D warnings`, pinned build and schemas/catalog pass.
+- Added three origin, six loan and nine native groups. Focused origin/loan totals
+  are 60/77. New native coverage runs 16 programs in both profiles and checks
+  16 exact-primary E303 rejections. It covers entry/backedge Local/Slot/Temporary
+  overwrite, same-site reinitialization, old copies, nested targets, live ancestor
+  temporaries, active/inactive nested payloads, public bounds and once-only effects.
+- Independent production/resource review found no blocker. Twelve exact-code checks
+  and five programs in both profiles pass (ten executions), including nested active
+  temporaries, same temporary-site revival rejection, skipped calls, projected
+  reborrows and physical old-copy conflicts. No optimized compiler rebuild or new
+  ELF/linkage qualification was performed; native debug/release execution did run.
+- Baseline compiler gate passed all ten checks at 532 Rust tests. Eleven focused
+  baseline probes exposed B001 for the newly supported expiry cases. Initial library
+  integration passed 274 groups and failed nine obsolete B001 expectations. First
+  full gate passed 292 library groups and 254 native groups, then stopped at four
+  more legacy B001 groups. Those now assert acceptance for unread carriage or E303
+  for actual use; mutable-carrier/list B001 boundaries remain. A follow-up formatting
+  stop and test-design corrections are recorded in STATUS_STEP_LOG.md. Final gate
+  is green; no production defect was found during integration.
+- Existing fixed-point/resource checks pass, including the 80-binding source-budget
+  rejection, 64 joins and 64 forward exits, RestartId exhaustion, active-path coverage
+  and missing-predecessor failures. Expired markers remain in the existing weighted
+  source/fact/replay budgets; no dynamic epoch allocation or new cap was introduced.
+- Python: 16 tooling and four compiler-harness groups pass (20 total). Documentation
+  checks 873 links in 86 Markdown files. Final handoff review and Git whitespace
+  checks pass; prior step-log history is preserved exactly. Static metadata validation remains separate
+  from compiler execution. Reference fixtures and REQUIRED were not changed.
+- Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Generic
+  temporary-borrow fixtures remain unsupported despite independently executed
+  temporary-owner support. Complete language/release qualification remains open.
+- Runtime/editor checks were not rerun. Historical evidence at `f16c30b`: Vim/Neovim,
+  15 runtime Python groups and native debug/release/sanitized checks passed. Runtime
+  groups were six diagnostic, 14 cleanup, ten stack, ten context, 25 scheduler and
+  14 owned, with fatal, truncation, lifetime, guard and admission probes.
+  ASan/UBSan/LSan and expired fiber-local detection passed outside the sandbox.
+  These remain prior checks, not generated-cleanup/unwind qualification.
+- Historical ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
-  artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
-- Preserve the unchanged vendored fcontext.hpp EOF exception and checksum.
+  artifacts/replay and v0.0.1 remain unqualified. Preserve the unchanged vendored
+  fcontext.hpp EOF exception and checksum.
 
 ## Next steps
 
-1. Design explicit expired carried-source identities across `borrow_value/`,
-   `borrow/restart.rs`, `borrow/replay.rs`, `borrow/pointee.rs` and
-   `loans/restarts.rs`. Distinguish expired Local/Slot/Temporary sources and public
-   bounds from newly initialized storage at the same static site. Enable safe
-   overwrite-before-use only once both origin and loan analysis preserve expiry;
-   do not merely remove restart_source gates. Cover entry versus backedge expiry,
-   nested targets, active/inactive payloads, old copies, public bounds, same-site
-   reinitialization and E303 on actual expired use, with debug/release execution.
-   Preserve source-path transfer guards, structural activity and all resource caps.
-2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
-   Shared-reference/temporary write roots, mutable reference-bearing fields and source
-   exclusive references require explicit origin, move/initialization and cleanup
-   models before enabling new writes.
-3. Define generated payload/diagnostic layouts and scope cleanup using runtime
+1. Design the first exclusive-reference and initialization slice in `OWNERSHIP.md`,
+   `src/check/mutation.rs`, `src/borrow_value.rs` and `src/loans/`. Define move/reborrow
+   state, parent suspension and scope exits before enabling source-level exclusive
+   references or mutable reference-bearing carriers. Preserve canonical slots,
+   first-collection conflicts, terminal expiry and source-side predecessor activity.
+   Prove accepted execution and relevant lifetime/loan rejections in both profiles
+   before relaxing any capability gate.
+2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding.
-4. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
+3. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
    with explicit scope/dependency models and unchanged effect order. Add
    static/intrinsic sources and new projections only with updated lifetime
    contracts/no-return assumptions. Extend diagnostic source identities and evidence
    without treating bootstrap byte-span text as a complete replay artifact.
-5. Implement required evaluation, specialization and the project/module graph;
+4. Implement required evaluation, specialization and the project/module graph;
    enable fixtures only after actual support, then progress libraries and tools.
-6. Keep the combined gate and both handoffs/logs current. Strict conformance needs
-   zero unsupported cases and still covers only part of v0.0.1 qualification.
+5. Keep both handoffs/logs current; run the combined gate after wider integrations.
+   Do not rerun green compiler checks without a new change or concern. Strict
+   conformance needs zero unsupported cases and still covers only part of v0.0.1
+   qualification. Expiry source/tests and native/example documentation are committed;
+   preserve this handoff and its execution evidence.

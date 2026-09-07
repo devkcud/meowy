@@ -6,12 +6,84 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Expired-source split handoff finalized
+
+- Findings: Split complete by responsibility: 7906333 implements expiry with source tests and legacy expectation migrations; 324e9ae adds native coverage, example and README; this checkpoint records the handoff. Automatic commit policy remains separately recorded in 206fb3e.
+- Validation: All 26 non-tracker files match their pre-split hashes in the working tree and committed blobs. Staged/per-commit Git whitespace checks pass; all previously committed checkpoint entries remain intact. No source edits or test reruns occurred during splitting; prior ten-check compiler evidence remains documented.
+- Blockers: None for the split. Conformance still has 13 unsupported cases; full v0.0.1 remains unqualified.
+- Next steps: Resume exclusive-reference initialization/reborrow design from the current STATUS, retaining terminal expiry, physical predecessor loans and existing validation boundaries. Do not push or publish without authorization.
+
+### 2026-09-07 — Expired-source native coverage committed
+
+- Findings: Commit 324e9ae adds the nine native expiry groups with their registration, the executable example with its both-profile assertion, and README support details. Implementation/legacy migrations remain in 7906333. Both current handoffs now identify those commits and retain the next ownership/initialization work.
+- Validation: Staged whitespace and cached/remaining diff review passed. The prior ten-check compiler gate remains valid evidence for unchanged source; this split did not rerun tests.
+- Blockers: None.
+- Next steps: Verify all 26 non-tracker files against the saved content hashes, preserve historical log entries, commit the handoffs and confirm clean Git state.
+
+### 2026-09-07 — Expired-source implementation committed
+
+- Findings: Commit 7906333 contains terminal expiry, ownership documentation, source tests and legacy native expectation migrations. Kept module registrations with their files and all behavior-dependent assertions with the implementation. Independent split review found no dependency issue or unrelated change.
+- Validation: Staged whitespace and cached/remaining diff review passed. Prior compiler execution evidence is unchanged; no source edits or test reruns.
+- Blockers: None.
+- Next steps: Commit new native expiry coverage, example and README; then update current commit references and commit all handoff/history changes.
+
+### 2026-09-07 — Expired-source commit split prepared
+
+- Findings: Reviewed the full dirty tree and grouped expiry implementation plus legacy expectation migrations, new native/example coverage, then current handoffs/history. Existing policy commit 206fb3e stays separate. Saved content hashes for every non-tracker changed file.
+- Validation: Reusing the prior green ten-check compiler gate (550 Rust, 20 Python, 37 examples in both profiles). This commit-only step does not change source or rerun runtime tests; staged and remaining diffs will receive Git integrity checks.
+- Blockers: None.
+- Next steps: Commit implementation and current expectation migrations, then native/example/README coverage, then finalize tracker commit references and verify content preservation and clean Git state.
+
 ### 2026-09-07 — Automatic focused commits required
 
 - Findings: Root AGENTS.md now requires agents to commit their completed, validated task changes and split distinct concerns into dependency-ordered commits. Compiler rules are aligned; unrelated user/agent work is excluded and pushing/publication still requires authorization.
 - Validation: Independent review confirms both instruction files agree. Git whitespace and staged-diff checks pass; only this workflow change is staged. Compiler execution evidence is unchanged.
 - Blockers: None.
 - Next steps: Apply this commit policy to subsequent tasks, preserving the current compiler continuation and its recorded validation.
+
+### 2026-09-07 — Expired-source handoff complete
+
+- Findings: Final independent documentation review confirms support boundaries, evidence and concrete next steps. Clarified that predecessor snapshots preserve incoming identities before boundary conversion, including any already-expired sources; restart instructions now reuse green evidence unless changes or concerns require checks.
+- Validation: All ten compiler checks pass: 550 Rust tests, 20 Python tests and 37 examples in both profiles; conformance 10 passed, 13 unsupported, 0 failed. Final documentation check passes 873 links, Git whitespace passes, and both logs preserve all previous checkpoint history exactly. No production or test changes followed the green gate.
+- Blockers: None for this slice. Runtime/editor checks remain historical; exclusive/owned references, generated cleanup and complete v0.0.1 qualification remain open. Work is uncommitted.
+- Next steps: Continue with the exclusive-reference initialization/reborrow design in OWNERSHIP.md, check/mutation.rs, borrow_value.rs and loans/, preserving terminal expiry and predecessor loans; connect generated cleanup only with explicit lifetime/ownership proofs.
+
+### 2026-09-07 — Expired-source compiler gate passed
+
+- Findings: Terminal carried-source expiry and all regression migrations are complete. Live ancestor temporaries survive inner restarts; actual expired uses remain E303, physical predecessor loans remain E302, and raw proof/budget failures remain B001. Updated both current handoffs with the exclusive-reference/initialization and generated-cleanup next steps.
+- Validation: All ten compiler checks pass: 550 Rust tests (292 library, 258 native), 20 Python tests, 873 links, schemas/catalog, formatting, Clippy, build and conformance. All 37 examples execute in both profiles. Independent audit passes twelve checks and ten executions. No production changes followed the gate; runtime/editor evidence remains historical.
+- Blockers: No unfinished implementation or failing check. Conformance retains 13 unsupported cases; complete v0.0.1 remains unqualified. Changes are uncommitted as requested scope did not include committing.
+- Next steps: Review final handoffs, preserve all prior log history and verify links/whitespace. Next design exclusive-reference initialization/reborrow state before enabling new capabilities; then connect generated cleanup to runtime ownership.
+
+### 2026-09-07 — Compiler gate found remaining legacy source gates
+
+- Findings: Production changes and new regression groups pass. The first full gate found four more native groups expecting B001 for unread expired carriage, including an unreachable read after an infinite loop. Mutable carriers/lists must keep their separate B001 assertions.
+- Validation: Formatting, Clippy and all 292 library tests pass. Native result: 254 passed, four legacy groups failed; all 37 examples executed in both profiles. Subsequent harness/build/conformance steps did not run because the gate stopped.
+- Follow-up: Migrated the four native groups; a subsequent gate stopped at one test-array formatting difference. Ran cargo fmt; final gate is running. Production source remains unchanged.
+- Blockers: No production defect observed. Full gate remains incomplete until these legacy expectations are corrected.
+- Next steps: Migrate only those supported-carriage rows, preserve actual-use E303 and remaining capability gates, then rerun the compiler gate and finalize handoffs.
+
+### 2026-09-07 — Expired-source focused proof complete
+
+- Findings: Terminal expiry enables overwrite-before-read for ended entry and backedge Local/Slot/Temporary sources and public bounds. Current predecessor loans, nested target lifetimes, active ancestor temporaries, lazy payloads and once-only effects retain their rules. Added expired-restarts.mwy and updated ownership/README documentation.
+- Validation: All 60 origin groups, 77 loan groups and nine new native groups pass. Native coverage runs 16 programs in both profiles and checks 16 E303 rejections. Independent review passes twelve checks and five programs in both profiles. No production blocker found.
+- Corrections: Legacy B001-only assertions now check supported carriage or actual-use E303. A temporary native-test source argument omission was fixed before execution. New tests initially hit mutable-pointer narrowing E208, ambiguous optional-record construction, and an expired pointee read in a physical-cell conflict probe; corrected tests isolate their intended behavior. Owned origin formatting was normalized.
+- Blockers: Full changed-source compiler gate and example execution remain pending; no environmental blocker.
+- Next steps: Freeze source/tests, run all compiler checks, finalize current handoffs and verify links/whitespace. Preserve runtime/editor evidence as historical; exclusive ownership and generated cleanup remain open.
+
+### 2026-09-07 — Terminal expired sources implemented
+
+- Findings: Source::Expired retains its static source-site ID and remains terminal under projection. Lifetime checking rejects it before storage lookup; loan overlap treats it as nonphysical. Header conversion retains live ancestor-owned sources, converts E303/ending owners, and propagates unsupported/budget failures. Raw predecessor proofs and demand transfers are unchanged.
+- Validation: First library run compiled and passed 274 tests; nine legacy tests failed because they expected B001 for carried values never read. Eleven native baseline probes confirm B001 for old entry/backedge and same-site cases. New regression assertions are still being integrated.
+- Blockers: No environmental blocker. Changed-source verification remains incomplete until new expiry cases and legacy migrations pass.
+- Next steps: Complete origin/loan/native coverage for safe overwrite, actual expired use, active ancestor temporaries, nested variants and public bounds. Independently audit the representation and then run the compiler gate.
+
+### 2026-09-07 — Expired carried-source design and baseline
+
+- Findings: The next slice can reuse component-based demand transfers. Add a terminal expired source-site identity, preserving origin versus bound roles and structural activity. Convert ended or target-owned sources; preserve live ancestor temporaries and genuine unsupported/budget errors. Predecessor snapshots must remain before expiry/reset.
+- Validation: Baseline compiler gate passed all ten checks: 532 Rust tests, 20 Python tests and 36 examples in both profiles; conformance 10 passed, 13 unsupported, 0 failed. No changed-source validation yet.
+- Blockers: None requiring user input. Exclusive ownership, mutable carriers and generated cleanup remain separate work.
+- Next steps: Implement bounded source expiry and lifetime rejection; add native entry/backedge, nested-target, old-copy, active-payload and public-bound regressions. Root is sole handoff/log writer.
 
 ### 2026-09-07 — Stored activity handoff complete
 
