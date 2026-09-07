@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Scalar exclusive direct-function arguments implemented.
+Updated: 2026-09-07. Guarded bare scalar-reference returns implemented.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Scalar reference returns/evidence/native matrix: `9dba94a`; contract/example: `e457380`.
 Scalar function arguments/native matrix: `c7af472`; contract/example: `d72d5d0`.
 Scalar exclusive implementation/native matrix: `3fe8715`; example/docs: `87e7926`.
 Lifecycle/taking intent/availability: `d72b413`.
@@ -27,30 +28,30 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Direct functions now accept scalar exclusive parameters with primitive results and
-primitive/scalar-reference arguments. Caller Read/Write accesses occur after all
-arguments return and retain every captured reference through entry. This rejects
-suspended-parent moves and conflicting arguments even when parameters are unused.
-Exclusive arguments consume holders; `&!*p` delegates a child and expected shared
-parameters reborrow without moving the parent.
+Flat direct signatures now return bare shared/exclusive references to Bool/Int/Float.
+`borrow_contract/returns.rs` records guarded compatible-argument indexes alongside
+actual call origins in `Facts.returns`. `loans/returns.rs` links those guards to
+captured input values and grants a fresh mode-bearing result loan only on normal
+return. Equal addresses do not merge authority; missing or incomplete evidence is
+B001. Callee-root emissions retain demand to function exit and reject local escapes.
 
-Callee input grants retain mode on symbolic Source::Input roots. Same-root access
-checks preserve parent suspension; different scalar inputs are independent for
-exclusive access because every direct caller validates disjoint arguments. Input
-referents remain distinct from local pointer cells. Nested/recursive calls and
-receiver syntax for direct functions use this contract without new LLVM promises.
+Shared results can select shared/exclusive inputs; exclusive results require
+exclusive inputs. Nested/recursive forwarding preserves parent suspension and moves.
+Every borrow-carrying argument still contributes lifetime bounds; those bounds never
+become result addresses or permission. Bounds protect writes/acquisitions and scope,
+without imposing exclusive read restrictions on unrelated lifetime-only inputs.
+Caller entry maximum access, once-only argument capture and Leave/panic remain intact.
 
-Later argument Leave/panic skips entry without undoing earlier effects or moves;
-non-returning callees still validate entry. Mutating calls invalidate caller facts.
-Unused exclusive parameters trigger the restart gate. Shared-only restart callees
-remain valid for shared reborrows. Reference results, wider exclusive signatures,
-carriers, fields/cells, dispatch blocks and exclusive restart bodies remain B001.
+Wider shared signatures and restart bodies retain opaque ancestry. Wider exclusive
+signatures/results, carriers, cells, nested exclusive block results, arbitrary
+exclusive-derived shared block results, dispatch blocks and exclusive restart bodies
+remain gated. No backend, runtime ABI, dependency or reference fixture changed.
 
-Seventeen native groups pass in both profiles. All ten compiler checks pass: 626 Rust
-checks (334 library, 292 native), 20 Python tests, 39 debug/release examples and
-888 local links, plus formatting, Clippy, build, schema/catalog and conformance checks.
-No reference fixture, dependency, backend or runtime ABI change was needed. Contracts are in `EXCLUSIVE_FUNCTIONS.md`; preserve
-`EXCLUSIVE_REFERENCES.md` and the prior local-scalar matrix.
+All ten compiler checks pass: 645 Rust tests (337 library, 308 native), 20 Python
+tests, 40 debug/release examples, 896 links, formatting, Clippy, build and schema/
+catalog/conformance checks. Three graph groups prove guard correspondence, equal-
+address identity and missing evidence; sixteen native groups exercise the return
+matrix and shared restarts. Contract: `REFERENCE_RETURNS.md`.
 
 ## Prior implemented milestone
 
@@ -95,10 +96,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 119 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 122 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 292 native groups, 4 harness tests and 39 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 308 native groups, 4 harness tests and 40 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -115,7 +116,8 @@ records, typed inspection paths, metadata charging and region resolution.
 `loans/authority.rs` owns acquisition IDs, guarded provenance, opacity and parent checks.
 `loans/storage.rs` owns lifecycle events/scopes; `loans/init.rs` owns storage demand
 and forward guarded availability. `loans/permissions.rs` owns mode-aware access,
-ancestor checks and semantic boundary gates. Contract tests live beside their
+ancestor checks and semantic boundary gates. `loans/returns.rs` consumes guarded
+call-result parent evidence from `borrow_contract/returns.rs`. Contract tests live beside their
 module; `check/temporaries.rs` owns temporary creation and statement metadata.
 `borrow/mutable.rs` owns the bounded assignment/restart/capability scan.
 `borrow/branches.rs` and `loans/branches.rs` own guarded environment restoration and
@@ -586,7 +588,25 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 334
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 337
+  library and 308 native groups (645 total); 20 Python tests; all 40 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 896 links in
+  89 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Sixteen new native return groups cover shared/exclusive identity, guarded input
+  selection, nested/recursive calls, parent/sibling suspension, moves, widths, public
+  bounds, retained emissions, call entry/capture, no-return arguments/callees and
+  existing shared restart behavior. Sixteen returned-parent stages execute; 512
+  report B001 within the proof budget. The new example outputs 10, 8, 10, 11.
+- Three graph groups check matching origin/parent choice guards, distinct parents
+  at equal addresses and B001 for missing, incomplete or invalid-index return
+  evidence. First library run passed 332 and failed two old access/opaque metadata
+  expectations; wider-signature opaque coverage was retained during migration.
+- Source probes preceded thirteen passing native groups, then proof/captured-target/
+  resource checks and the full gate passed at 644. The final example/shared-restart
+  gate passed at 645. No reference fixture, backend, runtime ABI or dependency changed.
+  Runtime/editor/optimized-compiler/host qualification were not rerun; generated
+  cleanup and wider ownership results remain unimplemented.
+- Prior function-argument `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 334
   library and 292 native groups (626 total); 20 Python tests; all 39 examples in
   debug/release; formatting, Clippy, pinned build, schemas/catalog and 888 links in
   88 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
@@ -697,14 +717,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Design explicit guarded reference-result authority in `borrow_contract/` and
-   `loans/values.rs`. The result must identify captured input loans separately from
-   its actual source and conservative all-input bounds. Preserve caller parent
-   suspension through returned exclusive/shared views and guarded input selection;
-   matching physical origins alone must not create authority. Add native identity,
-   shared reborrow, multiple-input and exact move/lifetime/conflict cases before
-   opening any result gate. Keep wider signatures, carriers, fields/cells, dispatch
-   blocks and exclusive restart bodies gated until their own contracts are proved.
+1. Design scalar-reference nested block results in `borrow/mutable.rs`,
+   `borrow/emissions.rs` and `loans/control.rs`. Broaden the boundary only after
+   proving consuming emissions, retained result-slot demand, guarded parent transfer,
+   normal and named-Leave exits, discarded emissions and local-scope lifetime errors.
+   Preserve the reference-return/native matrix and all-input bounds. Wider carriers,
+   reference cells, dispatch blocks and exclusive restart bodies remain separate.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle

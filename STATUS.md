@@ -11,28 +11,29 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented scalar exclusive arguments for direct functions with primitive
-  results (`c7af472`; contract/example `d72d5d0`). Calls capture arguments once and validate shared/exclusive access at
-  entry, including suspended parents and conflicting arguments that are otherwise
-  unused. Passing a holder moves it; explicit or implicit reborrows preserve parents.
-- Symbolic input loans retain mode, physical overlap and guarded parent permissions
-  through nested and recursive calls. Later argument Leave/panic skips call entry
-  while keeping completed moves. Mutating calls invalidate caller refinements.
-- All ten compiler checks pass: 626 Rust tests (334 library, 292 native), 20 Python
-  tests, 39 examples in debug/release, formatting, Clippy, build, schema/catalog checks
-  and 888 local links. Seventeen new native groups cover the function-argument slice.
-- Reference-return exclusive contracts, wider signatures, carriers, fields/cells,
-  dispatch blocks and exclusive restart bodies remain B001. Scalar-local references
-  remain in `3fe8715`, example/docs `87e7926`; reference fixtures and runtime ABI
-  are unchanged. Full conformance remains 10 passed/13 unsupported/0 failed.
-- Runtime/editor suites were not rerun. Standard library/module loading, generated
-  cleanup and complete v0.0.1 qualification remain open.
+- Implemented bare shared/exclusive scalar-reference results from flat direct
+  function signatures (`9dba94a`; contract/example `e457380`). Guarded argument indexes explicitly connect actual origins
+  to captured parent loans; no authority is inferred from matching addresses.
+- Returned descendants preserve parent suspension, move semantics and all-input
+  lifetime bounds through nested/recursive calls. Only function-root scalar-reference
+  emissions cross the new boundary; local escapes remain E303. Bounds protect
+  writes/lifetimes without inventing exclusive read restrictions on unrelated inputs.
+- All ten compiler checks pass: 645 Rust tests (337 library, 308 native), 20 Python
+  tests, 40 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  896 local links. Three graph groups validate choice/identity/missing-evidence
+  invariants; sixteen native groups cover return semantics and shared restarts.
+- Wider signatures/results, carriers, cells, exclusive nested block results,
+  dispatch blocks and exclusive restart bodies remain B001. No backend, ABI,
+  dependency or reference fixture changed. Full conformance remains 10 passed,
+  13 unsupported, 0 failed; runtime/editor suites were not rerun.
+- Standard library/module loading, generated cleanup and complete v0.0.1
+  qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar exclusive locals and direct function arguments | Guarded reference-result authority and wider ownership shapes |
+| Compiler | Scalar exclusive locals, arguments and returned authority | Scalar-reference block results and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -42,12 +43,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design guarded reference-result authority in `compiler/src/borrow_contract/`
-   and `compiler/src/loans/values.rs`. A returned view needs an explicit relationship
-   to the captured input loan, including parent suspension and all-input lifetime
-   bounds. Do not infer authority from matching addresses or public bounds. Prove
-   identity/shared reborrow/guarded selection cases before opening return gates;
-   preserve the scalar-local and function-argument matrices.
+1. Design scalar-reference nested block results in `compiler/src/borrow/mutable.rs`,
+   `compiler/src/borrow/emissions.rs` and `compiler/src/loans/control.rs`. Preserve
+   consuming emissions, retained slot demand, guarded parents and named Leave;
+   verify before allowing exclusive or exclusive-derived shared block-result
+   crossings. Keep carrier/reference-cell state and generated cleanup separate.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

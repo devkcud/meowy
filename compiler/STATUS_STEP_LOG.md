@@ -6,6 +6,75 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Guarded scalar reference-return final validation complete
+
+- All ten compiler checks pass: 645 Rust groups (337 library, 308 native), 20 Python
+  groups, 40 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  896 local links in 89 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Sixteen native return groups and three graph evidence groups pass. The new example
+  prints 10, 8, 10, 11 on separate lines. The added shared-return restart regression
+  preserves existing opaque loop behavior. No backend/ABI/dependency/fixture changed.
+- Commits: `9dba94a` implements guarded results and tests; `e457380` adds contract
+  docs and the native example. Staged whitespace checks passed.
+- Blockers: None for bare scalar-reference returns. Next: Design scalar-reference
+  nested block results with consuming emissions, retained demand and scoped exits.
+
+### 2026-09-07 — Scalar reference-return compiler gate passes
+
+- All ten checks pass: 644 Rust groups (337 library, 307 native), 20 Python groups,
+  39 debug/release examples, formatting, Clippy, build, schemas/catalog and 888 links.
+  Conformance remains 10 passed/13 unsupported/0 failed.
+- Three graph groups prove guard correspondence, equal-address parent identity and
+  B001 for missing/incomplete/out-of-range return evidence. Fifteen native groups
+  cover the return matrix and bounded 16/512-stage authority chains.
+- A focused shared identity-return loop also executes successfully; added it as a
+  native regression to preserve restart opacity. Added the reference-returns example
+  and contract/capability docs. Next: final validation, focused commits and handoffs.
+  Runtime/editor/cleanup and complete release qualification remain separate.
+
+### 2026-09-07 — Scalar reference-return native matrix passes
+
+- Thirteen new native groups pass in debug/release: exclusive/shared returns,
+  recursive forwarding, guarded choices, widths/boolean storage, all-input bounds,
+  parent/sibling suspension, moves, retained emissions, call entry and no-return
+  argument/callee paths. Prior unsupported shapes stay gated.
+- Added graph evidence tests for matching choice guards, distinct same-address
+  parents and missing/incomplete metadata. Added native captured-return targets
+  and bounded 16/512-stage return-chain coverage; checks are pending.
+- Updated obsolete B001 tests to retain wider-signature/result coverage, and kept
+  opaque ancestry tests on wider shared signatures. Next: full compiler gate,
+  design/example docs, exact handoff evidence and focused commits.
+
+### 2026-09-07 — Scalar return evidence and parent transfer integrated
+
+- Added guarded argument-index return facts, normal-return parent transfer and
+  mode-bearing result loans. Only function-root scalar-reference emissions cross
+  the new boundary. Shared/exclusive result candidates preserve one choice for
+  physical origins and parent authority; all-input bounds remain separate.
+- Exclusive read conflicts now inspect actual origins; lifetime-only bounds retain
+  write/acquisition protection without excluding reads of unrelated ignored inputs.
+- Validation: Nine source probes match acceptance/E302/E303 expectations. Library
+  run passed 332 and failed two obsolete call-access/opaque-contract assertions.
+  Those are being migrated while retaining wider-signature opaque coverage.
+- Next: Native debug/release result matrix, missing/guarded return-evidence tests,
+  bounded resource checks, full compiler gate and capability docs/commits.
+
+### 2026-09-07 — Guarded scalar reference-result contract scoped
+
+- Flat direct signatures may return one shared/exclusive scalar reference. Record
+  explicit argument indexes and mutually exclusive choice guards alongside call
+  origin facts; captured argument loans use the same guards. Never recover authority
+  from equal addresses or public bounds. Exclusive results require exclusive inputs.
+- Preserve call-entry maximum access, all-input lifetime bounds and root-function
+  emission lifetime checks. Keep carriers, exclusive nested block results, dispatch
+  blocks and exclusive restart bodies gated. Bounds retain write protection without
+  inventing exclusive physical read restrictions on unrelated inputs.
+- Validation: Clean tree at 59deb1d; four baseline identity/shared/selection/escape
+  probes report B001. Read contracts and lean-build skill. Next: implement bounded
+  return evidence, captured-parent transfer and root emission, then native matrix
+  and full gate before committing.
+
 ### 2026-09-07 — Scalar function-argument final validation complete
 
 - All ten compiler checks pass: 626 Rust groups (334 library, 292 native), 20 Python
