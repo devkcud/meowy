@@ -6,6 +6,49 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Shared provenance committed and handoff finalized
+
+- Findings: Commit ebc8ebe contains role-preserving values, shared LoanIds, guarded copy/parent provenance, explicit opacity, actual-source region resolution, fifteen graph groups and ownership/design documentation. Both current handoffs identify storage lifecycle and forward availability as the next work. Exclusive references remain unsupported.
+- Validation: All ten compiler checks passed on the committed source: 577 Rust tests, 20 Python tests, 37 examples in debug/release, 879 links, formatting, Clippy, schemas/catalog, build and conformance 10 passed/13 unsupported/0 failed. Staged whitespace passed; no production or test edits followed the gate. Prior runtime/editor evidence remains historical.
+- Blockers: None for this slice. Opaque ancestry and unresolved regions cannot be used as permission; mode-aware exclusivity, consuming operations, availability and generated cleanup remain open.
+- Next steps: Commit the handoffs/history and verify clean Git state. Resume with explicit storage lifecycle/consuming-use events and forward initialized/moved dataflow on the current CFG, preserving existing source/bound, guard and budget rules.
+
+### 2026-09-07 — Shared authority compiler gate passed
+
+- Findings: Shared acquisition identity, guarded ancestry, role-preserving graph values and actual-source region resolution are complete. Calls/restarts retain explicit opacity; only opaque restart bodies may retain unresolved region guards after tag/source reset. Exclusive modes, suspension enforcement and forward availability remain separate work.
+- Validation: All ten compiler checks pass: 577 Rust tests (319 library, 258 native), 20 Python tests, 879 links, schemas/catalog, formatting, Clippy, build and conformance 10 passed/13 unsupported/0 failed. All 37 examples run in both profiles. Fifteen new provenance groups pass. No source/test changes follow this gate; runtime/editor/optimized compiler checks were not rerun.
+- Blockers: None for the slice. Full v0.0.1, exclusive execution, move/initialization checks and generated cleanup remain open.
+- Next steps: Commit implementation/tests/docs, update both handoffs with the commit, preserve historical logs and verify clean Git state. Next add storage lifecycle/consuming events and forward availability to the current CFG.
+
+### 2026-09-07 — Restart region-proof boundary corrected
+
+- Findings: The first full gate exposed three old native cases where reset removes earlier tag/source relationships from CFG reach. Requiring total physical-region coverage there overrejected existing shared behavior. Such gaps now retain an explicit unresolved guard only for opaque restart bodies; non-restarting gaps remain B001, even behind opaque calls. Bounds still never become origins.
+- Validation: Initial full run passed formatting, Clippy, 318 library groups and 255 native groups, then stopped at three native failures. Added focused coverage for the pre-restart copied-tag case and rejection of missing actual sources without a restart; reruns are pending.
+- Follow-up: The added boundary test initially assumed a generated LocalId that belonged to the integer owner, not its string lifetime bound. Replaced that assertion with a type-based bound lookup; all fifteen focused groups now pass. A full follow-up gate had stopped at that test assertion; final rerun is next.
+- Blockers: No environment blocker. Final compiler gate is incomplete until the corrected normalization passes.
+- Next steps: Run focused metadata tests and the complete compiler gate, update documentation with the explicit unresolved-region boundary, then commit source/tests/docs and final handoffs.
+
+### 2026-09-07 — Shared authority focused proof complete
+
+- Findings: Added graph-local shared LoanIds, guarded metadata copy edges and parent alternatives, explicit opaque call/restart ancestry, parent-graph checks and normalized actual-source access regions. Physical origins remain separate from lifetime bounds through all existing value transformations. Named-field paths canonicalize across direct and borrowed views; no exclusive permission or move semantics are enabled.
+- Validation: All fourteen new authority groups pass, including copied children, guard/short-circuit/Leave parents, bounds, opacity, fields/slots, input cells and resource/cycle failures. All 304 existing library tests passed at integration. No new production/test failure occurred during this step; final full compiler gate is next.
+- Blockers: None. Forward availability and exclusive-mode enforcement remain subsequent work; call/restart opacity cannot be treated as permission.
+- Next steps: Run the full compiler gate, address any failures, finalize current handoffs and commit the cohesive implementation/tests/docs separately from tracker history.
+
+### 2026-09-07 — Graph source roles preserved
+
+- Findings: Graph Value now retains origins and bounds separately while exposing their combined dependency view to existing liveness. Facts ingestion, copies, guarded joins, restart headers and reborrows preserve each role without duplicating their storage.
+- Validation: All 304 existing library groups pass after the role-preserving change. No supported capability or backend behavior changed.
+- Blockers: None. Stable shared identity propagation and access-region proof are next; calls/restarts need explicit opaque ancestry boundaries.
+- Next steps: Add bounded shared loan IDs and metadata-only copy links; propagate guarded parents, normalize actual access regions, cover opacity/expiry/resource cases and run the full compiler gate.
+
+### 2026-09-07 — Shared authority implementation scoped
+
+- Findings: Graph values currently flatten actual origins and public bounds. Preserve these roles before permission metadata. Add stable shared acquisition identities with guarded copy/parent relationships distinct from immutable value IDs. Normalize access regions using actual origins only; unsupported call/restart ancestry must remain opaque rather than manufacturing authority.
+- Validation: Read current source, design and memory invariants; clean tree at 6d4a675. No changed-source checks yet. Existing compiler evidence remains prior evidence.
+- Blockers: None. Exclusive reference modes, forward moved/initialized state and cleanup remain subsequent stages.
+- Next steps: Implement role-preserving values, validate existing behavior, then integrate bounded shared authority propagation and source-grounded tests; run compiler checks and split commits with current handoffs.
+
 ### 2026-09-07 — Access records committed and handoff finalized
 
 - Findings: Commit 698e4b1 contains access representation/traversal, unchanged shared-write conflict behavior, twelve graph groups and ownership/design documentation. Current handoffs identify guarded authority alternatives and forward initialization as the next steps; exclusive gates remain closed.

@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Bounded loan access records are implemented and validated.
+Updated: 2026-09-07. Shared authority provenance and region resolution are validated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Shared provenance/value roles/regions: `ebc8ebe`.
 Access implementation/tests/docs: `698e4b1`.
 Expiry implementation: `7906333`; native coverage/example: `324e9ae`.
 Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
@@ -23,24 +24,30 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Completed bounded access records in `loans/access.rs` on the existing CFG (`698e4b1`). Node.access
-replaces the write-only field; the shared E302 solver still uses the same write places.
-Direct reads retain canonical roots, lexical views and typed component paths. Pointee
-reads and shared acquisitions retain exact pointer value IDs instead of flattening
-public bounds into fictitious sources. Scalar, primary, field and stored-tag reads
-follow HIR evaluation order. Static predicates without tags add no tag accesses.
+Completed shared authority provenance on the existing CFG (`ebc8ebe`). `loans/values.rs::Value`
+keeps actual origins and public bounds separate through every existing transformation;
+liveness still checks both roles. `loans/authority.rs` supplies graph-local LoanIds,
+metadata-only copy links, guarded alternatives and captured reborrow parent relations.
+Copies keep identity; separate acquisitions never merge merely because origins match.
+Input components receive separate shared identities from their local parameter cells.
 
-Access records add no liveness requirements beyond the original operations. Existing
-returning-index/RHS reservations, guarded branches, reset transfers and terminal
-expiry are preserved. Missing pointee evidence is rejected on reachable nodes only.
-Retained access weights and path/validation work use the existing graph budgets.
-All ten compiler checks pass, including twelve new access groups and all examples in
-both profiles. Backend code, runtime ABI and dependencies are unchanged.
+Call result ancestry is opaque and opacity follows copies/children. Reachable restart
+bodies are deliberately opaque for permission purposes; repeated static sites are not
+proved runtime epochs. Actual-source access regions preserve canonical roots/views,
+field projections and remaining primary/variant paths. Restart-erased source/tag
+correlations can leave explicit unresolved-region guards under opacity. Ordinary
+missing physical origins still fail B001, including opaque calls without restarts.
 
-The [exclusive-reference design](EXCLUSIVE_REFERENCES.md) now marks this foundation
-implemented. Guarded authority alternatives, parent relationships, consuming contexts
-and forward initialized/moved state remain next. Exclusive modes and indirect writes
-stay B001; current access metadata is not authorization or a public artifact format.
+All ten compiler checks pass: 319 library plus 258 native groups, all examples in
+both profiles and existing conformance. Fifteen new graph groups cover ancestry,
+roles, guards, resolution and resource/cycle boundaries. No backward use/transfer,
+backend, runtime ABI, dependency or supported syntax was changed. The initial native
+region-proof regressions and test correction are preserved in the step logs.
+
+The [exclusive-reference design](EXCLUSIVE_REFERENCES.md) now marks shared provenance
+implemented. This does not enforce exclusive permission or parent suspension. Storage
+lifecycle, consuming contexts and forward initialized/moved state remain next; `&!`
+and indirect writes remain B001. Neither opaque nor unresolved metadata is permission.
 
 ## Prior implemented milestone
 
@@ -85,7 +92,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 89 loan, 15 contract and 2 value-budget groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 104 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
 | Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 258 native groups, 4 harness tests and 37 covered examples |
@@ -101,7 +108,8 @@ single native target by behavior while sharing one temp-directory counter.
 `borrow_value/pointee.rs` transforms summaries, `borrow/pointee.rs` resolves demanded
 reads, `borrow_contract/call.rs` handles candidate substitution, and
 `loans/transitive.rs` connects summary transfers; `loans/access.rs` owns access
-records, typed inspection paths, metadata charging and reach-checked evidence. Contract tests live beside their
+records, typed inspection paths, metadata charging and region resolution.
+`loans/authority.rs` owns acquisition IDs, guarded provenance, opacity and parent checks. Contract tests live beside their
 module; `check/temporaries.rs` owns temporary creation and statement metadata.
 `borrow/mutable.rs` owns the bounded assignment/restart target scan.
 `borrow/branches.rs` and `loans/branches.rs` own guarded environment restoration and
@@ -573,29 +581,35 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - Current `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
-  Rust: 304 library and 258 native groups (562 total); 20 Python tests pass. All 37
+  Rust: 319 library and 258 native groups (577 total); 20 Python tests pass. All 37
   examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
   schemas/catalog and 879 documentation links in 87 files pass. Conformance remains
   10 passed, 13 unsupported, 0 failed across both profiles.
-- Twelve new access graph groups pass. They cover read/store order, field/primary/
-  variant paths, pointer snapshots and public bounds, acquisition spans, canonical
-  aliases, skipped stores, first-collection regions, complementary guards, reset
-  transfers, missing evidence, static tag elimination and resource caps. Existing
-  loan coverage is now 89 groups. Reference fixtures and REQUIRED are unchanged.
-- The first integration run passed 283 library groups and failed nine unreachable
-  nullable/never-returning cases because pointer evidence was requested eagerly.
-  Missing access targets now defer to final reach; reachable gaps remain B001. All
-  292 existing library groups then passed. Two new test cases needed source-context
-  corrections for narrowing and named emission ownership; final coverage is green.
-- Access events and paths count toward the existing 262,144 graph-origin metadata
-  cap and graph-work ledger. No new epoch/authority model, capability gate change,
-  runtime dependency or backend change was introduced. Runtime/editor suites and
-  optimized compiler/ELF qualification were not rerun for this slice. Older evidence
-  below remains explicitly historical.
+- Fifteen new authority groups pass; total loan coverage is 104 groups. Tests cover
+  copies versus distinct acquisitions, reborrow chains, holder replacement, guarded
+  parents, short circuits/Leave, bounds through joins, opaque calls/children/restarts,
+  copied carriers, normalized fields/slots, input cells, expired sources and bounded
+  growth/cycle rejection. A restart-region test also proves that an ordinary opaque
+  call cannot hide missing physical origins. Reference fixtures/REQUIRED are unchanged.
+- Role preservation and initial shared-identity integration each passed all 304 old
+  library groups. First full integration passed 318 library and 255 native groups,
+  then failed three old native cases because normalization demanded source/tag
+  relationships intentionally erased by reset. The fix records unresolved regions
+  only under explicit restart opacity; no expectation was weakened. A new test's
+  generated-LocalId assumption was corrected to a type-based bound lookup. Final
+  focused coverage and the full gate are green.
+- Actual origins and public bounds remain in the same overall weighted ledger but
+  retain separate roles. Loan records, copy edges, solver maps, parents and regions
+  consume existing graph-origin/work caps; registries/queues are bounded by existing
+  value limits. Opacity and terminal expiry cannot be used as permission. This is not
+  a runtime epoch, exclusive-mode, move/initialization or cleanup implementation.
+- Prior access gate at `698e4b1`: 304 library plus 258 native groups and twelve access
+  groups passed, with 37 examples in both profiles. Current implementation preserves
+  their behavior and extends the source-role/provenance evidence.
 - Prior design evidence: 43 capability probes passed (39 B001, E302/E303/E305 and
-  one accepted shared control). They checked existing syntax/gates, not exclusive
-  native behavior. The design was reviewed in the prior step; no independent agent
-  review was performed during the current access implementation.
+  one accepted shared control). They checked existing gates, not exclusive execution.
+  No independent agent review or runtime/editor/optimized-compiler qualification ran
+  during the current shared-provenance slice. Older evidence below is historical.
 - Prior expiry `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
   Rust: 292 library and 258 native groups (550 total). All 37 examples execute in
   debug/release; expired-restarts output is exactly `1\n2\n3\n7\n9\n9\n`.
@@ -642,15 +656,17 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Add guarded authority alternatives and parent relationships separate from value
-   IDs and physical origins/public bounds in `borrow_value.rs`, `loans/state.rs`,
-   `loans/access.rs` and `loans/transitive.rs`. Normalize direct and exact-version
-   pointee regions through authority without treating lifetime bounds as permission.
-   Keep lexical views, component paths, guard partitions and resource caps explicit.
-2. Add forward initialized/moved state on the same CFG, alongside backward demand.
-   Prove moves, reinitialization, shared-child copies, parent suspension, conditional
-   paths, short circuits and exact-target Leave. Preserve budget exhaustion and
-   terminal expiry. Gate hidden exclusive ancestry at calls/carriers/reference cells.
+1. Add explicit storage lifecycle and consuming-use events in `loans/state.rs`,
+   `control.rs`, `values.rs` and a focused `init.rs`; then solve forward guarded
+   initialized/moved availability on the existing CFG. Reference value definitions
+   are not storage initialization, and backward liveness is not availability.
+   Preserve RHS evaluation/commit order, lexical/statement ends and exact Leave.
+2. Connect shared provenance to mode-aware permissions and parent suspension only
+   with the forward availability proofs. Keep actual origins, public bounds,
+   value IDs, LoanIds and normalized physical regions distinct. Preserve guarded
+   parent alternatives, child copies, canonical aliases, terminal expiry and caps.
+   Opaque call/restart ancestry and unresolved regions cannot grant permission;
+   exclusive-derived shared boundary crossings must remain explicitly gated.
 3. Integrate explicit reference mode and consuming contexts through checker, origin
    traversal, loans and scalar indirect stores. Capture targets once and retain
    demand only through returning stores. Enable the complete scalar slice after

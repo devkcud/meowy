@@ -11,35 +11,39 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented bounded access records in `698e4b1` on the existing loan CFG: direct reads,
-  stored-tag inspections, shared acquisitions and writes. Direct targets retain
-  canonical storage, lexical views and typed paths; pointee targets retain exact
-  immutable pointer value IDs. Public bounds are not converted into physical reads.
-- Existing write conflicts and last-use behavior are preserved. Tag-only paths do
-  not consume payloads; static type predicates create no invented tag reads.
-  Branches keep their guards and header/reset transfers add no accesses. Missing
-  pointee evidence is allowed only on unreachable paths; reachable gaps remain B001.
-- All ten compiler checks pass: 562 Rust tests (304 library, 258 native), 20 Python
-  tests, 879 local links, schemas/catalog, formatting, Clippy, build and conformance.
-  All 37 examples execute in debug/release. Twelve new graph groups prove ordering,
-  paths, aliases, pointer versions, guards, resets, missing evidence and budgets.
-- The [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md) remains the
-  continuation. Access records are the implemented foundation; stable authority,
-  parent suspension and forward availability are still required. `&!` and indirect
-  writes remain B001. Backend code, runtime ABI and dependencies did not change.
-- Terminal expiry remains implemented in `7906333`, with native/example evidence
-  in `324e9ae`. Existing replay/work/storage limits remain; access metadata counts
-  toward the current graph-origin/work limits. Complete source changes and checks
-  are recorded in the adjacent logs, including initial failures and corrections.
+- Implemented shared authority provenance in `ebc8ebe`: graph-local LoanIds distinguish
+  separate
+  acquisitions, copies keep identity, and reborrows retain guarded parent alternatives.
+  Branches, short circuits, named Leave and copied pointee contents preserve ancestry.
+  These identities remain separate from physical sources and immutable value IDs.
+- Graph values now preserve actual origins separately from public lifetime bounds.
+  Existing liveness still visits both roles; normalized access regions use only actual
+  origins. Named-field paths agree across direct reads and reborrowed views while
+  canonical slots, lexical views, primary/variant paths and terminal expiry remain.
+- Calls and reachable restart bodies retain opaque authority. Restart-erased tag
+  correlations may leave explicit unresolved-region guards; these cannot authorize
+  access. Missing actual origins in non-restarting graphs remain B001 even for calls.
+  No exclusive mode, consuming operation or forward initialization check is enabled.
+- All ten compiler checks pass: 577 Rust tests (319 library, 258 native), 20 Python
+  tests, 879 links, schemas/catalog, formatting, Clippy, build and conformance.
+  All 37 examples execute in debug/release. Fifteen new groups cover identity,
+  guarded parents, bounds, opacity, region resolution, inputs, expiry and budgets.
+- Existing shared E302/E303 behavior remains intact; the first full gate exposed
+  three restart-region regressions that were corrected without changing expectations.
+  The [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md) now records the
+  implemented provenance foundation and the remaining permission/availability work.
+- Access records remain implemented in `698e4b1`, terminal expiry in `7906333`
+  with native/example evidence in `324e9ae`. No backend, runtime ABI, dependency or
+  reference fixture changed. Metadata growth stays within the existing logical caps.
 - Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-  Runtime/editor suites were not rerun; their historical evidence at `f16c30b`
-  remains in the compiler handoff. Complete v0.0.1 qualification is still open.
+  Runtime/editor suites were not rerun; their historical evidence remains in the
+  compiler handoff. Complete v0.0.1 qualification is still open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Bounded access records and terminal restart expiry | Guarded authority and forward initialization on the current CFG |
+| Compiler | Guarded shared provenance and actual-source access regions | Storage lifecycle, forward availability and exclusive permissions |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -49,13 +53,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Add guarded authority alternatives and parent relationships in
-   `compiler/src/borrow_value.rs` and `compiler/src/loans/`, distinct from physical
-   sources, public bounds and immutable value IDs. Resolve direct/pointee access
-   regions through that authority, then add forward initialized/moved state on the
-   same CFG. Prove reinitialization, child copies, parent suspension, guarded joins
-   and exact Leave behavior before enabling the designed scalar `&!` slice. Keep
-   inferred carriers, derived shared call/cell crossings and exclusive restarts gated.
+1. Add explicit storage lifecycle/consuming-use events and forward initialized/moved
+   state on the existing CFG in `compiler/src/loans/state.rs`, `control.rs`, `values.rs`
+   and a focused `init.rs`. Separate physical storage availability from reference
+   value definitions and backward demand. Prove initialization, replacement, child
+   copies, parent suspension, guarded joins and exact Leave behavior before enabling
+   the designed scalar `&!` slice. Preserve opaque call/restart boundaries and reject
+   inferred exclusive ancestry crossings until their contracts are implemented.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.
