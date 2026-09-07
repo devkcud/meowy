@@ -247,7 +247,10 @@ impl Checker<'_> {
                     if self.merging && matches!(stmt, Stmt::Leave(_)) {
                         self.leave_target(*id, Span::default())?;
                     } else if self.merging {
-                        self.restart_target(*id, Span::default())?;
+                        let Stmt::Restart { site, .. } = stmt else {
+                            unreachable!()
+                        };
+                        self.restart_target(*id, *site, Span::default())?;
                     }
                     Flow {
                         next: false,

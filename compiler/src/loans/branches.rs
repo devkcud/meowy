@@ -1,4 +1,4 @@
-use super::{BTreeMap, Bundle, FALSE, Graph, Guard, LocalId, Node, Result, Span, Type};
+use super::{BTreeMap, Bundle, FALSE, Graph, Guard, LocalId, Node, Result, Span, TRUE, Type};
 use crate::borrow_value::State;
 
 pub(crate) type Versions = BTreeMap<LocalId, Bundle>;
@@ -177,7 +177,7 @@ impl Graph<'_> {
                     self.charge(path.len() + 1)?;
                     node.defs.push(*target);
                     if let Some(source) = source.get(path) {
-                        node.transfers.push((*target, *source));
+                        node.transfers.push((*target, *source, TRUE));
                     }
                 }
             }

@@ -11,7 +11,7 @@ impl Graph<'_> {
             self.charge(path.len() + 1)?;
             if path.contains(&Step::Deref) {
                 if let Some(target) = target.get(path) {
-                    node.transfers.push((*target, *id));
+                    node.transfers.push((*target, *id, TRUE));
                 }
             } else {
                 node.uses.push(*id);
@@ -73,7 +73,7 @@ impl Graph<'_> {
             let path = std::iter::once(Step::Deref).chain(path).collect();
             result.insert(path, target);
             node.defs.push(target);
-            node.transfers.push((target, source));
+            node.transfers.push((target, source, TRUE));
         }
         self.append(node)?;
         Ok(result)
@@ -150,7 +150,7 @@ impl Graph<'_> {
                             expr.span,
                         )
                     })?;
-                    node.transfers.push((*target, *source));
+                    node.transfers.push((*target, *source, TRUE));
                 }
             }
         }

@@ -208,7 +208,7 @@ d.print(*p)
 #[test]
 pub fn reference_assignments_preserve_restart_header_boundaries() {
     for source in [
-        "<H>:<{view<&int32><null>}>;a:1;holder<H>:{->view:&a};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",
+        "a:1;p<&int32><null>:=&a;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
         "a:1;p:=&a;p=&2;'out{'out.restart()};v:*p",
     ] {
         let output = Case::new(source).command("check", &["--json"]);

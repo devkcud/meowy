@@ -1,7 +1,6 @@
-use super::branches::Values;
 use super::{
-    BTreeMap, BTreeSet, BlockId, Checker, Diagnostic, Guards, LocalId, Origin, Path, Result,
-    Source, Span, State, TRUE,
+    BTreeMap, BTreeSet, BlockId, Checker, Diagnostic, Guards, LocalId, Origin, Result, Source,
+    Span, State, TRUE,
 };
 
 pub(crate) type Header = BTreeMap<LocalId, State>;
@@ -43,19 +42,30 @@ pub(crate) fn same(a: &Headers, b: &Headers, guards: &mut Guards, span: Span) ->
             if !left
                 .origins
                 .iter()
-                .map(|origin| (&origin.component, &origin.source))
+                .map(|origin| (&origin.component, &origin.source, origin.guard))
                 .eq(right
                     .origins
                     .iter()
-                    .map(|origin| (&origin.component, &origin.source)))
+                    .map(|origin| (&origin.component, &origin.source, origin.guard)))
                 || !left
                     .bounds
                     .iter()
-                    .map(|origin| (&origin.component, &origin.source))
+                    .map(|origin| (&origin.component, &origin.source, origin.guard))
                     .eq(right
                         .bounds
                         .iter()
-                        .map(|origin| (&origin.component, &origin.source)))
+                        .map(|origin| (&origin.component, &origin.source, origin.guard)))
+            {
+                return Ok(false);
+            }
+            if !left
+                .active
+                .iter()
+                .map(|active| (&active.component, active.member, active.guard))
+                .eq(right
+                    .active
+                    .iter()
+                    .map(|active| (&active.component, active.member, active.guard)))
             {
                 return Ok(false);
             }
@@ -98,7 +108,7 @@ impl Checker<'_> {
     pub(crate) fn widen_header(
         &mut self,
         id: BlockId,
-        values: &Values,
+        values: &Header,
         span: Span,
     ) -> Result<Header> {
         if !self
@@ -108,12 +118,12 @@ impl Checker<'_> {
             return Err(State::budget(span));
         }
         let mut header = self.headers.remove(&id).unwrap_or_default();
-        if !header.is_empty() && !header.keys().copied().eq(values.iter().map(|(id, _)| *id)) {
+        if !header.is_empty() && !header.keys().eq(values.keys()) {
             return Err(Self::unsupported(span));
         }
         for (local, state) in values {
             let shape = super::header::Shape::new(&self.program.locals[*local], self.guards, span)?;
-            shape.validate(state, false, self.guards, span)?;
+            let activity = shape.inspect(state, false, self.guards, span)?;
             if !self
                 .guards
                 .spend(state.weight() + header.len().checked_ilog2().unwrap_or(0) as usize + 1)
@@ -125,6 +135,13 @@ impl Checker<'_> {
             let current = header.remove(local).unwrap_or_default();
             let mut origins = BTreeSet::new();
             let mut bounds = BTreeSet::new();
+            let mut seen = BTreeSet::new();
+            for active in &current.active {
+                if !self.guards.spend(active.component.len() + 1) {
+                    return Err(State::budget(span));
+                }
+                seen.insert((active.component.clone(), active.member));
+            }
             for (input, output) in [
                 (&current.origins, &mut origins),
                 (&current.bounds, &mut bounds),
@@ -140,7 +157,27 @@ impl Checker<'_> {
                     output.insert((origin.component.clone(), origin.source.clone()));
                 }
             }
-            let mut count = origins.len() + bounds.len();
+            let mut count = origins.len() + bounds.len() + seen.len();
+            for (key, member) in &activity.members {
+                let lookup = seen.len().checked_ilog2().unwrap_or(0) as usize + 1;
+                if !self.guards.spend((key.0.len() + 1).saturating_mul(lookup)) {
+                    return Err(State::budget(span));
+                }
+                let parent = activity
+                    .parents
+                    .get(&key.0)
+                    .copied()
+                    .ok_or_else(|| Self::unsupported(span))?;
+                let active = self.guards.and(parent, *member);
+                if self.guards.overlap(active, effective) && !seen.contains(key) {
+                    if count >= super::MAX_ORIGINS {
+                        return Err(State::budget(span));
+                    }
+                    self.reserve_origins(key.0.len() + 1, span)?;
+                    seen.insert(key.clone());
+                    count += 1;
+                }
+            }
             for (input, output) in [(&state.origins, &mut origins), (&state.bounds, &mut bounds)] {
                 for origin in input {
                     let lookup = output.len().checked_ilog2().unwrap_or(0) as usize + 1;
@@ -151,7 +188,13 @@ impl Checker<'_> {
                     ) {
                         return Err(State::budget(span));
                     }
-                    if !self.guards.overlap(origin.guard, effective) {
+                    let active = activity
+                        .paths
+                        .get(&origin.component)
+                        .copied()
+                        .ok_or_else(|| Self::unsupported(span))?;
+                    let present = self.guards.and(effective, active);
+                    if !self.guards.overlap(origin.guard, present) {
                         continue;
                     }
                     self.restart_source(&origin.source, id, span)?;
@@ -169,24 +212,42 @@ impl Checker<'_> {
                     }
                 }
             }
-            if origins.len() + bounds.len() > super::MAX_ORIGINS || origins.is_empty() {
+            if count > super::MAX_ORIGINS || origins.is_empty() {
                 return Err(State::budget(span));
             }
-            let canonical = |sources: BTreeSet<(Path, Source)>| {
-                sources
-                    .into_iter()
-                    .map(|(component, source)| Origin {
-                        component,
-                        source,
-                        guard: TRUE,
-                    })
-                    .collect()
-            };
-            let state = State {
-                origins: canonical(origins),
-                bounds: canonical(bounds),
+            let mut state = State {
+                active: self.header_activity(id, *local, &shape, seen, span)?,
                 ..State::default()
             };
+            let activation =
+                super::activity::Activity::new(&shape, &state, true, self.guards, span)?;
+            for (keys, output) in [(origins, &mut state.origins), (bounds, &mut state.bounds)] {
+                for (component, source) in keys {
+                    if !self.guards.spend(
+                        component.len()
+                            + activation.paths.len().checked_ilog2().unwrap_or(0) as usize
+                            + 1,
+                    ) {
+                        return Err(State::budget(span));
+                    }
+                    let guard = activation
+                        .paths
+                        .get(&component)
+                        .copied()
+                        .ok_or_else(|| Self::unsupported(span))?;
+                    if guard == super::FALSE {
+                        return Err(Diagnostic::unsupported(
+                            "restart source outside observed activity",
+                            span,
+                        ));
+                    }
+                    output.push(Origin {
+                        component,
+                        source,
+                        guard,
+                    });
+                }
+            }
             shape.validate(&state, true, self.guards, span)?;
             header.insert(*local, state);
         }
@@ -204,7 +265,9 @@ impl Checker<'_> {
             .targets
             .remove(&id)
             .ok_or_else(|| Self::unsupported(span))?;
-        let header = self.widen_header(id, &target.incoming, span)?;
+        let input = self.predecessor(&target.incoming, span)?;
+        let header = self.widen_header(id, &input.values, span)?;
+        self.facts.header_inputs.insert(id, input);
         for (local, state) in &header {
             if !self
                 .guards
@@ -223,7 +286,12 @@ impl Checker<'_> {
         Ok(())
     }
 
-    pub(crate) fn restart_target(&mut self, id: BlockId, span: Span) -> Result<()> {
+    pub(crate) fn restart_target(
+        &mut self,
+        id: BlockId,
+        site: crate::hir::RestartId,
+        span: Span,
+    ) -> Result<()> {
         if !self
             .guards
             .spend(self.targets.len().checked_ilog2().unwrap_or(0) as usize + 1)
@@ -234,10 +302,34 @@ impl Checker<'_> {
             .targets
             .remove(&id)
             .ok_or_else(|| Self::unsupported(span))?;
-        let values = self.capture_versions(&target.incoming, self.assumed, span)?;
-        let header = self.widen_header(id, &values, span)?;
+        let input = self.predecessor(&target.incoming, span)?;
+        let header = self.widen_header(id, &input.values, span)?;
+        self.facts.restart_inputs.insert(site, input);
         self.headers.insert(id, header);
         self.targets.insert(id, target);
         Ok(())
+    }
+
+    pub(crate) fn predecessor(
+        &mut self,
+        incoming: &super::branches::Values,
+        span: Span,
+    ) -> Result<super::state::Predecessor> {
+        let entered = self.assumed;
+        let values = self.capture_versions(incoming, entered, span)?;
+        let weight = values
+            .iter()
+            .map(|(_, state)| state.weight() + 1)
+            .sum::<usize>()
+            + 1;
+        self.reserve_origins(weight, span)?;
+        let lookup = values.len().checked_ilog2().unwrap_or(0) as usize + 1;
+        if !self.guards.spend(values.len().saturating_mul(lookup) + 1) {
+            return Err(State::budget(span));
+        }
+        Ok(super::state::Predecessor {
+            values: values.into_iter().collect(),
+            entered,
+        })
     }
 }

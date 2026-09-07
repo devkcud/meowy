@@ -70,8 +70,8 @@ pub(crate) fn check(block: &Block, program: &Program, guards: &mut Guards) -> Re
                     }
                     add(Item::Expression(condition))?;
                 }
-                Stmt::Restart { target: id, .. } => {
-                    restarts.insert(*id);
+                Stmt::Restart { target, .. } => {
+                    restarts.insert(*target);
                 }
                 Stmt::Leave(_) => {}
                 Stmt::SlotAlias { .. } => {}

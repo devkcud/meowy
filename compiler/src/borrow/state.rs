@@ -58,12 +58,19 @@ impl Proofs {
 
 #[derive(Default)]
 pub(crate) struct Facts {
+    pub(crate) header_inputs: BTreeMap<BlockId, Predecessor>,
+    pub(crate) restart_inputs: BTreeMap<crate::hir::RestartId, Predecessor>,
     pub(crate) headers: BTreeMap<BlockId, BTreeMap<LocalId, State>>,
     pub(crate) merging: BTreeSet<BlockId>,
     pub(crate) locals: BTreeMap<LocalId, State>,
     pub(crate) blocks: BTreeMap<BlockId, State>,
     pub(crate) calls: BTreeMap<CallId, State>,
     pub(crate) reborrows: BTreeMap<ReborrowId, State>,
+}
+
+pub(crate) struct Predecessor {
+    pub(crate) values: BTreeMap<LocalId, State>,
+    pub(crate) entered: Guard,
 }
 
 #[derive(Clone)]
@@ -108,6 +115,7 @@ pub(crate) struct Value {
 }
 
 pub(crate) struct Checker<'a> {
+    pub(crate) choices: super::activity::Choices,
     pub(crate) headers: BTreeMap<BlockId, BTreeMap<LocalId, State>>,
     pub(crate) restarts: BTreeSet<BlockId>,
     pub(crate) targets: BTreeMap<BlockId, super::exits::Target>,

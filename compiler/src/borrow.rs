@@ -1,3 +1,4 @@
+pub(crate) mod activity;
 pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod emissions;

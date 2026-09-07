@@ -69,9 +69,12 @@ impl<'a> Graph<'a> {
             let transfers = self.nodes[id].transfers.clone();
             self.charge(transfers.len())?;
             let mut incoming = Vec::new();
-            for (target, source) in transfers {
+            for (target, source, active) in transfers {
                 if let Some(guard) = next.get(&target) {
-                    incoming.push((source, *guard));
+                    let guard = self.guards.and(*guard, active);
+                    if guard != FALSE {
+                        incoming.push((source, guard));
+                    }
                 }
             }
             for value in &self.nodes[id].defs {
@@ -136,8 +139,8 @@ impl<'a> Graph<'a> {
         }
         self.block(block)?;
         let reach = self.reach()?;
-        for node in &self.missing_headers {
-            if reach[*node] != FALSE {
+        for (node, active) in &self.missing_headers {
+            if self.guards.overlap(reach[*node], *active) {
                 return Err(Diagnostic::unsupported(
                     "missing restart reference header or transfer proof",
                     Span::default(),

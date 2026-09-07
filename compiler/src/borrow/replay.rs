@@ -17,8 +17,9 @@ pub(crate) fn body(
     let plan = super::mutable::check(block, program, guards)?;
     let span = Span::default();
     let mut headers = Headers::new();
+    let mut choices = super::activity::Choices::new();
     for _ in 0..MAX_PASSES {
-        let size = weight(&headers);
+        let size = weight(&headers) + super::activity::weight(&choices);
         let seeds = size.saturating_mul(2);
         if used.saturating_add(seeds) > super::MAX_FACT_ORIGINS
             || !guards.spend(size + plan.restarts.len() + 1)
@@ -26,6 +27,7 @@ pub(crate) fn body(
             return Err(State::budget(span));
         }
         let mut checker = Checker {
+            choices: choices.clone(),
             headers: headers.clone(),
             restarts: plan.restarts.clone(),
             targets: BTreeMap::new(),
@@ -72,6 +74,7 @@ pub(crate) fn body(
             return Ok((checker.facts, checker.origins));
         }
         headers = checker.headers;
+        choices = checker.choices;
     }
     Err(super::Diagnostic::unsupported(
         "restart origin fixed-point budget exhausted",
@@ -96,6 +99,8 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
             + next.calls.len()
             + next.reborrows.len()
             + next.headers.len()
+            + next.header_inputs.len()
+            + next.restart_inputs.len()
             + next.merging.len();
         let lookup = program.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
         if !guards.spend(entries.saturating_mul(lookup)) {
@@ -106,6 +111,8 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         facts.calls.extend(next.calls);
         facts.reborrows.extend(next.reborrows);
         facts.headers.extend(next.headers);
+        facts.header_inputs.extend(next.header_inputs);
+        facts.restart_inputs.extend(next.restart_inputs);
         facts.merging.extend(next.merging);
     }
     Ok(facts)

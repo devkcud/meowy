@@ -1,9 +1,11 @@
 use super::{
-    BTreeSet, Diagnostic, Guards, MAX_ORIGINS, Path, Result, Span, State, Step, TRUE, Type,
+    BTreeMap, BTreeSet, Diagnostic, FALSE, Guards, MAX_ORIGINS, Path, Result, Span, State, Step,
+    TRUE, Type,
 };
 
 pub(crate) struct Shape {
     pub(crate) paths: BTreeSet<Path>,
+    pub(crate) unions: BTreeMap<Path, usize>,
 }
 
 impl Shape {
@@ -16,6 +18,7 @@ impl Shape {
         }
         crate::borrow_contract::type_weight(ty, guards, span)?;
         let mut paths = BTreeSet::new();
+        let mut unions = BTreeMap::new();
         let mut pending = vec![(ty, Path::new())];
         while let Some((ty, path)) = pending.pop() {
             let lookup = paths.len().checked_ilog2().unwrap_or(0) as usize + 1;
@@ -24,12 +27,12 @@ impl Shape {
             }
             match ty {
                 Type::Reference(target) => {
-                    if paths.len() + pending.len() >= MAX_ORIGINS {
+                    if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS {
                         return Err(State::budget(span));
                     }
                     paths.insert(path.clone());
                     if target.has_reference() {
-                        if paths.len() + pending.len() >= MAX_ORIGINS
+                        if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
                             || !guards.spend(path.len() + 1)
                         {
                             return Err(State::budget(span));
@@ -44,7 +47,7 @@ impl Shape {
                         .chain(fields.iter().map(|field| &field.ty))
                         .enumerate()
                     {
-                        if paths.len() + pending.len() >= MAX_ORIGINS
+                        if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
                             || !guards.spend(path.len() + 1)
                         {
                             return Err(State::budget(span));
@@ -54,11 +57,23 @@ impl Shape {
                         pending.push((field, nested));
                     }
                 }
-                Type::Union(_) => {
-                    return Err(Diagnostic::unsupported(
-                        "active-variant restart header summaries",
-                        span,
-                    ));
+                Type::Union(members) => {
+                    if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
+                        || !guards.spend(path.len() + 1)
+                    {
+                        return Err(State::budget(span));
+                    }
+                    unions.insert(path.clone(), members.len());
+                    for (index, member) in members.iter().enumerate() {
+                        if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
+                            || !guards.spend(path.len() + 1)
+                        {
+                            return Err(State::budget(span));
+                        }
+                        let mut nested = path.clone();
+                        nested.push(Step::Variant(index));
+                        pending.push((member, nested));
+                    }
                 }
                 Type::List { element, .. } if element.has_reference() => {
                     return Err(Diagnostic::unsupported(
@@ -69,7 +84,7 @@ impl Shape {
                 _ => {}
             }
         }
-        Ok(Self { paths })
+        Ok(Self { paths, unions })
     }
 
     pub(crate) fn validate(
@@ -79,43 +94,66 @@ impl Shape {
         guards: &mut Guards,
         span: Span,
     ) -> Result<()> {
-        if state.size() > MAX_ORIGINS || !guards.spend(state.weight() + self.paths.len() + 1) {
+        self.inspect(state, canonical, guards, span).map(|_| ())
+    }
+
+    pub(crate) fn inspect(
+        &self,
+        state: &State,
+        canonical: bool,
+        guards: &mut Guards,
+        span: Span,
+    ) -> Result<super::activity::Activity> {
+        if state.size() > MAX_ORIGINS
+            || !guards.spend(state.weight() + self.paths.len() + self.unions.len() + 1)
+        {
             return Err(State::budget(span));
         }
-        if !state.active.is_empty() || (canonical && (state.present != TRUE || state.proof != TRUE))
-        {
+        if canonical && (state.present != TRUE || state.proof != TRUE) {
             return Err(Diagnostic::unsupported(
                 "noncanonical restart header activity",
                 span,
             ));
         }
-        let mut covered = BTreeSet::new();
+        let activity = super::activity::Activity::new(self, state, canonical, guards, span)?;
+        let mut covered = BTreeMap::new();
         let lookup = self.paths.len().checked_ilog2().unwrap_or(0) as usize + 1;
         for origin in state.origins.iter().chain(&state.bounds) {
             if !guards.spend((origin.component.len() + 1).saturating_mul(lookup)) {
                 return Err(State::budget(span));
             }
-            if !self.paths.contains(&origin.component) || (canonical && origin.guard != TRUE) {
+            let Some(active) = activity.paths.get(&origin.component) else {
                 return Err(Diagnostic::unsupported(
                     "unknown restart header component",
                     span,
                 ));
+            };
+            if canonical && (origin.guard != *active || *active == FALSE) {
+                return Err(Diagnostic::unsupported(
+                    "noncanonical restart origin activity",
+                    span,
+                ));
             }
         }
-        if canonical {
-            for origin in &state.origins {
-                if !guards.spend((origin.component.len() + 1).saturating_mul(lookup)) {
-                    return Err(State::budget(span));
-                }
-                covered.insert(origin.component.clone());
+        for origin in &state.origins {
+            if !guards.spend((origin.component.len() + 1).saturating_mul(lookup)) {
+                return Err(State::budget(span));
             }
-            if covered != self.paths {
+            let old = covered.get(&origin.component).copied().unwrap_or(FALSE);
+            covered.insert(origin.component.clone(), guards.or(old, origin.guard));
+        }
+        for (path, active) in &activity.paths {
+            if !guards.spend(path.len() + lookup) {
+                return Err(State::budget(span));
+            }
+            let active = guards.and(*active, state.proof);
+            if !guards.implies(active, covered.get(path).copied().unwrap_or(FALSE)) {
                 return Err(Diagnostic::unsupported(
                     "incomplete restart header reference coverage",
                     span,
                 ));
             }
         }
-        Ok(())
+        Ok(activity)
     }
 }

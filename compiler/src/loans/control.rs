@@ -261,12 +261,11 @@ impl<'a> Graph<'a> {
                         |graph| graph.statements(otherwise),
                     )?;
                 }
+                Stmt::Restart { target, site } if self.merging => {
+                    self.restart(*target, *site)?;
+                }
                 Stmt::Leave(id) | Stmt::Restart { target: id, .. } => {
                     let restart = matches!(statement, Stmt::Restart { .. });
-                    if self.merging && restart {
-                        self.restart(*id)?;
-                        continue;
-                    }
                     if self.merging && !restart {
                         self.charge(
                             self.blocks.get(id).expect("control target").incoming.len() + 1,

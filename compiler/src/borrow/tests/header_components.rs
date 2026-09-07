@@ -20,21 +20,17 @@ pub(crate) fn transitive_headers_preserve_nested_cells_and_selected_field_source
 }
 
 #[test]
-pub(crate) fn header_shape_distinguishes_snapshot_activity_from_reference_free_pointees() {
+pub(crate) fn header_shapes_keep_reference_free_union_paths_and_temporary_gate() {
     for source in [
         "value<int32><null>:null;p:=&value;count:=0;'loop{p=&value;count=count+1;|count<2|'loop.restart()};copy:*p",
         "value<int32><null>:null;cell:&value;p:=&cell;count:=0;'loop{p=&cell;count=count+1;|count<2|'loop.restart()};copy:**p",
         "value<int32><null>:null;holder:{->view:&value;->n:1};p:=&holder;count:=0;'loop{p=&holder;count=count+1;|count<2|'loop.restart()};copy:*p.view",
+        "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'loop{p=&holder;'loop.restart()}",
+        "a:1;holder:{->view:&a;->tag<int32><null>:null};p:=&holder;'loop{p=&holder;'loop.restart()}",
     ] {
         accepts(source);
     }
-    for source in [
-        "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'loop{p=&holder;'loop.restart()}",
-        "a:1;holder:{->view:&a;->tag<int32><null>:null};p:=&holder;'loop{p=&holder;'loop.restart()}",
-        "cell:&1;p:=&cell;'loop{p=&cell;'loop.restart()}",
-    ] {
-        rejects(source, "B001");
-    }
+    rejects("cell:&1;p:=&cell;'loop{p=&cell;'loop.restart()}", "B001");
 }
 
 #[test]

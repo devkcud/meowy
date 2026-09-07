@@ -337,29 +337,41 @@ implementation boundary; it does not change language rules.
   only the final stable pass publishes Facts. Source effects are never lowered or
   executed again during this analysis.
 - `borrow/restart.rs` canonicalizes each header into separate actual-origin and
-  lifetime-bound `(Path, Source)` sets. Initial and feasible backedge sources accumulate
-  monotonically. Source order and guards do not affect convergence. The final
-  Facts.headers map contains every mutable-reference ID present at target entry,
-  including bindings that a particular iteration does not change.
+  lifetime-bound `(Path, Source)` sets plus observed `(union path, member)` keys.
+  Initial and feasible backedge sources and members accumulate monotonically.
+  `borrow/activity.rs` retains choice guards keyed by target, local, union path and
+  member across replay. Equality compares canonical source roles, member activity
+  and their stable guards. The final Facts.headers map contains every mutable
+  reference ID present at target entry, including bindings an iteration does not change.
 - `borrow/header.rs` supplies one charged Shape validator to origin and loan
   analysis. It follows reference leaves and record Slot paths, entering Deref only
   when a reference's referent carries references. Nested reference cells and record
-  pointees retain canonical per-component sources and bounds. Every typed reference
-  path needs actual-origin coverage; bounds do not substitute for stored pointers.
+  pointees retain canonical per-component sources and bounds. Every active typed
+  reference path needs actual-origin coverage; bounds do not substitute for stored
+  pointers. Inactive null/empty alternatives may contain no reference sources.
 - Traversal stops at reference-free referents, preserving references to scalar
-  unions even behind another reference or inside a carrier. A Union encountered
-  inside a stored pointee snapshot requires activity and remains B001, including a
-  scalar-union field alongside reference fields. Reference-bearing List shapes are
-  also B001. Canonical headers never erase active facts to admit an unsupported shape.
-- Header guards, presence and proof are widened to TRUE, and header entry resets
-  continuation assumptions. This deliberately loses entry/previous-iteration
-  predicate correlations. The final body pass still records current-iteration
-  branches, calls, leaves and result guards normally.
+  unions even behind another reference or inside a carrier. Unions encountered
+  inside stored pointee snapshots retain disjoint alternatives over observed
+  members. Child activity includes its parent's activation; actual origins and
+  bounds carry the corresponding structural path guard. Reference-bearing List
+  shapes remain B001; unsupported activity is never erased to admit a shape.
+- Header presence and proof are widened to TRUE, and header entry resets
+  continuation assumptions. Stable partitions preserve parent/child structural
+  activation, while correlations between independent union fields or owners may
+  widen conservatively. Entry/previous-iteration predicate correlations are lost.
+  The final body pass still records current-iteration branches, calls, leaves and
+  result guards normally.
 - Every feasible carried origin and bound, at every component path, must be an
-  Input source or live Local/Slot storage strictly outside the restarted target. Target/descendant-owned
-  sources and all Temporary sources report B001. Rebinding the same static LocalId,
-  alias or statement therefore cannot revive a previous iteration's view. A local
-  source overwritten by surviving storage before the backedge need not be carried.
+  Input source or live Local/Slot storage strictly outside the restarted target.
+  Target/descendant-owned sources and all Temporary sources report B001. Rebinding
+  the same static LocalId, alias or statement therefore cannot revive a previous
+  iteration's view. A local source overwritten by surviving storage before the
+  backedge need not be carried.
+- Each resolved restart has a stable RestartId. The final pass publishes initial
+  predecessor snapshots by target and restart snapshots by site, retaining the raw
+  incoming State and entered guard before widening/reset. Shared Shape inspection
+  proves typed path activity on that predecessor; provisional snapshots never
+  become published facts.
 - Loan headers use stable value IDs. Initial and backedge predecessors define them
   through demand-only transfers from the versions captured on that predecessor,
   then cross a reset edge. Before-entry copies retain initial-only precision;
@@ -368,14 +380,19 @@ implementation boundary; it does not change language rules.
   All paths transfer on demand, so carrying a record/reference cell does not eagerly
   read unused pointees. Dereference copies retain nested public call bounds and
   original pointee sources separately from the outer cell's lifetime.
+- Backward propagation resets future-iteration demand before applying the current
+  predecessor's source activation. A missing transfer path is permitted only when
+  proved inactive there. Missing predecessor snapshots or active source/destination
+  paths report B001 when reachable; absence alone is not an inactivity proof.
 - Replay shares one charged guard arena, has at most 64 passes per body, and counts
-  header cloning, source comparisons, deduplication and type/ownership walks.
+  header/choice cloning, source comparisons, deduplication and type/ownership walks.
   Each header state respects the 4,096-part limit. Scratch passes include previously
-  committed facts and both retained/cloned seed maps in the 262,144 weighted-origin
-  cap before cloning; final body counters carry forward, preventing individually
-  small bodies from bypassing aggregate limits. This is a logical fact/cache budget,
-  not a byte-accurate allocator peak; transient working values retain their existing
-  per-value and shared-work limits.
+  committed facts and both retained/cloned header and choice seed maps in the
+  262,144 weighted-origin cap before cloning. Choice keys and predecessor snapshots
+  also count toward that cap. Final body counters carry forward, preventing
+  individually small bodies from bypassing aggregate limits. This is a logical
+  fact/cache budget, not a byte-accurate allocator peak; transient working values
+  retain their existing per-value and shared-work limits.
   Nonconvergence or exhausted work/storage reports B001.
 - Assignment-free bodies keep the previous single-pass loop behavior. Forward
   Leave joins, physical cell loans, old copies, public call bounds and emitted-slot
@@ -584,7 +601,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, active-variant/iteration-owned reference headers, owner moves, owned
+  references/reborrows, iteration-owned reference headers, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
@@ -757,8 +774,11 @@ implementation boundary; it does not change language rules.
 2. Extend the existing graph with owned initialization, moves, scope ends,
    verified call effects and cleanup edges. Keep storage IDs distinct from values.
    Named leave/restart edges must preserve their exact target and owner lifetimes.
-3. Improve predicate relationships across loop iterations without replacing the
-   conservative restart boundary until sound temporal proofs are available.
+3. Add explicit expired iteration identities before admitting target-owned or
+   Temporary sources in restart headers. Preserve active-path lifetime checks and
+   prevent a repeated static storage ID from reviving an earlier iteration's view.
+   Improve correlations across independent header alternatives only with bounded
+   temporal proofs.
 4. Check live shared/exclusive loans against overlapping places. Whole-owner access
    overlaps every field; different proven record fields can be disjoint. Reborrows
    suspend conflicting parent access. Dynamic indexing remains conservative.

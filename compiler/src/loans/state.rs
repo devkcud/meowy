@@ -15,7 +15,7 @@ pub(crate) struct Edge {
 pub(crate) struct Node {
     pub(crate) uses: Vec<usize>,
     pub(crate) defs: Vec<usize>,
-    pub(crate) transfers: Vec<(usize, usize)>,
+    pub(crate) transfers: Vec<(usize, usize, Guard)>,
     pub(crate) write: Option<(Place, Span)>,
     pub(crate) next: Vec<Edge>,
 }
@@ -46,5 +46,5 @@ pub(crate) struct Graph<'a> {
     pub(crate) merging: bool,
     pub(crate) missing_calls: Vec<(usize, Span)>,
     pub(crate) missing_reborrows: Vec<(usize, Span)>,
-    pub(crate) missing_headers: Vec<usize>,
+    pub(crate) missing_headers: Vec<(usize, Guard)>,
 }

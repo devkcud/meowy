@@ -121,7 +121,13 @@ first:&left;second:&right;p:=&first;count:=0
         "<H>:<{view<&int32>;tag<int32><null>}>;a:1;holder<H>:{->view:&a;->tag:1};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",
         "<A>:<{view<&int32>}>;<B>:<{other<&int32>}>;a:1;holder<A><B>:{->view:&a};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",
     ] {
-        rejects(source, "B001");
+        let output = Case::new(source).command("check", &["--json"]);
+        assert!(
+            output.status.success(),
+            "{source}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stderr.is_empty());
     }
 }
 

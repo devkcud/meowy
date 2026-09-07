@@ -101,13 +101,9 @@ pub(crate) fn transitive_restart_headers_keep_activity_and_source_lifetime_bound
     accepts(
         "value<int32><null>:1;cell:&value;p:=&cell;i:=0;'again{v:**p;p=&cell;i=i+1;|i<2|'again.restart()}",
     );
-    rejects(
-        "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'again{p=&holder;'again.restart()}",
-        "B001",
-    );
-    rejects(
+    accepts("a:1;holder:{->view<&int32><null>:&a};p:=&holder;'again{p=&holder;'again.restart()}");
+    accepts(
         "a:1;holder:{->tag<int32><null>:null;->view:&a};p:=&holder;'again{p=&holder;'again.restart()}",
-        "B001",
     );
     rejects("cell:&1;p:=&cell;'again{p=&cell;'again.restart()}", "B001");
     rejects(

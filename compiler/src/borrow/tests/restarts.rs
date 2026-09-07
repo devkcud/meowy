@@ -25,7 +25,6 @@ pub(crate) fn restart_domains_require_surviving_direct_sources_and_bounds() {
         "a:1;p:=&a;'loop{local:2;p=&local;'loop.restart()}",
         "a:1;p:=&a;'loop{->n:2;p=&n;'loop.restart()}",
         "a:1;p:=&a;'loop{p=&1;'loop.restart()}",
-        "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'loop{p=&holder;'loop.restart()}",
         "first<&int32>:(p<&int32>,other<&string>){->p};a:1;p:=&a;'loop{local:\"short\";p=first(&a,&local);'loop.restart()}",
     ] {
         rejects(source, "B001");
