@@ -4,6 +4,50 @@ use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Stmt, TRUE
 use crate::hir::WriteStep;
 
 impl<'a> Graph<'a> {
+    pub(crate) fn scalar_emission(
+        &mut self,
+        id: crate::hir::EmitId,
+        target: crate::hir::BlockId,
+        field: &Option<String>,
+        value: &super::Expr,
+    ) -> Result<bool> {
+        self.tick()?;
+        if field.is_some() || !crate::borrow_contract::scalar_reference(&value.ty) {
+            return Ok(false);
+        }
+        self.charge(self.proofs.dispatches.len().checked_ilog2().unwrap_or(0) as usize + 1)?;
+        if self.proofs.dispatches.contains(&target) {
+            return Ok(false);
+        }
+        let ty = &self.blocks.get(&target).ok_or_else(Self::budget)?.ty;
+        if crate::borrow_contract::scalar_reference(ty) && ty.accepts(&value.ty) {
+            return Ok(true);
+        }
+        let lookup = self.proofs.emissions.len().checked_ilog2().unwrap_or(0)
+            + self.proofs.completions.len().checked_ilog2().unwrap_or(0)
+            + 2;
+        self.charge(lookup as usize)?;
+        let missing = || {
+            crate::diagnostic::Diagnostic::unsupported(
+                "missing scalar emission completion proof",
+                value.span,
+            )
+        };
+        let written = self
+            .proofs
+            .emissions
+            .get(&id)
+            .copied()
+            .ok_or_else(missing)?;
+        let complete = self
+            .proofs
+            .completions
+            .get(&target)
+            .copied()
+            .ok_or_else(missing)?;
+        Ok(self.guards.and(written, complete) == super::FALSE)
+    }
+
     pub(crate) fn block(&mut self, block: &Block) -> Result<Bundle> {
         let life = self.new_scope(ScopeKind::Block(block.id))?;
         let mut incoming = if self.merging {
@@ -275,12 +319,13 @@ impl<'a> Graph<'a> {
                     self.append(node)?;
                 }
                 Stmt::Emit {
+                    id,
                     target,
                     field,
                     value,
-                    ..
                 } => {
                     let span = value.span;
+                    let allowed = self.scalar_emission(*id, *target, field, value)?;
                     let scope = self.blocks.get(target).expect("emission target");
                     let slot = crate::borrow::slot(&scope.ty, field)
                         .filter(|(_, ty)| ty.accepts(&value.ty))
@@ -295,7 +340,7 @@ impl<'a> Graph<'a> {
                         self.expression(value)?
                     };
                     let mut node = self.copied(&value, &result)?;
-                    node.barrier = (self.output != Some(*target)).then_some(span);
+                    node.barrier = (!allowed).then_some(span);
                     self.append(node)?;
                 }
                 Stmt::If {

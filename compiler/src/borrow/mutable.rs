@@ -110,12 +110,6 @@ pub(crate) fn check(
                 }
                 match &expr.kind {
                     ExprKind::Block(block) => {
-                        if block.ty.has_exclusive() {
-                            return Err(crate::diagnostic::Diagnostic::unsupported(
-                                "exclusive block results",
-                                expr.span,
-                            ));
-                        }
                         for stmt in block.stmts.iter().rev() {
                             add(Item::Statement(stmt))?;
                         }

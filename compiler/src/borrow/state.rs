@@ -32,6 +32,7 @@ pub(crate) struct Proofs {
     pub(crate) tags: Tags,
     pub(crate) mutable: BTreeSet<LocalId>,
     pub(crate) receivers: BTreeSet<LocalId>,
+    pub(crate) dispatches: BTreeSet<BlockId>,
     pub(crate) calls: BTreeMap<CallId, Guard>,
     pub(crate) aliases: BTreeMap<LocalId, Alias>,
     pub(crate) temporaries: BTreeMap<LocalId, crate::hir::StatementId>,

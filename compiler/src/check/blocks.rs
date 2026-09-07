@@ -64,6 +64,7 @@ impl Checker {
         });
         let mut stmts = Vec::new();
         if let Some(value) = receiver {
+            self.proofs.dispatches.insert(id);
             let ty = value.ty.clone();
             let local = self.local(ty.clone());
             self.proofs.receivers.insert(local);

@@ -194,12 +194,12 @@ x:=1;p:&!x;'out{id(p,{x=2;d.print(x);'out.leave()})};d.print(x)
 }
 
 #[test]
-pub fn wider_shapes_and_exclusive_block_results_remain_gated() {
+pub fn wider_shapes_and_named_results_remain_gated() {
     for source in [
         "f<{p<&!int32>}>:(p<&!int32>){->p:p}",
         "f<&!int32>:(p<&!int32>,s<string>){->p}",
-        "id<&!int32>:(p<&!int32>){->p};x:=1;p:&!x;r:{->id(p)}",
-        "id<&int32>:(p<&int32>){->p};x:=1;p:&!x;r:{->id(p)}",
+        "id<&!int32>:(p<&!int32>){->p};x:=1;p:&!x;r:{->view:id(p)}",
+        "id<&int32>:(p<&int32>){->p};x:=1;p:&!x;r:{->view:id(p)}",
         "f<&!int32>:(p<&!int32>){'again{'again.restart()};->p}",
         "id<&!int32>:(p<&!int32>){->p};x:=1;r:id(&!x);s:&r",
         "id<&!int32>:(p<&!int32>){->p};x:=1;r:id(&!x);r.{v:*self}",

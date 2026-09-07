@@ -24,6 +24,7 @@ pub(crate) mod mutable_references;
 pub(crate) mod nested_writes;
 pub(crate) mod panics;
 pub(crate) mod reborrows;
+pub(crate) mod reference_blocks;
 pub(crate) mod reference_records;
 pub(crate) mod reference_returns;
 pub(crate) mod reference_slots;
