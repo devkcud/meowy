@@ -6,6 +6,62 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Reference-bearing Copy temporary handoff complete
+
+- State: Implementation c325099 and native/example evidence fb72c97 are complete. Copy temporaries retain reference contents, separate cell lifetime and public call bounds. Current handoffs describe fixed-type mutable shared-reference locals as the next slice.
+- Validation: All 14 combined checks passed with 419 Rust tests, 35 Python tests and 866 links; optimized example output and independent checks passed. Read-only handoff audit found and corrected one ambiguous copy-lifetime phrase. No unfinished source changes remain.
+- Blockers: Full ownership and release qualification remain incomplete; 13 conformance cases are unsupported.
+- Next steps: Model mutable shared-reference local versions, preserving earlier copies and physical cell loans. Prove joins/restarts or retain explicit B001 limits; keep ref-bearing collections, exclusive references and owned cleanup separate.
+
+### 2026-09-06 — Reference-bearing Copy temporary native coverage commit
+
+- State: Committed eight native groups, reference-temporaries example and README as fb72c97. Coupled implementation is c325099. Source, optimized execution and independent review are complete; only final handoffs remain.
+- Validation: All 14 checks pass with 419 Rust and 35 Python tests. Optimized example output is exact; both focused commits pass cached whitespace checks. No source changes followed validation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current root/compiler STATUS with reference-bearing Copy contents and fixed-type mutable shared-reference local next steps. Preserve all logs, check links/whitespace, commit the handoff and confirm clean Git state.
+
+### 2026-09-06 — Reference-bearing Copy temporary implementation commit
+
+- State: Committed initializer-state preservation, shared loan-summary construction, backend carrier support and focused library/boundary evidence as c325099. Native/example/README evidence remains separate; source and review are complete.
+- Validation: All 14 checks and optimized exact-output smoke passed before committing. Cached whitespace and staged scope checks pass. No source changes followed verification.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit reference_temporaries native coverage and example/README, then refresh both current handoffs and mutable shared-reference local next steps. Preserve history, check links/whitespace and verify clean Git state.
+
+### 2026-09-06 — Reference-bearing Copy temporary optimized smoke
+
+- State: Optimized reference-temporaries build and execution pass with exact output. Source, native evidence and independent review are complete; no source changes followed the combined gate. Documentation distinguishes copying contents while alive from using the copy after cell expiry.
+- Validation: Release-profile example exited 0 with exact true,7,owner,7,3 lines and empty stderr. All 14 checks pass with 419 Rust and 35 Python tests. Scope remains Copy values; owned cleanup, mutable carriers, exclusive borrows and reference-bearing lists stay separate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit coupled origin/loan/backend changes and old boundaries, then native/example/README evidence. Refresh current handoffs, preserve logs and record fixed-type mutable shared-reference locals as next work before final Git checks.
+
+### 2026-09-06 — Reference-bearing Copy temporary combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on frozen source. Temporary reference values and carriers preserve initializer summaries and separate cell lifetime, including eager direct reads, deferred deeper pointees, public call bounds, nullable tags and restart. Optimized compiler build is running.
+- Validation: 221 library and 198 native Rust tests, 35 Python tests, 866 local links, Clippy, formatting, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed. Independent evidence is nine checks and six profile executions.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized reference-temporaries with exact output, inspect and split implementation/old boundaries and native evidence commits, then finalize current handoffs and preserved logs. Next: fixed-type mutable shared-reference locals with value-version and cell-loan tracking.
+
+### 2026-09-06 — Reference-bearing Copy temporary source freeze
+
+- State: Full native and loan regression pass on frozen source. Temporary reference values, records and unions now preserve initializer origins/bounds/tags beneath Deref; direct copies can outlive the outer cell, and public call bounds still constrain returned references. Materialization uses direct initializer values and deferred deeper summaries.
+- Validation: 198 native, 36 loan, 33 origin and 61 backend groups pass. Independent evidence is nine checks plus six profile executions. Formatting is clean; no integration failure remains. New example demonstrates direct reference/carrier copies.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 combined checks and the optimized reference-temporaries example, then split source/old boundaries from native/example/README evidence. Finalize STATUS/logs with mutable shared-reference local value versions and cell-loan checks as the next bounded work.
+
+### 2026-09-06 — Reference-bearing temporary native integration passed
+
+- State: All eight new native groups pass first integration in debug/release. Initializer state and lazy loan summaries now preserve carried references, tags and bounds while temporary cell ownership stays statement-scoped. Ordinary borrow and temporary materialization share one summary helper; only materialization eagerly consumes initializer values.
+- Validation: Native8 and independent nine checks/six profile executions pass. Three new origin groups and backend61 pass. Root added two loan groups and an example; old temporary-owner B001 rows now test E303 when the cell is used after its statement.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run full loan/native regression and final review, update documented capability boundaries, then run all 14 checks and optimized example before implementation/coverage/handoff commits.
+
+### 2026-09-06 — Reference-bearing Copy temporary implementation started
+
+- State: Starting from clean 3d27353. Extend temporary Copy values to stored references and carriers, preserving initializer origins/bounds/activity beneath Deref while the outer cell keeps statement ownership. Frontend/origin and backend work are delegated; root owns loan transfers, native evidence and all handoffs. Independent review will verify direct copies, call bounds and initializer access.
+- Validation: Read current temporary factory, origin gate, statement lifetime contract and repository rules. Existing Statement/TemporaryBorrow/SourceTemporary interfaces are reusable; no new syntax, allocation ownership or HIR shape is planned. No new native validation yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Feed real initializer states into borrowed summaries, connect eager materialization reads with deferred pointee transfers, remove validated layout gates, then verify positive copies, E302/E303, tags, nested statements and effects before full checks and split commits.
+
 ### 2026-09-06 — Statement-owned Copy temporary handoff
 
 - State: Shared borrows of reference-free Copy temporaries are complete in dd28a65, with native/example/README evidence in 83987ec. Explicit statement ownership preserves one evaluation, real cells, nested/matcher boundaries and E303 expiry. Actual calls validate complete transitive input lifetimes after returning arguments; tag-only inspection does not read expired payloads but validates holder access. Source and reviews are complete.

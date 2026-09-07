@@ -1,8 +1,8 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-06. Statement-owned Copy temporary borrows pass the final gate.
+Updated: 2026-09-06. Reference-bearing Copy temporary borrows pass the final gate.
 Full v0.0.1 remains incomplete; no unfinished source work or active workers remain.
-Implementation: `dd28a65`; native coverage/example: `83987ec`.
+Implementation: `c325099`; native coverage/example: `fb72c97`.
 Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5af`.
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
@@ -11,17 +11,15 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current objective
 
-Completed: shared borrows of reference-free Copy temporary owners use explicit
-Statement/TemporaryBorrow HIR and Source::Temporary lifetime metadata. Whole computed
-owners evaluate once; field/index/reborrow paths use actual backing cells. Statement
-wrappers preserve ordinary bindings, matcher condition/body ownership and nested
-statement expiry. References cannot extend temporary lifetime into later statements.
+Completed: TemporaryBorrow supports Copy values carrying references. Its initializer
+state is preserved beneath Deref; the outer Source::Temporary cell still follows
+its statement owner. Direct copies made while the cell lives can retain surviving
+pointees afterward, while call bounds and temporary-cell expiry remain enforced.
 
-Actual call entry validates all active transitive argument dependencies, including
-scalar-returning calls; nonreturning later arguments skip the call. Tag-only origin
-inspection avoids reference-payload reads while requiring live holder pointers.
-Reference-bearing/owned temporary owners, exclusive references, mutable reference
-carriers and reference-bearing list elements remain outside this slice.
+Loan construction eagerly consumes actual initializer reference values and transfers
+nested summaries only on demand. Existing backend cells store exact reference,
+record and union layouts with once-only evaluation and no owned cleanup. Mutable
+references/carriers, reference-bearing list elements and exclusive/owned work remain open.
 
 ## Resume here
 
@@ -48,10 +46,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 35 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 30 origin, 34 loan, 15 contract and 2 value-budget groups |
-| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 57 focused backend tests |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 33 origin, 36 loan, 15 contract and 2 value-budget groups |
+| Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 61 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 190 native groups, 4 harness tests and 29 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 198 native groups, 4 harness tests and 30 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -176,8 +174,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   Generated Bind/Emit/SlotAlias sequences stay together; matcher-controlled statements
   share the matcher owner, while nested block statements get fresh IDs. Wrappers do
   not close ordinary lexical locals. Statement/temporary IDs each cap at 65,536.
-- TemporaryBorrow materializes one reference-free Copy value after its initializer
-  returns. Source::Temporary tracks the LocalId, StatementId and selected fields;
+- TemporaryBorrow materializes one Copy value after its initializer returns,
+  preserving reference-bearing contents through the existing borrowed-state helper. Source::Temporary tracks the LocalId, StatementId and selected fields;
   the origin pass requires its statement to remain active. The loan graph validates
   owner proofs and carries the source through calls/reborrows. Backend cells are
   entry allocations reinitialized at the source site, with no loop alloca growth.
@@ -185,6 +183,14 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   remains active; a temporary created by a nested binding/emission cannot escape
   that statement into its surrounding expression. Unused expired references are
   not lifetime extensions; actual later reads and retained escapes report E303.
+- Reference-bearing temporary initializers retain their actual origins, bounds and
+  variant activity beneath Deref. Source::Temporary identifies only the outer cell;
+  direct dereference copies drop only that cell access. Original pointee and public
+  all-input bounds remain, including any other temporary owner on which they depend.
+- Graph::referenced shares bounded summary construction between ordinary borrows
+  and temporaries. Materialization passes direct initializer uses; deeper summaries
+  get conditional transfer edges. Selecting a scalar field cannot skip whole-owner
+  initializer reference reads/effects, while pointer-only uses do not read pointees.
 - Existing storage/reborrow paths keep original owners; computed list parents are
   evaluated once before deciding between reference-valued parents and new owners.
   Fields/indices retain the whole temporary root. Static list facts permit E101;
@@ -193,7 +199,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Temporary operands keep ordinary types. An unannotated &1 is &int32; explicit
   typed owners work for other widths. Binding mismatch is E207, argument mismatch
   E212, and invalid narrowing remains E208. No reference-width conversion or implicit
-  static promotion is introduced. Reference-bearing temporary owners remain B001.
+  static promotion is introduced. Owned temporary values remain unsupported.
 - Lists store initialized length separately from capacity. Only reference-free Copy
   elements are enabled, including nested lists, records and unions. Copies and
   equality inspect initialized elements; append returns the same capacity/type.
@@ -292,8 +298,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Reference-bearing record/union dispatch preserves component/variant facts and
   evaluates receivers/arguments once. `&holder.view` borrows a reference cell;
   `&holder.view.field` can load that reference then reborrow its pointee field.
-  Reference-bearing/owned temporary owners, arbitrary union-payload/primary-ascription
-  addresses, exclusive borrows and mutable reference carriers remain unsupported.
+  Owned temporary values, arbitrary union-payload/primary-ascription addresses,
+  exclusive borrows and mutable reference carriers remain unsupported.
 - Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
   field indices while inherited bounds stay unchanged. Lowering evaluates the parent
   once and derives addresses without record copies. Address hints perform no lowering;
@@ -417,30 +423,26 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Final `python3 -B tools/verify.py --all`: all 14 checks pass. Cargo target/output
   and compiler identity are explicit. Runtime sanitizers ran outside the sandbox;
   metadata validation remains distinct from compiler execution and qualification.
-- Rust: 212 library and 190 native groups pass. New groups: 6 origin, 2 loan,
-  4 backend and 9 native. Clippy `-D warnings` and formatting pass. The optimized
-  compiler builds/runs `examples/temporary-borrows.mwy` with exact stdout
-  `owner\n7\nfalse\n4\n9\n` and empty stderr.
-- Coverage includes distinct equal-valued cells, ordered owner/argument/index effects,
-  whole-root projections, matcher/dispatch chains, nested statement E303, all-input
-  E302/E303, Never, leave/restart/panic, E101/P001 and explicit-width controls.
-- Root review reproduced an expired temporary hidden in a scalar call through a
-  reference cell; full entered-call validation now rejects it. A second precision
-  regression rejected tag-only access to a live holder with an expired payload;
-  narrow origin inspection now accepts tags and still rejects expired holder access.
-- All 57 backend, 30 origin and 34 loan groups pass. Independent review passed
-  15 focused checks and three effect programs in both profiles (six executions).
-  An invalid backend record-forwarding fixture and native literal-ascription fixture
-  were corrected. Obsolete B001 rows now verify E303 later uses or invalid-ascription
-  E208. No reference fixture or REQUIRED changed; runtime ABI/dependencies are unchanged.
+- Rust: 221 library and 198 native groups pass. New groups: 3 origin, 2 loan,
+  4 backend and 8 native. Clippy `-D warnings` and formatting pass. The optimized
+  compiler builds/runs `examples/reference-temporaries.mwy` with exact stdout
+  `true\n7\nowner\n7\n3\n` and empty stderr.
+- New native groups passed first integration. Cases cover distinct cells versus
+  original pointees, copies made while the cell lives and used after expiry, public call bounds, contained
+  temporary expiry, whole-carrier initializer reads, deferred deeper contents,
+  nullable activity, E302/E303 and once-only leave/restart/panic effects.
+- All 61 backend, 33 origin and 36 loan groups pass. Independent review passed
+  nine focused checks and three effect programs in both profiles (six executions).
+  Old temporary B001 rows now require E303 for actual later uses. No reference
+  fixture or REQUIRED changed; HIR shape, runtime ABI and dependencies are unchanged.
 - Python: 16 tooling, 15 runtime and 4 compiler-harness groups pass. Documentation
-  checks 865 local links; schemas/catalog and Vim/Neovim pass.
+  checks 866 local links; schemas/catalog and Vim/Neovim pass.
 - Runtime debug/release/sanitized profiles pass 6 diagnostic, 14 cleanup, 10 stack,
   10 context, 25 scheduler and 14 owned groups with fatal, truncation, lifetime, guard
   and admission probes. ASan/UBSan/LSan and expired fiber-local detection pass.
 - Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Full
-  language/release qualification remains open; the generic temporary-borrow fixture
-  is still unsupported despite this independently executed Copy-owner capability.
+  language/release qualification remains open; generic temporary-borrow fixtures
+  are still unsupported despite independently executed temporary-owner support.
 - Prior ELF evidence found x86-64 PIE, only libc.so.6 in DT_NEEDED and GLIBC_2.34.
   It was not repeated. Baseline-host execution, bundled distribution, full panic
   artifacts/replay and v0.0.1 remain unqualified. Git whitespace passes.
@@ -448,13 +450,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend TemporaryBorrow to reference-bearing Copy values using stored-value
-   summaries beneath Deref in origins and loan transfers. Preserve contained origins,
-   all-input bounds and tags independently of the temporary cell. Verify direct
-   dereference copies keep surviving pointees while retained cell addresses expire,
-   calls retain public bounds, nested statements never extend lifetime, initializer
-   effects run once and summaries stay bounded. Keep owned values, mutable carriers,
-   reference-bearing lists and exclusive borrowing separate.
+1. Add ordinary local mutable shared-reference bindings of fixed &T type in
+   checker/borrow/loan value flow. Use explicit origin versions so reassignment
+   updates later reads without changing earlier reference copies. Keep physical cell
+   loans separate: live &binding aliases must reject reassignment. Verify branch
+   joins, statement expiry, call bounds and restart propagation before accepting
+   those flows; retain B001 where proof is incomplete. Reference-bearing collections,
+   exclusive references and non-Copy ownership remain separate extensions.
 2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
    Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup

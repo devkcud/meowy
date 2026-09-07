@@ -7,40 +7,38 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `dd28a65` enables shared borrows of reference-free Copy temporary owners.
-  Statement wrappers track lifetime without changing ordinary lexical bindings;
-  TemporaryBorrow evaluates once into a dedicated typed cell. Source::Temporary
-  retains the materialization site and owning statement through calls/reborrows.
-- Matcher conditions share their directly controlled statement's lifetime; nested
-  block statements get separate owners. Later reference use is E303, even for
-  literals. Same-statement calls, dispatch, field/index paths and value copies work;
-  leave/restart/panic skip nonreturning materialization and later effects.
-- Function entry now validates all active transitive argument origins and bounds
-  after arguments return. This closes an expired temporary hidden behind a live
-  reference cell in a scalar-returning call. Tag-only origin inspection avoids
-  payload reads while still validating holder pointers and computed effects.
-- `83987ec` adds nine native groups, `compiler/examples/temporary-borrows.mwy`
-  and README evidence. Six origin, two loan and four backend groups cover lifetime,
-  identity, effects, bounds and the two cross-feature fixes. Runtime ABI/dependencies
-  are unchanged; Copy values add no owned cleanup or loop stack growth.
-- All 14 combined checks pass: 402 Rust tests, 35 Python tests, 865 local links,
+- Compiler: `c325099` extends statement-owned Copy temporaries to references,
+  records and unions carrying references. The real initializer state is preserved
+  beneath Deref, retaining origins, bounds and active variants independently of the
+  temporary cell's StatementId. Existing HIR, contracts and lifetime rules are reused.
+- Materialization reads directly stored reference values; deeper pointee summaries
+  remain conditional on later demand. Ordinary borrows and temporary materialization
+  share a bounded loan helper with different direct-use inputs. Initializers still
+  evaluate once, including computed whole-carrier field projections.
+- A direct dereference copies contents while the cell lives. The copy can outlive
+  that cell if its original pointees/bounds survive; retained temporary-cell addresses
+  still expire. Public call bounds remain attached after dereference. Tag-only
+  inspection and full entered-call validation retain their existing distinctions.
+- `fb72c97` adds eight native groups, `compiler/examples/reference-temporaries.mwy`
+  and README evidence. Three origin, two loan and four backend groups cover cell
+  identity, direct copies, nullable activity, eager/deferred reads, E302/E303,
+  call bounds and leave/restart/panic. No HIR, ABI or dependency expansion was needed.
+- All 14 combined checks pass: 419 Rust tests, 35 Python tests, 866 local links,
   editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
   debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
   13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs temporary-borrows with exact output. Fifteen independent
-  checks and six profile executions pass; no unfinished source work, active workers
-  or failing checks remain. Existing operand widths are preserved; borrowing does
-  not perform reference-width conversions.
-- Reference-bearing/owned temporary owners, exclusive references, mutable reference
-  carriers, reference-bearing lists and full release qualification remain open.
-  Next is Copy temporary contents carrying references, with transitive summaries
-  kept separate from the temporary cell's statement lifetime.
+- The optimized compiler runs reference-temporaries with exact output. Nine
+  independent checks and six profile executions pass; no unfinished source work,
+  active workers or failing checks remain. Temporary/summary/depth budgets remain.
+- Mutable reference bindings/carriers, reference-bearing lists, exclusive references,
+  owned cleanup and full release qualification remain open. Next is ordinary local
+  mutable shared-reference bindings with explicit value versions and cell-loan checks.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Statement-owned reference-free Copy temporaries and nested shared borrows | Reference-bearing Copy temporaries, exclusive ownership and cleanup |
+| Compiler | Reference-bearing Copy temporaries and bounded shared borrowing | Mutable shared-reference locals, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,10 +48,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend temporary Copy owners to values carrying references using stored-value
-   summaries beneath Deref. Preserve contained origins, bounds and tags independently
-   of cell lifetime; direct copies may keep surviving pointees while temporary-cell
-   addresses still expire. Verify call bounds, nested statements, effects and budgets.
+1. Model ordinary mutable shared-reference locals with a fixed &T type and explicit
+   origin versions. Reassignment must change future reads while existing copies keep
+   their old pointees/bounds; a live borrow of the reference cell must block writes.
+   Verify branch joins and restart flow before enabling them; keep unproved flows B001.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and
