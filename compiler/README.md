@@ -147,7 +147,11 @@ holder. Shared/exclusive children preserve their parent authority through last u
 The [exclusive functions example](examples/exclusive-functions.mwy) passes moved
 and reborrowed scalar handles through nested direct calls. The bounded
 [argument contract](EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
-reference-result restrictions.
+wider-result restrictions.
+The [reference returns example](examples/reference-returns.mwy) carries a selected
+exclusive loan through a call and resumes its parent after the returned view ends.
+The [return contract](REFERENCE_RETURNS.md) keeps guarded input authority separate
+from conservative lifetime bounds.
 
 ## Implemented language
 
@@ -185,13 +189,16 @@ reference-result restrictions.
   scalar-reference types create a reborrow without moving the exclusive holder.
   Indirect stores capture the pointer before RHS effects and complete only on
   returning paths. Named Leave, short circuits and conditional moves are supported.
-  Direct functions accept scalar exclusive parameters with primitive results and
-  primitive or scalar-reference arguments. Passing a holder moves it; `&!*p` keeps
+  Direct functions accept scalar exclusive parameters with primitive or bare scalar-
+  reference results and primitive or scalar-reference arguments. Passing a holder moves it; `&!*p` keeps
   the parent available after the call. Shared parameters reborrow without consuming
   the parent. Entry checks reject suspended parents and conflicting arguments even
   for unused parameters or non-returning callees. Direct receiver syntax uses the
   same contract; nested and recursive calls retain symbolic input permissions.
-  Reference-result contracts, wider exclusive signatures, carriers, cells, aliases,
+  Returned references retain guarded captured-input parents. Their all-input lifetime
+  bounds protect storage without authorizing access. Exclusive results move; shared
+  returned children permit compatible parent reads and suspend parent writes.
+  Wider exclusive signatures/result shapes, carriers, cells, aliases,
   dispatch blocks, fields, collections, block results, comparisons and restart bodies
   remain B001. Unsupported call/result/cell/dispatch-block crossings also reject
   shared values carrying exclusive ancestry.

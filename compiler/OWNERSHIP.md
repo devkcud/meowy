@@ -202,7 +202,7 @@ implementation boundary; it does not change language rules.
   reference sources, additional addressable projections or reference-producing intrinsic contracts.
 - The CFG applies the call snapshot's presence/proof only on its returning edge;
   restart still erases iteration relations. Signature-based result activity may
-  be more conservative than a particular body. Reference-result exclusive authority,
+  be more conservative than a particular body. Wider reference-result exclusive authority,
   mutable carriers, captures, indirect calls and owned cleanup remain unsupported.
   Existing string values are literal-backed static views and do not create local
   referent-storage dependencies merely by passing a string value.
@@ -665,8 +665,8 @@ implementation boundary; it does not change language rules.
   children retain their ancestry. Parent graphs are checked for cycles and invalid
   IDs with charged work. Scalar permission checks walk guarded parents to preserve
   delegated access while suspending incompatible parent and sibling operations.
-- Call result ancestry is opaque because current signatures do not describe loan
-  transfer. Opacity propagates through copies and derived loans. Every reachable
+- Call result ancestry outside flat scalar signatures is opaque. Bare scalar-reference
+  results now use explicit guarded argument transfer. Opacity propagates through copies and derived loans. Every reachable
   restart body is also opaque for authority purposes, so a repeated static site
   cannot be treated as a proved dynamic permission. Known site IDs may remain as
   evidence alongside that opacity; they must not bypass it. Existing shared call
@@ -952,8 +952,8 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
   The backend evaluates each operand once and preserves scalar storage layout.
 - Calls, emissions, reference-bearing cells/temporaries and dispatch receivers
   carry semantic boundary markers. Guarded ancestry checks reject exclusive-derived
-  shared values crossing unsupported boundaries. Primitive-result direct calls use
-  explicit entry accesses instead. Reference-result exclusive contracts, carriers,
+  shared values crossing unsupported boundaries. Flat scalar direct calls use
+  explicit entry accesses and guarded result transfer instead. Wider result contracts, carriers,
   field/element roots, comparisons, block results and resolved restart bodies remain B001.
 - Availability produces E301 for definite moves and E309 for uncertain storage;
   origin lifetime failures remain E303. Mutable owner requirements and shared scalar
@@ -962,7 +962,7 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
 ## Scalar exclusive function inputs
 
 The [function argument contract](EXCLUSIVE_FUNCTIONS.md) restricts exclusive
-signatures to primitive results and primitive/scalar-reference arguments.
+signatures to primitive or bare scalar-reference results and primitive/scalar-reference arguments.
 
 - Caller evaluation captures argument values once, left to right. After every
   argument returns, Read/Write entry accesses retain every captured reference
@@ -975,10 +975,31 @@ signatures to primitive results and primitive/scalar-reference arguments.
 - Passing an exclusive handle consumes it. Passing `&!*p` delegates a child;
   expected shared parameters create shared reborrows. The same entry checks apply
   to direct receiver syntax and recursive/forwarded calls. Mutating calls clear
-  caller mutable refinements. Primitive results carry no returned loan authority.
+  caller mutable refinements. Primitive results carry no returned loan authority;
+  bare scalar-reference results use the guarded transfer described below.
 - A later argument's Leave/panic skips entry and the call without undoing earlier
   moves. A non-returning callee still validates entry. Exclusive parameters trigger
   restart exclusions even when unused; shared-only restart callees remain supported.
 - Seventeen native groups cover these paths in both profiles, including exact
-  E301/E302/E309 and B001 boundaries. Reference results, wider signatures, carriers
+  E301/E302/E309 and B001 boundaries. Wider results/signatures, carriers
   and dispatch blocks remain separate proof-bearing work.
+
+## Guarded scalar reference results
+
+The [result contract](REFERENCE_RETURNS.md) explicitly records candidate argument
+indexes and guards in `Facts.returns`. Actual origins and captured-parent copy links
+use the same choice. Exclusive results accept only compatible exclusive inputs;
+shared results may use shared or exclusive inputs. Callee-root lifetime and mode
+checking proves the body; callers conservatively consider every compatible argument.
+
+Result loans are created only after normal return. Missing/incomplete evidence or
+invalid argument indexes are B001. Equal physical addresses never merge distinct
+argument authority. Caller entry still validates every argument's maximum access.
+Root-function emissions retain demand until exit; later conflicting parent access
+is E302. Exclusive emissions and returned handles consume their holders.
+
+Public bounds include every borrow-carrying input, including ignored or incompatible
+pointee types. They retain scope and write/acquisition protection, but cannot become
+actual result addresses, authorize access or prohibit a read solely because the
+result is exclusive. Wider calls retain opaque ancestry. Nested block results,
+carriers and generated destruction remain separate contracts.
