@@ -12,6 +12,7 @@ mod expired_restarts;
 mod fields;
 mod functions;
 mod guarded_references;
+mod indexed_fields;
 mod init;
 mod leaving_references;
 mod mutable_references;

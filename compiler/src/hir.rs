@@ -49,20 +49,6 @@ pub enum Type {
 }
 
 impl Type {
-    pub(crate) fn scalar_element(&self) -> Option<&Type> {
-        match self {
-            Self::List { element, .. }
-                if matches!(
-                    element.as_ref(),
-                    Self::Bool | Self::Int { .. } | Self::Float { .. }
-                ) =>
-            {
-                Some(element)
-            }
-            _ => None,
-        }
-    }
-
     pub fn pointee(&self) -> Option<&Type> {
         match self {
             Self::Reference(ty) | Self::Exclusive(ty) => Some(ty),

@@ -180,7 +180,6 @@ pub fn wider_alias_pointees_and_paths_remain_gated() {
         "r:{->row:={->n:=1};p:&!row}",
         "r:{->row:={->inner:={->n:=1}};p:&!row.inner}",
         "r:{->row:={->label:=\"x\"};p:&!row.label}",
-        "r:{->items:=[{->n:=1}];p:&!items[1].n}",
         "r:{->row:={->n:=1};s:&row;p:&!s.n}",
         "r:{->row:={->n:=1};p:&!row.n;'again{'again.restart()}}",
         "x:1;r:{->row:={->n:=1;->view:&x};p:&!row.n}",

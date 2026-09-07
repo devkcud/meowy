@@ -185,7 +185,6 @@ pub fn reference_temporary_and_non_scalar_targets_remain_gated() {
         "p:&![[1]][1][1]",
         "xs:=[[{->n:=1}]];p:&!xs[1][1]",
         "xs:=[[1]];p:&!xs[1]",
-        "xs:=[{->n:=1}];p:&!xs[1].n",
         "xs:=[[1]];p:&!xs[1][1];'again{'again.restart()}",
     ] {
         rejects(source, "B001");

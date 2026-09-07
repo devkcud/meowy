@@ -184,7 +184,6 @@ pub fn unsupported_roots_pointees_and_unknown_fields_stay_explicit() {
         "v:={->n:=1};p:&!v",
         "v:={->inner:={->n:=1}};p:&!v.inner",
         "v:={->label:=\"x\"};p:&!v.label",
-        "v:=[{->n:=1}];p:&!v[1].n",
         "v:={->n:=1};s:&v;p:&!s.n",
         "v:={->n:=1};s:&v;p:&!(*s).n",
         "p:&!({->n:=1}).n",

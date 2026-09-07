@@ -188,7 +188,6 @@ pub fn mixed_write_paths_enforce_mutability_types_and_remaining_boundaries() {
         ("h:={->items:=[{->n:=1}]};p:&h;p.items[1].n=2", "B001"),
         ("h:={->items:=[{->n:=1}]};p:&h;(*p).items[1].n=2", "B001"),
         ("[{->n:=1}][1].n=2", "B001"),
-        ("h:={->items:=[{->n:=1}]};p:&!h.items[1].n", "B001"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

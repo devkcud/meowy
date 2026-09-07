@@ -2,6 +2,7 @@ mod aliases;
 mod blocks;
 mod expressions;
 mod functions;
+mod indexed;
 mod mutation;
 mod names;
 mod references;
