@@ -11,36 +11,29 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented explicit storage lifecycle and demand-driven forward availability
-  in `d72b413` on the existing CFG. Canonical cells and function/block/branch/statement scopes are
-  separate from reference value IDs. Returning initialization, scope endings and
-  value-taking versus inspection are recorded as events.
-- Availability tracks ready, moved, uninitialized and ended alternatives under guards.
-  It preserves short circuits, named Leave, statement temporaries, target-owned aliases,
-  restart and panic. Only demanded states are retained; empty scopes keep events without
-  unnecessary state. The existing 1,000-matcher acceptance case passes within unchanged
-  limits after an initial budget regression was corrected.
-- All current HIR source types remain Copy. Internal tests explicitly vary cell Copy
-  metadata to prove E301/E309 transitions, reinitialization and ended-scope protection;
-  this does not enable source-level moves or `&!`. Permission enforcement, parent
-  suspension, indirect stores and generated cleanup remain open.
-- All ten compiler checks pass: 592 Rust tests (334 library, 258 native), 20 Python
-  tests, 879 links, schemas/catalog, formatting, Clippy, build and conformance.
-  All 37 examples execute in debug/release. Fifteen lifecycle groups extend the
-  existing access/provenance coverage; no reference fixture or backend code changed.
-- Shared provenance remains in `ebc8ebe`, access records in `698e4b1`, and terminal
-  expiry in `7906333` with native/example evidence in `324e9ae`. Opaque ancestry and
-  unresolved regions cannot authorize access. See the
-  [exclusive-reference design](compiler/EXCLUSIVE_REFERENCES.md) for the remaining slice.
+- Implemented scalar exclusive references (`3fe8715`, example/docs `87e7926`)
+  to ordinary mutable boolean/integer/float
+  locals: moves, reinitialization, shared/exclusive reborrows and indirect stores.
+  Guarded availability reports E301/E309; lifetime and mutability remain E303/E305.
+- Mode-aware LoanIds and bounded ancestor walks enforce parent suspension and E302
+  conflicts. Stores capture their pointer before RHS work and finish only on returning
+  paths. Conditional moves, short circuits, named Leave and panic are covered.
+- Exclusive signatures, carriers, cells, aliases, fields/collections, comparisons,
+  block results, dispatch and restart bodies remain B001. Shared values retaining
+  exclusive ancestry cannot cross call/result/cell/dispatch boundaries.
+- All ten compiler checks pass: 609 Rust tests (334 library, 275 native), 20 Python
+  tests, 38 examples in debug/release, formatting, Clippy, 881 local links, schemas,
+  catalog, build and conformance. Seventeen new native groups cover the exclusive
+  slice. Reference fixtures and runtime ABI remain unchanged.
 - Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
   Runtime/editor suites were not rerun; their historical evidence remains in the
-  compiler handoff. Complete v0.0.1 qualification is still open.
+  compiler handoff. Complete v0.0.1 qualification remains open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Lifecycle, guarded availability and shared provenance | Mode-aware exclusive permissions and scalar indirect stores |
+| Compiler | Scalar exclusive references, moves and guarded permissions | Exclusive function contracts and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,14 +43,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Integrate explicit exclusive-reference mode through `compiler/src/hir.rs`,
-   `check/`, `borrow/`, `loans/` and the backend scalar-store path. Use the existing
-   value-taking/inspection events and Copy classification for real source moves;
-   enforce permissions and parent suspension against guarded loan provenance and
-   normalized regions. Capture indirect targets once and retain demand only through
-   returning stores. Enable the designed ordinary-scalar slice only after native
-   debug/release and exact-code tests pass; preserve opaque call/restart, carrier,
-   alias/reference-cell and owned-payload gates.
+1. Preserve the first scalar exclusive slice and its native matrix. Design explicit
+   exclusive function contracts in `compiler/src/borrow_contract/` and
+   `compiler/src/loans/permissions.rs`: prove symbolic input overlap, guarded authority
+   transfer and conservative public bounds before opening those gates. Extend other
+   excluded shapes one at a time; keep unsupported source forms explicit.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

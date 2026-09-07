@@ -6,6 +6,52 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Scalar exclusive final compiler gate passes
+
+- Findings: Source-level scalar exclusive references, moves, child permissions and
+  once-captured indirect stores are complete. Added an executable example and
+  updated the implementation/capability documents. Unsupported shapes remain gated.
+- Validation: All ten compiler checks pass: 609 Rust groups (334 library, 275 native),
+  20 Python groups, 38 debug/release examples, formatting, Clippy, build, catalog,
+  schemas and 881 local links. Conformance is 10 passed/13 unsupported/0 failed.
+  Seventeen exclusive native groups include captured child authority and bounded
+  16-loan acceptance/512-loan B001. Runtime/editor suites were not rerun.
+- Blockers: None for this slice. Wider exclusive contracts/shapes and generated
+  cleanup remain open; this does not qualify a complete language release.
+- Commits: `3fe8715` contains implementation and native coverage; `87e7926` contains
+  the example and capability docs. Both passed staged whitespace checks.
+- Next: Design explicit exclusive function authority contracts before opening
+  another source gate; preserve this matrix and the shared-reference regressions.
+
+### 2026-09-07 — Scalar exclusive native matrix passes
+
+- Fifteen new native groups pass: nine accepted/runtime groups execute in both
+  profiles, with exact E301/E302/E303/E305/E309 and B001 build diagnostics.
+- Covers scalar layouts/widths, moves, children, guarded alternatives, named Leave,
+  once-captured target replacement and panic skipping a final store. Derived shared
+  calls/results/cells/dispatch and excluded exclusive shapes remain gated.
+- Migrated obsolete B001 expectations only after source/native proof. Added backend
+  parent-mode validation. No reference fixture changed. Next: full compiler gate,
+  review budget/boundary regressions, update capability documentation and commit.
+
+### 2026-09-07 — Scalar mode and permissions integrated
+
+- Integrated exclusive scalar references, consuming contexts, guarded parent
+  permissions and once-captured indirect stores. Preserve call/result/cell/restart
+  gates, including shared-only values with exclusive ancestry.
+- Validation: 24 matrix source checks and guarded move/Leave/short-circuit probes
+  match expectations. Library run: 332 passed; two legacy B001 groups need migration.
+  Initial compile found one Rust borrow conflict, corrected before those checks.
+- Found a shared-derived dispatch boundary bypass; receiver metadata now gates it.
+  Next: native debug/release matrix, exact diagnostic regressions and full gate.
+
+### 2026-09-07 — Scalar exclusive integration scoped
+
+- Findings: Parser syntax exists and lifecycle/provenance prerequisites are complete. Add an explicit non-Copy exclusive scalar reference mode, mode-aware acquisition/access checks, guarded parent suspension and scalar indirect stores. Reuse existing regions, liveness, availability and backend pointer storage. Preserve opaque ancestry and unsupported shape boundaries.
+- Validation: Read current handoffs, source and design; clean Git state at 8204c51. No implementation changes validated yet.
+- Blockers: None. Source gates must not open without complete permission/availability/ordering proof.
+- Next steps: Integrate mode and stores through checker/HIR/origin/loan/backend, exercise the design matrix and old shared behavior, run compiler gates, then commit cohesive changes and handoffs.
+
 ### 2026-09-07 — Lifecycle implementation committed and handoff finalized
 
 - Findings: Commit d72b413 contains lifecycle scopes/cells/events, exhaustive Copy classification, value-taking/inspection propagation, sparse forward availability, fifteen focused groups and ownership/design documentation. Current handoffs identify real exclusive-mode and permission integration as the next slice; all current source storage remains Copy.

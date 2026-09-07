@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Storage lifecycle and forward availability are validated.
+Updated: 2026-09-07. First scalar exclusive-reference slice implemented.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Scalar exclusive implementation/native matrix: `3fe8715`; example/docs: `87e7926`.
 Lifecycle/taking intent/availability: `d72b413`.
 Shared provenance/value roles/regions: `ebc8ebe`.
 Access implementation/tests/docs: `698e4b1`.
@@ -25,31 +26,31 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Completed explicit lifecycle events in `loans/storage.rs` and demand-driven forward
-availability in `loans/init.rs` (`d72b413`). Canonical storage cells and scope IDs are distinct
-from reference value IDs. Parameters, locals, statement temporaries and target-owned
-aliases retain their actual owners. Enter/End/Init/Use events preserve returning RHS
-order, partial-write prerequisites and named Leave/restart/panic boundaries.
+Implemented scalar `&!` references to ordinary mutable Bool/Int/Float locals.
+`Type::Exclusive` is non-Copy; consuming contexts move the holder, while dereference
+and reborrow inspect it. Reinitialization preserves actual continuing predecessors.
+Definite moved use is E301; uncertain availability is E309; expired origins remain
+E303. Owner mutability and shared scalar store rejection report E305.
 
-Value contexts retain taking intent through transparent forms; pointer dereference,
-reborrow and tag inspection do not take the holder. HIR Copy classification is
-explicit and exhaustive. Every current source type is Copy; internal tests vary
-metadata to prove non-Copy transitions without enabling source-level moves.
+LoanIds now retain shared/exclusive mode. Bounded guarded ancestor walks preserve
+parent authority through moves and copies, permit compatible shared children and
+reject overlapping external/parent/sibling access with E302. Public bounds still
+protect dependencies without authorizing access. Indirect stores capture the pointer
+before RHS effects, retain it through a returning store only, and preserve earlier
+RHS moves/replacements when Leave or panic skips that store.
 
-Forward availability joins ready/moved/uninitialized/ended guards and validates after
-convergence. Definite moved use is E301; uncertain or ended availability is E309.
-Initialization requires a live owning scope and can replace a moved value. Only
-states demanded by uses are retained, and empty scopes add no availability state.
-All lifecycle events remain visible; the 1,000-matcher acceptance regression passes
-within the existing limits. This is whole-cell analysis, not partial initialization
-or generated cleanup/destructor-order proof.
+Exclusive function contracts, carriers, cells, emitted aliases, fields/collections,
+comparisons, block results, dispatch and bodies with resolved restarts remain B001.
+Boundary metadata also rejects shared-only values with exclusive ancestry crossing
+calls, emissions, reference-bearing storage/temporaries or dispatch receivers.
+Runtime ABI, cleanup, dependencies and reference fixtures are unchanged.
 
-All ten compiler checks pass: 334 library plus 258 native groups and all 37 examples
-in both profiles. Fifteen lifecycle groups pass. No backend, runtime ABI, dependency
-or source-level exclusive feature changed. The [exclusive-reference design](EXCLUSIVE_REFERENCES.md)
-now marks lifecycle/availability implemented; mode-aware permissions, actual source
-moves, parent suspension and scalar indirect stores are next. Opaque ancestry and
-unresolved regions cannot authorize access.
+Seventeen new native groups pass in debug/release, including captured child targets,
+conditional moves/parents and a bounded parent-chain acceptance/rejection pair.
+The final compiler gate passes all ten checks: 609 Rust groups (334 library,
+275 native), 20 Python groups and 38 examples in both profiles. Formatting, Clippy,
+881 local links, schema/catalog checks, build and conformance all pass.
+See [EXCLUSIVE_REFERENCES.md](EXCLUSIVE_REFERENCES.md) and `loans/permissions.rs`.
 
 ## Prior implemented milestone
 
@@ -94,10 +95,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 60 origin, 119 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive permissions; 60 origin, 119 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 258 native groups, 4 harness tests and 37 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 275 native groups, 4 harness tests and 38 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -113,9 +114,10 @@ reads, `borrow_contract/call.rs` handles candidate substitution, and
 records, typed inspection paths, metadata charging and region resolution.
 `loans/authority.rs` owns acquisition IDs, guarded provenance, opacity and parent checks.
 `loans/storage.rs` owns lifecycle events/scopes; `loans/init.rs` owns storage demand
-and forward guarded availability. Contract tests live beside their
+and forward guarded availability. `loans/permissions.rs` owns mode-aware access,
+ancestor checks and semantic boundary gates. Contract tests live beside their
 module; `check/temporaries.rs` owns temporary creation and statement metadata.
-`borrow/mutable.rs` owns the bounded assignment/restart target scan.
+`borrow/mutable.rs` owns the bounded assignment/restart/capability scan.
 `borrow/branches.rs` and `loans/branches.rs` own guarded environment restoration and
 returning-state joins. `borrow/exits.rs` owns target-entry and queued Leave snapshots;
 loan Scope captures target versions and exit predecessors. `loans/values.rs` owns
@@ -142,7 +144,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Static/intrinsic sources, wider exclusive shapes/contracts, payload moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Remaining contextual constraints, finer alias precision, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -169,7 +171,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   its guard; normally returning origin states are masked before merging. The skip
   path retains incoming values, and the join continuation is the union of returning
   guards. Partial panic paths inside nested expressions do not publish versions.
-- Facts.merging identifies bodies using reference assignments; the bounded HIR scan
+- Facts.merging identifies bodies using reference assignments or exclusive values; the bounded HIR scan
   also identifies their restart targets. Returning expressions retain normal proofs
   after nested scope closure. Assignment-free bodies keep the previous loop path;
   mutable reference-bearing nullable/aggregate bindings and emitted fields stay B001.
@@ -463,7 +465,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   evaluates receivers/arguments once. `&holder.view` borrows a reference cell;
   `&holder.view.field` can load that reference then reborrow its pointee field.
   Owned temporary values, arbitrary union-payload/primary-ascription addresses,
-  exclusive borrows and mutable reference carriers remain unsupported.
+  exclusive dispatch/carrier borrows and mutable reference carriers remain unsupported.
 - Dedicated reborrow sites retain bounded snapshots. Actual sources append referent
   field indices while inherited bounds stay unchanged. Lowering evaluates the parent
   once and derives addresses without record copies. Address hints perform no lowering;
@@ -585,6 +587,24 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - Current `python3 -B tools/verify.py --compiler`: all ten selected checks pass.
+  Rust: 334 library and 275 native groups (609 total); 20 Python tests pass. All 38
+  examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
+  schemas/catalog and 881 links in 87 Markdown files pass. Conformance remains
+  10 passed, 13 unsupported, 0 failed in both profiles.
+- Seventeen exclusive native groups cover scalar widths/boolean layout, moves,
+  reinitialization, copied children, parent transfer/suspension, guarded owner choices,
+  short circuits, Leave, pointer capture and panic. Exact rejection codes are checked
+  in debug/release builds. Sixteen nested loans execute; 512 are bounded by B001.
+  The new example outputs `8\n9\n10\n11\n20\n21\n` in both profiles.
+- First library run passed 332 and failed two obsolete B001 groups. The initial
+  full gate passed at 607 Rust tests after migration. Final review added captured
+  child/parent-budget regressions and removed allocation from physical overlap;
+  the final gate at 609 passes. A derived shared dispatch bypass found by probes
+  was gated before validation. No reference fixture, dependency or runtime ABI changed.
+- Runtime/editor checks and optimized compiler builds were not rerun. Generated
+  cleanup, exclusive calls/carriers/restarts and full release qualification remain
+  open. Existing historical evidence below is not new validation.
+- Prior lifecycle `python3 -B tools/verify.py --compiler`: all ten selected checks passed.
   Rust: 334 library and 258 native groups (592 total); 20 Python tests pass. All 37
   examples execute in debug/release. Formatting, Clippy `-D warnings`, pinned build,
   schemas/catalog and 879 links in 87 Markdown files pass. Conformance remains
@@ -593,8 +613,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   initialization versus reference definitions, RHS order, Copy taking, inspection,
   internal non-Copy E301/E309, reinitialization, guards/short circuits/Leave,
   statement/slot ownership, restart, panic, ended scopes and bounded sparse demand.
-  Non-Copy cases alter internal metadata explicitly; no exclusive source program
-  was accepted or executed. Reference fixtures and REQUIRED are unchanged.
+  Those non-Copy cases altered internal metadata explicitly; that prior slice did
+  not accept or execute exclusive source programs. Reference fixtures and REQUIRED are unchanged.
 - Initial integration passed all 319 existing library groups after fixing two
   missing wiring locals and one Rust mutable-borrow conflict. First full gate then
   passed 333 groups but hit the work budget in the existing 1,000-matcher acceptance
@@ -660,32 +680,24 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Integrate explicit exclusive-reference mode through `hir.rs`, checker type/value
-   paths, origin traversal, loan grants and backend scalar pointer operations. Keep
-   Copy classification exhaustive and retain value-taking versus inspection through
-   groups/ascriptions. Use lifecycle events for real source moves/reinitialization;
-   do not infer initialized storage from reference definitions or backward demand.
-2. Enforce mode-aware permissions and parent suspension over guarded provenance and
-   normalized physical regions. Preserve copied-child ancestry, actual sources versus
-   public bounds, canonical aliases, expiry and caps. Opaque call/restart ancestry
-   and unresolved regions cannot grant permission; gate exclusive-derived shared
-   boundary crossings even when their types contain only shared references.
-3. Add scalar indirect stores with once-only target capture and demand through the
-   returning store only. Prove the EXCLUSIVE_REFERENCES.md matrix with native execution
-   in both profiles and exact E301/E302/E303/E305/E309 checks before opening the
-   ordinary-scalar source gate. Keep exclusive restart bodies, fields, aliases,
-   containers, signatures/reference cells and owned payloads gated as designed.
-4. Define generated payload/diagnostic layouts and scope cleanup using runtime
+1. Preserve the scalar exclusive matrix in `tests/native/exclusive_references.rs`
+   and `EXCLUSIVE_REFERENCES.md`. For the next ownership extension, design scalar
+   exclusive function input/result contracts in `borrow_contract/` and
+   `loans/permissions.rs`: symbolic Input overlap, guarded authority transfer and
+   public-bound separation must be proved before opening signature/call gates.
+   Retain unsupported carriers, fields, aliases, reference cells and restart bodies.
+2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
-   interleaved cleanup before cancellation and pinned unwinding.
-5. Extend aggregate/emitted-name/cross-element constraints in `list_context/` only
-   with explicit scope/dependency models and unchanged effect order. Add
-   static/intrinsic sources and new projections only with updated lifetime
-   contracts/no-return assumptions. Extend diagnostic source identities and evidence
-   without treating bootstrap byte-span text as a complete replay artifact.
-6. Implement required evaluation, specialization and the project/module graph;
-   enable fixtures only after actual support, then progress libraries and tools.
-7. Keep both handoffs/logs current; run the combined gate after wider integrations.
-   Do not rerun green compiler checks without a new change or concern. Strict
-   conformance needs zero unsupported cases and still covers only part of v0.0.1
-   qualification. Preserve implemented expiry and its prior execution evidence.
+   interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle
+   events are analysis evidence, not generated destruction.
+3. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
+   explicit scope/dependency models and unchanged effect order. Add static/intrinsic
+   sources only with lifetime contracts and no-return assumptions.
+4. Build the manifest/module graph and initial Meowy library layer; implement
+   required evaluation and specialization before enabling their reference fixtures.
+   Continue root runtime/editor/library tracking alongside compiler work.
+5. Extend diagnostic source identities and evidence without treating bootstrap
+   byte-span text as a complete replay artifact. Run the combined repository gate
+   after wider integrations; preserve current compiler evidence until code changes.
+   Strict conformance still requires zero unsupported cases; this host does not
+   qualify the minimum host, bundled sysroot or complete v0.0.1 release.
