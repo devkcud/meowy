@@ -156,7 +156,7 @@ pub fn restart_carried_source_boundaries_prevent_iteration_identity_revival() {
         "a:1;p:=&a;i:=0;'loop{->n:2;p=&n;i=i+1;|i<2|'loop.restart()}",
         "a:1;p:=&a;i:=0;'loop{p=&2;i=i+1;|i<2|'loop.restart()}",
         "a:1;p:=&2;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
-        "a:1;holder:{->view:&a};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",
+        "<H>:<{view<&int32><null>}>;a:1;holder<H>:{->view:&a};p:=&holder;i:=0;'loop{p=&holder;i=i+1;|i<2|'loop.restart()}",
         "first<&int32>:(p<&int32>,q<&string>){->p};a:1;p:=&a;i:=0;'loop{text:\"local\";p=first(&a,&text);i=i+1;|i<2|'loop.restart()}",
         "first<&int32>:(p<&int32>,q<&string>){->p};a:1;p:=first(&a,&\"short\");i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}",
     ] {

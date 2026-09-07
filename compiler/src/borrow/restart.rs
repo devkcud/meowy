@@ -1,7 +1,7 @@
 use super::branches::Values;
 use super::{
-    BTreeMap, BTreeSet, BlockId, Checker, Diagnostic, Guards, LocalId, Origin, Result, Source,
-    Span, State, TRUE, Type,
+    BTreeMap, BTreeSet, BlockId, Checker, Diagnostic, Guards, LocalId, Origin, Path, Result,
+    Source, Span, State, TRUE,
 };
 
 pub(crate) type Header = BTreeMap<LocalId, State>;
@@ -43,13 +43,19 @@ pub(crate) fn same(a: &Headers, b: &Headers, guards: &mut Guards, span: Span) ->
             if !left
                 .origins
                 .iter()
-                .map(|origin| &origin.source)
-                .eq(right.origins.iter().map(|origin| &origin.source))
+                .map(|origin| (&origin.component, &origin.source))
+                .eq(right
+                    .origins
+                    .iter()
+                    .map(|origin| (&origin.component, &origin.source)))
                 || !left
                     .bounds
                     .iter()
-                    .map(|origin| &origin.source)
-                    .eq(right.bounds.iter().map(|origin| &origin.source))
+                    .map(|origin| (&origin.component, &origin.source))
+                    .eq(right
+                        .bounds
+                        .iter()
+                        .map(|origin| (&origin.component, &origin.source)))
             {
                 return Ok(false);
             }
@@ -106,25 +112,13 @@ impl Checker<'_> {
             return Err(Self::unsupported(span));
         }
         for (local, state) in values {
-            crate::borrow_contract::type_weight(&self.program.locals[*local], self.guards, span)?;
+            let shape = super::header::Shape::new(&self.program.locals[*local], self.guards, span)?;
+            shape.validate(state, false, self.guards, span)?;
             if !self
                 .guards
                 .spend(state.weight() + header.len().checked_ilog2().unwrap_or(0) as usize + 1)
             {
                 return Err(State::budget(span));
-            }
-            if !matches!(&self.program.locals[*local], Type::Reference(ty) if !ty.has_reference())
-                || !state.active.is_empty()
-                || state
-                    .origins
-                    .iter()
-                    .chain(&state.bounds)
-                    .any(|origin| !origin.component.is_empty())
-            {
-                return Err(Diagnostic::unsupported(
-                    "restart-carried references with reference-bearing pointees",
-                    span,
-                ));
             }
             let effective = self.guards.and(state.present, state.proof);
             let effective = self.guards.and(effective, self.assumed);
@@ -143,7 +137,7 @@ impl Checker<'_> {
                     {
                         return Err(State::budget(span));
                     }
-                    output.insert(origin.source.clone());
+                    output.insert((origin.component.clone(), origin.source.clone()));
                 }
             }
             let mut count = origins.len() + bounds.len();
@@ -161,12 +155,13 @@ impl Checker<'_> {
                         continue;
                     }
                     self.restart_source(&origin.source, id, span)?;
-                    if !output.contains(&origin.source) {
+                    let key = (origin.component.clone(), origin.source.clone());
+                    if !output.contains(&key) {
                         if count >= super::MAX_ORIGINS {
                             return Err(State::budget(span));
                         }
                         self.reserve_origins(origin.weight() + 1, span)?;
-                        output.insert(origin.source.clone());
+                        output.insert(key);
                         count += 1;
                     }
                     if output.len() > super::MAX_ORIGINS {
@@ -177,24 +172,23 @@ impl Checker<'_> {
             if origins.len() + bounds.len() > super::MAX_ORIGINS || origins.is_empty() {
                 return Err(State::budget(span));
             }
-            let canonical = |sources: BTreeSet<Source>| {
+            let canonical = |sources: BTreeSet<(Path, Source)>| {
                 sources
                     .into_iter()
-                    .map(|source| Origin {
-                        component: Vec::new(),
+                    .map(|(component, source)| Origin {
+                        component,
                         source,
                         guard: TRUE,
                     })
                     .collect()
             };
-            header.insert(
-                *local,
-                State {
-                    origins: canonical(origins),
-                    bounds: canonical(bounds),
-                    ..State::default()
-                },
-            );
+            let state = State {
+                origins: canonical(origins),
+                bounds: canonical(bounds),
+                ..State::default()
+            };
+            shape.validate(&state, true, self.guards, span)?;
+            header.insert(*local, state);
         }
         Ok(header)
     }

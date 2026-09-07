@@ -92,7 +92,7 @@ pub(crate) fn restarted_carried_sources_cannot_reuse_iteration_storage() {
     );
     rejects("a:1;p:=&a;'again{p=&2;'again.restart()}", "B001");
     rejects(
-        "a:1;holder:{->view:&a};p:=&holder;'again{p=&holder;'again.restart()}",
+        "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'again{p=&holder;'again.restart()}",
         "B001",
     );
     accepts("a:1;i:=0;'again{local:2;p:=&local;p=&a;v:*p;i=i+1;|i<2|'again.restart()}");

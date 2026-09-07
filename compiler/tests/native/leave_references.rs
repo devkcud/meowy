@@ -240,7 +240,7 @@ pub fn panic_discards_leave_continuations_and_restart_limits_stay_explicit() {
         );
     }
     for source in [
-        "a:1;cell:&a;p:=&cell;p=&cell;'loop{'loop.restart()}",
+        "<H>:<{view<&int32><null>}>;a:1;holder<H>:{->view:&a};p:=&holder;p=&holder;'loop{'loop.restart()}",
         "a:1;p:=&a;'out{p=&2;'inner{'out.restart()}}",
         "a:1;holder:={->view:&a};'out{'out.leave()}",
         "a:1;p<&int32><null>:=&a;'out{'out.leave()}",

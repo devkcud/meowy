@@ -2,6 +2,7 @@ pub(crate) mod branches;
 pub(crate) mod control;
 pub(crate) mod emissions;
 pub(crate) mod exits;
+pub(crate) mod header;
 pub(crate) mod mutable;
 pub(crate) mod origins;
 pub(crate) mod pointee;

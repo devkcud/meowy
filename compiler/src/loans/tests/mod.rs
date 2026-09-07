@@ -11,6 +11,7 @@ mod reference_temporaries;
 mod restarting_references;
 mod temporaries;
 mod transitive;
+mod transitive_restarts;
 mod values;
 
 use super::{Facts, Flow, Graph, Proofs};

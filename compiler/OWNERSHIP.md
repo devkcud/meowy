@@ -337,21 +337,26 @@ implementation boundary; it does not change language rules.
   only the final stable pass publishes Facts. Source effects are never lowered or
   executed again during this analysis.
 - `borrow/restart.rs` canonicalizes each header into separate actual-origin and
-  lifetime-bound Source sets. Initial and feasible backedge sources accumulate
+  lifetime-bound `(Path, Source)` sets. Initial and feasible backedge sources accumulate
   monotonically. Source order and guards do not affect convergence. The final
   Facts.headers map contains every mutable-reference ID present at target entry,
   including bindings that a particular iteration does not change.
-- This first domain requires fixed `&T` where T is reference-free, including
-  supported scalar, record, list and union referents. Header components are direct
-  paths with no Deref summaries or active-variant facts. Transitive carried
-  referents remain B001 until per-component sources and guarded activity have a
-  sound widening model. Iteration-local bindings can still use existing snapshots.
+- `borrow/header.rs` supplies one charged Shape validator to origin and loan
+  analysis. It follows reference leaves and record Slot paths, entering Deref only
+  when a reference's referent carries references. Nested reference cells and record
+  pointees retain canonical per-component sources and bounds. Every typed reference
+  path needs actual-origin coverage; bounds do not substitute for stored pointers.
+- Traversal stops at reference-free referents, preserving references to scalar
+  unions even behind another reference or inside a carrier. A Union encountered
+  inside a stored pointee snapshot requires activity and remains B001, including a
+  scalar-union field alongside reference fields. Reference-bearing List shapes are
+  also B001. Canonical headers never erase active facts to admit an unsupported shape.
 - Header guards, presence and proof are widened to TRUE, and header entry resets
   continuation assumptions. This deliberately loses entry/previous-iteration
   predicate correlations. The final body pass still records current-iteration
   branches, calls, leaves and result guards normally.
-- Every feasible carried origin and bound must be an Input source or live
-  Local/Slot storage strictly outside the restarted target. Target/descendant-owned
+- Every feasible carried origin and bound, at every component path, must be an
+  Input source or live Local/Slot storage strictly outside the restarted target. Target/descendant-owned
   sources and all Temporary sources report B001. Rebinding the same static LocalId,
   alias or statement therefore cannot revive a previous iteration's view. A local
   source overwritten by surviving storage before the backedge need not be carried.
@@ -360,6 +365,9 @@ implementation boundary; it does not change language rules.
   then cross a reset edge. Before-entry copies retain initial-only precision;
   header joins themselves read no reference. Nested targets and outer-target
   restarts use their own header IDs and skip unfinished RHS work.
+  All paths transfer on demand, so carrying a record/reference cell does not eagerly
+  read unused pointees. Dereference copies retain nested public call bounds and
+  original pointee sources separately from the outer cell's lifetime.
 - Replay shares one charged guard arena, has at most 64 passes per body, and counts
   header cloning, source comparisons, deduplication and type/ownership walks.
   Each header state respects the 4,096-part limit. Scratch passes include previously
@@ -576,7 +584,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, transitive/iteration-owned reference headers, owner moves, owned
+  references/reborrows, active-variant/iteration-owned reference headers, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 

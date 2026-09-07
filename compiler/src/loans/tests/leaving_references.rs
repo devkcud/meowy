@@ -102,7 +102,7 @@ pub(crate) fn leave_captures_allow_expired_values_to_be_replaced_without_reading
         "E303",
     );
     rejects(
-        "a:1;cell:&a;p:=&cell;'again{p=&cell;'again.restart()}",
+        "a:1;cell<&int32><null>:&a;p:=&cell;'again{p=&cell;'again.restart()}",
         "B001",
     );
 }

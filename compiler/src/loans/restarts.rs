@@ -1,5 +1,6 @@
 use super::branches::Versions;
-use super::{BlockId, Diagnostic, Graph, Node, Result, Span, TRUE, Type};
+use super::{BlockId, Diagnostic, Graph, Node, Result, Span, TRUE};
+use crate::borrow::header::Shape;
 
 impl Graph<'_> {
     pub(crate) fn restart_header(
@@ -14,26 +15,15 @@ impl Graph<'_> {
         let mut header = Versions::new();
         for (local, state) in states {
             self.charge(state.weight() + 1)?;
-            let valid =
-                self.program.locals.get(*local).is_some_and(
-                    |ty| matches!(ty, Type::Reference(target) if !target.has_reference()),
-                );
-            if !valid
-                || !self.proofs.mutable.contains(local)
-                || state.present != TRUE
-                || state.proof != TRUE
-                || !state.active.is_empty()
-                || state
-                    .origins
-                    .iter()
-                    .chain(&state.bounds)
-                    .any(|origin| !origin.component.is_empty() || origin.guard != TRUE)
-            {
+            let ty = self.program.locals.get(*local).ok_or_else(Self::budget)?;
+            if !self.proofs.mutable.contains(local) {
                 return Err(Diagnostic::unsupported(
-                    "restart header outside canonical reference-free pointees",
+                    "restart header outside mutable reference storage",
                     Span::default(),
                 ));
             }
+            let shape = Shape::new(ty, self.guards, Span::default())?;
+            shape.validate(state, true, self.guards, Span::default())?;
             let origins = state.origins.iter().chain(&state.bounds).cloned().collect();
             header.insert(*local, self.bundle(origins)?);
         }
