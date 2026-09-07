@@ -1038,5 +1038,25 @@ captured stores keep the pointer chosen before RHS effects and only through a
 returning store. Field owners cannot escape their scope.
 
 Fourteen native groups plus projection/path-limit evidence cover these rules in both
-profiles where applicable. Aliases, indexed/union/reference paths, non-scalar exclusive
+profiles where applicable. Record aliases, indexed/union/reference paths, non-scalar exclusive
 pointees, owned carriers and generated cleanup remain separate capabilities.
+
+## Exclusive mutable emitted scalars
+
+The [slot contract](EXCLUSIVE_SLOTS.md) permits direct mutable scalar aliases.
+`Alias.exclusive` records intent until the completed target type is known; exclusive
+backing must equal the declared local type. Shared union-member borrowing retains
+its existing compatibility rule. Proven discarded results retain their typed local
+fallback cells. No backend addressing or HIR extension was needed.
+
+Existing Slot sources retain canonical roots and lexical views. Guarded aliases
+share the target's storage scope but keep distinct acquisitions. Ordinary reads,
+writes and pointer stores resolve to that canonical slot. Reference moves, children,
+call/block transfer and lifetime bounds use the existing passes. Aliases initialize
+after RHS completion; pointers may outlive the alias scope but not their target.
+
+Fourteen native groups and canonical-storage/backing evidence cover exact types,
+mutation, widths, conflicts, guards, initialization, target lifetimes, cancellation
+and panic. Supported self-containing shared views and direct escapes are E303;
+exclusive carriers remain B001. Projected record aliases and generated cleanup
+remain separate contracts.

@@ -158,6 +158,9 @@ The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and s
 The [exclusive fields example](examples/exclusive-fields.mwy) mutates disjoint scalar
 fields while reading a primary value. The [field contract](EXCLUSIVE_FIELDS.md)
 describes mutable paths, owner lifetimes and remaining root restrictions.
+The [exclusive slots example](examples/exclusive-slots.mwy) borrows initialized
+emitted scalars beyond their alias scope while their target block remains alive.
+The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
 
 ## Implemented language
 
@@ -208,7 +211,11 @@ describes mutable paths, owner lifetimes and remaining root restrictions.
   Returned references retain guarded captured-input parents. Their all-input lifetime
   bounds protect storage without authorizing access. Exclusive results move; shared
   returned children permit compatible parent reads and suspend parent writes.
-  Wider exclusive signatures/result shapes, carriers, cells, aliases,
+  Direct mutable emitted scalar aliases also support exclusive borrowing after
+  initialization when their completed backing type is identical. Canonical slot
+  identity and target-block lifetime survive lexical alias scope and guarded views.
+  Immutable aliases report E305; widened backing remains B001.
+  Wider exclusive signatures/result shapes, carriers, cells, projected record aliases,
   dispatch blocks, indexed/reference paths, collections, carrier results, comparisons and restart bodies
   remain B001. Anonymous scalar-reference blocks preserve existing guarded loan
   identities and consume exclusive emissions. Retained results protect their owners
@@ -457,7 +464,7 @@ When an emission is proved discarded, an initialized local cell preserves its
 remaining effects without projecting into an absent or incompatible result field.
 Borrows of slot storage use the target block as their owner even when the alias name
 was declared in an inner scope. Discarded cells are retained as target-owned partial
-result storage. A slot borrow needs backing that matches the alias type or one
+result storage. A shared slot borrow needs backing that matches the alias type or one
 concrete union member, including a complete summary for reference-bearing referents.
 Proper subunion views remain B001 because borrowing cannot retag a copied value.
 References may pass through inner results, but escaping their target's publication

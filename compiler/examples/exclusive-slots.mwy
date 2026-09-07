@@ -1,0 +1,16 @@
+debug:@"debug"
+bump<null>:(view<&!int32>){*view=*view+1}
+
+result:'out{
+    view:{'out->count:=7;->&!count}
+    bump(&!*view)
+    debug.print(*view)
+    ->ready:=true
+    flag:&!ready
+    *flag=false
+}
+debug.print(result.count)
+debug.print(result.ready)
+'discard{
+    unused:{->n:=3;view:&!n;*view=4;debug.print(*view);'discard.leave()}
+}

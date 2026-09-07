@@ -21,7 +21,7 @@ reference value itself still requires a mutable binding.
 arguments with primitive results are supported by the
 [function argument contract](EXCLUSIVE_FUNCTIONS.md).
 
-Keep exclusive-bearing records, unions, lists, reference cells, emitted aliases,
+Keep exclusive-bearing records, unions, lists, reference cells, projected record aliases,
 temporary owners, dispatch blocks, wider result contracts and captures B001
 until their transfer and lifetime proofs exist. Reject inferred forms as well as
 explicit annotations. Initial support excludes exclusive pointer equality and
@@ -274,8 +274,8 @@ Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chai
 with B001 rather than publishing partial proofs. Existing shared-reference tests
 remain enabled; reference fixtures are unchanged.
 
-Next, extend one excluded shape at a time: emitted scalar exclusive borrows need
-backing-type, target lifetime and canonical slot-conflict proof; fields and collections need
+Next, extend one excluded shape at a time: emitted record-field exclusive borrows
+need exact backing, per-field mutability and target lifetime proof; fields and collections need
 projection-aware permission; carriers need non-Copy initialization and destruction;
 restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 
