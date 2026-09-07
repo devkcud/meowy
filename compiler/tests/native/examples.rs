@@ -111,6 +111,10 @@ pub fn examples_execute_in_both_profiles() {
             "7\n9\n9\n8\n",
         ),
         (
+            include_str!("../../examples/guarded-references.mwy"),
+            "7\n7\n7\n9\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

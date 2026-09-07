@@ -46,6 +46,7 @@ compiler/target/debug/meowy run compiler/examples/transitive-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/temporary-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/reference-temporaries.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
+compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -112,6 +113,8 @@ contained references out of temporary cells while keeping their original owners.
 The [mutable references example](examples/mutable-references.mwy) reassigns a shared
 reference while preserving an earlier copy and reads a borrowed reference cell
 for the last time before replacing its contents.
+The [guarded references example](examples/guarded-references.mwy) selects a reference
+in a matcher and updates only the owner that the selected view no longer borrows.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -208,10 +211,15 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   a value reads its directly contained references, while deeper pointee summaries
   are followed only when later operations need them.
 - Mutable ordinary locals with a fixed shared-reference type, such as `view:=&owner`.
-  Straight-line reassignment changes subsequent reads while earlier copies retain
+  Reassignment changes subsequent reads while earlier copies retain
   their original pointees and call bounds. A live borrow of the reference cell
   blocks reassignment; its final read may occur in the assignment's RHS. Mutable
-  nullable reference bindings/carriers and unproved control-flow joins remain B001.
+  nullable reference bindings/carriers remain B001.
+- Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
+  Returning paths merge their possible values; skipped paths retain their incoming
+  value, and panicking paths contribute no continuation. Earlier copies stay fixed.
+  Merging does not read a reference: its lifetime and loan are checked when demanded.
+  Owner writes and cell borrows retain their guards through nested branches.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -314,12 +322,16 @@ remain alive. The checker reuses branch/completion proofs and checks all possibl
 borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Fixed shared-reference
-locals support straight-line reassignment with separate versions of their contents.
-Mutable reference carriers, mutable nullable reference bindings, unproved
-joins/backedges and direct reference formatting require future analysis.
-The initial assignment gate rejects writes inside matcher arms or the right operand
-of `&&`/`||`. An entry or function body combining reference reassignment with any
-`leave` or `restart` is also B001, even when those operations appear unrelated.
+locals support reassignment with separate versions of their contents, including
+matcher arms and short-circuit right operands. Branches start from their incoming
+versions and merge only returning states under their actual guards. A skipped
+assignment preserves the old value; copying it before a branch preserves its old
+pointees and call bounds. Conditional lifetime checks do not revive expired values
+when the predicate later changes.
+Mutable reference carriers, mutable nullable reference bindings, exit/backedge
+joins and direct reference formatting require future analysis. An entry or function
+body combining reference reassignment with any `leave` or `restart` remains B001,
+even when those operations appear unrelated.
 This conservative boundary applies through nested expressions. A panic during the
 RHS skips the store; ordinary nested blocks and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
