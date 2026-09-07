@@ -6,6 +6,104 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Stored activity handoff complete
+
+- State: Restart-site metadata b0c9756, activity implementation 1df163b and native/example coverage 74fac7c are complete. Both current handoffs record supported stored activity, stable convergence, source-guarded predecessor transfers and the expired-source boundary. Final independent handoff review found no stale claim or missing continuation; wider runtime/library/tool work remains visible.
+- Validation: All ten compiler checks passed: 532 Rust tests, 20 Python tests and 36 examples in debug/release. Optimized header-activity output and independent twelve checks/six executions pass. Final documentation check passed 872 links; Git whitespace passed. All previous step-log history is preserved exactly. No source changed after the gate; runtime/editor checks remain historical.
+- Blockers: No unfinished source work or failing check remains. Temporary/iteration-owned carried sources and bounds, mutable reference-bearing carriers/lists, exclusive/owned work and generated cleanup remain unsupported. Conformance has 13 unsupported cases and complete v0.0.1 qualification is open.
+- Next steps: Implement explicit expired carried-source identities before relaxing Local/Slot/Temporary gates. Preserve entry/backedge distinctions, old copies, public bounds, parent-conditioned activity and source-side transfer guards; prove safe overwrite-before-use and rejection of actual expired use across nested targets and same-site reinitialization. Commit this handoff and verify clean Git state; do not rerun green checks without a new change or concern.
+
+### 2026-09-07 — Stored activity handoff prepared
+
+- State: Metadata b0c9756, activity implementation 1df163b and native/example evidence 74fac7c are complete. Current STATUS now describes guarded stored activity, stable member convergence and exact predecessor proofs; superseded activity tasks are replaced with expired carried-source identity work. Earlier history is preserved byte-for-byte.
+- Validation: All ten compiler checks, 532 Rust tests, 20 Python tests, 36 examples in both profiles, optimized execution and independent twelve checks/six executions passed. Final source did not change after the gate. Documentation scope/correlation review passed; final links and whitespace are next. The stale legacy B001 expectation, test ascription and Clippy warning corrections remain recorded.
+- Blockers: No source work or failing check remains. Temporary/iteration-owned carried sources, mutable reference-bearing bindings/lists, exclusive/owned features and generated cleanup remain unsupported; 13 conformance cases and full release qualification remain open.
+- Next steps: Check final handoffs, links and whitespace, commit trackers and verify clean Git state. Next implement explicit expiry so reusing a Local/Slot/StatementId cannot revive an earlier reference, then prove overwrite-before-use and actual-use rejection across active variants, bounds, old copies and nested targets. Preserve wider runtime/library/tool work and historical evidence.
+
+### 2026-09-07 — Stored activity execution coverage committed
+
+- State: RestartId metadata is b0c9756, canonical activity and loan proofs are 1df163b, and native/example documentation is committed separately. Eight native groups cover null/full transitions, nested activity, old copies, cells, reset-sensitive conflicts, public bounds and once-only calls; all 36 examples run in debug/release.
+- Validation: All ten compiler checks, 532 Rust tests, 20 Python tests and optimized header-activity execution pass. Independent twelve checks/six executions and source/docs reviews pass. Documentation now states member-activity convergence and predecessor States masked by entered guards; no source changed after the gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize both current STATUS files with precise support and evidence; preserve previous log history, check links/whitespace and commit handoff. Next implement explicit expired carried-source identities before admitting Temporary or iteration-owned header sources.
+
+### 2026-09-07 — Guarded restart activity committed
+
+- State: The activity implementation is committed separately from stable RestartId metadata. A focused borrow/activity module canonicalizes observed members with stable choices and parent activation; raw final-pass predecessor snapshots prove source-side guarded transfers and safe inactive omission after reset.
+- Validation: Full compiler gate and optimized header-activity execution pass. The implementation includes four origin and seven loan groups plus migration of old activity B001 boundaries; current origin/loan totals are 57/71. Shared work, header parts, choice/snapshot weights and replay limits remain enforced.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit eight native activity groups, the debug/release example and README next. Refresh both handoffs/logs with actual evidence, unchanged runtime/editor history and concrete expired-source identity work.
+
+### 2026-09-07 — Stable restart-site metadata committed
+
+- State: The first focused commit assigns bounded unique RestartId values after resolved control lookup and updates every HIR consumer. Backend lowering ignores site metadata; generated storage and runtime ABI are unchanged. Activity implementation and native/example coverage remain in the working tree for separate commits.
+- Validation: Metadata coverage includes unique sites across targets/functions/aliases and B001 exhaustion without ID reuse. All 37 checker and 62 backend groups pass; integrated full gate and optimized example are green. Cached whitespace passed before committing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit canonical guarded activity and predecessor proof next, then native/example coverage. Refresh STATUS with final evidence and expired carried-source next steps; preserve historical logs and unchanged runtime/editor evidence.
+
+### 2026-09-07 — Stored activity optimized example passed
+
+- State: Source, tests and ownership documentation are frozen. Stored nullable/tagged header activity preserves parent-conditioned reference paths; independent owner or sibling correlations can widen conservatively. The optimized compiler builds and runs the new example successfully.
+- Validation: Full compiler gate: all 10 checks, 532 Rust tests, 20 Python tests, 872 links and conformance 10 passed/13 unsupported/0 failed. Optimized release example exits 0 with exact empty/newline/7/newline/empty/newline output and empty stderr. Origin 57, loan 71, checker 37 and backend 62 groups pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Split stable RestartId metadata first, then activity implementation and old boundaries, native/example/README coverage, and refreshed trackers. Preserve historical runtime/editor evidence; expired carried-source identities are the next implementation boundary.
+
+### 2026-09-07 — Stored activity compiler gate passed
+
+- State: Stored restart activity is implemented and the complete compiler gate is green. Stable RestartId metadata and exact predecessor snapshots preserve inactive-path proofs and source-side loan transfers after reset; runtime ABI and dependencies remain unchanged.
+- Validation: All 10 compiler checks passed: 283 library plus 249 native tests (532 Rust), 20 Python tests, 872 links, formatting, Clippy, schemas/catalog, build and conformance. Conformance remains 10 passed, 13 unsupported, 0 failed across debug/release. Optimized compiler build is running.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run the optimized header-activity example, finish documentation review, split stable RestartId metadata, activity implementation, native/example coverage and final trackers. Next implementation is explicit expired carried-source identity.
+
+### 2026-09-07 — Stored activity source freeze
+
+- State: Stored activity implementation and tests are frozen. Canonical member alternatives use stable choices and structural parent activation; final initial/RestartId predecessor snapshots validate source-side guarded transfers and inactive omission. Metadata is bounded and runtime-neutral. Origin documentation/final routine checks are finishing alongside the gate.
+- Validation: Eight new native groups and the corrected legacy selection pass; independent twelve checks/six executions pass. All 71 loan groups, 37 checker and 62 backend metadata groups pass. Four new origin activity groups passed after resource precharges; the full compiler gate now covers all final source.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all ten compiler checks and optimized header-activity, then split stable RestartId metadata, activity implementation/old boundaries, native/example/README and final trackers. Preserve unchanged runtime ABI evidence as historical; next work is explicit expired carried-source identity.
+
+### 2026-09-07 — Stored activity independent checks and example prepared
+
+- State: All new activity native groups and the corrected legacy selection pass. Added header-activity.mwy and README support for stored nullable/nested union activity with exact predecessor inactivity proofs. Graph header transfers are source-guarded after reset; existing ordinary transfers remain unconditional.
+- Validation: Independent twelve checks/six executions passed exact outputs and reset-sensitive E302 controls. All 71 loan groups and metadata 37 checker/62 backend groups pass; Clippy and owned formatting are clean. Origin final tests/docs are finishing. The example is covered by the existing both-profile suite and awaits the full gate.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Freeze remaining origin changes, run all compiler checks and optimized header-activity. Split stable RestartId metadata, activity implementation, native/example evidence and final handoffs where practical. Next preserve carried-source lifetime restrictions while tackling explicit expired iteration identities.
+
+### 2026-09-07 — Stored activity native integration passed
+
+- State: All eight new activity groups passed first integration: null/full/null transitions, inactive-backedge final-use release, cross-iteration E302, old copies, nested variants, optional fields, public bounds and once-only calls. The substring-filtered run also selected one legacy group with a now-obsolete activity B001 row; migrated those rows to acceptance or remaining type/lifetime boundaries.
+- Validation: First integrated run: eight new groups passed, one selected legacy expectation failed. Production behavior was correct. The corrected filter rerun is in progress; independent twelve checks/six executions are starting. Stable RestartId migration already passed 37 checker/62 backend groups.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete focused origin/loan/activity proof tests and independent audit, then add example/docs and freeze source. Run all compiler checks and optimized smoke. Preserve exact source gates, tuple-site metadata intent and current versus historical evidence in split commits and handoffs.
+
+### 2026-09-07 — Stored header activity cores integrated
+
+- State: Origin activity reconstruction and exact predecessor snapshots compile. Observed member domains grow monotonically; stable per-header choices condition nested activity and each reference path. Loans now use source-side guarded transfers and deferred active missing-path checks after reset. Restart-site metadata is stable across aliases/functions.
+- Validation: Metadata migration checks passed 37 checker and 62 backend groups plus Clippy. The previous compiler activity probe rejected B001 as expected. Root eight-group integrated native run is now starting; no activity acceptance result is claimed until it completes.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Resolve integrated null/ref, nested-variant and reset-sensitive failures, then run focused source/loan proof-loss tests and independent probes. Keep body/source ownership gates and all cache/work budgets; update obsolete activity B001 expectations only after support is verified.
+
+### 2026-09-07 — Activity metadata migration and native corpus prepared
+
+- State: Stable RestartId metadata is implemented across HIR/checker/backend and fixtures; origin/loan consumers now use target plus site. Raw final-pass predecessor snapshots and source-side guarded header transfers are being integrated. Prepared eight native groups for null/full transitions, nested variants, optional fields, copies, public bounds, effects and source limits.
+- Validation: Restart metadata baseline 35 checker/62 backend passed; after migration 37 checker/62 backend, Clippy and owned formatting pass. One temporary Clippy warning in a test helper was corrected. Prior activity check remains B001 as expected; no integrated activity acceptance has been claimed yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete canonical activity choices, Shape inspection and predecessor snapshots, then compile/run all eight native groups. Prove inactive omissions versus active missing paths and reset-sensitive E302 controls before final source freeze and compiler gate.
+
+### 2026-09-07 — Canonical activity and predecessor-proof design selected
+
+- State: Approved monotone observed union-member domains with stable choice identities keyed by target/local/path/member; nested activity is parent-conditioned, and source/bound guards follow structural activation. Final initial/restart predecessor snapshots will prove inactive transfer paths. A bounded unique RestartId is being added to HIR; frontend/backend metadata migration is delegated separately.
+- Validation: Prepared four native activity groups. The previous compiler rejects a valid null/full restart header with B001, confirming the old capability boundary. No integrated activity behavior has passed yet. HIR site migration and origin/loan implementation are in progress; root remains sole tracker writer.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete stable activity reconstruction, semantic convergence and exact-edge inactivity proofs. Keep source lifetime gates and budgets; test null/full transitions, final-use release, old copies and cross-iteration E302 before relaxing activity B001. Preserve metadata-only backend behavior.
+
+### 2026-09-07 — Stored header activity investigation
+
+- State: Starting from clean 00d0b2b. Designing canonical stored-variant activity for restart headers, preserving nested component correlations and stable identities across replay. Origin/loan workers coordinate a proof seam for inactive predecessor paths; root owns native/example/README and all trackers. Temporary/iteration-owned source gates remain.
+- Validation: Current instructions/handoffs and clean Git state were verified. Prior slice passed 511 Rust and 20 Python tests plus optimized/independent checks. No stored-activity restart behavior is implemented or validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Agree bounded canonical activity and inactive-transfer proofs before changing gates. Check null/ref transitions, nested variants, old copies/cell/public bounds and cross-iteration reset behavior, then implement and test a coherent supported slice.
+
 ### 2026-09-07 — Transitive restart-header handoff complete
 
 - State: Implementation 34d2e7b and native/example evidence fa70eab are complete. Shared Shape checks typed reference paths and coverage; canonical component/source keys preserve distinct fields and layers in actual origins and bounds. Header transfers remain lazy, while stored activity and unsafe carried-source domains stay explicit.

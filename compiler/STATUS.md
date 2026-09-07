@@ -1,8 +1,9 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-07. Transitive restart header components are complete.
-Full v0.0.1 remains incomplete; source and validation are complete for this slice.
-Transitive headers: `34d2e7b`; native/example: `fa70eab`.
+Updated: 2026-09-07. Stored restart-header activity is implemented and validated.
+Full v0.0.1 remains incomplete; no unfinished source edits or failing checks remain.
+Restart-site metadata: `b0c9756`; guarded activity: `1df163b`; native/example: `74fac7c`.
+Prior transitive headers: `34d2e7b`; native/example: `fa70eab`.
 Prior direct restart implementation: `89800dc`, `ca037d3`, `dc7be5b`.
 Prior emission fix/Leave support: `b3e875a`, `4ddef85`, `cb4afaf`, `a9d688a`.
 Prior guarded merges: `5c55e44`, `af3a868`, `096ce78`.
@@ -14,19 +15,21 @@ Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
-## Current objective
+## Current milestone
 
-Completed: restart headers carry canonical per-component origins and bounds for
-nested references and record pointees without stored activity. The shared Shape
-validator follows typed reference/record paths, rejects unknown or missing reference
-components, and keeps lifetime bounds separate from actual-origin coverage.
-Canonical `(Path, Source)` identity prevents field/depth associations from collapsing.
+Completed: restart headers carry stored nullable/tagged member activity through
+nested references and record pointees. Observed members grow monotonically; stable
+choice identities and parent-conditioned activity make convergence meaningful.
+Origins and lifetime bounds retain distinct component/source roles under their
+structural activation. Independent union-field/owner correlations may widen.
 
-Header transfers remain demand-only. Pointer/scalar reads do not consume unrelated
-pointee references; dereference copies retain original sources and public bounds.
-Reference-free union referents remain supported at traversal cut points. Stored
-summary activity, Temporary and iteration-owned sources remain B001. Next is a
-canonical guarded activity model with proved inactive-path transfer handling.
+Stable RestartId metadata identifies exact backedges. Final-pass predecessor States
+are captured under their entered guards before header widening/reset. Loan transfers
+apply source-path activity after resetting future demand; inactive paths may be
+absent only with proof. Old copies, lazy pointee reads, physical cells and active
+public bounds retain their existing rules. Backend storage and runtime ABI did not
+change. Temporary and iteration-owned carried sources/bounds remain B001; explicit
+expired identities are next.
 
 ## Resume here
 
@@ -52,11 +55,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 35 checker, 18 list/context and 5 guard groups |
-| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 53 origin, 64 loan, 15 contract and 2 value-budget groups |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
+| Shared storage and loans | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, direct call contracts and E302/E303 checks; 57 origin, 71 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 241 native groups, 4 harness tests and 35 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 249 native groups, 4 harness tests and 36 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -76,8 +79,10 @@ returning-state joins. `borrow/exits.rs` owns target-entry and queued Leave snap
 loan Scope captures target versions and exit predecessors. `loans/values.rs` owns
 immutable graph versions. `borrow/replay.rs` isolates body passes and fact publication;
 `borrow/restart.rs` owns canonical header/source gates; `borrow/header.rs` supplies
-the shared charged Shape validator to origin and loan analysis. `loans/restarts.rs`
-owns stable header IDs and predecessor transfers. Retain these module boundaries.
+the shared charged Shape validator to origin and loan analysis. `borrow/activity.rs`
+owns member partitions and path activation. `loans/restarts.rs` owns stable header
+IDs and source-guarded predecessor transfers. `check/statements.rs` assigns bounded
+RestartId values after resolved control lookup. Retain these module boundaries.
 
 Agents share this checkout. File existence does not prove a component compiles.
 Interfaces remain `parser::parse`, `check::check`, `backend::emit_ir`, and
@@ -95,7 +100,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 | Full frontend | Complete grammar, stable item IDs, recovery CST/editor integration, all type forms | Conformance, compact syntax properties, malformed UTF-8 and parser fuzzing |
 | Type system | Literal types/unions, subtraction, callable environments, generics/capabilities, full type queries, nominal identity | Type/callable fixtures and negative boundaries |
 | Required evaluation | Type-producing helpers, effects, cycle checks, logical budgets, specialization | E211/E219/E220 and deterministic budget tests |
-| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, active-variant/expired-source restart headers, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
+| Ownership | Static/intrinsic sources, exclusive borrows/reborrows, expired-source restart headers, moves, partial initialization, captures, cleanup | Caller lifetime substitution, use-after-move/borrow rejection and exact-once cleanup |
 | Collections | Remaining contextual constraints, finer alias precision, exclusive access, aliases, slices, arrays, maps, vectors, allocators | Extent/count/bounds cases and allocation failures |
 | Runtime | Owned allocations, recoverable panics, unwinding, tasks, channels, timers, cancellation | Generated cleanup, structured joins, one-worker progress and sanitizer coverage |
 | Modules/projects | Relative imports, manifests, exports, aliases, root locks, dependency graph | Worked projects, offline locked builds and revision identity |
@@ -127,45 +132,55 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   after nested scope closure. Assignment-free bodies keep the previous loop path;
   mutable reference-bearing nullable/aggregate bindings and emitted fields stay B001.
 - Each restarted target in that mode includes all mutable-reference IDs present
-  at entry, even if an iteration leaves one unchanged. Initial and feasible backedge
-  values accumulate as separate actual-origin and lifetime-bound `(Path, Source)`
-  sets. Equality includes both fields, so repeated owners in different Slot/Deref
-  components cannot cause premature convergence or merge distinct dependencies.
-- Shared Shape validation follows State completeness: record Slot children and
-  reference leaves, descending Deref only when the referent contains references.
-  Every typed reference path requires actual-origin coverage; bounds do not supply
-  missing pointers. Unknown paths, missing components and noncanonical guards/proof/
-  presence fail B001. Canonical header activity remains empty and guards are TRUE.
-- Reference-free referents stop traversal. Scalar-union values can therefore sit
-  behind references, including nested reference cells and reference fields in a
-  carrier, without header activity. A Union reached while walking a stored summary
-  remains B001, including a scalar-union field beside reference fields. Lists that
-  contain references remain unsupported. Active facts are never erased to admit a type.
-- Every canonical header source/bound at every component must be an Input or live
-  Local/Slot strictly outside the restarted target. All Temporary sources and target/descendant-owned
-  carried sources remain B001, even where an overwrite could precede the next use.
-  This prevents rebinding a static LocalId/alias/statement from reviving an old
-  iteration. Ancestor slots can survive inner restarts; iteration-local reference
-  bindings can be reinitialized/rebound when they are not carried into a header.
-- Origin replay creates a fresh Checker for each pass over an entry/function body,
-  reinitializing inputs and discarding tentative locals/calls/reborrows/results/exits.
-  Headers grow monotonically and compare canonical component/source-role sets;
-  only stable final Facts publish. Fresh guard identities never decide convergence; source
-  effects are neither lowered nor executed during replay. Nested headers solve together.
-- Facts.headers is internal analysis metadata. The loan graph allocates stable
-  header value IDs once, defines/transfers them on initial/backedge predecessors,
-  and then crosses reset edges. Header start itself does not define those IDs.
-  All transfers are demand-only. Initial transfers retain pre-loop source precision
-  and old copies; reset edges widen reach and erase cross-iteration demand
-  correlations. Missing header/transfer evidence is an error only on actually
-  reachable graph nodes.
-- Header entry/reset erases incoming and iteration predicate correlations; final
-  body passes still track current-iteration branches, calls, leaves and result guards.
-  Some safe programs needing finer correlations may be rejected. A 64-pass cap,
-  shared work, 4,096 parts per header state and 262,144 weighted fact/cache entries
-  bound replay. Both retained/cloned seed maps are checked before cloning, and prior
-  body counters carry forward. These are logical budgets, not allocator byte peaks;
-  transient values retain their existing per-value/work limits. Exhaustion is B001.
+  at entry, even when an iteration leaves one unchanged. Initial and feasible
+  backedge values accumulate separate actual-origin and lifetime-bound `(Path,
+  Source)` sets plus observed `(union Path, member)` keys. Component paths preserve
+  repeated owners in distinct fields/layers. Stable choice guards are keyed by
+  target, local, union path and member and retained across body replay passes.
+- Shared Shape validation follows record Slot paths and reference leaves, entering
+  Deref only when the referent contains references. Stored unions have disjoint,
+  complete activity conditioned on their parent. Every active typed reference path
+  requires actual-origin coverage; bounds cannot supply missing pointers. Unknown
+  paths/members, missing active components or noncanonical guards/proof/presence
+  fail B001. Inactive null/empty payload paths may contain no reference origins.
+- Canonical headers partition only observed members. Child activation includes
+  its parent, and origins/bounds use their structural path guard. Reference-free
+  referents remain traversal cut points, including scalar unions behind nested
+  references. Reference-bearing lists and mutable reference-bearing nullable or
+  aggregate bindings remain B001; unsupported activity is never erased to admit a type.
+- Every feasible carried source/bound at every component must be an Input or live
+  Local/Slot strictly outside the restarted target. Temporary and target/descendant
+  storage remain B001, even where overwrite could precede the next read. Rebinding
+  a static LocalId/alias/statement cannot revive an earlier iteration's view.
+  Ancestor slots can survive inner restarts; noncarried iteration-local bindings
+  can be reinitialized/rebound normally.
+- Origin replay creates a fresh Checker for each body pass, reinitializing inputs
+  and discarding tentative locals/calls/reborrows/results/exits/predecessors.
+  Headers grow monotonically and compare canonical source roles and member activity
+  including stable guards. Only stable final Facts publish; effects are never
+  lowered or executed during replay. Nested headers solve together.
+- Every resolved restart carries a unique RestartId, with a charged 65,536-site
+  checker-wide limit including functions and resolved aliases. Backend lowering
+  ignores that metadata. Facts.header_inputs stores initial snapshots by target;
+  Facts.restart_inputs stores restart snapshots by site. Each snapshot captures
+  incoming State under its entered guard before widening/reset. Shape inspection
+  uses this exact predecessor to prove path activity.
+- Loan headers allocate stable value IDs once. Initial/backedge transfers define
+  those IDs before reset edges; header start itself does not redefine them. Backward
+  propagation resets future-iteration demand before applying predecessor source
+  activation. Destination/future activity must not filter that current transfer.
+  Ordinary transfers remain unconditional; all transfers remain demand-only.
+  Missing paths require proved inactivity. Missing snapshots or active path evidence
+  report B001 when their guard overlaps final graph reach.
+- Before-entry copies keep initial precision; current-iteration branches, calls,
+  leaves and result guards still apply. Header entry/reset erases incoming and
+  iteration correlations; independent union-field/owner correlations may widen.
+  Some safe programs needing stronger relationships remain conservatively rejected.
+- Replay retains the 64-pass, shared-work, 4,096-part and 262,144 weighted fact/cache
+  limits. Both retained/cloned header and choice seed maps are checked before cloning;
+  choice keys and predecessor snapshots are counted, and prior-body counters carry
+  forward. These are logical budgets, not allocator byte peaks. Transient states
+  retain existing per-value/work limits; exhaustion reports B001.
 - Each active target in merging mode records the mutable-reference IDs already
   present at entry. Leave captures only those surviving values under the actual
   exit guard before branch/scope restoration. The exact target merges its queued
@@ -523,32 +538,44 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - Final `python3 -B tools/verify.py --compiler`: all 10 selected checks pass on
-  frozen production source. Editor/native-runtime checks were not rerun. HIR,
-  Facts shape, backend storage, runtime ABI and dependencies are unchanged.
-- Rust: 270 library and 241 native groups pass (511 total). New groups: 4 origin,
-  6 loan and 8 native. All 53 origin, 64 loan, 62 backend and 35 checker groups pass.
-  Formatting and Clippy `-D warnings` pass; 35 examples run in both native profiles.
-- Coverage includes typed path completeness, component-sensitive convergence,
-  nested cells/record fields, projected rotations/nested targets, old copies,
-  lazy pointer/scalar reads versus demanded references, physical cells, public
-  bounds at every layer, ref-free union cut points and activity/source limits.
-  Independent review passed 12 checks and 3 programs in both profiles (6 executions).
-- Four initial native groups passed on first observed integration; no pre-change
-  baseline was run. The extended run had seven passes and one wrong expected code:
-  constructing a record with &1 correctly rejects E303 before any header check.
-  The expectation was corrected; all eight groups and the final gate pass.
-  Old blanket transitive B001 rows now exercise stored-activity carriers instead.
+  frozen production source. HIR gained RestartId and internal Facts gained exact
+  predecessor snapshots; generated storage, runtime ABI and dependencies did not
+  change. Editor/native-runtime checks were not rerun.
+- Rust: 283 library and 249 native groups pass (532 total). Added 2 checker,
+  4 origin, 7 loan and 8 native groups. All 37 checker, 57 origin, 71 loan and
+  62 backend groups pass. Formatting and Clippy `-D warnings` pass; all 36 examples
+  execute in both native profiles.
+- Coverage includes observed member convergence, parent-conditioned nested
+  activity, null/full/null transitions, optional fields, inactive transfer proofs,
+  active missing evidence, lazy/tag-only versus payload reads, old copies, cells,
+  public bounds and once-only calls. Reset-sensitive E302 tests prevent an initial
+  or future payload read from hiding a conflicting write behind a different tag.
+  Source tests also reject overlapping/incomplete/unknown activity and lifetime
+  bounds substituted for missing active origins.
+- The previous compiler rejected the prepared nullable-header probe with B001;
+  no full pre-change run of the new native module was made. First integration
+  passed all eight new groups, but the substring filter selected a ninth legacy
+  group with an obsolete activity B001 expectation. Those rows now check acceptance;
+  corrected selection is 9/9 and the full gate passes. Remaining old B001 rows now
+  exercise Temporary/iteration-owned sources or mutable reference-bearing bindings.
+  A needless test visibility warning and invalid test ascription were corrected
+  during focused work; final Clippy and all tests pass.
+- Independent review passed 12 exact-code checks and 3 programs in both profiles
+  (6 executions). Source/resource and documentation reviews found no blocker.
+  Documentation states that member activity participates in convergence and that
+  predecessor States are captured under entered guards, before widening/reset.
 - Optimized compiler build passed. That binary built and ran
-  `examples/transitive-restarts.mwy` in release: exit 0, exact stdout
-  `7\n1\n9\n2\n7\n`, empty stderr. No reference fixture or REQUIRED changed;
+  `examples/header-activity.mwy` in release: exit 0, exact stdout
+  `empty\n7\nempty\n`, empty stderr. No reference fixture or REQUIRED changed;
   no new ELF/linkage qualification is claimed.
-- Existing fixed-point/resource controls remain covered, including the 80-binding
-  source-budget rejection and 64-join/64-forward-exit successes. Missing canonical
-  pointee coverage and an unchanged Source sequence with changed component paths
-  have direct regressions; partial or wrong-path proofs never qualify as convergence.
+- Existing fixed-point/resource coverage remains, including the 80-binding
+  source-budget rejection and 64-join/64-forward-exit successes. Restart-site
+  exhaustion rejects without ID reuse. Shape/activity/source guards and retained
+  header/choice/snapshot weights remain charged under existing logical caps.
 - Fresh Python evidence: 16 tooling and 4 compiler-harness groups (20 total).
-  Documentation checks 871 links in 86 Markdown files; schemas/catalog pass.
-  Static metadata validation remains separate from compiler execution.
+  Documentation checks 872 links in 86 Markdown files; schemas/catalog pass.
+  Final handoff review and the repeated link check pass; prior log history is
+  preserved exactly. Static metadata validation remains separate from execution.
 - Historical unchanged-runtime/editor evidence at `f16c30b`: Vim/Neovim, 15 runtime
   Python groups and native debug/release/sanitized checks passed. Runtime groups
   were 6 diagnostic, 14 cleanup, 10 stack, 10 context, 25 scheduler and 14 owned,
@@ -565,15 +592,15 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend `borrow/header.rs`, `borrow/restart.rs`, `borrow/replay.rs` and
-   `loans/restarts.rs` with canonical active-member alternatives and stable guard
-   identities across replay. Keep source/bound paths correlated with nested variants
-   and compare activity content without treating fresh guard IDs as convergence.
-   Predecessor transfers may omit an optional reference path only with proof that it
-   is inactive. Verify initial/backedge null/ref changes, tagged record alternatives,
-   tag-only reads, old copies, cells and public bounds before relaxing activity B001.
-   Keep Temporary/iteration-owned gates until explicit expired identities prevent
-   same-site revival. Preserve shape completeness and every existing work/fact cap.
+1. Design explicit expired carried-source identities across `borrow_value/`,
+   `borrow/restart.rs`, `borrow/replay.rs`, `borrow/pointee.rs` and
+   `loans/restarts.rs`. Distinguish expired Local/Slot/Temporary sources and public
+   bounds from newly initialized storage at the same static site. Enable safe
+   overwrite-before-use only once both origin and loan analysis preserve expiry;
+   do not merely remove restart_source gates. Cover entry versus backedge expiry,
+   nested targets, active/inactive payloads, old copies, public bounds, same-site
+   reinitialization and E303 on actual expired use, with debug/release execution.
+   Preserve source-path transfer guards, structural activity and all resource caps.
 2. Preserve first-collection and canonical slot conflicts while expanding capabilities.
    Shared-reference/temporary write roots, mutable reference-bearing fields and source
    exclusive references require explicit origin, move/initialization and cleanup

@@ -5,41 +5,39 @@ The compiler has its detailed handoff in [compiler/STATUS.md](compiler/STATUS.md
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 The full documented v0.0.1 release remains incomplete.
 
-## Current snapshot
+## Current milestone
 
-- Compiler: `34d2e7b` extends restart headers to nested references and record
-  pointees that need no stored variant activity. One charged Shape validator is
-  shared by origin and loan analysis, checks typed reference paths and requires
-  actual-origin coverage for every path; lifetime bounds cannot replace pointers.
-- Canonical convergence and deduplication use `(Path, Source)` separately for
-  actual origins and bounds. Deref/Slot components stay distinct even when owners
-  repeat in different fields or layers. Existing predecessor transfers remain
-  demand-only, preserving lazy pointee reads, old copies and physical cell loans.
-- Shape traversal stops at reference-free referents, preserving scalar-union
-  references even through another reference or a carrier field. A union reached
-  inside a stored summary still requires activity and reports B001. Temporary and
-  iteration-owned sources/bounds remain B001 at every nested header component.
-- `fa70eab` adds eight native groups, `compiler/examples/transitive-restarts.mwy`
-  and README evidence. Four origin and six loan groups cover field/path identity,
-  full coverage, lazy versus demanded reads, public bounds, nested targets and
-  source/activity boundaries. Shared shape code lives in `compiler/src/borrow/header.rs`.
-- All ten compiler checks pass: 511 Rust tests, 20 Python tests, 871 local links,
-  schemas/catalog, formatting, Clippy, build and conformance. All 35 examples run
-  in debug/release. The optimized example and twelve independent checks/six
-  profile executions pass. One test expectation was corrected to retain an earlier E303.
-- Existing 64-pass, shared-work, 4,096-part and weighted fact/cache caps remain.
-  Runtime/editor checks were not rerun; their historical evidence is retained.
-  HIR, Facts shape, backend storage, runtime ABI and dependencies are unchanged.
-  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
-- Next is canonical guarded header activity with stable convergence and proved
-  inactive-path transfers. Expired iteration identities, mutable reference carriers,
-  exclusive/owned work, generated cleanup and release qualification remain open.
+- Compiler: `b0c9756` assigns stable bounded restart-site identities. `1df163b`
+  carries stored nullable/tagged union activity through restart headers, including
+  nested variants and reference-bearing record pointees.
+- Stable member choices preserve parent/child activation across analysis passes.
+  Canonical origins and lifetime bounds follow their structural reference paths.
+  Initial/restart-site snapshots prove predecessor activity before widening/reset;
+  loan transfers use that source activation after future demand crosses the reset.
+  Missing paths require proof of inactivity; active missing evidence remains B001.
+- `74fac7c` adds eight native groups and `compiler/examples/header-activity.mwy`.
+  Coverage includes null/full/null transitions, inactive final-use release, old
+  copies, physical cells, nested variants, public bounds and once-only call effects.
+  Tests and activity analysis live in focused modules.
+- All ten compiler checks pass: 532 Rust tests, 20 Python tests, 872 local links,
+  schemas/catalog, formatting, Clippy, build and conformance. All 36 examples run
+  in debug/release. Optimized header-activity execution and independent twelve
+  checks/six profile executions pass. One legacy B001 expectation was updated
+  after all eight new native groups passed; the corrected selection passes.
+- Existing replay/work/storage limits remain, including weighted choice seeds and
+  predecessor snapshots. HIR and internal Facts metadata changed; generated storage,
+  runtime ABI and dependencies did not. Runtime/editor checks were not rerun;
+  historical evidence at `f16c30b` remains in the compiler handoff.
+- Temporary and iteration-owned carried sources/bounds remain B001. Independent
+  field/owner and temporal correlations may widen conservatively. Mutable reference
+  carriers, exclusive/owned work, generated cleanup and release qualification remain
+  open. Conformance is 10 passed, 13 unsupported, 0 failed in both profiles.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Typed transitive restart headers without stored activity | Guarded activity/expired-source headers, exclusive ownership and cleanup |
+| Compiler | Guarded nullable/tagged restart headers with predecessor proofs | Explicit expired-source identities, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -49,13 +47,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend `compiler/src/borrow/header.rs`, `compiler/src/borrow/restart.rs` and
-   `compiler/src/loans/restarts.rs` with canonical active-member alternatives and
-   stable guard identities. Preserve correlations between variants and reference
-   components; inactive paths must be proved absent before omitting transfers.
-   Validate initial/backedge null/ref transitions, copies, tag-only reads and public
-   bounds before relaxing activity B001. Keep Temporary/iteration-owned source gates
-   until explicit expired identities prevent same-site revival.
+1. Design explicit expired carried-source identities in `compiler/src/borrow_value/`,
+   `compiler/src/borrow/restart.rs`, `compiler/src/borrow/replay.rs` and
+   `compiler/src/loans/restarts.rs`. Target-owned Local/Slot and Temporary summaries
+   must not revive when a static local, emitted slot or statement site runs again.
+   Permit safe overwrite-before-use only after origin and loan proofs represent
+   expiry. Exercise entry versus backedge expiry, nested targets, active variants,
+   public bounds, old copies and reinitialization; retain B001 until supported.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and
