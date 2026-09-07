@@ -1,0 +1,18 @@
+debug:@"debug"
+
+read<int32>:(view<&int32>){->*view}
+advance<null>:(view<&!int32>,amount<int32>){*view=*view+amount}
+update<int32>:(target<&!int32>,source<&int32>){
+    advance(&!*target,read(source))
+    ->read(target)
+}
+
+left:=7
+right:=2
+view:&!left
+debug.print(update(&!*view,&right))
+debug.print(read(view))
+advance(view,1)
+debug.print(left)
+(&!right).(advance,3)
+debug.print(right)

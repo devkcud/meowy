@@ -35,12 +35,12 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing aggregate/nullable bindings, exclusive loans/reborrows and owned-value
-  temporary borrows remain B001. Direct signatures and dispatch blocks can carry shared
+- Mutable reference-bearing aggregate/nullable bindings, wider exclusive shapes and
+  owned-value temporary borrows remain B001. Direct signatures and dispatch blocks can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
-- All supported referents are copyable and have no owned cleanup. Nothing in this
-  milestone implements moves, owner destruction or panic unwinding.
+- All supported referents are copyable and have no owned cleanup. Shared storage needs no move tracking; scalar exclusive handle moves are described
+  below. Owned destruction and panic unwinding remain unimplemented.
 
 ## Records carrying references
 
@@ -202,7 +202,7 @@ implementation boundary; it does not change language rules.
   reference sources, additional addressable projections or reference-producing intrinsic contracts.
 - The CFG applies the call snapshot's presence/proof only on its returning edge;
   restart still erases iteration relations. Signature-based result activity may
-  be more conservative than a particular body. Exclusive reborrows/access,
+  be more conservative than a particular body. Reference-result exclusive authority,
   mutable carriers, captures, indirect calls and owned cleanup remain unsupported.
   Existing string values are literal-backed static views and do not create local
   referent-storage dependencies merely by passing a string value.
@@ -250,8 +250,8 @@ implementation boundary; it does not change language rules.
   ignored-input dependencies as if they were actual pointers.
 - Each HIR reborrow has a unique site and bounded snapshot. The CFG consumes the
   parent dependencies at reborrow creation, then defines the projected actual
-  sources plus inherited bounds. Shared parents remain readable; this does not
-  implement exclusive-parent suspension or assignment through a shared reference.
+  sources plus inherited bounds. Shared parents remain readable. Scalar exclusive-parent suspension uses the
+  permission pass below; assignment through a shared reference is rejected.
   Missing snapshots are checked against final node reachability: known-dead
   branches need no invented origins, while any reachable proof gap remains B001.
 - Function contracts enumerate compatible whole referents, concrete named fields
@@ -952,8 +952,33 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
   The backend evaluates each operand once and preserves scalar storage layout.
 - Calls, emissions, reference-bearing cells/temporaries and dispatch receivers
   carry semantic boundary markers. Guarded ancestry checks reject exclusive-derived
-  shared values crossing them. Exclusive signatures, carriers, field/element roots,
-  comparisons, block results and resolved restart bodies remain B001.
+  shared values crossing unsupported boundaries. Primitive-result direct calls use
+  explicit entry accesses instead. Reference-result exclusive contracts, carriers,
+  field/element roots, comparisons, block results and resolved restart bodies remain B001.
 - Availability produces E301 for definite moves and E309 for uncertain storage;
   origin lifetime failures remain E303. Mutable owner requirements and shared scalar
   store rejection produce E305. Runtime cleanup and owned destruction are unproved.
+
+## Scalar exclusive function inputs
+
+The [function argument contract](EXCLUSIVE_FUNCTIONS.md) restricts exclusive
+signatures to primitive results and primitive/scalar-reference arguments.
+
+- Caller evaluation captures argument values once, left to right. After every
+  argument returns, Read/Write entry accesses retain every captured reference
+  through the call. This validates a moved suspended parent and arguments whose
+  last use is the call itself; parameter use inside the body cannot weaken entry.
+- Exclusive input grants retain their mode on symbolic Source::Input roots. Same
+  input roots overlap; local parameter cells remain distinct. Different scalar
+  roots are independent for exclusive accesses because each direct caller checks
+  conflicting arguments. Shared parameters may alias; no LLVM noalias is emitted.
+- Passing an exclusive handle consumes it. Passing `&!*p` delegates a child;
+  expected shared parameters create shared reborrows. The same entry checks apply
+  to direct receiver syntax and recursive/forwarded calls. Mutating calls clear
+  caller mutable refinements. Primitive results carry no returned loan authority.
+- A later argument's Leave/panic skips entry and the call without undoing earlier
+  moves. A non-returning callee still validates entry. Exclusive parameters trigger
+  restart exclusions even when unused; shared-only restart callees remain supported.
+- Seventeen native groups cover these paths in both profiles, including exact
+  E301/E302/E309 and B001 boundaries. Reference results, wider signatures, carriers
+  and dispatch blocks remain separate proof-bearing work.

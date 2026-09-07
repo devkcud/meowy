@@ -144,6 +144,11 @@ The [exclusive references example](examples/exclusive-references.mwy) moves a sc
 reference, reborrows it and captures an indirect store target before replacing the
 holder. Shared/exclusive children preserve their parent authority through last use.
 
+The [exclusive functions example](examples/exclusive-functions.mwy) passes moved
+and reborrowed scalar handles through nested direct calls. The bounded
+[argument contract](EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
+reference-result restrictions.
+
 ## Implemented language
 
 - UTF-8 sources, original byte spans, retained lexer trivia, compact punctuation,
@@ -180,9 +185,16 @@ holder. Shared/exclusive children preserve their parent authority through last u
   scalar-reference types create a reborrow without moving the exclusive holder.
   Indirect stores capture the pointer before RHS effects and complete only on
   returning paths. Named Leave, short circuits and conditional moves are supported.
-  Exclusive signatures, carriers, cells, aliases, dispatch, fields, collections,
-  block results, comparisons and restart bodies remain B001. Call/result/cell/dispatch
-  crossings also reject shared values carrying exclusive ancestry.
+  Direct functions accept scalar exclusive parameters with primitive results and
+  primitive or scalar-reference arguments. Passing a holder moves it; `&!*p` keeps
+  the parent available after the call. Shared parameters reborrow without consuming
+  the parent. Entry checks reject suspended parents and conflicting arguments even
+  for unused parameters or non-returning callees. Direct receiver syntax uses the
+  same contract; nested and recursive calls retain symbolic input permissions.
+  Reference-result contracts, wider exclusive signatures, carriers, cells, aliases,
+  dispatch blocks, fields, collections, block results, comparisons and restart bodies
+  remain B001. Unsupported call/result/cell/dispatch-block crossings also reject
+  shared values carrying exclusive ancestry.
 - Immutable records with shared-reference primary, named and nested components.
   Whole-record copies preserve every reference; field and scalar-primary access
   track only the selected components. All retained components must outlive their

@@ -16,10 +16,12 @@ bindings, replacement of mutable reference bindings, scalar dereference reads an
 writes, and shared/exclusive reborrows of those scalars. Include conditional paths,
 short-circuit evaluation, nested blocks and named `leave`.
 An immutable reference binding can mutate its referent through `&!T`; changing the
-reference value itself still requires a mutable binding.
+reference value itself still requires a mutable binding. Direct scalar-reference
+arguments with primitive results are supported by the
+[function argument contract](EXCLUSIVE_FUNCTIONS.md).
 
 Keep exclusive-bearing records, unions, lists, reference cells, emitted aliases,
-temporary owners, dispatch receivers, function arguments/results and captures B001
+temporary owners, dispatch blocks, reference-return contracts and captures B001
 until their transfer and lifetime proofs exist. Reject inferred forms as well as
 explicit annotations. Initial support excludes exclusive pointer equality and
 effectful exclusive-valued block results rather than passing them through the
@@ -87,10 +89,11 @@ writing an unrelated argument or make two references interchangeable. Keep sourc
 and bound roles distinct until the conflict query that needs each role. Graph values now retain both roles separately; their dependency iterator visits
 both for conservative liveness, while access regions use only actual origins.
 
-Exclusive function inputs are initially gated. When added, symbolic Input paths
-need a real overlap/authority model; the current physical-write comparison that
-returns false for Input is not sufficient. Do not attach LLVM `noalias` or other
-alias promises merely because a reference has exclusive mode.
+Scalar exclusive function inputs now carry mode-aware input loans. Symbolic Input
+roots participate in permission overlap; caller entry checks validate disjointness
+for exclusive arguments. The local pointer cell remains distinct from its referent.
+Reference results remain gated. Do not attach LLVM `noalias` or other alias promises
+merely because a reference has exclusive mode.
 
 ## Explicit accesses and last use
 
@@ -270,8 +273,8 @@ Leave and panic. Parent walks execute a 16-loan chain and reject a 512-loan chai
 with B001 rather than publishing partial proofs. Existing shared-reference tests
 remain enabled; reference fixtures are unchanged.
 
-Next, extend one excluded shape at a time: scalar exclusive function contracts need
-symbolic-input overlap and explicit authority transfer; fields and collections need
+Next, extend one excluded shape at a time: reference-return contracts need explicit
+guarded origin-to-loan authority transfer; fields and collections need
 projection-aware permission; carriers need non-Copy initialization and destruction;
 restarts need dynamic acquisition equivalence. Generated cleanup remains separate.
 
