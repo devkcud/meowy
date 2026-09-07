@@ -103,6 +103,10 @@ pub fn examples_execute_in_both_profiles() {
             "owner\n7\nfalse\n4\n9\n",
         ),
         (
+            include_str!("../../examples/reference-temporaries.mwy"),
+            "true\n7\nowner\n7\n3\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
