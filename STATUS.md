@@ -11,21 +11,22 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented bare shared/exclusive scalar-reference results from flat direct
-  function signatures (`9dba94a`; contract/example `e457380`). Guarded argument indexes explicitly connect actual origins
-  to captured parent loans; no authority is inferred from matching addresses.
-- Returned descendants preserve parent suspension, move semantics and all-input
-  lifetime bounds through nested/recursive calls. Only function-root scalar-reference
-  emissions cross the new boundary; local escapes remain E303. Bounds protect
-  writes/lifetimes without inventing exclusive read restrictions on unrelated inputs.
-- All ten compiler checks pass: 645 Rust tests (337 library, 308 native), 20 Python
-  tests, 40 debug/release examples, formatting, Clippy, build, schemas/catalog and
-  896 local links. Three graph groups validate choice/identity/missing-evidence
-  invariants; sixteen native groups cover return semantics and shared restarts.
-- Wider signatures/results, carriers, cells, exclusive nested block results,
-  dispatch blocks and exclusive restart bodies remain B001. No backend, ABI,
-  dependency or reference fixture changed. Full conformance remains 10 passed,
-  13 unsupported, 0 failed; runtime/editor suites were not rerun.
+- Implemented anonymous scalar-reference block results (`65eda96`, docs/example
+  `f3fa667`) using existing guarded loan identities and consuming emissions. Retained slots protect loans through completion;
+  named Leave returns initialized results, while cancellation keeps moves/effects
+  without inventing future result use. Local escapes remain E303.
+- Explicit dispatch-block metadata keeps captured exclusive results gated even when
+  the receiver is scalar. Named fields, carriers, cells and exclusive restart bodies
+  retain their capability boundaries. Missing cancellation proof reports B001.
+- The new short-circuit matrix exposed a separate Never-operand typing bug, fixed
+  in `1ff86ca`. Unary
+  and non-boolean binary operators now propagate non-returning operands while keeping
+  operand checking and evaluation order. All six focused control groups pass.
+- All ten compiler checks pass: 665 Rust tests (339 library, 326 native), 20 Python
+  tests, 41 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  904 local links. No backend, ABI, dependency or reference fixture changed.
+  Conformance remains 10 passed/13 unsupported/0 failed; runtime/editor suites
+  were not rerun.
 - Standard library/module loading, generated cleanup and complete v0.0.1
   qualification remain open.
 
@@ -33,7 +34,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar exclusive locals, arguments and returned authority | Scalar-reference block results and wider ownership shapes |
+| Compiler | Scalar exclusive values, calls and anonymous block results | Scalar-field borrows and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -43,11 +44,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design scalar-reference nested block results in `compiler/src/borrow/mutable.rs`,
-   `compiler/src/borrow/emissions.rs` and `compiler/src/loans/control.rs`. Preserve
-   consuming emissions, retained slot demand, guarded parents and named Leave;
-   verify before allowing exclusive or exclusive-derived shared block-result
-   crossings. Keep carrier/reference-cell state and generated cleanup separate.
+1. Design exclusive borrows of scalar fields in mutable reference-free Copy records.
+   Reuse `compiler/src/check/references.rs`, existing write-path mutability rules and
+   `compiler/src/loans/access.rs` canonical regions. Prove sibling disjointness,
+   whole-owner conflicts, lifetime, moves and call/block transfer before admitting
+   `&!owner.field`. Keep reference cells, owned carriers and generated cleanup separate.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

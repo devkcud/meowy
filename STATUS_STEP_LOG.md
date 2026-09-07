@@ -6,6 +6,80 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Scalar block-result and operator final validation complete
+
+- All ten compiler checks pass: 665 Rust groups (339 library, 326 native), 20 Python
+  groups, 41 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  904 local links in 90 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed. Runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fifteen native block groups, two graph evidence groups and three new independent
+  operator groups pass. The example prints 7, ready, 8, 9, 10. No backend, runtime
+  ABI, dependency or reference fixture changed. Prior failures are recorded below.
+- Commits: `1ff86ca` fixes Never operators; `65eda96` implements block results;
+  `f3fa667` adds docs/example. Staged whitespace checks passed for each concern.
+- Blockers: None for this slice. Next: Design scalar-field exclusive borrows with
+  mutability, canonical overlap, lifetime and value-transfer proof.
+
+### 2026-09-07 — Never-operator regression fixed and block docs prepared
+
+- Six native control groups pass in debug/release. Three new groups prove skipped
+  shared/numeric blocks, left/right panic prefixes, unary Never propagation and
+  scoped Leave. The operator fix changes only checker typing, preserving lowering.
+- Added the reference-blocks example and contract/capability documentation. Existing
+  loan identities, scope/availability and guarded demand support the block feature;
+  no backend, runtime ABI, dependency or reference fixture changed.
+- Next: Full compiler gate after the operator fix and example, then separate commits
+  for that fix, block implementation/tests, example/docs and validated handoffs.
+
+### 2026-09-07 — Full gate exposes Never-operand propagation bug
+
+- Full gate passed 339 library and 322 native groups, but the new short-circuit
+  regression failed: `false&&(*{->q}>0)` types its skipped block as Never, then the
+  comparison wrongly reports E222. Verification stopped before later checks.
+- Fix the owning scalar/unary checker paths to propagate a non-returning operand
+  while still checking operand expressions and preserving evaluation order. This
+  also affects ordinary skipped shared-reference/numeric blocks, so keep the fix
+  and its standalone regression tests in a separate commit.
+- Applied surgical-patch skill after the reproduced failure. Next: skipped and
+  live Never-operand execution/Leave/panic regressions, then the full compiler gate.
+
+### 2026-09-07 — Scalar block native matrix exercises ownership and cancellation
+
+- Thirteen native groups pass in both profiles: moves, shared/exclusive result
+  chains, retained demand, guards, named Leave, cancellation, RHS replacement,
+  once-captured stores, function return integration, widths, lifetimes and panic.
+- One native group used E203 for a missing result; the contract assigns E204 and
+  the test is corrected. No production diagnostic changed. Dispatch result gates
+  pass; added cancelled named-field rejection and short-circuit move coverage.
+- Migrated two old B001 block-result expectations to named-result carrier cases.
+  Next: guarded identity and cancellation-proof integrity tests, full compiler
+  gate, example/capability docs and focused commits.
+
+### 2026-09-07 — Scalar block boundary checks integrated
+
+- Removed the scalar exclusive block gate and the function-root-only exception.
+  Anonymous scalar-reference results are allowed; cancelled anonymous emissions
+  require completion proof. Retain existing move, copy-link and lifetime machinery.
+- Validation: All 337 library groups pass. Seven source probes match acceptance,
+  E301, E302 and E303 across moves, retained loans, local escapes and named Leave.
+- Found two dispatch-result bypasses when the receiver itself was scalar; explicit
+  dispatch BlockId metadata now retains those capability gates. Next: native
+  debug/release matrix, guarded identity/missing-proof tests and the full gate.
+
+### 2026-09-07 — Anonymous scalar-reference block results scoped
+
+- Reuse existing guarded block copy links, consuming emission evaluation, retained
+  slot demand and origin lifetime checks. Remove the scalar exclusive block gate
+  only with anonymous scalar-result boundary checks. Known cancelled anonymous
+  emissions may consume operands without keeping a future result loan alive.
+- Preserve E301/E309 moves, E302 parent/external conflicts, E303 local escapes,
+  single initialization and exact-target Leave. Keep named fields/carriers/cells,
+  dispatch blocks and exclusive restart bodies gated; no cleanup ABI is introduced.
+- Validation: Clean tree at 7c16054; six baseline move/shared/retention/escape/Leave/
+  cancellation probes report B001. Read current handoff and language contracts.
+- Next: Implement bounded emission-boundary checks, native debug/release matrix,
+  missing proof/guarded identity regressions, full gate, docs and focused commits.
+
 ### 2026-09-07 — Guarded scalar reference-return final validation complete
 
 - All ten compiler checks pass: 645 Rust groups (337 library, 308 native), 20 Python
