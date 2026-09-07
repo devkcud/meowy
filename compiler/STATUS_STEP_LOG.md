@@ -6,6 +6,67 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Exclusive scalar-field final validation complete
+
+- All ten compiler checks pass: 681 Rust groups (341 library, 340 native), 20 Python
+  groups, 42 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  911 local links in 91 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fourteen native groups plus primary/ancestor projection and AST path-limit evidence
+  pass. The new example prints 7, 2, 3, false. No backend, ABI, dependency or reference
+  fixture changed; preceding source probes and validations are recorded below.
+- Commits: `55b3a1d` implements scalar field borrows and tests; `59caddd` adds the
+  contract docs and example. Staged whitespace checks passed for both concerns.
+- Blockers: None for scalar record fields. Next: Design mutable emitted scalar
+  borrowing with exact backing types, target lifetime and canonical slot conflicts.
+
+### 2026-09-07 — Exclusive scalar-field compiler gate passes
+
+- All ten compiler checks pass: 681 Rust groups (341 library, 340 native), 20 Python
+  groups, 41 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  904 links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Fourteen native groups plus explicit primary/ancestor overlap and AST path-limit
+  checks pass. Existing field writes and shared behavior remain green after common
+  mutability validation. No backend, ABI, dependency or reference fixture changed.
+- Added the exclusive-fields example and capability/ownership contract docs.
+  Next: final validation of that example/docs, focused commits and handoffs;
+  design emitted scalar borrowing before opening the next storage boundary.
+
+### 2026-09-07 — Exclusive scalar-field native matrix passes
+
+- Fourteen native groups pass in debug/release: scalar layout/widths, disjoint
+  siblings and primary reads, nested mutability, ancestor/whole-owner conflicts,
+  copied owners, moves/reborrows, call/block returns, bounds, guarded choices,
+  captured/cancelled stores, lifetimes, unsupported roots and deep structural caps.
+- Migrated obsolete B001 scalar-field cases to whole-record B001 or live-field
+  E302 cases after proof. No reference fixtures changed. Next: direct projection
+  and path-limit evidence, full compiler gate, capability docs/example and commits.
+
+### 2026-09-07 — Scalar field paths and overlap integrated
+
+- Added bounded exclusive field paths over reference-free Copy records and reused
+  mutable-field validation with direct writes. Canonical Place fields feed existing
+  origin/loan/backend paths; no reference type or backend extension was needed.
+- Validation: All 339 library groups pass. Six probes match sibling acceptance,
+  whole-owner/field E302, ancestor-mutability E305 and alias/index B001 boundaries.
+  Two primary projections reported conservative E302; access overlap now uses the
+  existing Slot(0) component to exclude named descendants while retaining ancestors.
+- Next: Native debug/release matrix for projections, moves/reborrows, calls/results,
+  bounds, lifetimes, guards and captured stores; evidence/budget checks and full gate.
+
+### 2026-09-07 — Scalar record-field exclusive borrowing scoped
+
+- Accept bounded named-field paths on mutable ordinary reference-free Copy records;
+  require each crossed field mutable and the final pointee Bool/Int/Float. Reuse
+  existing Place/provenance, loan modes, lifetime, availability and backend lowering.
+- Prove disjoint siblings and primary reads versus whole-owner/ancestor conflicts.
+  Keep aliases, indexed/union/reference paths, non-scalar exclusive pointees and
+  existing carrier/dispatch/restart restrictions separate.
+- Validation: Clean tree at 56529c0; six baseline probes report B001. Read working
+  rules, current handoffs, field mutation code and the language memory contract.
+- Next: Integrate path checking and precise access overlap, native debug/release
+  matrix, bounded/identity evidence, full gate, docs/example and focused commits.
+
 ### 2026-09-07 — Scalar block-result and operator final validation complete
 
 - All ten compiler checks pass: 665 Rust groups (339 library, 326 native), 20 Python

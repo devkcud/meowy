@@ -11,22 +11,20 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented anonymous scalar-reference block results (`65eda96`, docs/example
-  `f3fa667`) using existing guarded loan identities and consuming emissions. Retained slots protect loans through completion;
-  named Leave returns initialized results, while cancellation keeps moves/effects
-  without inventing future result use. Local escapes remain E303.
-- Explicit dispatch-block metadata keeps captured exclusive results gated even when
-  the receiver is scalar. Named fields, carriers, cells and exclusive restart bodies
-  retain their capability boundaries. Missing cancellation proof reports B001.
-- The new short-circuit matrix exposed a separate Never-operand typing bug, fixed
-  in `1ff86ca`. Unary
-  and non-boolean binary operators now propagate non-returning operands while keeping
-  operand checking and evaluation order. All six focused control groups pass.
-- All ten compiler checks pass: 665 Rust tests (339 library, 326 native), 20 Python
-  tests, 41 debug/release examples, formatting, Clippy, build, schemas/catalog and
-  904 local links. No backend, ABI, dependency or reference fixture changed.
-  Conformance remains 10 passed/13 unsupported/0 failed; runtime/editor suites
-  were not rerun.
+- Implemented exclusive borrows of scalar fields in ordinary mutable reference-free
+  Copy records (`55b3a1d`; contract/example `59caddd`). Each crossed field must be mutable; paths retain the original owner
+  and canonical field indexes. Direct writes share the same field validation.
+- Disjoint siblings and primary reads remain available while field loans are live;
+  ancestor/whole-owner access conflicts with E302. Moves, reborrows, call/block results,
+  bounds, guarded choices and captured stores reuse existing authority and lifetimes.
+- All ten compiler checks pass: 681 Rust tests (341 library, 340 native), 20 Python
+  tests, 42 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  911 local links. Fourteen new native groups and projection/path evidence cover
+  the feature.
+- Aliases, indexed/union/reference paths, non-scalar exclusive pointees and existing
+  ownership boundaries remain B001. No backend, ABI, dependency or reference fixture
+  changed. Conformance remains 10 passed/13 unsupported/0 failed; runtime/editor
+  suites were not rerun.
 - Standard library/module loading, generated cleanup and complete v0.0.1
   qualification remain open.
 
@@ -34,7 +32,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar exclusive values, calls and anonymous block results | Scalar-field borrows and wider ownership shapes |
+| Compiler | Scalar exclusive values, calls, block results and record fields | Emitted scalar borrows and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -44,11 +42,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design exclusive borrows of scalar fields in mutable reference-free Copy records.
-   Reuse `compiler/src/check/references.rs`, existing write-path mutability rules and
-   `compiler/src/loans/access.rs` canonical regions. Prove sibling disjointness,
-   whole-owner conflicts, lifetime, moves and call/block transfer before admitting
-   `&!owner.field`. Keep reference cells, owned carriers and generated cleanup separate.
+1. Design exclusive borrows of mutable emitted scalar storage in
+   `compiler/src/check/references.rs` and `compiler/src/check/aliases.rs`. Require
+   exact declared/backing types, target-block lifetime and canonical slot conflicts;
+   prove E303 for references escaping into their own result before opening the gate.
+   Preserve ordinary field/native evidence and keep owning carriers/cleanup separate.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

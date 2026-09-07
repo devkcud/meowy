@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Anonymous scalar-reference block results integrated.
+Updated: 2026-09-07. Exclusive scalar record-field borrows integrated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Exclusive scalar record fields: `55b3a1d`; contract/example: `59caddd`.
 Never-operator fix: `1ff86ca`; anonymous block results: `65eda96`; docs/example: `f3fa667`.
 Scalar reference returns/evidence/native matrix: `9dba94a`; contract/example: `e457380`.
 Scalar function arguments/native matrix: `c7af472`; contract/example: `d72d5d0`.
@@ -29,29 +30,24 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Anonymous scalar-reference blocks now transfer existing guarded loan identities and
-consume exclusive emissions. `loans/control.rs::scalar_emission` admits compatible
-bare slots or anonymous emissions proved cancelled by written/completion guards.
-Missing cancellation evidence is B001. The function-root-only output flag was removed.
-Dispatch BlockIds retain result gates independently of the receiver's value type.
+`&!owner.field` now resolves bounded named paths on ordinary mutable reference-free
+Copy records. The root and every crossed field must be mutable; the final pointee
+remains Bool/Int/Float. `check/mutation.rs::mutable_field` shares lookup/mutability
+validation with writes. Canonical Place indexes retain actual record storage.
 
-Retained result demand lasts through completion; own-target Leave returns the slot,
-while ancestor Leave or panic can cancel it without restoring moved holders.
-Nested values, functions, captured stores, widths and all-input bounds use the existing
-origin, availability and authority passes. Named fields/carriers/cells, dispatch
-results and exclusive restart bodies remain gated. No backend/ABI/dependency changed.
+Existing normalized regions and loan modes prove sibling disjointness and reject
+whole-owner/ancestor conflicts. `loans/permissions.rs::access_overlap` also preserves
+Slot(0) primary disjointness without losing ancestor protection. Moves/reborrows,
+functions, guarded returns, block results, bounds, captured stores and scope lifetime
+use the existing passes. No new reference type, backend operation or ABI was needed.
 
-The short-circuit test exposed a separate checker bug: skipped block values become
-Never, but enclosing scalar operators rejected them. Unary and non-boolean binary
-operators now propagate Never while preserving expression checking and evaluation
-order. Six focused native control groups pass, including panic prefixes and Leave.
-This fix is committed separately from the block-result feature.
-
-All ten compiler checks pass: 665 Rust tests (339 library, 326 native), 20 Python
-tests, 41 debug/release examples and 904 links, plus formatting, Clippy, build and
-schema/catalog/conformance checks. Block contract: `REFERENCE_BLOCKS.md`; prior
-returns: `REFERENCE_RETURNS.md`.
-No reference fixtures changed; runtime/editor and release qualification remain open.
+Aliases, indexed/union/reference paths, non-scalar exclusive pointees and existing
+carrier/dispatch/restart boundaries remain gated. The full compiler gate passes 681
+Rust tests (341 library, 340 native), 20 Python tests, 42 debug/release examples,
+911 local links and formatting, Clippy, build, schema/catalog/conformance checks.
+Fourteen new native groups and projection/path-budget evidence pass. Contract:
+`EXCLUSIVE_FIELDS.md`.
+No dependency or reference fixture changed; runtime/editor/release qualification remain open.
 
 ## Prior implemented milestone
 
@@ -95,11 +91,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 37 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 124 loan, 15 contract and 2 value-budget groups |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 38 checker, 18 list/context and 5 guard groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 125 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 326 native groups, 4 harness tests and 41 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 340 native groups, 4 harness tests and 42 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -588,7 +584,26 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 339
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 341
+  library and 340 native groups (681 total); 20 Python tests; all 42 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 911 links in
+  91 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Fourteen new native groups cover scalar field layouts, sibling/primary regions,
+  nested mutability, ancestor/whole-owner conflicts, copies, moves/reborrows, call/
+  block returns, bounds, guarded choices, captured stores, lifetimes and exclusions.
+  A 16-level path executes; 300 levels stop at a structural budget. The direct AST
+  test checks the path cap before root lookup; a graph test checks primary versus
+  named-descendant disjointness while retaining ancestor overlap.
+- Initial library run passed all 339 groups. Six probes matched intended outcomes;
+  two primary-read probes exposed conservative E302 and were corrected using the
+  existing Slot(0) component. Fourteen native groups and both full gates passed
+  after integration; the final example prints 7, 2, 3, false on separate lines.
+- Old B001 scalar-field expectations were migrated after source/native proof.
+  Shared field-write checks remain green with common mutability validation. No
+  backend, runtime ABI, dependency or reference fixture changed. Runtime/editor,
+  optimized-compiler and host qualification were not rerun; generated cleanup and
+  complete release qualification remain open.
+- Prior block-result/operator `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 339
   library and 326 native groups (665 total); 20 Python tests; all 41 examples in
   debug/release; formatting, Clippy, pinned build, schemas/catalog and 904 links in
   90 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
@@ -738,12 +753,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Design `&!owner.field` for scalar fields of mutable reference-free Copy records
-   in `check/references.rs`, reusing canonical places and existing write-path
-   mutability rules. Prove field/sibling versus whole-owner overlap in
-   `loans/access.rs` and `loans/permissions.rs`, plus scope lifetime, consuming moves
-   and call/block result transfer. Keep reference cells, non-Copy aggregates,
-   dispatch results, indexed exclusivity and restart bodies separately gated.
+1. Design mutable emitted scalar borrows in `check/references.rs`, `check/aliases.rs`
+   and the existing Slot source/lifetime paths. Require exact backing versus declared
+   scalar types, target-block lifetime, canonical conflict checks and no self-escaping
+   result reference. Prove initialization, mutable versus immutable aliases, direct/
+   indirect writes, Leave, bounds and transfers before removing the alias gate.
+   Keep record aliases, reference cells, indexed exclusivity and cleanup separate.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle
