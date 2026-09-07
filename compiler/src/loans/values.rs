@@ -36,13 +36,18 @@ impl<'a> Graph<'a> {
             .collect()
     }
 
-    pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
+    pub(crate) fn version(&mut self, source: &Bundle) -> Result<Bundle> {
         let mut value = Bundle::new();
-        for (path, id) in &source {
+        for (path, id) in source {
             let weight = self.values[*id].iter().map(Origin::weight).sum::<usize>();
             self.charge(weight + path.len() + 1)?;
             value.insert(path.clone(), self.value(self.values[*id].clone())?);
         }
+        Ok(value)
+    }
+
+    pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
+        let value = self.version(&source)?;
         let node = self.copied(&source, &value)?;
         self.append(node)?;
         Ok(value)

@@ -79,7 +79,7 @@ impl Checker {
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
                 let value = self.expr(value, expected.as_ref())?;
                 let ty = expected.unwrap_or_else(|| value.ty.clone());
-                if *mutable && ty.has_reference() {
+                if *mutable && ty.has_reference() && !matches!(ty, Type::Reference(_)) {
                     return Err(Diagnostic::unsupported(
                         "mutable reference bindings",
                         stmt.span,

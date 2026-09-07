@@ -32,7 +32,7 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing bindings, exclusive loans/reborrows and owned-value
+- Mutable reference-bearing aggregate/nullable bindings, exclusive loans/reborrows and owned-value
   temporary borrows remain B001. Direct signatures and dispatch blocks can carry shared
   references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
@@ -73,7 +73,7 @@ implementation boundary; it does not change language rules.
   physical origin is at the reference component; its stored value's origins, bounds
   and active variants are beneath that component's Deref step. Nested references
   repeat this step without recursive State objects or capacity enumeration.
-- A whole-carrier or reference-cell borrow snapshots immutable reference-bearing
+- A whole-carrier or reference-cell borrow snapshots its current reference-bearing
   contents. Copying a reference transfers its summary metadata, but does not itself
   read the pointee's reference fields. Runtime pointer uses consume the direct
   component; demanded summary uses propagate backwards through explicit CFG
@@ -93,8 +93,9 @@ implementation boundary; it does not change language rules.
   its original pointee source; taking `&outer.view` instead addresses the reference cell.
 - Reference-free dereferences still produce fresh unknown activity. They cannot
   replay a mutable referent's borrow-time union tag. Mutation of reference-bearing
-  storage remains unavailable, so supported transitive snapshots cannot become stale
-  through reference reassignment. Restart continues to clear iteration proofs.
+  aggregate storage remains unavailable. A shared reference-cell view prevents
+  reassignment while it is live; later reads of a reassigned mutable reference use
+  its new version. Restart continues to clear iteration proofs.
 - Publishing a whole borrowed carrier must prove that its physical cell and every
   transitive reference source outlive the receiving block. An unused field does not
   excuse a shorter-lived source in a published whole-carrier summary. Directly
@@ -128,7 +129,7 @@ implementation boundary; it does not change language rules.
   conservative.
 - Reads of mutable non-reference storage receive unknown activity. They do not
   reuse initializer tags after assignment or branch joins. Mutable carriers of
-  references remain B001, so this does not introduce reference reassignment.
+  references remain B001; fixed shared-reference locals use the version model below.
 - A type predicate inspects tags without reading payload references. Effectful
   operands still run, and fresh record/block construction still has its normal
   result-transfer uses. Whole copies and equality consume their active payloads;
@@ -247,7 +248,7 @@ implementation boundary; it does not change language rules.
 - Each HIR reborrow has a unique site and bounded snapshot. The CFG consumes the
   parent dependencies at reborrow creation, then defines the projected actual
   sources plus inherited bounds. Shared parents remain readable; this does not
-  implement exclusive-parent suspension or mutable reference reassignment.
+  implement exclusive-parent suspension or assignment through a shared reference.
   Missing snapshots are checked against final node reachability: known-dead
   branches need no invented origins, while any reachable proof gap remains B001.
 - Function contracts enumerate compatible whole referents, concrete named fields
@@ -260,6 +261,36 @@ implementation boundary; it does not change language rules.
 - Type walks, candidate frontiers, projected paths and snapshot expansion consume
   existing work/storage budgets. Many matching fields multiplied by returned
   reference components reject with B001 before unbounded contract expansion.
+
+## Mutable shared-reference bindings
+
+- Ordinary mutable locals with a fixed `&T` type can be rebound in proved linear
+  flow. T may be any currently supported referent, including a record, union,
+  bounded list or nested reference. The binding itself cannot be a nullable union
+  or reference-bearing aggregate; mutable emitted reference fields remain B001.
+- The physical LocalId remains the same cell. Origin analysis preserves its
+  current full State and replaces it only after a returning RHS; initial
+  `Facts.locals` snapshots stay unchanged. The loan graph creates fresh immutable
+  value IDs for assignments and reads. Earlier copies retain their own origins,
+  bounds and transitive snapshots when the binding changes.
+- `&binding` still borrows the physical reference cell, so a surviving cell view
+  blocks reassignment with E302. A final-use RHS load can finish before the store.
+  Copying the old reference value keeps its pointee loan instead; rebinding does
+  not erase that copy's dependencies. Public function bounds remain unchanged.
+- RHS expressions and call arguments evaluate in order. Straight-line nested
+  assignments preserve already evaluated operands and the final outer store wins.
+  A panic RHS performs no store. Expired contents can be overwritten without
+  reading them; a later read of an expired current origin or bound reports E303.
+- `borrow/mutable.rs` performs one bounded HIR scan for each entry/function body.
+  Assignments under any If arm or short-circuit right operand are B001, including
+  syntactically guarded constant arms. A body containing both a reference
+  assignment and any Leave/Restart is also B001, even when the transfer is in an
+  unrelated nested expression. Separate function bodies are checked independently.
+  Declarations and reads without reassignment keep existing guarded/loop support.
+- These gates exclude unproved reaching-definition joins and backedge state.
+  They must remain until an explicit bounded forward merge/fixed-point model is
+  implemented. The scan charges every push/pop, limits its frontier/depth, and new
+  State/value versions consume existing origin and graph budgets.
 
 ## Statement-owned Copy temporaries
 
@@ -464,7 +495,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, reference reassignment, owner moves, owned
+  references/reborrows, general reference assignment joins, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 

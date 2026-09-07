@@ -178,7 +178,7 @@ count:=0
 pub fn reference_temporary_mutation_and_owned_collection_boundaries_stay_explicit() {
     for source in [
         "owner:1;value:={->view:&owner}",
-        "owner:1;view:=&owner",
+        "owner:1;view<&int32><null>:=&owner",
         "owner:=1;view:&!owner",
         "owner:1;items:[&owner]",
     ] {

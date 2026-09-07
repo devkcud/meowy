@@ -1,5 +1,6 @@
 pub(crate) mod control;
 pub(crate) mod emissions;
+pub(crate) mod mutable;
 pub(crate) mod origins;
 pub(crate) mod pointee;
 pub(crate) mod state;
@@ -45,8 +46,10 @@ pub(crate) fn check(
         statements: BTreeMap::new(),
     };
     let result = (|| {
+        mutable::check(&program.body, program, checker.guards)?;
         checker.block(&program.body)?;
         for function in &program.functions {
+            mutable::check(&function.body, program, checker.guards)?;
             checker.locals.clear();
             checker.assumed = TRUE;
             checker.inputs = function.params.iter().copied().collect();

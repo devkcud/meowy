@@ -5,7 +5,7 @@ use super::{
 
 impl Checker<'_> {
     pub(crate) fn unsupported(span: Span) -> Diagnostic {
-        Diagnostic::unsupported("borrow origins outside immutable local storage", span)
+        Diagnostic::unsupported("borrow origins outside supported local storage", span)
     }
 
     pub(crate) fn close_scope(&mut self) {
@@ -43,7 +43,7 @@ impl Checker<'_> {
         self.complete(&ty, &state, span)?;
         if !self.proofs.mutable.contains(&id) {
             self.link_tags(id, &ty, &mut state, span)?;
-        } else {
+        } else if !matches!(ty, Type::Reference(_)) {
             state = State::unknown(&ty, self.guards, span)?;
         }
         self.reserve_origins(state.weight() + 1, span)?;

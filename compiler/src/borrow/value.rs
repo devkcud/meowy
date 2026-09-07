@@ -100,7 +100,7 @@ impl Checker<'_> {
                 state
             }
             ExprKind::Local(id) => {
-                if self.proofs.mutable.contains(id) {
+                if self.proofs.mutable.contains(id) && !matches!(expr.ty, Type::Reference(_)) {
                     State::unknown(&expr.ty, self.guards, expr.span)?
                 } else {
                     let state = self

@@ -84,22 +84,38 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
-                    self.append(Node {
-                        uses: result.into_values().collect(),
-                        write: Some((
-                            Place {
-                                root: self
-                                    .proofs
-                                    .aliases
-                                    .get(id)
-                                    .map(|alias| alias.root)
-                                    .unwrap_or(*id),
-                                fields: Vec::new(),
-                            },
-                            value.span,
-                        )),
-                        ..Node::default()
-                    })?;
+                    if self.current.is_empty() {
+                        continue;
+                    }
+                    let target = if matches!(self.program.locals[*id], Type::Reference(_)) {
+                        Some(self.version(&result)?)
+                    } else {
+                        None
+                    };
+                    let mut node = if let Some(target) = &target {
+                        self.copied(&result, target)?
+                    } else {
+                        Node {
+                            uses: result.into_values().collect(),
+                            ..Node::default()
+                        }
+                    };
+                    node.write = Some((
+                        Place {
+                            root: self
+                                .proofs
+                                .aliases
+                                .get(id)
+                                .map(|alias| alias.root)
+                                .unwrap_or(*id),
+                            fields: Vec::new(),
+                        },
+                        value.span,
+                    ));
+                    self.append(node)?;
+                    if let Some(target) = target {
+                        self.locals.insert(*id, target);
+                    }
                 }
                 Stmt::SetPath {
                     id,

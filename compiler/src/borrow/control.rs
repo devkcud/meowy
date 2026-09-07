@@ -117,11 +117,24 @@ impl Checker<'_> {
                 }
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
-                    if result.flow.next
-                        && (!result.state.origins.is_empty()
-                            || self.program.locals[*id].has_reference())
-                    {
-                        return Err(Self::unsupported(value.span));
+                    if result.flow.next {
+                        if matches!(self.program.locals[*id], Type::Reference(_)) {
+                            if !self.proofs.mutable.contains(id)
+                                || self.proofs.aliases.contains_key(id)
+                                || value.ty != self.program.locals[*id]
+                            {
+                                return Err(Self::unsupported(value.span));
+                            }
+                            self.reserve_origins(result.state.weight() + 1, value.span)?;
+                            self.locals
+                                .get_mut(id)
+                                .ok_or_else(|| Self::unsupported(value.span))?
+                                .state = result.state;
+                        } else if !result.state.origins.is_empty()
+                            || self.program.locals[*id].has_reference()
+                        {
+                            return Err(Self::unsupported(value.span));
+                        }
                     }
                     result.flow
                 }

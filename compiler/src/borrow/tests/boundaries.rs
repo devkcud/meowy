@@ -5,7 +5,6 @@ pub(crate) fn reference_mutation_and_exclusive_contracts_remain_explicit() {
     for source in [
         "a:1;r:={->field:&a}",
         "a:1;flag:=true;r:={|flag|->&a}",
-        "a:1;r:=&a",
         "a:=1;r:&!a",
         "f<int32>:(r<&!int32>){->*r}",
     ] {
