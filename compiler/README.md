@@ -48,6 +48,7 @@ compiler/target/debug/meowy run compiler/examples/reference-temporaries.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
+compiler/target/debug/meowy run compiler/examples/restart-references.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -118,6 +119,8 @@ The [guarded references example](examples/guarded-references.mwy) selects a refe
 in a matcher and updates only the owner that the selected view no longer borrows.
 The [leave references example](examples/leave-references.mwy) keeps an earlier RHS
 reassignment when leaving the target skips the unfinished outer assignment.
+The [restart references example](examples/restart-references.mwy) carries a new
+reference into the next iteration while a copy made before the loop keeps its target.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -227,6 +230,10 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
   surviving reference values for its exact target, then joins them with normal
   completion there. Nested exits preserve completed effects and skip unfinished
   stores/calls. Exiting a target does not extend its local, slot or temporary storage.
+- Bounded restart analysis for mutable references to reference-free pointees.
+  Header values include initial and backedge sources, with iteration guards reset.
+  Old copies and physical cell loans remain separate; header transfers add no read.
+  Nested targets and skipped RHS/call work retain their normal execution order.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -340,11 +347,20 @@ before inner scopes are discarded. Target completion merges these exits with
 fallthrough without adding reference reads. A leave from an RHS keeps earlier
 completed assignments and skips the unfinished store, call or index operation.
 Initialized result emissions retain their own loans and path-specific proofs.
-Mutable reference carriers, mutable nullable reference bindings, restart joins and
-direct reference formatting require future analysis. An entry or function body
-combining reference reassignment with any `restart` remains B001, even for an
-unrelated nested transfer. A panic during the RHS skips the store; nested blocks
-and call arguments retain evaluation order.
+Restart headers are solved by bounded origin analysis before loan checking. In
+bodies using reference reassignment, every mutable reference already present at a
+restarted target's entry must have a
+reference-free pointee and sources/bounds owned by surviving ancestor storage or
+function inputs. Temporary sources and storage owned by the target or its inner
+scopes remain B001 in these headers, even when an overwrite could precede the next
+read. Rebinding local references created inside an iteration remains supported
+when they do not enter another restarted target's header.
+The analysis forgets header-entry and iteration guards, so programs needing finer
+iteration correlations may be rejected. Canonical source/bound sets converge within
+64 passes and the existing work/storage budgets; incomplete proof reports B001.
+Mutable reference carriers, mutable nullable reference bindings, transitive loop
+headers and direct reference formatting require future analysis. A panic during
+the RHS skips the store; nested blocks and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's
 storage. Whole-carrier and reference-cell borrows retain bounded summaries of their
