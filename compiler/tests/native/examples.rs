@@ -107,6 +107,10 @@ pub fn examples_execute_in_both_profiles() {
             "true\n7\nowner\n7\n3\n",
         ),
         (
+            include_str!("../../examples/mutable-references.mwy"),
+            "7\n9\n9\n8\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),

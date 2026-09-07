@@ -14,6 +14,7 @@ pub(crate) mod immutable_slots;
 pub(crate) mod list_contexts;
 pub(crate) mod lists;
 pub(crate) mod mixed_writes;
+pub(crate) mod mutable_references;
 pub(crate) mod nested_writes;
 pub(crate) mod panics;
 pub(crate) mod reborrows;
