@@ -22,6 +22,7 @@ pub(crate) mod reference_slots;
 pub(crate) mod reference_unions;
 pub(crate) mod references;
 pub(crate) mod scalars;
+pub(crate) mod temporary_borrows;
 pub(crate) mod transitive_borrows;
 pub(crate) mod unions;
 

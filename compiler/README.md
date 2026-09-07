@@ -43,6 +43,7 @@ compiler/target/debug/meowy run compiler/examples/emitted-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/immutable-slots.mwy
 compiler/target/debug/meowy run compiler/examples/reference-slots.mwy
 compiler/target/debug/meowy run compiler/examples/transitive-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/temporary-borrows.mwy
 compiler/target/debug/meowy build compiler/examples/loop.mwy --output compiler/build/sum
 compiler/build/sum
 ```
@@ -102,6 +103,8 @@ own storage lifetime.
 The [transitive borrows example](examples/transitive-borrows.mwy) borrows a whole
 reference-carrying record and a reference-valued cell, then copies their contents
 while preserving the original pointee lifetimes.
+The [temporary borrows example](examples/temporary-borrows.mwy) borrows computed
+values within one statement, preserving evaluation order and distinct owner cells.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
@@ -187,6 +190,11 @@ not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 - Scope-local references to by-value parameters and dispatch `self` bindings.
   Their addresses cannot escape their storage scopes. Shared-reference and
   reference-carrier dispatch retain original origins and all-input bounds.
+- Shared borrows of reference-free Copy temporaries, including computed records,
+  list elements and same-statement calls/reborrows. Each owner is evaluated once
+  and lasts through its complete statement. Matcher conditions share that lifetime
+  with their controlled statement; nested block statements have separate owners.
+  Storing a reference does not extend its lifetime, and later uses report E303.
 - Shared borrows of initialized bounded-list elements, such as `&values[index]`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
@@ -239,7 +247,7 @@ release panic artifact format or a recovery/unwind implementation.
 
 Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, exclusive borrows,
-borrows of temporary storage, capturing closures, generic/type-producing
+borrows of reference-bearing or owned temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
 fields, mutable primary slots and alias
 views requiring union retagging. String interpolation
@@ -305,8 +313,8 @@ An assignment with no indices updates only the selected field. Its static offset
 remain valid when the RHS replaces the same Copy owner; RHS changes to other fields
 are preserved. The final store still conflicts with any overlapping live shared
 view. Immutable roots or crossed fields report E305, and incompatible field
-mutability in declared construction or completing branches reports E206. Shared
-reference targets and temporary roots remain B001.
+mutability in declared construction or completing branches reports E206. Assignment
+through shared-reference targets or temporary roots remains B001.
 Named emissions register an alias after initialization. Later reads
 and permitted mutable assignments resolve the actual result cell, with conversion
 between the declared local type and a wider final slot type. Matching field mutability
@@ -328,6 +336,17 @@ construction limit reports B001 before deeper type/state cloning. Summary parts,
 paths, transfers and candidate expansion also consume the existing shared budgets.
 Nested reference types use separate `&` tokens, as in `<& &int32>`, or type aliases;
 `&&` remains the logical operator token.
+Temporary owners use ordinary operand types: `&1` borrows an `int32`, and borrowing
+does not convert it to `&uint8`. Use an explicitly typed binding or function result
+when another width is needed. Copying a temporary's value within its statement is
+allowed; returning a reference from an inner statement does not extend its owner
+to the surrounding expression. No owned cleanup or reference-bearing temporary
+storage is introduced by this Copy-only support.
+At actual function entry, all active argument origins and bounds are validated,
+including nested summaries. Validation follows all returning argument evaluations;
+a later argument that leaves or panics skips the call. Type predicates inspect tags
+without reading reference payloads, while pointers used to access those tags must
+still be alive.
 Element assignment captures the local list's initialized length, evaluates its
 index once and checks bounds, then evaluates the RHS once before storing. A bounds
 failure skips the RHS. An index or RHS that leaves, restarts or panics skips the

@@ -99,6 +99,10 @@ pub fn examples_execute_in_both_profiles() {
             "7\ntrue\n7\n7\n",
         ),
         (
+            include_str!("../../examples/temporary-borrows.mwy"),
+            "owner\n7\nfalse\n4\n9\n",
+        ),
+        (
             include_str!("../../examples/references.mwy"),
             "true\nfalse\n42\nmeowy\n",
         ),
