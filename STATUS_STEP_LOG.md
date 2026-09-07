@@ -6,6 +6,83 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Statement-owned Copy temporary handoff
+
+- State: Shared borrows of reference-free Copy temporaries are complete in dd28a65, with native/example/README evidence in 83987ec. Explicit statement ownership preserves one evaluation, real cells, nested/matcher boundaries and E303 expiry. Actual calls validate complete transitive input lifetimes after returning arguments; tag-only inspection does not read expired payloads but validates holder access. Source and reviews are complete.
+- Validation: All 14 checks pass: 212 library and 190 native Rust tests, 35 Python tests, 865 local links, formatting, Clippy, build, editors, schemas/catalog and runtime debug/release/sanitizers. Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles. Optimized temporary-borrows output is exact. Independent review passed 15 checks and six profile executions; both focused commits pass cached whitespace checks.
+- Blockers: No unfinished source work or failing checks. Reference-bearing/owned temporary owners, mutable reference carriers, exclusive borrows, reference-bearing lists, owned cleanup and full release qualification remain open. Ordinary operand widths and existing resource budgets remain explicit.
+- Next steps: Commit this handoff and verify clean Git state. Then attach stored-value summaries beneath Deref for reference-bearing Copy temporary owners, preserving contained origins/bounds/tags separately from cell lifetime. Verify direct-copy survival, expired-cell rejection, public call bounds, nested statement boundaries, initializer effects and budgets before enabling them. Keep owned/exclusive/list work separate and runtime/library/tooling progress visible.
+
+### 2026-09-06 — Copy temporary native coverage commit
+
+- State: Committed nine native groups, temporary-borrows example and README as 83987ec. Coupled implementation is dd28a65. Source, optimized execution and independent review are complete; only final handoffs remain.
+- Validation: All 14 checks pass with 402 Rust and 35 Python tests. Optimized example output is exact; both focused commits pass cached whitespace checks. No source changes followed verification.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Refresh current root/compiler STATUS with statement-owned support and the two discovered fixes, preserve old logs, check links/whitespace, and commit the handoff. Next is reference-bearing Copy temporary contents with preserved transitive origins and call bounds.
+
+### 2026-09-06 — Copy temporary implementation commit
+
+- State: Committed statement-owned temporary materialization, lifetime analysis, backend lowering, call-entry and tag-inspection fixes plus focused library/legacy boundary evidence as dd28a65. Native/example/README evidence remains separate.
+- Validation: All 14 checks and optimized exact-output smoke passed before committing. Cached whitespace and staged dependency boundaries pass. No source changes followed validation.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit the nine native temporary groups, example and README, then refresh current handoffs and reference-bearing Copy temporary next steps. Preserve old logs, check links/whitespace and verify clean Git state.
+
+### 2026-09-06 — Copy temporary optimized smoke passed
+
+- State: Optimized temporary-borrows build and execution pass with exact output. Source, independent review and native evidence are complete; no source changes followed the full gate. Preparing focused commits.
+- Validation: Release compiler built successfully; release-profile example exited 0 with exact owner,7,false,4,9 lines and empty stderr. All 14 checks pass with 402 Rust and 35 Python tests. The call-entry safety and tag-only inspection regressions are covered.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit coupled temporary ownership, lowering, analysis and old boundary updates; commit native/example/README evidence separately. Finalize current STATUS/logs, preserve history and record reference-bearing Copy temporary owners as the next bounded slice.
+
+### 2026-09-06 — Copy temporary combined gate passed
+
+- State: All 14 repository/compiler/runtime checks pass on frozen source. Reference-free Copy temporary borrows use exact statement ownership and distinct cells; nested call-entry lifetime validation and tag-only inspection are verified. Optimized compiler build is running.
+- Validation: 212 library and 190 native Rust tests, 35 Python tests, 865 local links, Clippy, formatting, build, editors, schemas/catalog and runtime debug/release/sanitized suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed. Independent evidence is 15 checks plus six profile executions.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized temporary-borrows with exact output, inspect coupled source/test changes, split implementation/old boundaries and native evidence commits, then finalize STATUS/logs and the next ownership slice with clean Git checks.
+
+### 2026-09-06 — Copy temporary combined gate started
+
+- State: Source is frozen after complete temporary lifetime and inspection regressions. The combined repository/compiler/runtime gate is running outside the sandbox for sanitizer process inspection. Reference-bearing/owned temporary owners remain explicit boundaries; ordinary width typing is unchanged.
+- Validation: 190 native, 34 loan, 30 origin and 57 backend groups pass. Independent review completed 15 focused checks and six profile executions. Combined tooling, 865 local links, schemas/catalog have passed; remaining gate results are pending.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Inspect all gate results, run optimized temporary-borrows with exact output, then split source/legacy boundaries from native/example/README evidence. Finalize current handoffs, preserve history and record the next temporary ownership work before final Git checks.
+
+### 2026-09-06 — Copy temporary source freeze and complete native regression
+
+- State: All 190 native groups pass, including nine new temporary groups and both cross-feature regressions. Statement-owned Copy cells preserve evaluation and lifetime boundaries; call entry validates complete active inputs, and tag inspection retains narrow payload demand. Source and independent review are complete.
+- Validation: 34 loan, 30 origin, 57 backend and 190 native groups pass. Independent evidence totals 15 focused checks and six debug/release effect executions. The only final native failure was a stale B001 expectation now correctly E208. README and runnable temporary-borrows example are updated.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run formatting/Clippy and all 14 combined checks on frozen source, build/run the optimized temporary example, then split implementation/legacy boundary updates, native evidence and final handoff commits. Preserve all history and record the next ownership slice.
+
+### 2026-09-06 — Temporary lifetime and inspection regressions verified
+
+- State: Both discovered integration issues are fixed: actual calls validate all active transitive input lifetimes after returning arguments, and tag-only origin inspection avoids expired payload reads while validating the holder pointer. New native tag cases pass alongside temporary identity, scope and effect cases.
+- Validation: All 34 loan groups pass. Full native run passed 189/190; the sole failure was an obsolete B001 expectation for an invalid record-to-scalar ascription now diagnosed E208. Updated that expectation and reran. New temporary suite has nine groups; independent final tag probes are underway.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Confirm complete native and independent results, update README/example and current capability boundaries, then run all 14 checks on frozen source. Follow with optimized smoke, focused implementation/coverage commits and final handoff.
+
+### 2026-09-06 — Temporary call-entry fix and tag-only inspection
+
+- State: Expired temporary summaries are now rejected at actual function entry after all returning arguments; scalar return types no longer hide the lifetime. Root confirmed E303 for the original nested-cell call. A second precision case still rejected tag-only inspection of a live holder containing an expired temporary reference; frontend is aligning origin inspection with the existing tag-only loan behavior.
+- Validation: 29 origin groups and call-entry regression controls pass, including inactive summaries and later-argument leave/panic. Root verified scalar field reads remain accepted. The explicit tag-only case currently reports E303 and is recorded as pending correction; no full-gate claim.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Verify tag-only origin demand preserves physical holder checks and computed effects, rerun temporary/native/loan suites, update obsolete capability rows, then complete independent checks, the combined gate and optimized smoke before commits.
+
+### 2026-09-06 — Temporary native integration and nested call lifetime finding
+
+- State: All eight new temporary native groups pass after correcting a uint8 fixture to use an explicitly typed owner. Additional root review found an expired temporary hidden behind a live reference cell could reach a scalar-returning function: read(&cell) after cell:&1 was incorrectly accepted. Frontend is adding complete active input-origin validation at actual call entry.
+- Validation: Native8 pass in both profiles; backend57 and independent nine checks/six effect executions pass. The separate nested expired-temporary call reproduces exit0 where E303 is required. A native regression is added; validation must happen after all arguments return, preserving later-argument leave behavior.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Fix and verify nested call-entry lifetimes, including inactive nullable summaries and nonreturning later arguments. Then run loan/full native/library regressions, update obsolete temporary B001 rows and complete all repository checks before split commits.
+
+### 2026-09-06 — Copy temporary ownership integration
+
+- State: Started from clean 975395d and implemented the agreed statement/temp seam. HIR Statement wrappers own temporary lifetimes without introducing lexical scopes; TemporaryBorrow evaluates a reference-free Copy owner once into a dedicated typed cell. Source::Temporary separates physical site and statement owner. Matcher conditions share their controlled statement owner; nested block statements retain separate owners.
+- Validation: Read current handoffs, rules and temporary-owner contract. Frontend/origin/backend consumers and root loan traversal now compile with cargo check. Loan materialization validates the active statement/proof, evaluates once, skips Never and produces a distinct temporary origin. No native acceptance is claimed yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Add focused same-statement/escape/effect/identity native and loan evidence, verify matcher/nested boundaries and existing reborrows, then run full native/library/independent checks before the combined gate, optimized example and split commits.
+
 ### 2026-09-06 — Transitive shared-borrow handoff
 
 - State: Bounded whole-carrier/reference-cell shared borrows are complete in 6ecda19, with native/example/README evidence in fda28b9. Flat Deref summaries preserve contained origins and activity; conditional loan transfers maintain backward dependencies without reading unrelated pointees. Recursive call contracts retain all active input bounds at every returned reference layer. Source and reviews are complete.
