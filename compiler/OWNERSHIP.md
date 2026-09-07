@@ -609,7 +609,7 @@ implementation boundary; it does not change language rules.
   regressions cover a many-input/many-result contract and an oversized referent
   type without requiring a large physical allocation.
 - This graph currently enforces shared-loan/write conflicts only. Exclusive
-  references/reborrows, iteration-owned reference headers, owner moves, owned
+  references/reborrows, exclusive reference headers, owner moves, owned
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
@@ -776,6 +776,10 @@ implementation boundary; it does not change language rules.
   and list formatting remain B001.
 
 ## Next analysis stages
+
+The [exclusive-reference implementation design](EXCLUSIVE_REFERENCES.md) defines
+the first scalar slice, required access/authority/initialization facts, retained
+B001 boundaries and future execution criteria. It does not enable `&!` support.
 
 1. Extend origin and all-input bounds to exclusive reborrows, static reference
    sources and documented intrinsic contracts before enabling those capabilities.
