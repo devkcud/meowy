@@ -6,6 +6,66 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Projected element full validation complete
+
+- Integrated mutable record-field and emitted scalar list elements with canonical
+  Place/Local/Slot paths, exact owner backing, target lifetime and selected-list
+  reservations. Added fourteen native groups, three graph groups and an example.
+- All ten compiler checks pass: 748 Rust (351 library, 397 native), 20 Python,
+  46 debug/release examples, 931 links, formatting, Clippy, build and schemas/catalog.
+  Conformance: 10 passed, 13 unsupported, 0 failed; full language gate remains open.
+- First full-gate failures were corrected: stale emitted-list B001 and whole-record
+  diagnostic precedence. Runtime/editor/optimized-compiler/host qualification not rerun.
+- Implementation: `bbd08b3`; contract/example: `8010888`.
+- No remaining slice blocker. Next: design nested-index owned paths and reservation
+  chains, then prove per-index cancellation, overlap, backing and lifetime. Keep
+  unsupported ownership shapes gated and continue generated cleanup/library tracking.
+
+### 2026-09-07 — Full-gate boundary corrections
+
+- First full gate reached 395 passing native groups and two failures. Removed the
+  obsolete emitted-list B001 expectation after actual-slot tests proved support.
+- Restored target-shape validation before root immutability in the shared exclusive
+  place resolver. Unsupported whole-record exclusive values retain B001; supported
+  scalar/list-element places still require E305 mutable-root checks.
+- Gate stopped before later checks; full compiler gate rerunning after these changes.
+- Next: inspect results, finish handoffs and split validated commits.
+
+### 2026-09-07 — Projected element native proof and documentation
+
+- Twelve initial native groups pass in debug/release. All six element graph groups
+  pass, including three new projection, missing-proof and cancellation groups.
+- Early capacity tests assumed annotated lists retained inferred capacity: slots
+  contextualize construction instead, and conflicting explicit annotations are E207.
+  Guarded incompatible completions now exercise exact-backing B001; accepted exact
+  annotations retain a runtime control. A Rust test borrow conflict and an overly
+  specific early-failure message assertion were corrected; no implementation change.
+- Added guarded alias identity and captured-store cases, a projected emitted example,
+  and updated owner/backing/reservation documentation. Full compiler gate running.
+- Next: resolve any gate failures, record current evidence and split code/tests,
+  contract/example and handoff commits. No runtime or release qualification claimed.
+
+### 2026-09-07 — Projected element implementation and library check
+
+- ExclusiveElement now holds Place. Shared mutable-path resolution validates named
+  fields and marks exact alias backing; origin/loan proof rechecks owner mutability,
+  record shape, field mutability and alias proof. Sources preserve Local/Slot paths.
+- Reservation covers the selected list; backend resolves its actual storage before
+  one index evaluation. Target-scope lifecycle events use the canonical alias cell.
+- All 348 existing library tests pass. Native and full gate validation pending.
+- Next: add projected/alias execution, conflict, bounds, cancellation and proof tests.
+
+### 2026-09-07 — Projected element owner investigation
+
+- Reuse the bounded mutable named-field resolver and deferred exact alias backing
+  validation. Generalize ExclusiveElement to Place and retain Local/Slot identity.
+- Backend place lowering already resolves actual emitted and nested storage. Reserve
+  the selected list, preserving sibling disjointness and target lifetime.
+- Read current rules, implementation plan and memory/collection contracts. No new
+  tests run; prior green evidence remains historical. No blocker found.
+- Next: implement owner proof and lowering, then exercise projected/alias conflicts,
+  cancellation, exact backing and debug/release execution.
+
 ### 2026-09-07 — Owned exclusive element final validation complete
 
 - All ten compiler checks pass: 731 Rust groups (348 library, 383 native), 20 Python

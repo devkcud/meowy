@@ -6,6 +6,21 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Projected and emitted element milestone
+
+- Integrated mutable record-field and emitted scalar list elements with canonical
+  Place/Local/Slot paths, exact owner backing, target lifetime and selected-list
+  reservations. Added fourteen native groups, three graph groups and an example.
+- All ten compiler checks pass: 748 Rust (351 library, 397 native), 20 Python,
+  46 debug/release examples, 931 links, formatting, Clippy, build and schemas/catalog.
+  Conformance: 10 passed, 13 unsupported, 0 failed; full language gate remains open.
+- First full-gate failures were corrected: stale emitted-list B001 and whole-record
+  diagnostic precedence. Runtime/editor/optimized-compiler/host qualification not rerun.
+- Implementation: `bbd08b3`; contract/example: `8010888`.
+- No remaining slice blocker. Next: design nested-index owned paths and reservation
+  chains, then prove per-index cancellation, overlap, backing and lifetime. Keep
+  unsupported ownership shapes gated and continue generated cleanup/library tracking.
+
 ### 2026-09-07 — Owned exclusive element final validation complete
 
 - All ten compiler checks pass: 731 Rust groups (348 library, 383 native), 20 Python
