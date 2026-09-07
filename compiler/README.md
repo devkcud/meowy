@@ -315,8 +315,8 @@ borrow origins. Retained local escapes report E303; discarded emissions still
 evaluate their operands and effects. References can also be stored in immutable
 record and union components and direct-function signatures. Fixed shared-reference
 locals support straight-line reassignment with separate versions of their contents.
-Mutable reference carriers, mutable nullable bindings, unproved joins/backedges
-and direct reference formatting require future analysis.
+Mutable reference carriers, mutable nullable reference bindings, unproved
+joins/backedges and direct reference formatting require future analysis.
 The initial assignment gate rejects writes inside matcher arms or the right operand
 of `&&`/`||`. An entry or function body combining reference reassignment with any
 `leave` or `restart` is also B001, even when those operations appear unrelated.

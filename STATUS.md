@@ -7,38 +7,38 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current snapshot
 
-- Compiler: `c325099` extends statement-owned Copy temporaries to references,
-  records and unions carrying references. The real initializer state is preserved
-  beneath Deref, retaining origins, bounds and active variants independently of the
-  temporary cell's StatementId. Existing HIR, contracts and lifetime rules are reused.
-- Materialization reads directly stored reference values; deeper pointee summaries
-  remain conditional on later demand. Ordinary borrows and temporary materialization
-  share a bounded loan helper with different direct-use inputs. Initializers still
-  evaluate once, including computed whole-carrier field projections.
-- A direct dereference copies contents while the cell lives. The copy can outlive
-  that cell if its original pointees/bounds survive; retained temporary-cell addresses
-  still expire. Public call bounds remain attached after dereference. Tag-only
-  inspection and full entered-call validation retain their existing distinctions.
-- `fb72c97` adds eight native groups, `compiler/examples/reference-temporaries.mwy`
-  and README evidence. Three origin, two loan and four backend groups cover cell
-  identity, direct copies, nullable activity, eager/deferred reads, E302/E303,
-  call bounds and leave/restart/panic. No HIR, ABI or dependency expansion was needed.
-- All 14 combined checks pass: 419 Rust tests, 35 Python tests, 866 local links,
-  editors, schemas/catalog, formatting, Clippy, build and conformance. Runtime
-  debug/release/sanitizer checks pass unchanged. Conformance remains 10 passed,
-  13 unsupported, 0 failed in both profiles.
-- The optimized compiler runs reference-temporaries with exact output. Nine
-  independent checks and six profile executions pass; no unfinished source work,
-  active workers or failing checks remain. Temporary/summary/depth budgets remain.
-- Mutable reference bindings/carriers, reference-bearing lists, exclusive references,
-  owned cleanup and full release qualification remain open. Next is ordinary local
-  mutable shared-reference bindings with explicit value versions and cell-loan checks.
+- Compiler: `32d093c` adds straight-line reassignment of ordinary fixed `&T` locals.
+  Each returning assignment updates the current origin state and creates fresh
+  loan value IDs; the physical cell keeps its LocalId. Earlier copies preserve
+  their old pointees, transitive summaries and public call bounds.
+- A live `&binding` view blocks reassignment with E302. Its final read may happen
+  in the RHS. Overwriting expired contents without reading them is allowed; using
+  expired current origins/bounds reports E303. Nested RHS effects and already
+  evaluated call arguments retain their actual values and evaluation order.
+- `compiler/src/borrow/mutable.rs` keeps unproved control flow explicit: assignments in matcher
+  arms or short-circuit right operands are B001. An entry/function body combining
+  reference assignment with any leave/restart is also B001. Separate function
+  bodies are checked independently; panic RHS paths skip the store.
+- `4b7d655` adds eight native groups, `compiler/examples/mutable-references.mwy`
+  and README evidence. Three origin, four loan and one backend group cover the
+  implementation. Existing HIR, storage lowering, runtime ABI and dependencies
+  are unchanged. Temporary-owner and bounded transitive borrowing support remains.
+- All 14 check categories have passing evidence across the combined run and final
+  compiler rerun: 435 Rust tests, 35 Python tests, 867 links, editors, schemas,
+  formatting, Clippy, build and conformance. Runtime debug/release/sanitized checks
+  pass. One obsolete native B001 expectation was corrected before the compiler rerun.
+- The optimized compiler runs mutable-references with exact output; 12 independent
+  checks and six profile executions pass. Source and verification are complete.
+  Conformance remains 10 passed, 13 unsupported, 0 failed in both profiles.
+- Next: bounded guarded branch merges for mutable reference values, preserving
+  earlier copies and cell loans. Mutable reference-bearing nullable/aggregate bindings, reference
+  lists, exclusive references, owned cleanup and full release qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Reference-bearing Copy temporaries and bounded shared borrowing | Mutable shared-reference locals, exclusive ownership and cleanup |
+| Compiler | Fixed shared-reference local versions and bounded shared borrowing | Guarded reference-version joins, exclusive ownership and cleanup |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,10 +48,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Model ordinary mutable shared-reference locals with a fixed &T type and explicit
-   origin versions. Reassignment must change future reads while existing copies keep
-   their old pointees/bounds; a live borrow of the reference cell must block writes.
-   Verify branch joins and restart flow before enabling them; keep unproved flows B001.
+1. Add bounded guarded branch merges in `compiler/src/borrow/` and
+   `compiler/src/loans/`. Snapshot incoming versions for each arm, merge returning
+   states under their guards and attach loan transfers at the correct branch ends.
+   Verify selected/unselected owners, old copies, cell loans and nested effects.
+   Keep leave/restart combinations B001 until explicit exit/backedge state is modeled.
 2. Preserve first-collection conflict rules and precise slot identity while adding
    capabilities. Shared-reference/temporary write roots, mutable reference-bearing
    fields and source-level exclusive references need explicit initialization and

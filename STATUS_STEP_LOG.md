@@ -6,6 +6,104 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-06 — Mutable shared-reference local handoff complete
+
+- State: Implementation 32d093c and native/example coverage 4b7d655 are complete. Fixed shared-reference locals support linear reassignment with frozen prior copies and physical cell loans. Current handoffs document guarded branches and per-body leave/restart exclusions, with explicit branch-version merging as the next slice.
+- Validation: Final compiler gate passed all 10 selected checks with 435 Rust tests. All 14 categories have passing evidence across the initial combined run and compiler rerun, including 35 Python tests, 867 links and runtime sanitizers. The optimized example and independent 12 checks/six executions passed. Final read-only audit corrected two overly broad mutation-limit phrases; no source change followed testing.
+- Blockers: Full ownership/release qualification is incomplete; 13 conformance cases remain unsupported. No unfinished source work or failing check remains after the documented stale-test correction.
+- Next steps: Add bounded guarded branch merges for current origin and loan value versions. Preserve old copies, cell loans, call bounds and evaluation order; retain leave/restart exclusions until explicit exit/backedge state is modeled. Continue generated runtime cleanup and module/library work from the root tracker.
+
+### 2026-09-06 — Mutable reference native coverage committed
+
+- State: Committed eight native groups, mutable-references example and README as 4b7d655. Implementation is 32d093c. Source, native/optimized execution and independent review are complete; final current handoffs and preserved checkpoints remain.
+- Validation: 435 Rust tests and 35 Python tests pass across the compiler rerun and initial combined runtime checks. All 14 categories have current passing evidence; optimized example output is exact. Both focused commits pass cached whitespace/scope checks.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finalize root/compiler STATUS with exact current support, conservative control boundaries, completed validation and guarded branch-version merge next steps. Preserve log history, check links/whitespace, commit the handoff and confirm clean Git state.
+
+### 2026-09-06 — Mutable reference implementation committed
+
+- State: Committed fixed shared-reference local versions, bounded control policy, focused library tests, OWNERSHIP and old native boundaries as 32d093c. Optimized compiler build and release-profile mutable-references example pass with exact output. New native suite/example/README remain for a separate commit; final trackers follow.
+- Validation: All 10 compiler checks pass with 435 Rust tests; all 14 check categories have successful evidence across combined run/compiler rerun. Runtime/editor validation is unchanged and passed. Optimized example exits 0 with exact 7, 9, 9, 8 lines and empty stderr. Cached whitespace/scope checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Commit native mutable-reference coverage, example and README; refresh current handoffs with 36 origin, 40 loan, 62 backend, 206 native and 31 examples, preserving all checkpoints and failed baseline/stale-expectation history. Next: bounded guarded branch-version merges.
+
+### 2026-09-06 — Mutable reference compiler gate passed
+
+- State: Corrected the sole obsolete transitive B001 test to cover mutable nullable references. Full compiler gate now passes on frozen production source; all 14 check categories have passing evidence across the initial combined run and compiler rerun. Optimized compiler build is running.
+- Validation: Compiler rerun: all 10 selected checks pass; 229 library+206 native=435 Rust tests, 16 tooling+4 harness tests, 867 links, schemas/catalog, formatting, Clippy, build and conformance. Initial combined run separately passed editors, runtime 15 and native debug/release/sanitized checks. Conformance remains 10 passed, 13 unsupported, 0 failed. No reference fixtures or REQUIRED changed.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run optimized mutable-references example with exact bytes, then split implementation and old boundary updates from new native/example/README evidence. Finalize current handoffs/logs and record bounded guarded branch-version merging as next work.
+
+### 2026-09-06 — Combined gate found stale transitive boundary expectation
+
+- State: The combined gate stopped at one old native test expecting owner:1;cell:=&owner to fail B001. Fixed shared-reference binding is now supported; update that historical boundary to a mutable nullable reference. Production behavior and all new groups passed; no compiler defect was observed.
+- Validation: Initial combined run: tooling 16, links 867, schemas/catalog, Vim/Neovim, runtime 15 and debug/release/sanitized native runtime checks passed; formatting, Clippy and 229 library tests passed. Native 205 passed, 1 stale expectation failed; harness/build/conformance were not reached.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Correct only the obsolete native boundary, rerun the full compiler gate including all 206 native groups/harness/build/conformance, and retain actual successful editor/runtime evidence from the combined run. Then optimized example and split commits with final handoffs.
+
+### 2026-09-06 — Mutable reference source freeze
+
+- State: Fixed shared-reference local reassignment is complete and source is frozen. Current origin State and fresh immutable graph versions preserve copies, nested summaries, temporary expiry and call bounds while retaining physical cell identity. Guarded writes and per-body reassignment with leave/restart are explicit B001. OWNERSHIP and README describe the exact scope.
+- Validation: 36 origin, 40 loan, 35 checker groups and eight new native groups pass. New backend group passed both profiles; independent 12 checks and six executions pass. Formatting and Git whitespace checks pass. No source integration failure remains.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Run all 14 combined checks on frozen source, then an optimized mutable-references example. Split coupled implementation/old boundaries, native/example evidence and final current handoffs. Next: guarded branch-version merges; retain leave/restart gate until exit/backedge state is modeled.
+
+### 2026-09-06 — Mutable reference independent safety probes passed
+
+- State: Independent review found no stale-origin or hidden-control-flow acceptance gap. The capability scan is exhaustive, carries guarded context through nested expressions and scopes leave/restart restrictions per body. Old reference values stay frozen while physical cells update; runtime ABI/HIR/dependencies remain unchanged.
+- Validation: All 12 independent check programs and six executions (three programs in debug/release) matched exact diagnostics/output/P006 spans. All 40 loan groups, eight new native groups and the new backend HIR group pass. Frontend focused tests/documentation are finishing.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Freeze remaining frontend and storage-design edits, format and run the full combined gate. Resolve any actual failures, then split implementation/boundaries from native/example evidence and final tracker handoff. Next implementation slice is guarded reference-version branch joins.
+
+### 2026-09-06 — Mutable reference native integration passed
+
+- State: All eight native groups pass after enabling fixed shared-reference locals, updating current origin state on returning assignment and defining fresh loan versions. Copies retain old targets/bounds, cell aliases reject writes, temporaries expire, aggregate/nested referents work and RHS effects execute once. Per-body capability scan rejects unproved branches and leave/restart combinations.
+- Validation: Initial cargo check --lib and eight native groups pass. Native groups execute accepted cases in debug/release and require E302/E303/E305/E207/B001 boundaries. Earlier four-group failure was the expected preimplementation B001 baseline. Focused library coverage and independent probes are in progress.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish focused origin/loan evidence and independent hidden-control-flow probes, freeze source, run formatting/Clippy/compiler/native/conformance and combined repository checks, then commit implementation, examples/coverage and final handoffs separately.
+
+### 2026-09-06 — Mutable reference loan versions implemented
+
+- State: Loan assignments now define a fresh bounded bundle, retain copied transfers/direct reads, attach the stable physical-cell write and replace only the current local version. Backend needs no production change. Added explicit native rejection cases for matcher/short-circuit writes and bodies combining reassignment with leave/restart.
+- Validation: New backend HIR group passed both profiles, including copied operands, later loads, once-only RHS and skipped stores on divergence. Eight native groups and focused loan groups await frontend/origin integration.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Complete the bounded per-body capability scan and mutable origin-state updates, run native and focused loan/origin tests, then independently probe conservative control boundaries and finalize scope documentation.
+
+### 2026-09-06 — Mutable reference native scenarios and example prepared
+
+- State: Prepared seven native groups plus mutable-references.mwy and README usage. Coverage includes fixed &T with nested/reference-bearing record/list/union pointees, copied operand values before later argument effects, nested straight-line RHS writes, diagnostics and unchanged unsupported carrier forms. Production implementation is still in progress.
+- Validation: Only the earlier four-group B001 baseline has run; the added scenarios and example have not passed yet. No completed-feature claim applies until integration checks pass.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Integrate current State and fresh loan Bundle updates, settle explicit branch/short-circuit/leave/restart restrictions, run focused tests, and fix any uncovered stale-origin or physical-cell conflicts before the final gate.
+
+### 2026-09-06 — Mutable reference implementation seam simplified
+
+- State: Existing graph Local reads already create immutable value IDs, so no HIR read/write IDs are needed. Returning assignments will create a fresh loan bundle and replace current local state while preserving physical LocalId storage. Added aggregate/nested pointee and type-boundary native groups; old bare-reference B001 row now exercises nullable binding instead.
+- Validation: Code-path review establishes the smaller reuse seam. Four baseline native groups failed at the old binding gate as expected; six new groups are pending integration. Frontend owner will reject unproved control-flow updates explicitly.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Finish checker/origin current-state updates and fresh graph assignment bundles. Run focused library/native groups, probe branch/short-circuit/leave/restart boundaries independently, then document exact accepted scope and run the final gate.
+
+### 2026-09-06 — Mutable reference native baseline recorded
+
+- State: Added four native regression groups for reassignment, prior copies, physical cell conflicts, final RHS reads, call bounds, temporary expiry and once-only effects. Checker and loan implementation are being coordinated; these tests deliberately fail on the current unsupported binding gate.
+- Validation: Focused native run: 0 passed, 4 failed with expected B001 mutable-reference binding diagnostics before implementation. This is a regression baseline, not passing conformance. Prior 419-test combined evidence belongs to b10ba7f and earlier source.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement the agreed version and read-snapshot seam, rerun the four native groups, add controlled-flow and remaining-type boundary cases, then run the compiler gate and update evidence.
+
+### 2026-09-06 — Mutable reference version design selected
+
+- State: Keep physical LocalId storage and existing backend loads/stores. Add immutable value versions for fixed &T local bindings and returning assignments; old copies and cell borrows retain their own summaries. Frontend/origin and loan workers own separate files. Conditional joins and loop-carried changes require explicit B001 until proven.
+- Validation: Read-only checker/origin/CFG/backend review complete. Existing branch walkers share maps across arms and exits lack value-state snapshots, so those paths cannot be enabled by removing gates alone. Native acceptance and rejection cases are specified; source edits are starting.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Implement versioned straight-line reference updates, freeze operand values before RHS effects, and preserve physical cell E302 conflicts. Add origin/loan/native coverage and explicit branch/restart boundaries, then run focused integration.
+
+### 2026-09-06 — Mutable shared-reference local investigation
+
+- State: Reference-bearing temporary handoff is committed as b10ba7f with a clean tree. Investigating fixed-type mutable shared-reference locals across checker, origin state and loan CFG; root owns all trackers, two workers are reviewing interfaces before edits.
+- Validation: Prior full gate passed; final documentation link and Git checks passed. New behavior is not implemented or validated yet.
+- Blockers: none requiring user input; unsupported implementation areas stay explicit.
+- Next steps: Choose an explicit local value-version model that preserves copied origins and cell loans. Inspect joins/restarts and add sound implementation boundaries before enabling the checker path.
+
 ### 2026-09-06 — Reference-bearing Copy temporary handoff complete
 
 - State: Implementation c325099 and native/example evidence fb72c97 are complete. Copy temporaries retain reference contents, separate cell lifetime and public call bounds. Current handoffs describe fixed-type mutable shared-reference locals as the next slice.
