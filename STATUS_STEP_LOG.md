@@ -6,6 +6,67 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Emitted record-field final validation complete
+
+- All ten compiler checks pass: 713 Rust groups (345 library, 368 native), 20 Python
+  groups, 44 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  921 local links in 92 Markdown files. Conformance is 10 passed/13 unsupported/0
+  failed; runtime/editor/optimized-compiler/host qualification were not rerun.
+- Fourteen native groups and canonical nested-projection/whole-record backing
+  evidence pass. The example prints 7, 2, 2, 3. No HIR, backend, ABI, dependency or
+  reference fixture change was needed. Earlier evidence remains in prior checkpoints.
+- Commits: `12bee5a` implements emitted record-field borrowing and tests; `69353bd`
+  adds docs/example. Staged whitespace checks passed for both concerns.
+- Blockers: None for this slice. Next: Design ordinary bounded-list scalar element
+  borrowing with explicit owner authority and once-only index/bounds checks.
+
+### 2026-09-07 — Emitted record-field compiler gate passes
+
+- All ten compiler checks pass: 713 Rust groups (345 library, 368 native), 20 Python
+  groups, 43 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  919 links. Conformance remains 10 passed/13 unsupported/0 failed.
+- Fourteen native groups and explicit canonical nested-projection/whole-record
+  backing evidence pass. Existing scalar slots, ordinary fields and shared views
+  remain green. No backend, runtime ABI, dependency or reference fixture changed.
+- Added the projected-slot example and extended the existing slot/field contracts.
+  Next: final example/docs validation, focused commits and a scalar list-element
+  design handoff with explicit owner authority and once-only index/bounds evaluation.
+
+### 2026-09-07 — Emitted record-field native matrix passes
+
+- Fourteen native groups pass in debug/release: actual slot mutation, widths,
+  nested/sibling/primary access, mutability, ancestor conflicts, target lifetime,
+  guarded views, moves/children/calls, exact whole-record backing, captured stores,
+  cancelled mixed layouts, escape/bounds, copied records, collections and panic.
+- Migrated old scalar-projection B001 expectations to supported/E305 behavior while
+  retaining whole-record/indexed/reference restrictions. No fixtures changed.
+- Next: Explicit canonical projection and exact whole-record backing evidence,
+  full gate, example/docs and focused commits.
+
+### 2026-09-07 — Emitted record-field gate integrated
+
+- Removed the alias projection-only gate, reusing existing bounded field checks,
+  exact Alias.exclusive backing validation and Slot field projections. Generalized
+  the backing diagnostic to cover scalar and record owners; no lowering changed.
+- Validation: All 343 library groups pass. Eight probes match sibling/primary and
+  target-lifetime acceptance, ancestor E302, root E305, self-escape E303, cancelled
+  storage and B001 when an unrelated field widens the backing record.
+- Next: Native debug/release coverage, projected canonical/backing evidence,
+  old-boundary migration after proof, full gate, docs/example and focused commits.
+
+### 2026-09-07 — Emitted record-field exclusive borrowing scoped
+
+- Reuse existing field paths and Alias.exclusive backing validation for mutable
+  emitted reference-free Copy records. Require mutable root/crossed fields, a
+  scalar endpoint and exact whole-record backing; retain canonical Slot projections.
+- Preserve target lifetime beyond alias scope, sibling/primary disjointness,
+  ancestor conflicts, guarded identities, cancellation and call/block transfer.
+  Whole-record exclusive pointees, unions/indexing/reference cells remain gated.
+- Validation: Clean tree at 127fe7b; six field/sibling/immutable/target/escape/discard
+  baseline probes report B001. Read current handoff and storage/memory contracts.
+- Next: Remove the projection-only gate, exercise native/evidence matrices, run
+  compiler checks, document the boundary and commit coherent changes.
+
 ### 2026-09-07 — Exclusive emitted scalar final validation complete
 
 - All ten compiler checks pass: 697 Rust groups (343 library, 354 native), 20 Python

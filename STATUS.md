@@ -11,22 +11,19 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Implemented direct exclusive borrows of mutable emitted Bool/Int/Float aliases
-  (`94192da`; contract/example `ec45d2e`).
-  Exclusive intent is checked against the completed backing type; it must be exact.
-  Shared union-member borrowing retains its existing compatibility rule.
-- Canonical Slot roots and target-block lifetime preserve alias identity beyond
-  lexical scope, including guarded aliases and cancelled typed fallback storage.
-  Mutations, moves, children, calls/blocks, bounds and captured stores reuse the
-  existing passes. Self-containing shared views and direct escapes report E303.
-- All ten compiler checks pass: 697 Rust tests (343 library, 354 native), 20 Python
-  tests, 43 debug/release examples, formatting, Clippy, build, schemas/catalog and
-  919 local links. Fourteen new native groups and canonical/backing evidence pass,
-  including cancelled storage with a different completed field type.
-- Immutable scalar aliases report E305; widened backing, record aliases/projections,
-  exclusive carriers and restart bodies remain gated. No backend, ABI, dependency
-  or reference fixture changed. Conformance remains 10 passed/13 unsupported/0
-  failed; runtime/editor suites were not rerun.
+- Implemented scalar-field exclusive borrows through mutable emitted reference-free
+  Copy records (`12bee5a`; docs/example `69353bd`). Existing field mutability and exact whole-record backing checks now
+  govern alias projections; even widening an unselected field remains B001.
+- Canonical Slot roots, nested field indexes and lexical views preserve target-owned
+  lifetime and guarded identity. Sibling/primary access, ancestor conflicts, moves,
+  calls/blocks, captured stores and cancelled fallback layouts reuse existing passes.
+- All ten compiler checks pass: 713 Rust tests (345 library, 368 native), 20 Python
+  tests, 44 debug/release examples, formatting, Clippy, build, schemas/catalog and
+  921 local links. Fourteen new native groups and canonical/backing evidence pass.
+- Whole-record exclusive pointees, reference cells, indexed/union/reference paths,
+  owning carriers and exclusive restart bodies remain gated. No backend, ABI,
+  dependency or reference fixture changed. Conformance remains 10 passed/13
+  unsupported/0 failed; runtime/editor suites were not rerun.
 - Standard library/module loading, generated cleanup and complete v0.0.1
   qualification remain open.
 
@@ -34,7 +31,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Exclusive scalar locals, fields and emitted storage | Emitted record-field borrows and wider ownership shapes |
+| Compiler | Exclusive scalar locals and fields across ordinary/emitted storage | Scalar list-element borrows and wider ownership shapes |
 | Runtime | Owning panic snapshots and failure batches | Generated scope exits, richer diagnostics, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -44,11 +41,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Design scalar-field exclusive borrows through mutable emitted record aliases.
-   Reuse `compiler/src/check/references.rs`, `compiler/src/check/aliases.rs` and
-   canonical Slot projections; require exact backing, reference-free Copy records,
-   mutable crossed fields and target-block lifetime. Prove disjoint siblings,
-   ancestor conflicts and self-escape rejection before removing the projection gate.
+1. Design exclusive scalar list-element borrows on ordinary mutable bounded lists.
+   Trace `compiler/src/list.rs`, `compiler/src/loans/transitive.rs` and collection
+   access regions. Prove owner authority, once-only index/bounds evaluation,
+   conservative element overlap, live-owner conflicts and cancellation before opening
+   `&!items[index]`. Do not infer exclusive permission from an internal shared view.
 2. Define generated payload/diagnostic layouts and connect cleanup to runtime
    mark/close while parent storage lives. Retain owning outcomes, drain every failure
    batch and preserve interleaved cleanup before cancellation and unwinding.

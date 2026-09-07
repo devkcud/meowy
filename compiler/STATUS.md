@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Mutable emitted scalar exclusive borrows integrated.
+Updated: 2026-09-07. Emitted scalar record-field exclusive borrows integrated.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Exclusive emitted record fields: `12bee5a`; docs/example: `69353bd`.
 Exclusive emitted scalars: `94192da`; contract/example: `ec45d2e`.
 Exclusive scalar record fields: `55b3a1d`; contract/example: `59caddd`.
 Never-operator fix: `1ff86ca`; anonymous block results: `65eda96`; docs/example: `f3fa667`.
@@ -31,24 +32,23 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Direct mutable Bool/Int/Float aliases now support `&!name` after initialization.
-`Alias.exclusive` records intent until the target's completed field type is known;
-that backing type must exactly equal the alias's declared scalar type. Shared
-union-member borrowing retains its existing rule. Discarded aliases use their
-existing declared-type fallback cells under emission/completion proof.
+Mutable emitted reference-free Copy record aliases now support scalar-field exclusive
+borrows. Removing the projection-only gate reuses bounded paths, mutable crossed
+fields, scalar endpoint checks and Alias.exclusive validation of the complete backing
+record. Widening an unselected field still fails; shared union views retain support.
 
-Existing Slot roots, lexical views and target-owned lifecycle preserve canonical
-conflicts and pointer lifetime beyond alias scope. Reference moves, reborrows,
-children, call/block results, bounds, captured stores and Leave/panic are unchanged.
-Supported self-containing shared views and direct escapes report E303; exclusive
-carriers remain B001. Immutable aliases are E305. Record aliases/projections,
-non-scalar pointees, widened backing and exclusive restart bodies remain gated.
+Existing Slot sources preserve target, canonical root, lexical view and nested field
+indexes. Sibling/primary disjointness, ancestor conflicts, target lifetime beyond
+alias scope, guarded identity, moves, calls/results, captured stores and cancellation
+need no new HIR or lowering. Cancelled records retain their declared fallback layout.
+Whole-record exclusive pointees, reference cells, indexed/union/reference paths,
+owning carriers and exclusive restart bodies remain gated.
 
-All ten compiler checks pass: 697 Rust tests (343 library, 354 native), 20 Python
-checks, 43 debug/release examples, 919 local links and formatting, Clippy, build,
-schema/catalog/conformance checks. Fourteen new native groups and canonical/backing
-evidence pass, including cancelled mixed backing. Contract: `EXCLUSIVE_SLOTS.md`. No backend, ABI, dependency
-or reference fixture changed; runtime/editor/release qualification remain open.
+All ten compiler checks pass: 713 Rust tests (345 library, 368 native), 20 Python
+tests, 44 debug/release examples, 921 local links, formatting, Clippy, build and
+schema/catalog/conformance checks. Fourteen new native groups and explicit nested
+projection/whole-record backing evidence pass. Contract: `EXCLUSIVE_SLOTS.md`. No backend, runtime ABI, dependency or
+reference fixture changed; runtime/editor/release qualification remain open.
 
 ## Prior implemented milestone
 
@@ -92,11 +92,11 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | --- | --- | --- |
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
-| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 39 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 126 loan, 15 contract and 2 value-budget groups |
+| Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 127 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 354 native groups, 4 harness tests and 43 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 368 native groups, 4 harness tests and 44 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -585,33 +585,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 343
-  library and 354 native groups (697 total); 20 Python tests; all 43 examples in
-  debug/release; formatting, Clippy, pinned build, schemas/catalog and 919 links in
+- Current `python3 -B tools/verify.py --compiler`: all ten checks pass. Rust: 345
+  library and 368 native groups (713 total); 20 Python tests; all 44 examples in
+  debug/release; formatting, Clippy, pinned build, schemas/catalog and 921 links in
   92 Markdown files. Conformance remains 10 passed, 13 unsupported, 0 failed.
-- Fourteen new native groups cover actual slot storage, widths, sibling/canonical
-  conflicts, target lifetime beyond alias scope, guarded views, moves/children,
-  call/block transfer, captured stores, Leave/cancellation, escapes, strict backing,
-  initialization and panic. A cancelled mixed-backing branch also passes. The new
-  example prints 8, 8, false, 4 on separate lines.
-- A graph group proves canonical target storage with distinct guarded acquisitions;
-  a checker group proves strict exclusive backing rejection at the borrow span while
-  preserving shared union views. The first library run passed 340 and failed one
-  obsolete B001 expectation; native proof preceded migration and both full gates pass.
-- No backend, runtime ABI, dependency or reference fixture changed. Runtime/editor
-  suites, optimized compiler builds and host qualification were not rerun. Historical
-  runtime/sanitizer/ELF evidence is retained in the adjacent step log, not claimed as
-  new validation. Generated cleanup and complete v0.0.1 qualification remain open.
+- Fourteen new native groups cover actual projected storage, widths, mutability,
+  sibling/primary access, ancestor conflicts, target lifetime, guarded views,
+  moves/children/calls, exact whole-record backing, captured stores, cancelled mixed
+  layouts, escape/bounds, copied records, sibling collections and panic.
+- A graph test proves nested canonical projections across different guarded views
+  with target-owned scope. A checker test rejects unrelated-field backing widening
+  at the borrow span while preserving the paired shared case. All 343 initial library
+  groups passed; source/native proof preceded old-boundary migration, and both full
+  gates pass. The example prints 7, 2, 2, 3 on separate lines.
+- No new HIR, backend operation, runtime ABI, dependency or reference fixture was
+  needed. Runtime/editor/optimized-compiler/host qualification were not rerun.
+  Historical evidence remains in the step log. Indexed exclusive borrowing,
+  generated cleanup and complete v0.0.1 qualification remain open.
 
 ## Next steps
 
-1. Design scalar-field projections through mutable emitted record aliases in
-   `check/references.rs`, `check/aliases.rs` and canonical Slot access paths. Require
-   exact record backing, reference-free Copy owners and mutable crossed fields;
-   prove sibling/primary disjointness, ancestor conflicts, target lifetime, guarded
-   views, cancellation and call/block transfer before opening the projection gate.
-   Keep whole-record exclusive pointees, reference cells, indexed borrowing and
-   owning cleanup separate; preserve the scalar alias and ordinary-field matrices.
+1. Design exclusive scalar element borrowing on ordinary mutable bounded lists in
+   `list.rs`, `loans/transitive.rs` and access/permission construction. Establish
+   owner authority independently of shared pointer provenance, capture owner/index
+   once, preserve bounds failures and conservative element overlap, and distinguish
+   a reservation from final acquisition. Prove live-owner/element conflicts, scoped
+   cancellation and call/block transfer before opening `&!items[index]`. Keep wider
+   collection paths, reference cells, owning payloads and restart bodies separate.
 2. Define generated payload/diagnostic layouts and scope cleanup using runtime
    mark/close while parents live. Retain owning outcomes, drain reports and preserve
    interleaved cleanup before cancellation and pinned unwinding. Existing lifecycle
