@@ -1,0 +1,17 @@
+debug:@"debug"
+row:={->items:=[[1]];->other:=0}
+view:&!row.items[{
+    debug.print("outer")
+    ->1
+}][{
+    debug.print("inner")
+    row.other=3
+    ->1
+}]
+*view=2
+debug.print(*view)
+debug.print(row.other)
+'done{
+    discarded:&!row.items[1][{row.items=[[4]];'done.leave()}]
+}
+debug.print(row.items[1][1])

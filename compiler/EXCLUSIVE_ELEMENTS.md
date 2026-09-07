@@ -1,19 +1,21 @@
 # Exclusive scalar list-element borrows
 
 `&!items[index]` borrows an initialized scalar element of mutable bounded-list
-storage: ordinary locals, named record fields and exact-backed emitted aliases. Elements may be boolean, integer or float. This implements a
+storage: ordinary locals, named record fields, nested indexed owners and exact-backed
+emitted aliases. Elements may be boolean, integer or float. This implements a
 bounded slice of the existing [collection](../docs/reference/collections.md) and
 [memory](../docs/reference/memory.md) contracts, preserving one-based positions and
 initialized-length checks. Whole-list exclusive references remain unavailable.
 
 ## Owner authority and reservation
 
-`ExclusiveElement` HIR stores an owned Place (local view plus named-field path)
-and one index expression. It is separate from shared ElementBorrow and names no
-parent reference. Frontend and analysis require mutable owner proof. Every crossed
+`ExclusiveElement` HIR stores an owned Place (local view plus leading named-field
+path), intermediate WriteStep indexes/fields, and a final scalar-element index.
+It is separate from shared ElementBorrow and names no parent reference. Frontend and analysis require mutable owner proof. Every crossed
 field must be mutable; projected owners must be reference-free Copy records. A
-mutable binding holding a shared reference is not an owner proof. Temporary,
-reference-derived, nested-index roots and non-scalar elements remain gated.
+mutable binding holding a shared reference is not an owner proof. Nested list
+owners and mutable record fields between indexes use the same reference-free Copy
+proof. Temporary/reference-derived roots and non-scalar pointees remain gated.
 An explicit value copy into a new mutable local is a valid independent owner.
 
 Emitted aliases require exact backing for the complete list or containing record,
@@ -24,22 +26,34 @@ explicit mutable/exclusive intent and completed backing evidence.
 
 The graph records an owner read and a private storage reservation before the index.
 The reservation names the selected list region, including its named-field prefix,
-but has no loan identity or authority. Sibling fields and separate lists stay disjoint.
+but has no loan identity or authority. Sibling storage outside the outermost selected
+list remains disjoint.
 It permits reads while blocking conflicting writes/exclusive acquisitions during
 returning index evaluation. This protects the captured address and initialized length.
 
 After the index returns, a fresh root exclusive loan names Source::Local or
-Source::Slot with named-field prefixes followed by an Element projection. Its authority comes from mutable-owner proof, not from the
-reservation or a shared pointer. The final acquisition demands the reservation;
+Source::Slot with mixed Field/Element projections ending at the selected element.
+Its authority comes from mutable-owner proof, not from the reservation or a shared
+pointer. The final acquisition demands the reservation;
 afterward the reservation is dead. A non-returning index creates no exclusive loan
 and has no artificial future reservation demand. Existing work/storage limits cover
 these records and their analyses.
 
+Nested paths reserve each enclosing collection before its index. Each returned
+intermediate index demands all reservations already captured because its bounds
+check and address calculation occur even if a later index exits. Final acquisition
+demands all of them, then ends them together. Cancellation within an index skips
+that index's bounds/acquisition demand and every later evaluation; demand from an
+earlier completed index remains. Thus an outer mutation followed by a returning
+outer index is rejected even if the inner index always leaves. Mutating the owner
+inside a non-returning inner index is allowed after earlier checks have completed.
+
 ## Evaluation and bounds
 
 The backend captures the actual owner address and initialized length before evaluating
-the index exactly once. It reuses the existing signed/unsigned conversion and P001
-bounds helper, then computes the element address only on the valid path. No list copy,
+each index exactly once, checking an outer position before evaluating the next.
+Intermediate bounds diagnostics retain their own index-path spans. It reuses the
+existing signed/unsigned conversion and P001 bounds helper, then computes the element address only on the valid path. No list copy,
 allocation, runtime ABI change or LLVM alias promise is added for the borrow itself.
 
 Known invalid constant positions report E101 using available length/capacity facts.
@@ -78,7 +92,8 @@ required independently of storage shape in both origin and loan analysis. They a
 verify canonical Local/Slot field paths, cancellation, and missing alias/field proof.
 Fourteen additional native groups cover projected/alias storage, sibling regions,
 mutable paths, whole-owner backing, target scopes, cancellation, bounds, guarded views
-and captured stores. Reference fixtures are unchanged. Full conformance still has 13 unsupported cases.
+and captured stores. Reference fixtures are unchanged. Full conformance still has
+13 unsupported cases.
 
 The [exclusive elements example](examples/exclusive-elements.mwy) reads an index while
 reserving its owner, mutates the actual element through a call and cancels a later
@@ -88,7 +103,14 @@ The [projected elements example](examples/exclusive-projected-elements.mwy) carr
 an emitted list-element pointer past its lexical alias, mutates a sibling list
 during index evaluation, and writes the actual target storage through a call.
 
-Next, define authority and reservation propagation for nested indexed owners before
-supporting those roots. Reference-derived and temporary roots, owning elements,
-whole-list exclusive values, generated cleanup and exclusive restart bodies remain
-separate work.
+Fifteen nested-path native groups cover mixed fields/indexes, per-level bounds and
+cancellation, completed-index reservation demand, actual emitted layouts, guarded
+views, calls, captured stores, integer widths and empty lists. Three further graph
+groups prove reservation chains and independently checked intermediate owner paths.
+The [nested elements example](examples/exclusive-nested-elements.mwy) demonstrates
+ordered index effects, a disjoint outer sibling and cancellation of an inner index.
+
+Next, extend owned indexed paths to scalar field leaves such as `&!rows[i].value`,
+with capture and reservation demand through field acquisition. Reference-derived
+and temporary roots, owning elements, whole-list exclusive values, generated cleanup
+and exclusive restart bodies remain separate work.

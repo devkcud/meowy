@@ -89,5 +89,6 @@ The [projected slots example](examples/exclusive-slot-fields.mwy) reads the prim
 and writes a sibling while carrying a nested-field pointer out of the alias scope.
 [Scalar list elements](EXCLUSIVE_ELEMENTS.md) now support ordinary local,
 record-field and emitted storage with exact backing, canonical regions, selected-list
-reservations and target lifetimes. Nested-index roots, whole-record exclusive
+reservations and target lifetimes, including nested indexed owners. Scalar field
+leaves after indexes, whole-record exclusive
 pointees, non-Copy carriers and cleanup remain separate work.
