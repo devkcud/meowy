@@ -139,6 +139,7 @@ impl<'a> Graph<'a> {
         }
         self.block(block)?;
         let reach = self.reach()?;
+        self.access_evidence(&reach)?;
         for (node, active) in &self.missing_headers {
             if self.guards.overlap(reach[*node], *active) {
                 return Err(Diagnostic::unsupported(
@@ -165,9 +166,14 @@ impl<'a> Graph<'a> {
         }
         let live = self.liveness(&reach)?;
         for (id, reachable) in reach.iter().enumerate() {
-            let Some((place, span)) = self.nodes[id].write.clone() else {
+            let Some((place, span)) = self.nodes[id]
+                .access
+                .as_ref()
+                .and_then(super::access::Access::write)
+            else {
                 continue;
             };
+            let place = place.clone();
             if *reachable == FALSE {
                 continue;
             }

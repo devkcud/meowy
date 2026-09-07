@@ -5,7 +5,8 @@ This is the next implementation slice after terminal restart-source expiry
 [memory rules](../docs/reference/memory.md),
 [reference conversions](../docs/reference/types.md#inference-and-assignment), and
 [ownership diagnostics](../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
-The design is not implemented: `&!value`, `<&!T>` and indirect assignment remain
+The bounded access-record foundation is implemented; the remaining design is not.
+`&!value`, `<&!T>` and indirect assignment remain
 bootstrap capabilities gated by B001. Planned rejections below are not current
 conformance results.
 
@@ -53,7 +54,7 @@ demand both solve bounded loop fixed points.
 | `check/references.rs`, `check/mutation.rs`, `check/statements.rs` | Resolve addresses, direct writes and mutability | Separate reference inspection from consumption; validate pointee access independently of pointer-cell mutability |
 | `borrow_value.rs`, `borrow_value/pointee.rs` | Component origins, public bounds, activity and expiry | Carry authority separately without changing the meaning of Source or bounds |
 | `borrow/value.rs`, `borrow/origins.rs`, `borrow/control.rs`, `borrow/mutable.rs`, `borrow/branches.rs`, `borrow/exits.rs` | Shared-only origin traversal, version restoration and Facts production | Propagate guarded authority without treating exclusive reads as copies; reject excluded authority crossings |
-| `loans/state.rs`, `loans/values.rs`, `loans/control.rs` | Reference uses/defs/transfers and physical writes | Record reads, acquisitions, consumption and authorized indirect access in the existing CFG |
+| `loans/access.rs`, `loans/state.rs`, `loans/values.rs`, `loans/control.rs` | Bounded reads, stored-tag inspections, shared acquisitions and writes, alongside reference uses/defs/transfers | Add consumption and guarded authority for indirect access on the same CFG |
 | `loans/solve.rs`, `loans/branches.rs` | Backward demand and guarded reach/joins | Forward initialized/moved state plus shared/exclusive conflicts |
 | `loans/transitive.rs` | Summary transfers for shared reborrows | Explicit parent authority and bounded descendant demand |
 | `backend.rs`, `backend/storage.rs`, `backend/aggregate.rs` | IR types, operation dispatch, cells, pointer loads and scalar stores | Preserve reference mode checks; capture an indirect target once and store only on its returning edge |
@@ -97,11 +98,13 @@ alias promises merely because a reference has exclusive mode.
 
 ## Explicit accesses and last use
 
-Record source-level accesses before folding can erase their evidence. Ordinary
-scalar Local reads and tag inspections currently add no physical-read event, which
-is safe for shared-only loans but would miss reads conflicting with exclusivity.
-Each access records its kind, span, guarded canonical region and authorizing loan,
-if any. Distinguish accessing a reference cell from accessing its referent.
+Ordinary HIR Local reads, stored-tag inspections, shared acquisitions and writes
+now produce bounded CFG access records. Direct storage records keep canonical roots,
+lexical views and component paths; indirect records keep exact pointer value IDs.
+Records inherit CFG reach guards. Static predicates without a stored tag add no
+tag read. The implementation still has no authorizing loan identity, consumption or
+forward initialization model. Preserve source access evidence through future folding,
+and distinguish accessing a reference cell from accessing its referent.
 
 | Active loan | External read/shared acquisition | External write/exclusive acquisition | Access through that loan |
 | --- | --- | --- | --- |
@@ -260,9 +263,10 @@ current gates and source parsing only, not the planned exclusive behavior. The
 disposable probe sources/results are in `/tmp/meowy-exclusive-probes/` for this
 session. No production source or reference conformance fixture changed.
 
-1. Add explicit access events to the current CFG, starting with physical scalar
-   reads and existing writes. Preserve shared diagnostics, execution order and
-   last-use acceptance. Charge retained events and source paths before allocation.
+1. Access records are implemented on the current CFG, including direct storage,
+   exact-version pointees, tag paths and shared acquisitions. Preserve shared
+   diagnostics, evaluation order and demand-only transfers while extending them.
+   Keep weighted metadata/work charging and reach-checked missing evidence.
 2. Add distinct bounded authority IDs and forward availability, preserving guards,
    value versions and source/bound roles. Prove local moves, replacement, child
    demand and exact Leave behavior before admitting source-level exclusivity.

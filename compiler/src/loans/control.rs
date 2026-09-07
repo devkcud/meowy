@@ -1,3 +1,4 @@
+use super::access::Kind;
 use super::{Block, Bundle, Graph, Node, Origin, Place, Result, Scope, Stmt, TRUE, Type};
 use crate::hir::WriteStep;
 
@@ -132,18 +133,9 @@ impl<'a> Graph<'a> {
                             ..Node::default()
                         }
                     };
-                    node.write = Some((
-                        Place {
-                            root: self
-                                .proofs
-                                .aliases
-                                .get(id)
-                                .map(|alias| alias.root)
-                                .unwrap_or(*id),
-                            fields: Vec::new(),
-                        },
-                        value.span,
-                    ));
+                    let access =
+                        self.access(Kind::Write, self.storage(*id, Vec::new()), &[], value.span)?;
+                    node.access = Some(access);
                     self.append(node)?;
                     if let Some(target) = target {
                         self.locals.insert(*id, target);
@@ -218,9 +210,11 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         continue;
                     }
+                    let access =
+                        self.access(Kind::Write, self.storage(*id, place.fields), &[], *span)?;
                     self.append(Node {
                         uses: reservation.into_iter().chain(value.into_values()).collect(),
-                        write: Some((place, *span)),
+                        access: Some(access),
                         ..Node::default()
                     })?;
                 }

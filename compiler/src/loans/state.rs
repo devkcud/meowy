@@ -1,7 +1,6 @@
 use super::branches::{Arm, Versions};
 use super::{
-    BTreeMap, BlockId, Bundle, Facts, Flow, Guard, LocalId, Origin, Place, Program, Proofs, Span,
-    Type,
+    BTreeMap, BlockId, Bundle, Facts, Flow, Guard, LocalId, Origin, Program, Proofs, Span, Type,
 };
 
 #[derive(Clone)]
@@ -16,7 +15,7 @@ pub(crate) struct Node {
     pub(crate) uses: Vec<usize>,
     pub(crate) defs: Vec<usize>,
     pub(crate) transfers: Vec<(usize, usize, Guard)>,
-    pub(crate) write: Option<(Place, Span)>,
+    pub(crate) access: Option<super::access::Access>,
     pub(crate) next: Vec<Edge>,
 }
 

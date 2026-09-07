@@ -1,3 +1,4 @@
+use super::access::Kind;
 use super::{
     BTreeMap, Bundle, CallId, Diagnostic, Expr, ExprKind, FALSE, Graph, LocalId, MAX_ORIGINS,
     MAX_VALUES, Node, Origin, Path, Result, Span, Step, Type,
@@ -101,20 +102,50 @@ impl<'a> Graph<'a> {
     }
 
     pub(crate) fn inspect(&mut self, expr: &Expr) -> Result<()> {
-        self.tick()?;
+        self.inspect_path(expr, &[])
+    }
+
+    pub(crate) fn inspect_path(&mut self, expr: &Expr, path: &[Step]) -> Result<()> {
+        self.charge(path.len() + 1)?;
         match &expr.kind {
-            ExprKind::Local(_) => {}
-            ExprKind::Field { value, .. }
-            | ExprKind::Primary(value)
-            | ExprKind::Coerce { value } => self.inspect(value)?,
+            ExprKind::Local(id) => {
+                if self.has_tag(&expr.ty, path)? {
+                    self.read_local(*id, path, Kind::Tag, expr.span)?;
+                }
+            }
+            ExprKind::Field { value, index } => {
+                let path = std::iter::once(Step::Slot(index + 1))
+                    .chain(path.iter().copied())
+                    .collect::<Vec<_>>();
+                self.inspect_path(value, &path)?;
+            }
+            ExprKind::Primary(value) => {
+                let path = std::iter::once(Step::Slot(0))
+                    .chain(path.iter().copied())
+                    .collect::<Vec<_>>();
+                self.inspect_path(value, &path)?;
+            }
+            ExprKind::Coerce { value } => {
+                let path = self.inspection_path(&value.ty, &expr.ty, path)?;
+                self.inspect_path(value, &path)?;
+            }
             ExprKind::Block(block) => {
                 self.block(block)?;
             }
             ExprKind::Deref(value) => {
                 let value = self.expression(value)?;
+                if self.current.is_empty() {
+                    return Ok(());
+                }
                 let uses = self.direct(&value)?;
+                let access = if self.has_tag(&expr.ty, path)? {
+                    Some(self.pointee_access(&value, path, Kind::Tag, expr.span)?)
+                } else {
+                    None
+                };
                 self.append(Node {
                     uses,
+                    access,
                     ..Node::default()
                 })?;
             }
@@ -234,14 +265,16 @@ impl<'a> Graph<'a> {
                     },
                     value,
                     uses,
+                    expr.span,
                 )?;
                 Self::select(result, path)
             }
-            ExprKind::Borrow(place) => Self::select(self.borrowed(place)?, path),
+            ExprKind::Borrow(place) => Self::select(self.borrowed(place, expr.span)?, path),
             ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {
                 self.derived(expr, path)?
             }
             ExprKind::Local(id) if expr.ty.has_reference() => {
+                self.read_local(*id, path, Kind::Read, expr.span)?;
                 let local = Self::select(self.local(*id)?, path);
                 self.copy(local)?
             }
@@ -349,12 +382,15 @@ impl<'a> Graph<'a> {
                 }
                 Bundle::new()
             }
+            ExprKind::Local(id) => {
+                self.read_local(*id, path, Kind::Read, expr.span)?;
+                Bundle::new()
+            }
             ExprKind::Null
             | ExprKind::Bool(_)
             | ExprKind::Int(_)
             | ExprKind::Float(_)
-            | ExprKind::String(_)
-            | ExprKind::Local(_) => Bundle::new(),
+            | ExprKind::String(_) => Bundle::new(),
         };
         if expr.ty == Type::Never {
             self.current.clear();

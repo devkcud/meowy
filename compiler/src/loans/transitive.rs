@@ -1,4 +1,5 @@
-use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Source, Step, TRUE};
+use super::access::Kind;
+use super::{Bundle, Expr, ExprKind, Graph, Node, Origin, Place, Result, Source, Span, Step, TRUE};
 
 impl Graph<'_> {
     pub(crate) fn copied(&mut self, source: &Bundle, target: &Bundle) -> Result<Node> {
@@ -31,7 +32,7 @@ impl Graph<'_> {
         Ok(result)
     }
 
-    pub(crate) fn borrowed(&mut self, place: &Place) -> Result<Bundle> {
+    pub(crate) fn borrowed(&mut self, place: &Place, span: Span) -> Result<Bundle> {
         self.charge(place.fields.len() + 1)?;
         let path = place
             .fields
@@ -39,7 +40,7 @@ impl Graph<'_> {
             .map(|index| Step::Slot(index + 1))
             .collect::<Vec<_>>();
         let stored = Self::select(self.local(place.root)?, &path);
-        self.referenced(self.proofs.source(place), stored, Vec::new())
+        self.referenced(self.proofs.source(place), stored, Vec::new(), span)
     }
 
     pub(crate) fn referenced(
@@ -47,6 +48,7 @@ impl Graph<'_> {
         source: Source,
         stored: Bundle,
         uses: Vec<usize>,
+        span: Span,
     ) -> Result<Bundle> {
         self.charge(stored.len() + uses.len() + 1)?;
         let pointer = self.value(vec![Origin {
@@ -75,6 +77,13 @@ impl Graph<'_> {
             node.defs.push(target);
             node.transfers.push((target, source, TRUE));
         }
+        let access = self.access(
+            Kind::Borrow,
+            super::access::Target::Pointee(pointer),
+            &[],
+            span,
+        )?;
+        node.access = Some(access);
         self.append(node)?;
         Ok(result)
     }
@@ -85,6 +94,7 @@ impl Graph<'_> {
             return Ok(Bundle::new());
         }
         let uses = self.direct(&parent)?;
+        let access = self.pointee_access(&parent, path, Kind::Read, value.span)?;
         let prefix = std::iter::once(Step::Deref)
             .chain(path.iter().copied())
             .collect::<Vec<_>>();
@@ -99,6 +109,7 @@ impl Graph<'_> {
         }
         let mut node = self.copied(&source, &result)?;
         node.uses.extend(uses);
+        node.access = Some(access);
         self.append(node)?;
         Ok(result)
     }
@@ -154,6 +165,7 @@ impl Graph<'_> {
                 }
             }
         }
+        node.access = Some(self.pointee_access(&result, &[], Kind::Borrow, expr.span)?);
         self.append(node)?;
         Ok(Self::select(result, path))
     }

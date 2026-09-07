@@ -51,6 +51,9 @@ impl<'a> Graph<'a> {
         if self.nodes.len() == MAX_NODES {
             return Err(Self::budget());
         }
+        if let Some(access) = &node.access {
+            self.check_access(access)?;
+        }
         let id = self.nodes.len();
         self.nodes.push(node);
         Ok(id)

@@ -613,6 +613,38 @@ implementation boundary; it does not change language rules.
   temporary values, indirect/capturing contracts and cleanup edges remain
   unimplemented. Ordinary scalar/record reads may overlap shared references.
 
+## Loan access records
+
+- `loans/access.rs` owns bounded Read, Tag, Borrow and Write records on the existing
+  CFG. `Node.access` replaces the previous write-only field. The shared conflict
+  solver consumes the same physical write places and retains its E302 behavior.
+  Reads and acquisitions do not yet implement exclusive authority or moves.
+- Direct storage accesses retain the canonical Place and original lexical LocalId
+  view plus typed component paths. Primary, named fields and narrowed union members
+  remain distinct. Alias reads and writes agree on their canonical root without
+  losing the view used to interpret the value. Indexed writes retain the first
+  collection region and existing returning-index/RHS reservations.
+- Indirect reads and shared acquisitions name exact immutable pointer value IDs,
+  with component paths for selected pointees. They do not flatten public bounds
+  into fictitious physical reads. These IDs identify snapshots, not exclusive loan
+  authority. Later authority propagation must still distinguish actual sources
+  from public lifetime dependencies and retain guarded parent alternatives.
+- Tag traversal maps coercions back to original storage paths and adds no payload
+  demand. Static predicates on types with no stored union tag create no tag read.
+  Pointer evaluation required to reach a pointee still retains its existing uses.
+  Read records follow HIR evaluation order; write records occur only after returning
+  RHS work. Branches preserve reach guards; reset/header transfers add no accesses.
+- Access construction charges path work before cloning. Retained target/path
+  weights count toward the existing 262,144 graph-origin metadata limit, and walks
+  consume graph work. Missing pointee evidence may remain only on unreachable CFG
+  paths; reachable gaps are B001. No access record adds a liveness use or definition
+  beyond the operation's preexisting reference requirements.
+- Twelve focused graph groups cover read/store order, field/primary/tag paths,
+  pointer versions/public bounds, acquisitions, aliases, skipped stores, indexed
+  regions, complementary guards, reset edges, missing evidence and resource limits.
+  Exclusive modes, parent permission, forward availability and indirect writes remain
+  the next stages; access metadata is not source-level `&!` support or a public artifact.
+
 ## Inline bounded lists
 
 - `T[N]` stores a runtime initialized length and inline capacity, with no allocator
