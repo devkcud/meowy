@@ -58,7 +58,7 @@ case in debug/release without changing the runtime allocator representation.
 | Shared borrows/reborrows of allocator cells and carriers | Preserve contained bounds beneath the reference; direct dereference drops only the cell access, while function results also retain their public input bounds |
 | Direct mutable memory.Allocator bindings and assignment | Retain guarded bound versions through branches, Leave and Restart; overwrite-before-read can discard expired bounds |
 | Mutable fixed allocator records and tagged values | Whole replacement and pure field paths preserve per-component bounds, shared-reference origins and current variant activity; no lists or exclusive members |
-| Bounded mutable lists and mutation through borrowed emitted aliases | Remain B001; existing unbounded static allocator storage works |
+| Bounded mutable lists and allocator-only emitted aliases | Remain B001; fixed reference-bearing aliases support exact-backing writes without Restart |
 | Field assignment in fixed allocator records | Replace only the selected subtree after RHS completion, retaining sibling effects and constraints |
 | Indexed assignment and list construction/append | Reject active bounds before discarding their facts; existing unbounded static heap lists remain supported |
 | Calls returning allocator lists, including behind references | B001 when input constraints need to be attached to unmodeled element paths |
@@ -157,8 +157,8 @@ Fixed mutable allocator records and closed unions can contain shared references,
 including nullable and nested reference components. Whole replacement versions both
 physical origins and allocator bounds. Mutable reference fields support direct and
 nested writes on completed fixed records. Constructors preserve initial borrowed
-emitted-name snapshots; writes through those names remain B001 until backing-state
-synchronization is implemented. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
+emitted-name snapshots; exact-backing writes synchronize them in bodies without
+Restart. Widened/discarded backing and allocator-only alias bounds stay gated. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
 
 Replacing a carrier releases only loans no longer demanded by its current value.
 Old copies retain their own sources. Reading a reference field keeps its pointee
@@ -175,7 +175,7 @@ and cannot be revived by the next iteration's local initialization. Shared cell
 borrows and transitive call-input validation retain their existing checks.
 
 Fixed carrier eligibility also admits reference-only values and nullable references.
-Lists at any depth, exclusive carriers and borrowed emitted-alias writes remain
+Lists at any depth, exclusive carriers and broader emitted-alias writes remain
 separate work. No runtime layout or ABI changes.
 
 ## Evidence and next work
@@ -187,7 +187,7 @@ carrier gates and fanout exhaustion. Native tests verify full execution,
 non-freezing lifetime bounds, skipped call entry and distinct E303/B001 diagnostics
 in debug/release. Existing reference and restart regressions remain required.
 
-Next represent bounded lists, emitted-alias mutation and
+Next represent bounded lists, emitted-alias restart/widened backing and
 dynamic string-view origins in these same passes. Keep owning construction gated until the
 [initialized-state/drop schedules](OWNING_HIR.md) prove normal, Leave, Restart and
 panic exits. Runtime task cancellation, native unwinding and release qualification

@@ -36,6 +36,7 @@ pub(crate) fn check(
         push(&mut pending, Item::Statement(stmt), 0, guards)?;
     }
     let mut write = None;
+    let mut alias_write = None;
     if !guards.spend(params.len() + 1) {
         return Err(State::budget(Span::default()));
     }
@@ -60,6 +61,9 @@ pub(crate) fn check(
                     }
                 }
                 Stmt::Assign { id, value } => {
+                    if proofs.aliases.contains_key(id) && program.locals[*id].has_reference() {
+                        alias_write.get_or_insert(value.span);
+                    }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
                     }
@@ -75,6 +79,9 @@ pub(crate) fn check(
                 Stmt::SetPath {
                     id, path, value, ..
                 } => {
+                    if proofs.aliases.contains_key(id) && program.locals[*id].has_reference() {
+                        alias_write.get_or_insert(value.span);
+                    }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
                     }
@@ -170,6 +177,14 @@ pub(crate) fn check(
                 }
             }
         }
+    }
+    if let Some(span) = alias_write
+        && !restarts.is_empty()
+    {
+        return Err(crate::diagnostic::Diagnostic::unsupported(
+            "borrowed emitted-alias writes with restart",
+            span,
+        ));
     }
     if let Some(span) = exclusive
         && !restarts.is_empty()

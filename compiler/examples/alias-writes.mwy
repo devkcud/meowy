@@ -1,0 +1,13 @@
+d:@"debug"
+x:=7
+y:9
+r:{
+    ->view:=&x
+    old:view
+    view=&y
+    d.print(*old)
+    x=8
+    d.print(*view)
+}
+d.print(*r.view)
+d.print(x)

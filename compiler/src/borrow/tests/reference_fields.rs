@@ -103,13 +103,13 @@ pub(crate) fn reference_fields_keep_cell_borrows_and_public_call_bounds() {
 }
 
 #[test]
-pub(crate) fn borrowed_emitted_alias_mutation_stays_gated() {
+pub(crate) fn borrowed_alias_writes_preserve_unsupported_shapes() {
     rejects("x:1;r:{->c:{->p:=&x};c.p=&x}", "E305");
-    rejects("x:1;y:2;r:{->p:=&x;p=&y}", "B001");
-    rejects("x:1;r:{->p<&int32><null>:=null;p=&x}", "B001");
-    rejects("x:1;y:2;r:{->c:={->p:=&x};c.p=&y}", "B001");
-    rejects("x:1;r:{->c:={->p:=&x;->n:=0};c.n=1}", "B001");
-    rejects("x:1;y:2;r:{->c:={->p:=&x};c={->p:=&y}}", "B001");
+    accepts("x:1;y:2;r:{->p:=&x;p=&y}");
+    accepts("x:1;r:{->p<&int32><null>:=null;p=&x}");
+    accepts("x:1;y:2;r:{->c:={->p:=&x};c.p=&y}");
+    accepts("x:1;r:{->c:={->p:=&x;->n:=0};c.n=1}");
+    accepts("x:1;y:2;r:{->c:={->p:=&x};c={->p:=&y}}");
     rejects("x:1;r:={->p:=&[1]}", "B001");
     rejects("x:=1;r:={->p:=&!x}", "B001");
     rejects("r:{x:1;->p:=&x}", "E303");

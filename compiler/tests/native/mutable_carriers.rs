@@ -112,7 +112,7 @@ pub fn mutable_reference_carriers_keep_expiry_loans_and_storage_gates() {
             "same<boolean>:(a<&int32><null>,b<&int32><null>){->a==b};x:=1;y:2;p<&int32><null>:=&x;v:same(p,{p=&y;x=3;->p})",
             "E302",
         ),
-        ("x:1;r:{->p:=&x;p=&x}", "B001"),
+        ("x:1;r:{->p:=&x;p=&x;'loop{'loop.restart()}}", "B001"),
         ("x:1;r:={->p:&x;->list:[1]}", "B001"),
         ("x:=1;r:={->p:&!x}", "B001"),
         ("x:1;r:={->p:&x};r.p=&x", "E305"),

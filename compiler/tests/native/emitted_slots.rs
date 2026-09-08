@@ -136,7 +136,10 @@ pub fn emitted_slot_aliases_keep_type_and_ownership_boundaries_explicit() {
         ("value:{->n:1;n=2}", "E305"),
         ("value:{->n:=1;n=\"wrong\"}", "E207"),
         ("value:{->n:=1;->n:=2}", "E205"),
-        ("owner:1;value:{->view:=&owner;view=&owner}", "B001"),
+        (
+            "owner:1;value:{->view:=&owner;view=&owner;'loop{'loop.restart()}}",
+            "B001",
+        ),
         ("value:{->n:=1;f<int32>:(){->n}}", "B001"),
     ] {
         let case = Case::new(source);

@@ -195,6 +195,7 @@ impl<'a> Graph<'a> {
                     self.append(node)?;
                     if let Some(target) = target {
                         self.locals.insert(*id, target);
+                        self.sync_alias(*id, &[], value.span)?;
                     }
                 }
                 Stmt::Store {
@@ -330,6 +331,7 @@ impl<'a> Graph<'a> {
                     self.append(node)?;
                     if let Some(updated) = updated {
                         self.locals.insert(*id, updated);
+                        self.sync_alias(*id, path, *span)?;
                     }
                 }
                 Stmt::Emit {

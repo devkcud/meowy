@@ -11,24 +11,23 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Mutable reference fields](compiler/OWNERSHIP.md#mutable-reference-fields) support
-  direct/nested writes on completed fixed records. Constructors retain borrowed
-  emitted-name snapshots; writes through those names stay gated. Ordinary copies
-  use independent storage. Nullable tags, sibling loans and restart expiry remain intact.
-- All fourteen combined checks pass: 894 Rust (434 library, 460 native), 35 Python,
-  56 debug/release examples, both editors, formatting, Clippy, build and contracts.
+- [Borrowed emitted-alias writes](compiler/OWNERSHIP.md#borrowed-emitted-alias-writes)
+  now synchronize fixed reference-bearing names with exact result backing. Whole and
+  field writes preserve sibling versions, old copies, current tags and RHS/Leave effects.
+- All fourteen combined checks pass: 906 Rust (441 library, 465 native), 35 Python,
+  57 debug/release examples, both editors, formatting, Clippy, build and contracts.
   Runtime passes 100 groups/profile with sanitizers and required probes. Conformance:
   10 passed, 13 unsupported, 0 failed. Runtime/backend and dependencies unchanged.
-- The [reference-fields example](compiler/examples/reference-fields.mwy) changes a
-  field's referent and then its former owner. Borrowed alias writes, lists, exclusive
-  carriers, dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF
-  and complete release qualification remain open.
+- The [alias-writes example](compiler/examples/alias-writes.mwy) replaces an emitted
+  pointer while retaining an old copy. Restart with these writes, widened/discarded
+  backing and bounded allocator-only aliases remain gated. Lists, exclusive carriers, dynamic
+  origins, owning cleanup, source error APIs, tasks, DWARF and full release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable reference fields, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
+| Compiler | Exact-backing borrowed alias writes and mutable reference fields | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -38,12 +37,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Implement borrowed emitted-alias writes with origin/result/backing synchronization and branch/restart
-   proof. Preserve constructor-copy independence, sibling versions and current tags.
-   Lists need bounded element summaries. Then add dynamic allocator contexts and
-   string-view origins. Follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) before
-   strings.copy: normal, Leave, Restart, panic and temporary/call/result transfers
-   need exactly-once cleanup. Source error APIs and task qualification remain separate.
+1. Extend result snapshots into restart merging before lifting the body-wide Restart gate. Add widened/discarded
+   backing and allocator-only alias proofs, preserving selected result definitions,
+   old copies and RHS sibling effects. Lists need bounded summaries. Add dynamic
+   allocator/view origins, then follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md)
+   for normal/Leave/Restart/panic and temporary/result cleanup transfers.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

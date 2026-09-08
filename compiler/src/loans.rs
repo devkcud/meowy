@@ -1,4 +1,5 @@
 pub(crate) mod access;
+pub(crate) mod aliases;
 pub(crate) mod authority;
 pub(crate) mod branches;
 pub(crate) mod control;

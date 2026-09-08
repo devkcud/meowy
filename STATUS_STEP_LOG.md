@@ -6,6 +6,57 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Borrowed alias write validation complete
+
+- All fourteen combined checks pass: 906 Rust (441 library, 465 native), 35 Python,
+  57 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Seven new library and five native groups prove guarded result synchronization,
+  selected CFG result definitions, current tags, branch/Leave/RHS effects, old copies,
+  source/cell loans, transitive/public bounds and outer-publication lifetime checks.
+- Historical alias B001 rows now accept supported writes or exercise Restart gates.
+  Final checks have no failures; handoff passes 996 local links in 99 Markdown files
+  and Git whitespace checks. The alias-writes example prints 7, 9, 9, 8.
+- Next: result restart merging before lifting the body-wide alias-write Restart gate;
+  widened/discarded backing, allocator-only aliases, bounded lists, dynamic origins
+  and owning cleanup schedules remain separate proof work.
+
+### 2026-09-08 — Borrowed alias native proof and contract
+
+- Full library suite: 441 passed. Full native suite: 465 passed, including five new
+  groups in both profiles. Current result sources, old-copy/cell loans, selected
+  field/RHS updates, branch/Leave results, nullable tags and allocator roles execute.
+- Added alias-writes example, explicit alias lookup/path budget charging and final
+  outer-publication coverage: replacing a local-derived pointer with a surviving
+  source permits the completed carrier to escape; retaining the local still fails.
+- Updated ownership/allocator/README boundaries. Restart with these writes and
+  widened/discarded backing remain B001; no runtime/backend changes.
+- Next: combined gate for the final additions, final handoff/diff review and commit.
+
+### 2026-09-08 — Borrowed alias result synchronization implemented
+
+- Origin writes replace only the selected result component under completing path
+  guards. Unwritten branches retain their snapshots; retained-source checks apply
+  to each new value. CFG writes redefine the same selected result bundle components.
+- Seven new library groups pass: current results, old copies, field siblings/RHS,
+  branches/Leave, nullable tags, cell/transitive loans, multiple alias views and
+  explicit exact-backing/Restart gates. Corrected two fixture target/backing assumptions.
+- Four old library B001 groups became obsolete; updated to acceptance or the retained
+  Restart boundary. Added five native groups. Next: native proof, example/docs and gate.
+
+### 2026-09-08 — Borrowed alias write investigation
+
+- Clean tree at 4bf18c7. Alias locals already retain initial versions, while origin
+  results and CFG result bundles still reflect initial emissions. Writes need both.
+- Next: synchronize only changed result components under completing path guards,
+  keep exact backing types, preserve alias/local copies and field sibling versions,
+  and add result CFG definitions at each write. Retained-source rules still apply.
+- Scope includes fixed reference-bearing aliases, branches, Leave and exact backing.
+  Restart with these writes, widened backing, allocator-only aliases and lists stay
+  gated until their separate result/header proofs exist. No checks yet.
+
 ### 2026-09-08 — Mutable reference field validation complete
 
 - All fourteen combined checks pass: 894 Rust (434 library, 460 native), 35 Python,

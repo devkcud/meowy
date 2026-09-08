@@ -129,11 +129,11 @@ impl Checker<'_> {
                     if result.flow.next {
                         if self.proofs.versioned(self.program, *id) {
                             if !self.proofs.mutable.contains(id)
-                                || self.proofs.aliases.contains_key(id)
                                 || value.ty != self.program.locals[*id]
                             {
                                 return Err(Self::unsupported(value.span));
                             }
+                            self.sync_alias(*id, &[], &result.state, value.span)?;
                             self.reserve_origins(result.state.weight() + 1, value.span)?;
                             self.locals
                                 .get_mut(id)
@@ -177,9 +177,7 @@ impl Checker<'_> {
                     }
                     let mut ty = &self.program.locals[*id];
                     let tracked = self.proofs.versioned(self.program, *id);
-                    if (ty.has_reference() && (!tracked || self.proofs.aliases.contains_key(id)))
-                        || path.is_empty()
-                    {
+                    if (ty.has_reference() && !tracked) || path.is_empty() {
                         return Err(Self::unsupported(*span));
                     }
                     let mut prefix = Vec::new();
@@ -231,6 +229,7 @@ impl Checker<'_> {
                                 let state =
                                     current.replaced(&prefix, next.state, self.guards, *span)?;
                                 self.complete(&self.program.locals[*id], &state, *span)?;
+                                self.sync_alias(*id, &prefix, &state, *span)?;
                                 self.reserve_origins(state.weight() + 1, *span)?;
                                 self.locals
                                     .get_mut(id)
