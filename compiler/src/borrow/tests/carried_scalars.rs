@@ -89,7 +89,7 @@ pub(crate) fn carried_scalar_widths_strings_and_boolean_fields_keep_declared_typ
 }
 
 #[test]
-pub(crate) fn carried_scalar_storage_borrows_and_wider_types_remain_gated() {
+pub(crate) fn carried_scalar_exclusive_borrows_and_wider_types_remain_gated() {
     rejects(
         "first:=true;i:=0;r:'out{'loop{|first|{'out->n:7;first=false};i=i+1;|i<2|'loop.restart()}}",
         "B001",
@@ -103,7 +103,7 @@ pub(crate) fn carried_scalar_storage_borrows_and_wider_types_remain_gated() {
         "B001",
     );
     rejects(
-        "<R>:<{n<int32>}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:7;p:&n;v:*p;first=false};i=i+1;|i<2|'loop.restart()}}",
+        "<R>:<{n<int32>:=}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:=7;p:&!n;v:*p;first=false};i=i+1;|i<2|'loop.restart()}}",
         "B001",
     );
     accepts(

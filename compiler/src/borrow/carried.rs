@@ -41,10 +41,10 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
         if proofs
             .carried
             .contains_key(&(alias.target, Some(alias.field.clone())))
-            && let Some(span) = alias.borrowed.or(alias.exclusive)
+            && let Some(span) = alias.exclusive
         {
             return Err(Diagnostic::unsupported(
-                "borrowing carried publication storage",
+                "exclusively borrowing carried publication storage",
                 span,
             ));
         }

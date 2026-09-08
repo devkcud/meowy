@@ -6,6 +6,31 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Shared carried-scalar borrowing validation complete
+
+- All ten compiler checks pass: 1036 Rust (521 library, 515 native), 20 Python,
+  66 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Shared views acquire initialized result storage and survive inner restarts without
+  weakening expiry or last-use checks. Nineteen focused carried-slot tests pass.
+- Next: prove exclusive carried borrows, then wider initialization and ownership.
+  Runtime/backend, dependencies, library and editor work remain unchanged.
+
+### 2026-09-08 - Shared carried-scalar focused proof passes
+
+- Formatting and the focused carried-slot source/proof tests pass, including
+  acquisition, owner reset, expired references and write conflicts.
+- Next: native debug/release execution and full compiler gate, then handoff/commit.
+
+### 2026-09-08 - Shared carried-scalar acquisition implementation
+
+- The former address gate now permits shared borrows only. Acquisition events
+  require active, initialized result cells without changing runtime storage.
+- Added source/proof/native coverage and an example for inner restarts, owner
+  resets, expiry, last use and function bounds. Validation is pending.
+- Next: run focused regressions and compiler gate, record results, then commit.
+  Runtime, libraries, editor integration and dependencies remain unchanged.
+
 ### 2026-09-08 - Carried scalar initialization validation complete
 
 - All ten compiler checks pass: 1025 Rust (515 library, 510 native), 20 Python,

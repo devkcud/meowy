@@ -4,8 +4,8 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Carried scalar publication initialization verified.
-Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
+Updated: 2026-09-08. Shared carried-scalar borrowing verified.
+Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
@@ -40,6 +40,14 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
+[Shared carried scalar borrows](OWNERSHIP.md#shared-carried-scalar-borrows) now record
+Acquire events at actual address construction. Each event requires an active owner
+and initialized slot in the bounded CFG proof. The existing canonical storage,
+source expiry, reference headers, public bounds and last-use checks are unchanged.
+Six new source groups and direct acquisition/reset proofs pass alongside the prior
+carried-slot regressions. Five native groups and the new example pass in debug/release.
+All ten compiler checks pass. Exclusive carried-storage borrowing stays B001.
+
 [Carried scalar initialization](OWNERSHIP.md#carried-scalar-initialization) supports
 declared non-nullable Boolean, integer, float and static-string fields/primaries
 initialized once before an inner restart. Proofs.carried records deferred obligations;
@@ -51,11 +59,11 @@ Pure Boolean trees preserve value/copy semantics. Other results remain unknown;
 indirect writes invalidate knowledge. Limits are 64 carried slots, 512 known Boolean
 locals/state and 16,384 visited states with shared work charging. Late/frontier and
 reference proofs remain intact. Reference-bearing, nullable, aggregate or inferred
-carried slots and borrowing their storage remain B001 pending separate proofs.
+carried slots and exclusive borrowing of their storage remain B001 pending separate proofs.
 
-All ten compiler checks pass: 515 library, 510 native, 20 Python and 65 examples in
-both profiles, formatting, Clippy, build and repository contracts. The carried-scalars
-example prints init, 0, 1, 2, 7. Runtime/backend, dependencies and reference fixtures
+All ten compiler checks pass: 521 library, 515 native, 20 Python and 66 examples in
+both profiles, formatting, Clippy, build and repository contracts. The carried-borrows
+example prints 7, 7, 7, 7, 1. Runtime/backend, dependencies and reference fixtures
 are unchanged; wider ownership, library and release work remain open.
 
 ## Prior source-language milestone
@@ -123,10 +131,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 107 origin/initialization, 130 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 113 origin/initialization, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 510 native groups, 4 harness tests and 65 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 515 native groups, 4 harness tests and 65 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -619,8 +627,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  515 library + 510 native (1025 total). Python: 16 tooling + 4 compiler (20).
-  All 65 examples execute in debug/release. Formatting, Clippy, build, local links,
+  521 library + 515 native (1036 total). Python: 16 tooling + 4 compiler (20).
+  All 66 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
 - Eleven new source/proof groups cover exactly-once initialization, Boolean copies
   and refinement, owner resets, missing/duplicate results, Leave/panic, effectful RHS
@@ -641,9 +649,11 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Extend carried scalar storage borrowing only after proving acquisition and
-   owner-reset availability in `borrow/carried.rs`, `loans/emission_init.rs` and
-   the existing storage/loan checks. Keep nullable/reference-bearing initialization
+1. Prove exclusive carried-scalar borrowing before lifting the remaining gate in
+   `borrow/carried.rs`. Reuse `loans/emission_init.rs` acquisition/lifecycle and
+   existing loan authority; preserve indirect-write Boolean invalidation, moved
+   handles, last-use conflicts and owner-reset expiry. Add source/native cases and
+   run the compiler gate after integration. Keep nullable/reference-bearing initialization
    and wider Boolean/value summaries gated until their own proofs are available.
    Preserve `borrow/frontier.rs` certificates, absent late headers and source expiry,
    binding-event guards and demand-only normal/Leave refreshes.

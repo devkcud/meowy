@@ -11,6 +11,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [Shared carried-scalar borrowing](compiler/OWNERSHIP.md#shared-carried-scalar-borrows)
+  passes source/proof and native debug/release checks. Acquisition
+  requires active, initialized result storage; existing expiry and loan checks remain.
+  Six new source groups, five native groups and the full compiler gate pass.
+
 - [Carried scalar initialization](compiler/OWNERSHIP.md#carried-scalar-initialization)
   proves exactly-once emission across inner restarts for declared non-nullable
   scalar results, including Boolean flags, owner resets and completing paths.
@@ -35,7 +40,7 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 1025 Rust (515 library, 510 native), 20 Python, 65 examples
+- Current compiler gate: 1036 Rust (521 library, 515 native), 20 Python, 66 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
@@ -48,7 +53,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Whole union-alias assignment, late publications and carried scalar initialization | Carried storage borrows, wider initialization, list bounds and drop schedules |
+| Compiler | Whole union-alias assignment, late publications and shared carried-scalar borrows | Exclusive carried borrows, wider initialization, list bounds and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -58,8 +63,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Prove shared borrowing and owner-reset availability for carried scalar storage,
-   then extend wider initialization/value summaries. Preserve late certificates,
+1. Prove exclusive carried-scalar borrowing before lifting its gate: reuse acquisition,
+   owner lifecycle and loan authority, preserving indirect-write invalidation,
+   move/last-use conflicts and expiry. Run source/native regressions and the compiler
+   gate. Extend wider initialization/value summaries only after separate proof.
+   Preserve late certificates,
    duplicate-slot checks and result-scope resets.
    Preserve conditional initialization,
    ancestor storage, exact predecessor coverage and no synthetic reads.

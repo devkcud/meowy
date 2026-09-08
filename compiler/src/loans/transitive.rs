@@ -68,6 +68,7 @@ impl Graph<'_> {
             _ => None,
         };
         let temporary = matches!(source, Source::Temporary { .. });
+        let emission = self.emission_acquire(&source, span)?;
         let pointer = self.value(vec![Origin {
             component: Vec::new(),
             source,
@@ -79,6 +80,9 @@ impl Graph<'_> {
             defs: vec![pointer],
             ..Node::default()
         };
+        if let Some(event) = emission {
+            node.emissions.push(event);
+        }
         if let Some(id) = owner {
             if temporary {
                 self.event(&mut node, EventKind::Init(id), span)?;

@@ -1,6 +1,8 @@
 use super::emission_value::Value;
 use super::storage::{EventKind, ScopeKind};
-use super::{BTreeMap, BlockId, Diagnostic, Expr, FALSE, Graph, LocalId, Node, Result, Span};
+use super::{
+    BTreeMap, BlockId, Diagnostic, Expr, FALSE, Graph, LocalId, Node, Result, Source, Span,
+};
 use crate::borrow::carried::Key;
 use std::collections::{BTreeSet, VecDeque};
 
@@ -12,6 +14,7 @@ pub(crate) enum Event {
     Set(LocalId, Value),
     Forget,
     Emit(Key),
+    Acquire(Key, Span),
     Complete(BlockId),
 }
 
@@ -69,6 +72,32 @@ impl Graph<'_> {
         Ok(None)
     }
 
+    pub(crate) fn emission_acquire(
+        &mut self,
+        source: &Source,
+        span: Span,
+    ) -> Result<Option<Event>> {
+        if self.proofs.carried.is_empty() {
+            return Ok(None);
+        }
+        let Source::Slot { target, view, .. } = source else {
+            return Ok(None);
+        };
+        self.charge(self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize + 1)?;
+        let alias = self.proofs.aliases.get(view).ok_or_else(Self::budget)?;
+        self.charge(
+            (alias.field.len() + 1).saturating_mul(
+                self.proofs.carried.len().checked_ilog2().unwrap_or(0) as usize + 1,
+            ),
+        )?;
+        let key = (*target, Some(alias.field.clone()));
+        Ok(self
+            .proofs
+            .carried
+            .contains_key(&key)
+            .then_some(Event::Acquire(key, span)))
+    }
+
     pub(crate) fn emission_states(&mut self) -> Result<()> {
         if self.proofs.carried.is_empty() {
             return Ok(());
@@ -93,6 +122,7 @@ impl Graph<'_> {
                     .iter()
                     .map(|event| match event {
                         Event::Set(_, value) => value.weight(),
+                        Event::Acquire(key, _) => key.1.as_ref().map_or(0, String::len) + 1,
                         _ => 1,
                     })
                     .sum::<usize>()
@@ -132,6 +162,15 @@ impl Graph<'_> {
                             ));
                         }
                         state.initialized |= bit;
+                    }
+                    Event::Acquire(key, span) => {
+                        let (bit, _) = slots.get(key).ok_or_else(Self::budget)?;
+                        if state.active & bit == 0 || state.initialized & bit == 0 {
+                            return Err(Diagnostic::unsupported(
+                                "carried result is not proved initialized before borrowing",
+                                *span,
+                            ));
+                        }
                     }
                     Event::Complete(owner) => {
                         let bits = owners.get(owner).copied().ok_or_else(Self::budget)?;

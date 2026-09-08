@@ -34,7 +34,7 @@ pub(crate) fn carried_scalar_proof_rejects_missing_initialization_duplicates_and
     use crate::hir::{Block, Field, Program, Type};
     use crate::loans::emission_init::Event;
     use crate::loans::storage::{EventKind, ScopeKind};
-    use crate::loans::{Graph, Node};
+    use crate::loans::{Edge, Graph, Node};
 
     let int = Type::Int {
         bits: 32,
@@ -80,8 +80,39 @@ pub(crate) fn carried_scalar_proof_rejects_missing_initialization_duplicates_and
     assert_eq!(graph.emission_states().unwrap_err().code, "B001");
     graph.nodes[0].emissions.insert(0, Event::Emit(key.clone()));
     graph.emission_states().unwrap();
-    graph.nodes[0].emissions.insert(0, Event::Emit(key));
+    graph.nodes[0].emissions.insert(0, Event::Emit(key.clone()));
     assert_eq!(graph.emission_states().unwrap_err().code, "B001");
+    graph.nodes[0].emissions = vec![
+        Event::Acquire(key.clone(), Span::default()),
+        Event::Emit(key.clone()),
+        Event::Complete(0),
+    ];
+    assert_eq!(graph.emission_states().unwrap_err().code, "B001");
+    graph.nodes[0].emissions.swap(0, 1);
+    graph.emission_states().unwrap();
+    graph.nodes[0].emissions.swap(1, 2);
+    assert_eq!(graph.emission_states().unwrap_err().code, "B001");
+    graph.nodes[0].emissions = vec![Event::Emit(key.clone())];
+    let mut reset = Node::default();
+    graph
+        .event(&mut reset, EventKind::End(scope), Span::default())
+        .unwrap();
+    graph
+        .event(&mut reset, EventKind::Enter(scope), Span::default())
+        .unwrap();
+    reset
+        .emissions
+        .push(Event::Acquire(key.clone(), Span::default()));
+    graph.nodes.push(reset);
+    graph.nodes[0].next.push(Edge {
+        target: 1,
+        guard: crate::flow::TRUE,
+        reset: true,
+    });
+    assert_eq!(graph.emission_states().unwrap_err().code, "B001");
+    graph.nodes[1].emissions.insert(0, Event::Emit(key));
+    graph.nodes[1].emissions.push(Event::Complete(0));
+    graph.emission_states().unwrap();
     graph.guards.spend(usize::MAX);
     assert_eq!(graph.emission_states().unwrap_err().code, "B001");
 }

@@ -6,6 +6,7 @@ mod allocator_headers;
 mod allocator_records;
 mod allocators;
 mod boundaries;
+mod carried_borrows;
 mod carried_proof;
 mod carried_scalars;
 mod changing_published;

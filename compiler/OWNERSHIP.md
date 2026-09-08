@@ -597,12 +597,32 @@ implementation boundary; it does not change language rules.
   visited states, with existing graph/proof work charging. Missing, duplicate or
   unproved initialization and exhausted proof remain B001; ordinary E204/E205 cases
   are preserved. Success is a proof over every explored completion, not one witness.
-- Address-taking of a carried alias remains B001 pending storage-availability proof.
-  Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
+- Shared address-taking uses the acquisition proof below; exclusive carried borrows
+  remain B001. Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
   reads, storage allocations, ABI changes or dependencies are added by the analysis.
 - The [carried-scalars example](examples/carried-scalars.mwy) prints one initializer,
   three iteration values and the retained field. Stateful reference-bearing
   publications, broader Boolean/value analysis and owning cleanup remain separate work.
+
+## Shared carried scalar borrows
+
+- A shared reference to a carried scalar alias addresses the existing result cell.
+  The actual borrow node records an Acquire event keyed by result owner and field.
+  Every explored acquisition requires that owner active and its slot initialized;
+  a missing proof reports B001 at the borrow span. Acquisition adds no runtime read.
+- The existing storage solver independently checks the canonical cell at acquisition.
+  Inner restarts retain ancestor storage. Ordinary mutable-reference headers can
+  carry its address beyond the alias's lexical scope, without inventing definitions
+  or weakening reference origin, public bound or demand-only transfer checks.
+- Ending or restarting the result owner expires retained references. Reinitializing
+  the same static slot cannot revive an old view; reads remain E303. Replacing an
+  expired reference before reading it uses the existing overwrite rule. Shared
+  last-use checks still reject conflicting slot mutation with E302.
+- The [carried-borrows example](examples/carried-borrows.mwy) retains a view across
+  three iterations and replaces it after owner completion. Source and native cases
+  cover owner resets, function bounds, Leave, scalar widths and storage identity.
+  Exclusive borrows, nullable/reference-bearing initialization and wider value
+  analysis remain separate work. Runtime/backend and dependencies are unchanged.
 
 ## Mutable shared-reference bindings
 

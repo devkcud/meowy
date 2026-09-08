@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/carried-borrows.mwy"),
+            "7\n7\n7\n7\n1\n",
+        ),
+        (
             include_str!("../../examples/carried-scalars.mwy"),
             "init\n0\n1\n2\n7\n",
         ),

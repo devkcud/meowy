@@ -1,0 +1,17 @@
+d:@"debug"
+<R>:<{n<int32>}>
+x:1
+p:=&x
+first:=true
+i:=0
+r<R>:'out{
+    'loop{
+        |first|{'out->n:7;p=&n;first=false}
+        d.print(*p)
+        i=i+1
+        |i<3|'loop.restart()
+    }
+}
+d.print(r.n)
+p=&x
+d.print(*p)

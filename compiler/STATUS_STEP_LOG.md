@@ -6,6 +6,41 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Shared carried-scalar borrowing validation complete
+
+- All ten compiler checks pass: 521 library + 515 native (1036 Rust), 20 Python,
+  66 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Nineteen focused carried-slot tests pass. Six new source groups, five native
+  groups and direct acquisition/reset boundaries cover original cell identity,
+  scalar widths, inner restarts, owner expiry/reset, overwrite repair, function
+  bounds, Leave and E302 conflicts. No test failures remain.
+- Acquire events require active, initialized storage without synthesizing payload
+  reads or changing reference headers. Exclusive carried borrowing remains B001.
+  No runtime/backend, syntax, reference fixture or dependency changes; prior
+  runtime/editor evidence is preserved rather than rerun.
+- Next: prove exclusive carried acquisition, authority, indirect-write invalidation
+  and owner-reset expiry before lifting its gate; wider initialization stays separate.
+
+### 2026-09-08 - Shared carried-scalar focused proof passes
+
+- Formatting and the carried-slot library tests pass. Acquisition before emission,
+  after completion or after owner reset without reinitialization is rejected;
+  shared views retain existing expiry, public bounds and last-use conflicts.
+- No focused failures remain. Next: full compiler gate and native debug/release
+  outputs, then record complete evidence and commit this slice.
+
+### 2026-09-08 - Shared carried-scalar acquisition implementation
+
+- Inspection found canonical result-owner storage and terminal restarted-source
+  expiry already represented. Added Acquire proof events at actual shared address
+  construction rather than altering provenance, headers or storage availability.
+- The bounded initializer requires an active owner and initialized slot on every
+  acquisition. Exclusive borrowing remains gated. Six source groups, five native
+  groups, direct reset/acquisition boundaries and an example await validation.
+- No runtime/backend, syntax, reference fixture or dependency changes. Next:
+  focused regressions, full compiler gate, final handoff and task-only commit.
+
 ### 2026-09-08 - Carried scalar initialization validation complete
 
 - All ten compiler checks pass: 515 library + 510 native (1025 Rust), 20 Python,

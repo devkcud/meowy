@@ -68,6 +68,7 @@ compiler/target/debug/meowy run compiler/examples/fixed-published.mwy
 compiler/target/debug/meowy run compiler/examples/changing-published.mwy
 compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
+compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -163,8 +164,11 @@ across an edge using the separate proof below; other carried initialization rema
 The [carried scalar example](examples/carried-scalars.mwy) initializes a declared
 result field on the first iteration and retains it across inner restarts. A bounded
 Boolean-state proof checks exactly-once initialization and every completing path.
-Reference-bearing, nullable or inferred carried slots and borrowing their storage
-remain unavailable; effectful Boolean results may prevent proof.
+The [carried borrow example](examples/carried-borrows.mwy) acquires a shared view
+after initialization and keeps it across inner restarts while the result owner lives.
+Acquisition checks active, initialized storage; owner expiry and last-use rules
+remain unchanged. Reference-bearing, nullable or inferred carried slots and exclusive
+borrowing of carried storage remain unavailable; effectful Boolean results may prevent proof.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;

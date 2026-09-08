@@ -124,7 +124,7 @@ run<int32>:(stop<boolean>){
 }
 
 #[test]
-pub fn carried_scalar_incomplete_repeated_and_borrowed_storage_stay_rejected() {
+pub fn carried_scalar_incomplete_repeated_and_exclusive_storage_stay_rejected() {
     for (source, code) in [
         (
             "<R>:<{n<int32>}>;first:=false;i:=0;r<R>:'out{'loop{|first|{'out->n:7;first=false};i=i+1;|i<2|'loop.restart()}}",
@@ -139,7 +139,7 @@ pub fn carried_scalar_incomplete_repeated_and_borrowed_storage_stay_rejected() {
             "B001",
         ),
         (
-            "<R>:<{n<int32>}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:7;p:&n;first=false};i=i+1;|i<2|'loop.restart()}}",
+            "<R>:<{n<int32>:=}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:=7;p:&!n;first=false};i=i+1;|i<2|'loop.restart()}}",
             "B001",
         ),
         (
