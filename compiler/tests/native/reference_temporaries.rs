@@ -176,11 +176,9 @@ count:=0
 
 #[test]
 pub fn reference_temporary_mutation_and_owned_collection_boundaries_stay_explicit() {
-    for source in [
-        "owner:1;value:={->view:&owner}",
-        "owner:1;view<&int32><null>:=&owner",
-        "owner:1;items:[&owner]",
-    ] {
+    Case::new("owner:1;value:={->view:&owner}").runs(b"");
+    Case::new("owner:1;view<&int32><null>:=&owner").runs(b"");
+    for source in ["owner:1;items:[&owner]", "owner:1;holder:{->view:=&owner}"] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");
         assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"B001\""));

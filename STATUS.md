@@ -11,26 +11,26 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Shared-reference allocator carriers](compiler/ALLOCATOR_BOUNDS.md#shared-reference-allocator-carriers)
-  preserve physical references and allocator lifetime bounds through whole replacement,
-  field RHS effects, Leave and Restart. Current tags permit inactive nullable paths;
-  active expired uses remain E303 and physical conflicts remain E302.
-- Eight new library groups, one required-origin header check and four native groups
-  cover this slice. All fourteen checks pass: 867 Rust (417 library, 450 native),
-  35 Python, 54 debug/release examples, both editors, formatting, Clippy, build and
-  contracts. Runtime passes all 100 groups/profile with sanitizers and required probes.
+- [Mutable borrowed carriers](compiler/OWNERSHIP.md#mutable-borrowed-carriers) now
+  include reference-only records and nullable/closed unions. Whole replacement,
+  field RHS effects, current predicates, Leave and Restart preserve component
+  origins and loans. Active expired uses stay E303 and physical conflicts E302.
+- Nine new library tests and five native groups pass, including debug/release
+  execution and missing-origin header proof. All fourteen check categories have
+  passing evidence: 881 Rust (426 library, 455 native), 35 Python, 55 examples,
+  both editors, formatting, Clippy, build, contracts and runtime sanitizers.
   Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend unchanged.
-- The [allocator-carriers example](compiler/examples/allocator-carriers.mwy) shows
-  reference replacement while retaining lifetime-only allocator bounds. Lists,
-  reference-only mutable carriers, mutable reference fields and emitted aliases remain
-  gated. Dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF and
-  the full release remain open.
+- The [mutable-carriers example](compiler/examples/mutable-carriers.mwy) alternates
+  empty/live/empty reference fields through replacement and Restart. Mutable
+  reference fields, emitted aliases, lists and exclusive carriers remain gated.
+  Dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF and the
+  full release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Shared-reference allocator carriers, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
+| Compiler | Fixed mutable borrowed carriers, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -40,8 +40,8 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend reference-only mutable carriers and mutable reference fields; emitted aliases need
-   backing synchronization and lists need bounded element summaries. Preserve current
+1. Add mutable reference fields and emitted aliases with constructor/backing
+   synchronization and lists need bounded element summaries. Preserve current
    tag observations, post-RHS sibling versions and active-reference header coverage.
    Then add dynamic allocator contexts and string-view origins. Follow
    [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) before strings.copy: normal,

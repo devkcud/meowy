@@ -35,9 +35,9 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- Mutable reference-bearing aggregate/nullable bindings, wider exclusive shapes and
-  owned-value temporary borrows remain B001. Direct signatures and dispatch blocks can carry shared
-  references and immutable record/union carriers.
+- List-bearing mutable carriers, mutable reference fields, wider exclusive shapes
+  and owned-value temporary borrows remain B001. Direct signatures and dispatch
+  blocks can carry shared references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
 - All supported referents are copyable and have no owned cleanup. Shared storage needs no move tracking; scalar exclusive handle moves are described
   below. Owned destruction and panic unwinding remain unimplemented.
@@ -67,8 +67,8 @@ implementation boundary; it does not change language rules.
 - Union wrappers containing references and omitted optional reference fields are
   supported. Concrete fields of a carrier can be borrowed without reading its other
   reference components. Whole-carrier and reference-cell borrows preserve separate
-  cell and pointee origins. Mutable carriers and indirect/capturing function
-  contracts remain separate work.
+  cell and pointee origins. Fixed mutable carriers use the version model below;
+  indirect/capturing function contracts remain separate work.
 
 ## Transitive pointee summaries
 
@@ -95,8 +95,8 @@ implementation boundary; it does not change language rules.
   reference, as in `&outer.view.field`, loads that pointer once and continues from
   its original pointee source; taking `&outer.view` instead addresses the reference cell.
 - Reference-free dereferences still produce fresh unknown activity. They cannot
-  replay a mutable referent's borrow-time union tag. Mutation of reference-bearing
-  aggregate storage remains unavailable. A shared reference-cell view prevents
+  replay a mutable referent's borrow-time union tag. Fixed mutable carriers use
+  current stored versions. A shared reference-cell view prevents
   reassignment while it is live; later reads of a reassigned mutable reference use
   its new version. Restart continues to clear iteration proofs.
 - Publishing a whole borrowed carrier must prove that its physical cell and every
@@ -130,9 +130,9 @@ implementation boundary; it does not change language rules.
   assumption reapplied after restart. Reset edges erase those relations along
   with other iteration facts; analyses needing stronger temporal relations remain
   conservative.
-- Reads of mutable non-reference storage receive unknown activity. They do not
-  reuse initializer tags after assignment or branch joins. Mutable carriers of
-  references remain B001; fixed shared-reference locals use the version model below.
+- Reads of unversioned mutable storage receive unknown activity. Fixed borrowed
+  carriers link predicate-site observations to the current stored version, under
+  parent activity. They never reuse an initializer's tags after replacement.
 - A type predicate inspects tags without reading payload references. Effectful
   operands still run, and fresh record/block construction still has its normal
   result-transfer uses. Whole copies and equality consume their active payloads;
@@ -203,7 +203,8 @@ implementation boundary; it does not change language rules.
 - The CFG applies the call snapshot's presence/proof only on its returning edge;
   restart still erases iteration relations. Signature-based result activity may
   be more conservative than a particular body. Wider reference-result exclusive authority,
-  mutable carriers, captures, indirect calls and owned cleanup remain unsupported.
+  list-bearing mutable carriers, captures, indirect calls and owned cleanup remain
+  unsupported.
   Existing string values are literal-backed static views and do not create local
   referent-storage dependencies merely by passing a string value.
 
@@ -265,13 +266,42 @@ implementation boundary; it does not change language rules.
   existing work/storage budgets. Many matching fields multiplied by returned
   reference components reject with B001 before unbounded contract expansion.
 
+## Mutable borrowed carriers
+
+- Ordinary mutable locals may contain fixed Copy shared-reference or allocator
+  values, records and closed unions, including nullable references. Eligibility
+  uses `Type::fixed_borrowed_value`; nested referents must have supported fixed
+  shapes. Lists, exclusive carriers and mutable emitted aliases remain gated.
+- Whole assignment replaces the stored component versions after RHS completion.
+  Copies and earlier argument operands keep their original origins, public lifetime
+  bounds and loans. Existing mutable non-reference fields can be assigned; reference
+  fields remain immutable and change through whole replacement.
+- Pure field stores use the root state after RHS effects and preserve sibling loan
+  IDs. Completed inner writes survive Leave; an unfinished outer write is skipped.
+  Reads select the relevant component before checking lifetime. Safe sibling reads
+  and overwrite-before-read can therefore repair a carrier with an expired member.
+- Nullable and nested variant predicates use current observation snapshots in both
+  origin analysis and the loan CFG. Tag-only inspection skips payload consumption;
+  a proven null path may copy null, while an active expired reference use is E303.
+  Assignment invalidates overlapping refinements, so earlier tags cannot narrow
+  a replacement. Live cell/pointee conflicts still report E302.
+- Restart reuses canonical activity and exact predecessor transfers. Inactive
+  reference paths need no origin; every active reference path needs physical origin
+  coverage, and lifetime bounds cannot substitute for it. Iteration-local expired
+  sources remain terminal across subsequent initializations. The existing part,
+  replay and shared-work limits apply without list-capacity expansion.
+- The [mutable-carriers example](examples/mutable-carriers.mwy) alternates an empty
+  reference field and a live reference through replacement and Restart. Tests cover
+  field RHS/Leave effects, old copies, nullable/nested variants, argument snapshots,
+  public bounds, transitive sources, header coverage and remaining storage gates.
+
 ## Mutable shared-reference bindings
 
 - Ordinary mutable locals with a fixed `&T` type can be rebound in straight-line
   flow and guarded matcher/short-circuit paths. T may be any currently supported
   referent, including a record, union, bounded list or nested reference.
-  The binding itself cannot be a nullable union
-  or reference-bearing aggregate; mutable emitted reference fields remain B001.
+  Nullable and aggregate bindings follow the fixed carrier rules above; mutable
+  emitted reference fields remain B001.
 - The physical LocalId remains the same cell. Origin analysis preserves its
   current full State and replaces it only after a returning RHS; initial
   `Facts.locals` snapshots stay unchanged. The loan graph creates fresh immutable
@@ -464,8 +494,8 @@ implementation boundary; it does not change language rules.
   Branch or expected-slot mutability conflicts report E206. Whole incompatible
   record assignment keeps E207, and nullable omissions inherit declared flags.
 - `owner.child.field = rhs` addresses mutable reference-free Copy local
-  storage. Every crossed named field must be mutable; an immutable root/path is
-  E305. Shared-reference, temporary and union-root payload targets remain
+  storage or fixed borrowed carriers. Every crossed named field must be mutable;
+  an immutable root/path is E305. Shared-reference, temporary and union-root payload targets remain
   B001. A field may hold any currently supported Copy value, including a whole
   list or record. Mixed paths check every field boundary and initialized index.
 - An all-field `SetPath` retains static physical offsets and the target span. RHS evaluates
@@ -480,7 +510,7 @@ implementation boundary; it does not change language rules.
   work budgets; path collection checks its 256-field limit before each push.
 - Mutable primary emissions and mutable fields
   whose subtree carries references also remain B001; no exclusive reference or
-  mutable reference carrier capability is implied by this metadata.
+  emitted reference carrier capability is implied by this metadata.
 - List candidate probes compare mutable flags and keep later emitted-name
   dependencies unresolved instead of reading a same-named outer binding. A known
   context permits ordinary once-only checking; unresolved scope-dependent choices

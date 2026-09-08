@@ -95,6 +95,8 @@ pub fn reference_record_copies_and_pending_results_protect_all_live_components()
 
 #[test]
 pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() {
+    Case::new("owner:1;pair:={->view:&owner}").runs(b"");
+    Case::new("f<null>:(flag<boolean>){owner:1;pair:={|flag|->view:&owner}}").runs(b"");
     for (source, code) in [
         ("pair:{local:1;->view:&local}", "E303"),
         (
@@ -106,11 +108,6 @@ pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() 
             "E303",
         ),
         ("bad:(){owner:1;pair:{->view:&owner};->pair}", "E303"),
-        ("owner:1;pair:={->view:&owner}", "B001"),
-        (
-            "f<null>:(flag<boolean>){owner:1;pair:={|flag|->view:&owner}}",
-            "B001",
-        ),
     ] {
         let result = Case::new(source).command("check", &["--json"]);
         assert_eq!(result.status.code(), Some(1), "{source}");

@@ -202,7 +202,6 @@ a:7;empty<H>:{->n:1};full<H>:{->view:&a;->n:2};p:=&empty;i:=0
     ] {
         Case::new(source).runs(b"");
     }
-    for source in ["a:1;p<&int32><null>:=&a", "a:1;items:[&a]"] {
-        rejects(source, "B001");
-    }
+    Case::new("a:1;p<&int32><null>:=&a").runs(b"");
+    rejects("a:1;items:[&a]", "B001");
 }

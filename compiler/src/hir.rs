@@ -138,21 +138,21 @@ impl Type {
         }
     }
 
-    pub(crate) fn fixed_allocator_part(&self) -> bool {
+    pub(crate) fn fixed_borrowed_part(&self) -> bool {
         match self {
-            Self::Reference(ty) => ty.fixed_allocator_part(),
+            Self::Reference(ty) => ty.fixed_borrowed_part(),
             Self::Exclusive(_) | Self::List { .. } => false,
-            Self::Union(types) => types.iter().all(Self::fixed_allocator_part),
+            Self::Union(types) => types.iter().all(Self::fixed_borrowed_part),
             Self::Record { primary, fields } => {
-                primary.fixed_allocator_part()
-                    && fields.iter().all(|field| field.ty.fixed_allocator_part())
+                primary.fixed_borrowed_part()
+                    && fields.iter().all(|field| field.ty.fixed_borrowed_part())
             }
             _ => self.is_copy(),
         }
     }
 
-    pub(crate) fn fixed_allocator_value(&self) -> bool {
-        self.has_allocator_value() && self.fixed_allocator_part()
+    pub(crate) fn fixed_borrowed_value(&self) -> bool {
+        self.has_borrowed() && self.fixed_borrowed_part()
     }
 
     pub fn has_borrowed(&self) -> bool {

@@ -21,7 +21,7 @@ impl Checker<'_> {
             ExprKind::Local(id)
                 if self.proofs.mutable.contains(id)
                     && self.proofs.versioned(self.program, *id)
-                    && self.program.locals[*id].fixed_allocator_value() =>
+                    && self.program.locals[*id].fixed_borrowed_value() =>
             {
                 let state = &self
                     .locals

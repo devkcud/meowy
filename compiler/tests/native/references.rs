@@ -121,6 +121,8 @@ debug.print("done")
 
 #[test]
 pub fn guarded_local_escapes_are_rejected_before_lowering() {
+    Case::new("owner:1;view:={->field:&owner}").runs(b"");
+    Case::new("f<null>:(flag<boolean>){owner:1;view:={|flag|->&owner}}").runs(b"");
     for (source, code) in [
         (
             "bad:(flag<boolean>){outer:1;view:'result{|flag|{local:2;'result->&local};|!flag|->&outer};->*view}",
@@ -131,11 +133,6 @@ pub fn guarded_local_escapes_are_rejected_before_lowering() {
             "E303",
         ),
         ("'result{{local:1;'result->&local;'result.leave()}}", "E303"),
-        ("owner:1;view:={->field:&owner}", "B001"),
-        (
-            "f<null>:(flag<boolean>){owner:1;view:={|flag|->&owner}}",
-            "B001",
-        ),
     ] {
         let case = Case::new(source);
         let result = case.command("check", &["--json"]);

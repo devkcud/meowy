@@ -87,7 +87,7 @@ impl Checker {
                 if *mutable
                     && ty.has_reference()
                     && !matches!(ty, Type::Reference(_) | Type::Exclusive(_))
-                    && !ty.fixed_allocator_value()
+                    && !ty.fixed_borrowed_value()
                 {
                     return Err(Diagnostic::unsupported(
                         "mutable reference bindings",

@@ -6,6 +6,66 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Fixed mutable borrowed carrier validation complete
+
+- All fourteen check categories now have passing evidence. Combined run passed
+  426 library tests and runtime/editor/contracts, then stopped at seven historical
+  native B001 expectations. Corrected full native rerun: 455 passed; final formatting,
+  Clippy, build, harness and conformance passed. Production code stayed unchanged.
+- Total: 881 Rust, 35 Python, 55 debug/release examples; runtime 100 groups/profile
+  in debug/release/ASan/UBSan/LSan with required probes. Conformance: 10 passed,
+  13 unsupported, 0 failed. No repeated runtime checks after test-only updates.
+- Nine new library tests and five native groups verify reference-only mutable
+  records/unions, current tags, physical/old-copy loans, RHS/Leave effects, call
+  snapshots, public bounds and restart expiry/coverage. Final handoff: 991 links
+  in 99 Markdown files and Git whitespace checks pass.
+- Next: mutable reference fields and emitted-alias constructor/backing proof,
+  bounded list summaries, then dynamic allocator/view origins and owning cleanup.
+  No failing checks or unfinished edits; full language/release remains incomplete.
+
+### 2026-09-08 — Combined gate found historical native expectations
+
+- The combined gate passed repository/editor/runtime checks, all sanitizer profiles,
+  formatting, Clippy and 426 library tests. Native tests: 448 passed, seven failed.
+- Each failure expected B001 for newly supported nullable/record local bindings.
+  Converted those historical cases to debug/release execution, retaining actual
+  escape, reference-emission, list and formatting boundaries. Production unchanged.
+- The gate stopped before harness/build/conformance. Next: validate the corrected
+  native suite, then finish the compiler gate without repeating green runtime checks.
+
+### 2026-09-08 — Fixed borrowed carrier native proof and documentation
+
+- All nine new library tests and five native groups pass. Native checks cover both
+  profiles: reference-only replacement, old copies, field RHS/Leave effects, nullable
+  and nested tags, restart, operand snapshots, returned bounds and E303/E302/B001/E305.
+- A raw header test accepts null without origins but rejects an active reference
+  whose only source evidence is a lifetime bound. No proof shortcut was added.
+- Added mutable-carriers example and updated ownership/allocator/README contracts.
+  Generalized eligibility reuses the same origin, CFG and restart representations.
+- Next: combined repository gate, final diff/handoff review and a cohesive commit.
+  Lists, mutable reference fields, emitted aliases and exclusive carriers stay gated.
+
+### 2026-09-08 — Reference-only carrier versions implemented
+
+- Renamed fixed allocator eligibility to fixed borrowed-value eligibility and
+  admitted reference-only records/closed unions, including nullable references.
+  Existing versions, field updates, predicate snapshots and headers are reused.
+- Eight new behavior groups pass. Full library suite: 425 passed after four old
+  B001 expectation groups were changed to acceptance for newly supported shapes.
+  Mutable reference emissions, lists, exclusive carriers and formatting stay gated.
+- Added a raw inactive-versus-missing reference-header regression and five native
+  groups; validation pending. Next: focused native proof, example/docs and full gate.
+
+### 2026-09-08 — Reference-only mutable carrier investigation
+
+- Clean starting tree at 421b7ae. Fixed allocator carriers already preserve shared
+  reference paths, nullable activity, physical loans and required restart coverage.
+- Next: remove the directly-contained-allocator prerequisite for fixed shared
+  carriers, rename eligibility around borrowed values, and verify reference-only
+  replacement, selective fields, predicates, call entry and canonical restarts.
+- Mutable reference fields/aliases, lists and exclusive carriers stay gated.
+  No new validation yet; use existing tests plus native debug/release regressions.
+
 ### 2026-09-08 — Shared-reference allocator carrier validation complete
 
 - All fourteen combined checks pass: 867 Rust (417 library, 450 native), 35 Python,

@@ -125,6 +125,8 @@ pub fn reference_unions_protect_live_copies_operands_and_slots() {
 
 #[test]
 pub fn reference_union_escapes_and_remaining_contracts_are_explicit() {
+    Case::new("a:1;r<&int32><null>:=&a").runs(b"");
+    Case::new("f<null>:(r<&int32><null>){copy:=r}").runs(b"");
     for (source, code) in [
         ("flag:=true;r:{a:1;|flag|->&a}", "E303"),
         ("flag:=true;r:{a:1;|flag|->view:&a}", "E303"),
@@ -133,8 +135,6 @@ pub fn reference_union_escapes_and_remaining_contracts_are_explicit() {
             "outer:1;flag:=true;r:{local:2;|flag|->&outer;|!flag|->&local}",
             "E303",
         ),
-        ("a:1;r<&int32><null>:=&a", "B001"),
-        ("f<null>:(r<&int32><null>){copy:=r}", "B001"),
         ("a:1;r<&int32><null>:&a;d:@\"debug\";d.print(r)", "B001"),
     ] {
         let result = Case::new(source).command("check", &["--json"]);

@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Shared-reference allocator carriers verified.
+Updated: 2026-09-08. Fixed mutable borrowed carriers verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,28 +40,30 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Shared-reference allocator carriers](ALLOCATOR_BOUNDS.md#shared-reference-allocator-carriers)
-retain physical reference origins alongside allocator lifetime bounds in fixed mutable
-records and closed unions. Shared referents must themselves have supported fixed
-shapes. Whole replacement and existing mutable non-reference field writes reuse
-stored state and loan versions; reference fields remain immutable.
+[Mutable borrowed carriers](OWNERSHIP.md#mutable-borrowed-carriers) now include
+reference-only records and nullable/closed unions. `Type::fixed_borrowed_value`
+replaces the allocator-specific prerequisite in binding checks, field writes,
+`Proofs::versioned`, tag observations and restart shapes. Existing directly mutable
+references retain their supported referents; aggregate shapes remain fixed Copy
+values with supported shared referents and no lists or exclusive constituents.
 
-Selective reads and field commits preserve sibling loans and post-RHS effects.
-Old copies keep their sources. Current predicate-site observations preserve nullable
-reference activity without reading expired payloads. Restart headers allow empty
-origins only where all physical reference paths are inactive; canonical validation
-still requires every active reference origin. Allocator bounds cannot satisfy it.
+Whole replacement preserves earlier copies and argument operands. Pure mutable
+non-reference field stores retain post-RHS sibling state and loan IDs. Current
+predicate observations link nullable/nested activity in origin and loan analysis;
+active expired uses are E303 and live physical conflicts E302. Restart retains
+required active-reference coverage and terminal expired source identities.
 
-Eight new library groups plus a raw missing-origin header check cover replacement,
-RHS/Leave effects, nullable activity, branches, restart, transitive references,
-actual call entry, E303 expiry and E302 conflicts. Four new native groups pass
-both profiles. The allocator-carriers example demonstrates reference replacement
-and lifetime-only allocator bounds. All fourteen combined checks pass.
+Nine new library tests pass, including inactive-versus-missing header coverage;
+five native groups pass debug/release. The mutable-carriers example alternates
+empty/live/empty through record replacement and Restart. All fourteen check categories
+have passing evidence: 426 library and 455 native tests, 35 Python tests, 55
+debug/release examples, editors, contracts and runtime
+sanitizers. Historical B001 cases now execute the newly supported bindings.
 
-Lists, reference-only mutable aggregates, mutable reference fields, exclusive
-carriers and emitted aliases remain gated. Dynamic allocator contexts/views,
-owning constructors/drop schedules and source error APIs remain pending.
-Runtime/backend representation, syntax, reference fixtures and dependencies unchanged.
+Mutable reference fields, emitted aliases, lists and exclusive carriers stay gated.
+Dynamic allocator/view origins, owning constructors/drop schedules and source error
+APIs remain pending. No runtime/backend representation, syntax, reference fixture
+or dependency changes.
 
 ## Prior implemented milestone
 
@@ -109,7 +111,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 450 native groups, 4 harness tests and 54 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 455 native groups, 4 harness tests and 55 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -189,7 +191,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Facts.merging identifies bodies using reference assignments or exclusive values; the bounded HIR scan
   also identifies their restart targets. Returning expressions retain normal proofs
   after nested scope closure. Assignment-free bodies keep the previous loop path;
-  reference-only mutable nullable/aggregate bindings and mutable reference emissions stay B001.
+  fixed nullable/aggregate bindings use the same version model; mutable reference emissions stay B001.
 - Each restarted target in that mode includes all mutable-reference IDs present
   at entry, even when an iteration leaves one unchanged. Initial and feasible
   backedge values accumulate separate actual-origin and lifetime-bound `(Path,
@@ -205,8 +207,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Canonical headers partition only observed members. Child activation includes
   its parent, and origins/bounds use their structural path guard. Reference-free
   referents remain traversal cut points, including scalar unions behind nested
-  references. Reference-bearing lists and reference-only mutable nullable or
-  aggregate bindings remain B001; unsupported activity is never erased to admit a type.
+  references. Reference-bearing lists and mutable reference emissions remain B001; unsupported activity is never erased to admit a type.
 - Every feasible carried source/bound keeps its structural component and role.
   Inputs and live ancestor-owned Local/Slot/Temporary sources survive. Ended or
   target/descendant-owned sources become terminal Source::Expired site identities;
@@ -324,8 +325,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   the immutable local length cache before emission. Static E101 and constant-based
   extents use those facts, while dynamic indices retain P001. Direct/field/element
   writes through reference-free immutable aliases report E305. Mutable copies remain
-  independent; reference-only mutable aggregates and bounded mutable emitted storage remain
-  outside the supported write model. Fixed allocator carriers use stored versions.
+  independent; bounded mutable emitted storage remains outside the supported write
+  model. Fixed borrowed carriers use stored versions.
 - Immutable reference-bearing named emissions also register SlotAlias. Bind/Local
   component states and CFG bundles retain original pointee origins, inherited bounds
   and active variants. A copied reference gains no dependency on its containing cell;
@@ -515,7 +516,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   shape; compatible scalar comparisons project the primary. Union equality needs
   identical normalized union types, so a raw null comparison can report E222.
 - Immutable binding/result snapshots link type-test tags to actual variant activity,
-  conditioned on the enclosing variant. Fixed allocator storage retains current
+  conditioned on the enclosing variant. Fixed borrowed storage retains current
   activity and links predicate-site tags at inspection; other mutable reference-free
   storage reads receive unknown activity. Record fields
   preserve mutability in their types. SetPath invalidates the selected region and
@@ -602,36 +603,36 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 417 library
-  + 450 native (867 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 54 examples execute in debug/release. Both editors, formatting, Clippy,
-  build, schemas/identities and catalog pass. Documentation passes 988 local links
-  in 99 Markdown files; final Git whitespace checks pass.
+- All fourteen check categories have passing evidence from the combined run and
+  targeted completion. Rust: 426 library + 455 native (881 total). Python: 16 tooling
+  + 15 runtime + 4 compiler (35). All 55 examples execute in debug/release. Both
+  editors, formatting, Clippy, build, schemas/identities and catalog pass.
+- `python3 -B tools/verify.py --all` initially stopped at seven native groups with
+  obsolete B001 carrier expectations; 448 native groups and all earlier checks
+  passed. Updated cases now run both profiles. The full native rerun passed all
+  455 groups; final formatting, Clippy, build, harness and conformance also passed.
+  Production code stayed unchanged after the initial combined run.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
-  fatal/admission/guard/fiber probes with approved process access. Runtime/backend
-  representations are unchanged; no selected check was skipped.
-- Eight new carrier library groups and one raw header test cover replacement,
-  old-copy/physical loans, selective reads, RHS/Leave effects, nullable activity,
-  branches, restart, transitive sources and actual call-entry validation. Lifetime
-  bounds cannot satisfy missing physical reference coverage. Four native groups
-  pass both profiles; the allocator-carriers example prints 7, 9, 8.
-- Initial fixtures hit preserved mutable-emission gates, duplicate names, field
-  mutability and earlier emitted-temporary expiry; corrected fixtures exercise the
-  intended paths. Nullable initial reference headers exposed an early empty-origin
-  rejection; canonical activity validation now decides required coverage. Final
-  combined checks have no failures.
-- Existing reference/header/allocator regressions pass. Conformance remains
-  10 passed, 13 unsupported, 0 failed. Lists, reference-only mutable carriers,
-  mutable reference fields, emitted aliases, dynamic contexts/views, owning drops,
-  source error APIs, tasks, DWARF and a complete release remain unqualified.
+  fatal/admission/guard/fiber probes with approved process access. Green runtime
+  checks were not repeated after test-only changes. Representations are unchanged.
+- Nine new library tests and five native groups cover reference-only replacement,
+  nullable/nested variants, old-copy and cell loans, post-RHS field updates, Leave,
+  earlier argument snapshots, returned input bounds, transitive references, restart
+  expiry and active-versus-missing header coverage. Initial library validation also
+  corrected four historical B001 expectation groups. No reference fixture changed.
+- Final documentation passes 991 local links in 99 Markdown files and Git whitespace
+  checks. The mutable-carriers example prints empty, 7, empty. Conformance remains
+  10 passed, 13 unsupported, 0 failed. Lists, mutable reference fields, emitted aliases,
+  exclusive carriers, dynamic contexts/views, owning drops, source error APIs, tasks,
+  DWARF and the complete release remain unqualified.
 
 ## Next steps
 
-1. Extend reference-only mutable carriers and mutable reference fields; emitted
-   aliases need target/backing synchronization and lists need bounded element summaries
-   without capacity expansion. Preserve current-version tag observations, post-RHS
-   sibling state/loan IDs and required active-reference header coverage.
-   Add real symbolic allocator contexts and string-view origins after those proofs.
+1. Add mutable reference fields with explicit constructor/emitted-alias proof;
+   emitted aliases need target/backing synchronization. Lists need bounded element
+   summaries without capacity expansion. Preserve current tag observations,
+   post-RHS sibling versions and required active-reference header coverage.
+   Add dynamic allocator contexts and string-view origins after those proofs.
    Follow [OWNING_HIR.md](OWNING_HIR.md) before owning constructors, preserving
    normal/Leave/Restart/panic and temporary/result transfer proof.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with

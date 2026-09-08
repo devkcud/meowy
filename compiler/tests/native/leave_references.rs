@@ -251,6 +251,6 @@ pub fn panic_discards_leave_continuations_and_restarts_preserve_unread_expiry() 
         "a:1;holder:={->view:&a};'out{'out.leave()}",
         "a:1;p<&int32><null>:=&a;'out{'out.leave()}",
     ] {
-        rejects(source, "B001");
+        Case::new(source).runs(b"");
     }
 }

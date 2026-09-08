@@ -165,8 +165,6 @@ pub fn reference_binding_types_and_unsupported_mutation_forms_stay_explicit() {
     for (source, code) in [
         ("a:1;b:2;p:&a;p=&b", "E305"),
         ("a:1;b<uint8>:2;p:=&a;p=&b", "E207"),
-        ("a:1;p<&int32><null>:=&a", "B001"),
-        ("a:1;holder:={->view:&a}", "B001"),
         ("a:1;holder:{->view:=&a}", "B001"),
         ("a:1;values:[&a]", "B001"),
         ("a:=1;p:&!a;q:p;v:*p", "E301"),
@@ -208,13 +206,7 @@ d.print(*p)
 #[test]
 pub fn reference_assignments_preserve_unreachable_reads_and_carrier_boundaries() {
     let source = "a:1;p<&int32><null>:=&a;i:=0;'loop{p=&a;i=i+1;|i<2|'loop.restart()}";
-    let output = Case::new(source).command("check", &["--json"]);
-    assert_eq!(output.status.code(), Some(1), "{source}");
-    assert!(
-        String::from_utf8_lossy(&output.stderr).contains("\"code\":\"B001\""),
-        "{source}: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    Case::new(source).runs(b"");
     let output =
         Case::new("a:1;p:=&a;p=&2;'out{'out.restart()};v:*p").command("check", &["--json"]);
     assert!(output.status.success(), "{output:?}");

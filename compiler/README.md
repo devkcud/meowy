@@ -4,7 +4,7 @@ This directory contains a working Rust compiler with a C++20 LLVM backend.
 It checks standalone Meowy source and produces Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to local and emitted storage, including guarded
-block results, immutable records and unions carrying references, direct-function
+block results, fixed mutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
 The [foundation values](FOUNDATION.md) include static heap handles and nominal
@@ -57,6 +57,7 @@ compiler/target/debug/meowy run compiler/examples/transitive-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/temporary-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/reference-temporaries.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
+compiler/target/debug/meowy run compiler/examples/mutable-carriers.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -323,8 +324,9 @@ implementation work.
 - Mutable ordinary locals with a fixed shared-reference type, such as `view:=&owner`.
   Reassignment changes subsequent reads while earlier copies retain
   their original pointees and call bounds. A live borrow of the reference cell
-  blocks reassignment; its final read may occur in the assignment's RHS. Mutable
-  nullable reference bindings/carriers remain B001.
+  blocks reassignment; its final read may occur in the assignment's RHS.
+  [Fixed mutable carriers](OWNERSHIP.md#mutable-borrowed-carriers) include nullable
+  references, records and closed unions, preserving current component activity.
 - Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
   Returning paths merge their possible values; skipped paths retain their incoming
   value, and panicking paths contribute no continuation. Earlier copies stay fixed.
@@ -402,9 +404,8 @@ source-level recovery, task unwinding and release panic artifacts remain unimple
 Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, non-scalar exclusive borrows,
 borrows of owned temporary storage, capturing closures, generic/type-producing
-helpers, imports beyond the foundational bootstrap modules, mutable nullable
-reference bindings, mutable reference-bearing fields, mutable primary slots and alias
-views requiring union retagging. String interpolation
+helpers, imports beyond the foundational bootstrap modules, mutable reference-bearing
+fields, mutable primary slots and alias views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
 
@@ -482,7 +483,7 @@ The analysis forgets header-entry and iteration guards, and may widen correlatio
 between independent union fields or owners. Programs needing finer correlations may
 be rejected. Canonical source/bound sets and member activity must converge within
 64 passes and the existing work/storage budgets; incomplete proof reports B001.
-Mutable reference carriers, mutable nullable reference bindings and direct reference
+Lists within mutable reference carriers, mutable reference fields and direct reference
 formatting require future analysis. A panic during
 the RHS skips the store; nested blocks and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
