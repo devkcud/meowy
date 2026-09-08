@@ -6,6 +6,56 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Discarded borrowed-alias validation complete
+
+- All fourteen combined checks pass: 931 Rust (455 library, 476 native), 35 Python,
+  59 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Seven new library and six native groups prove current transient values, old copies,
+  RHS/Leave/panic effects, payload repair, target lifetime beyond lexical alias scope,
+  inner Restart, E302/E303, call-entry checks and still-gated published outer results.
+- Historical endless-loop gate fixtures now use finite loops to preserve actual
+  publication boundaries. Final handoff passes 999 local links in 99 Markdown files
+  and Git whitespace checks. The example prints 9, 9, done; no failures remain.
+- Next: surviving published result-header merging, widened backing, allocator-only
+  alias bounds, bounded list summaries, dynamic origins and owning cleanup schedules.
+
+### 2026-09-08 — Discarded alias native proof and contract
+
+- Full library/native suites pass: 455 library and 475 native groups, including
+  seven new library and five native groups. Native execution covers both profiles.
+- Proven behavior: target-owned cells beyond lexical scope, inner Restart, repair
+  after payload expiry, RHS/Leave effects, copies, E302/E303 and published-result gates.
+- Added panic-RHS coverage and discarded-aliases example for the final gate. Updated
+  ownership/allocator/README contracts; old endless-loop gate fixtures now use finite
+  loops where the result can actually publish. Runtime/backend unchanged.
+- Next: combined verification, final handoff/diff review and a cohesive commit.
+
+### 2026-09-08 — Discarded alias writes implemented
+
+- Origin/loan synchronization skips result updates only for proven discarded
+  backing; local versions, physical access checks and transient target ownership
+  remain. Planner excludes these cells from surviving-result Restart restrictions.
+- Full library suite: 455 passed, including seven new groups for effects, copies,
+  RHS/Leave, tag repair, target-owned cell lifetime, inner Restart and call entry.
+- Initial tests exposed six historical gates using endless loops, whose slots are
+  discarded. Converted published-result boundary cases to finite loops and accepted
+  the newly supported discard case. Corrected a nested-block fixture missing emission.
+- Five native groups added. Next: native validation, example/docs and combined gate.
+
+### 2026-09-08 — Discarded borrowed alias investigation
+
+- Clean tree at a4258e5. Frontend Backing::Discarded proves an emission cannot
+  initialize a completed result; backend/lifecycle code already gives it a transient
+  cell owned by its target. Result synchronization currently rejects these writes.
+- Next: retain alias value versions while skipping nonexistent result updates,
+  exclude discarded backing from surviving-result Restart gating, and verify cell
+  lifetime, inner/outer Restart, RHS/Leave/panic effects, old copies and expiry.
+- Published outer results, widened backing and bounded allocator-only aliases keep
+  their gates. No new checks yet; existing storage and header machinery will be reused.
+
 ### 2026-09-08 — Alias Restart ownership validation complete
 
 - All fourteen combined checks pass: 918 Rust (448 library, 470 native), 35 Python,

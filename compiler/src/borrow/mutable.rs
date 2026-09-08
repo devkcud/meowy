@@ -74,6 +74,7 @@ pub(crate) fn check(
                 Stmt::Assign { id, value } => {
                     if let Some(alias) = proofs.aliases.get(id)
                         && program.locals[*id].has_reference()
+                        && alias.backing != Some(super::Backing::Discarded)
                     {
                         alias_writes.entry(alias.target).or_insert(value.span);
                     }
@@ -94,6 +95,7 @@ pub(crate) fn check(
                 } => {
                     if let Some(alias) = proofs.aliases.get(id)
                         && program.locals[*id].has_reference()
+                        && alias.backing != Some(super::Backing::Discarded)
                     {
                         alias_writes.entry(alias.target).or_insert(value.span);
                     }

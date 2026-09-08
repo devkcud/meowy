@@ -105,7 +105,10 @@ d.print(*r.p)
 #[test]
 pub fn alias_restart_lifetimes_loans_and_surviving_result_gates_are_checked() {
     for (source, code) in [
-        ("x:1;y:2;r:{->p:=&x;'inner{p=&y;'inner.restart()}}", "B001"),
+        (
+            "x:1;y:2;n:=2;r:{->p:=&x;'inner{p=&y;n=n-1;|n>0|'inner.restart()}};v:*r.p",
+            "B001",
+        ),
         (
             "x:1;y:2;r:'outer{'inner{'outer->p:=&x;p=&y;'inner.restart()}}",
             "B001",

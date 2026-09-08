@@ -4,6 +4,7 @@ pub(crate) mod allocator_bounds;
 pub(crate) mod allocator_carriers;
 pub(crate) mod cli;
 pub(crate) mod control;
+pub(crate) mod discarded_aliases;
 pub(crate) mod dispatch;
 pub(crate) mod dynamic_lists;
 pub(crate) mod effectful_lists;

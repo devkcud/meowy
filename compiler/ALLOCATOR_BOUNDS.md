@@ -159,7 +159,9 @@ physical origins and allocator bounds. Mutable reference fields support direct a
 nested writes on completed fixed records. Constructors preserve initial borrowed
 emitted-name snapshots; exact-backing writes synchronize them. Restart supports
 reset or independent slots; written outer result owners enclosing an inner Restart
-remain gated. Widened/discarded backing and allocator-only alias bounds stay gated. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
+remain gated for published results. Discarded reference-bearing aliases retain local
+versions without a result transfer; widened backing and allocator-only alias bounds
+stay gated. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
 
 Replacing a carrier releases only loans no longer demanded by its current value.
 Old copies retain their own sources. Reading a reference field keeps its pointee

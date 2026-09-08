@@ -41,7 +41,7 @@ pub(crate) fn reference_carrier_field_addresses_follow_their_storage_owner() {
 #[test]
 pub(crate) fn selected_carrier_addresses_keep_mutation_and_union_storage_boundaries() {
     for source in [
-        "owner:1;result:{->carrier:={->view:&owner;->n:2};carrier={->view:&owner;->n:3};'loop{'loop.restart()}}",
+        "owner:1;result:{->carrier:={->view:&owner;->n:2};carrier={->view:&owner;->n:3};n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
         "f<null>:(owner<&int32>,flag<boolean>){result:'out{|flag|{'out->carrier<{view<&int32>;n<int32>}><null>:{->view:owner;->n:2};|carrier<{view<&int32>;n<int32>}>|{p:&carrier.n}};|!flag|{'out->carrier:\"x\"}}}",
     ] {
         rejects(source, "B001");

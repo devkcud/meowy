@@ -9,6 +9,12 @@ impl Graph<'_> {
             return Ok(());
         };
         let ty = &self.program.locals[id];
+        if !alias.mutable || !ty.has_reference() || !ty.fixed_borrowed_value() {
+            return Err(Self::budget());
+        }
+        if alias.backing == Some(Backing::Discarded) {
+            return Ok(());
+        }
         let scope = self.blocks.get(&alias.target).ok_or_else(Self::budget)?;
         if !self.guards.spend(alias.field.len() + path.len() + 1) {
             return Err(Self::budget());
@@ -16,12 +22,7 @@ impl Graph<'_> {
         crate::borrow_contract::type_weight(&scope.ty, self.guards, span)?;
         let (mut prefix, backing) =
             crate::borrow::slot(&scope.ty, &Some(alias.field.clone())).ok_or_else(Self::budget)?;
-        if !alias.mutable
-            || alias.backing != Some(Backing::Result)
-            || backing != ty
-            || !ty.has_reference()
-            || !ty.fixed_borrowed_value()
-        {
+        if alias.backing != Some(Backing::Result) || backing != ty {
             return Err(Self::budget());
         }
         let path = path

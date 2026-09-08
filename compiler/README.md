@@ -61,6 +61,7 @@ compiler/target/debug/meowy run compiler/examples/mutable-carriers.mwy
 compiler/target/debug/meowy run compiler/examples/reference-fields.mwy
 compiler/target/debug/meowy run compiler/examples/alias-writes.mwy
 compiler/target/debug/meowy run compiler/examples/alias-restarts.mwy
+compiler/target/debug/meowy run compiler/examples/discarded-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -333,7 +334,9 @@ implementation work.
   [Mutable reference fields](OWNERSHIP.md#mutable-reference-fields) support direct
   and nested writes on completed fixed records. [Borrowed emitted-name writes](OWNERSHIP.md#borrowed-emitted-alias-writes)
   synchronize exact result backing. Restart supports reset or independent slots;
-  written outer result slots enclosing an inner Restart remain gated.
+  written published outer result slots enclosing an inner Restart remain gated.
+  [Discarded borrowed aliases](OWNERSHIP.md#discarded-borrowed-alias-writes) retain
+  ordinary value versions in their transient cells, including through inner Restart.
 - Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
   Returning paths merge their possible values; skipped paths retain their incoming
   value, and panicking paths contribute no continuation. Earlier copies stay fixed.
@@ -412,7 +415,8 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, non-scalar exclusive borrows,
 borrows of owned temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, borrowed emitted-alias
-writes to result owners enclosing an inner Restart, widened/discarded backing, mutable primary slots and alias
+writes to published result owners enclosing an inner Restart, widened backing,
+mutable primary slots and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.

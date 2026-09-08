@@ -305,7 +305,7 @@ implementation boundary; it does not change language rules.
 - Mutable borrowed emitted names retain initial component snapshots and may be read
   or borrowed. `Proofs::versioned` includes fixed reference-bearing aliases for this
   purpose. Exact-backing assignment and field paths synchronize the result as
-  described below; widened/discarded backing and surviving outer result slots
+  described below; widened backing and surviving published outer result slots
   enclosing an inner Restart remain B001.
 - After the record finishes, `r.view = &next` replaces only that field's origins,
   bounds and activity. Nested paths require a mutable ordinary root and mutable
@@ -345,7 +345,8 @@ implementation boundary; it does not change language rules.
   mutually exclusive scopes may share a result field while keeping guarded values.
   The completed carrier can escape an earlier source only after that component has
   been replaced with a source that survives its receiving scope.
-- Widened or discarded backing remains B001 on a returning borrowed-alias write.
+- Widened backing remains B001 on a returning borrowed-alias write. Proven discarded
+  backing keeps ordinary local versions without a result transfer, as described below.
   Restart supports writes when the result owner is reset by the target or is
   independent of it. Written result owners strictly enclosing a Restart target
   remain B001 until surviving result snapshots participate in header merging.
@@ -378,12 +379,40 @@ implementation boundary; it does not change language rules.
   remain E302, and retained-source lifetime checks remain mandatory on completing paths.
 - Whole/field writes, nullable predicates, nested RHS effects and Leave preserve
   their order. A Restart from a RHS skips its outer store and discards the target
-  iteration's result. Exact-backing requirements are unchanged; widened/discarded
-  backing and bounded allocator-only aliases remain separate work.
+  iteration's result. Published result backing must still be exact; widened backing
+  and bounded allocator-only aliases remain separate work.
 - The [alias-restarts example](examples/alias-restarts.mwy) initializes a fresh
   emitted pointer each iteration, changes it, and publishes only the last iteration's
   value. Library/native tests cover named outer emission targets, inner/outer resets,
   independent loops, carried input versions, old copies, expired cells and gates.
+
+## Discarded borrowed-alias writes
+
+- `Backing::Discarded` is assigned only after frontend completion analysis proves
+  that the emission cannot initialize a completed result. The backend already
+  provides a typed transient cell whose lifetime belongs to the emission target.
+  Fixed shared-reference aliases may now be assigned or updated through mutable
+  field paths in that storage.
+- Origin and loan passes retain normal current-value versions, sibling IDs,
+  physical accesses and transitive summaries. They skip result synchronization
+  because no published component exists. A local source may be used while it is
+  alive; later payload reads still report E303 after it expires. Overwrite-before-read
+  and tag-only inspection retain their normal rules, and old copies retain their loans.
+- Discarded cells do not enter the surviving-result Restart gate. Their alias
+  versions use existing canonical local headers, so an inner restart can preserve
+  the cell and its live sources. Restarting or leaving the target ends that cell;
+  copied slot references expire and cannot revive at the next initialization.
+  Published outer result slots still require their separate header-merging proof.
+- Leave and panic preserve earlier effects and skip unfinished outer stores. A
+  borrowed cell can survive the lexical scope that introduced its alias while the
+  target remains active. Reads or calls cannot bypass E302 conflicts or E303 expiry
+  merely because the eventual result is discarded. No owning cleanup or runtime
+  representation is added.
+- The [discarded-aliases example](examples/discarded-aliases.mwy) changes a transient
+  pointer to a target-local value and reads it across an inner restart before Leave.
+  Tests distinguish finite, potentially published results from endless or otherwise
+  non-completing paths; only proven discarded backing uses this rule. Widened result
+  backing, allocator-only alias bounds, lists and exclusive carriers remain gated.
 
 ## Mutable shared-reference bindings
 

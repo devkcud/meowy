@@ -21,6 +21,9 @@ impl Checker<'_> {
         if !alias.mutable || !ty.has_reference() || !ty.fixed_borrowed_value() {
             return Err(Self::unsupported(span));
         }
+        if alias.backing == Some(Backing::Discarded) {
+            return Ok(());
+        }
         let target = alias.target;
         if !self.guards.spend(alias.field.len() + path.len() + 1) {
             return Err(State::budget(span));

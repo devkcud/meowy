@@ -77,13 +77,16 @@ pub(crate) fn borrowed_alias_writes_preserve_cell_and_transitive_loans() {
 pub(crate) fn borrowed_alias_views_keep_copies_and_discarded_effects() {
     accepts("x:1;y:2;r:{->c:={->p:=&x};old:c;c.p=&y;v:*old.p};v:*r.c.p");
     accepts("x:1;y:2;'out{r:{->p:=&x;p={'out.leave();->&y}}}");
-    rejects("x:1;y:2;'out{r:{->p:=&x;p=&y;'out.leave()}}", "B001");
+    accepts("x:1;y:2;'out{r:{->p:=&x;p=&y;'out.leave()}}");
     accepts("x:1;y:2;flag:=true;r:'out{|flag|{'out->p:=&x;p=&y};|!flag|{'out->p:=&y;p=&x}};v:*r.p");
 }
 
 #[test]
 pub(crate) fn borrowed_alias_writes_keep_unsupported_backing_and_restart_gates() {
-    rejects("x:1;y:2;r:{->p:=&x;p=&y;'loop{'loop.restart()}}", "B001");
+    rejects(
+        "x:1;y:2;r:{->p:=&x;p=&y;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
+        "B001",
+    );
     rejects("x:1;flag:=true;r:'out{|flag|{'out->p:=&x;p=&x}}", "B001");
     rejects(
         "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p=&x};|!flag|{'out->p:=\"x\"}}",

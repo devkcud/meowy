@@ -105,13 +105,16 @@ pub fn reference_field_lifetimes_alias_writes_and_mutability_are_checked() {
             "r:={->p<&int32><null>:=null};'loop{|r.p<&int32>|{v:*r.p};x:1;r.p=&x;'loop.restart()}",
             "E303",
         ),
-        ("x:1;y:2;r:{->p:=&x;p=&y;'loop{'loop.restart()}}", "B001"),
         (
-            "x:1;y:2;r:{->c:={->p:=&x};c.p=&y;'loop{'loop.restart()}}",
+            "x:1;y:2;r:{->p:=&x;p=&y;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         (
-            "x:1;r:{->c:={->p:=&x;->n:=0};c.n=1;'loop{'loop.restart()}}",
+            "x:1;y:2;r:{->c:={->p:=&x};c.p=&y;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
+            "B001",
+        ),
+        (
+            "x:1;r:{->c:={->p:=&x;->n:=0};c.n=1;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         ("r:{x:1;->p:=&x}", "E303"),

@@ -51,7 +51,10 @@ pub(crate) fn alias_discard_paths_preserve_lexical_storage_and_boundaries() {
     for (source, code) in [
         ("r:{->n:=1;n=\"x\"}", "E207"),
         ("r:{->n:=1;->n:=2}", "E205"),
-        ("a:1;r:{->view:=&a;view=&a;'loop{'loop.restart()}}", "B001"),
+        (
+            "a:1;r:{->view:=&a;view=&a;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
+            "B001",
+        ),
     ] {
         rejects(source, code);
     }

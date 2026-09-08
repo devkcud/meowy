@@ -7,6 +7,7 @@ mod allocator_records;
 mod allocators;
 mod boundaries;
 mod control;
+mod discarded_aliases;
 mod guarded_references;
 mod header_activity;
 mod header_components;
