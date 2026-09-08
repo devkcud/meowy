@@ -1,6 +1,6 @@
 use super::{Backing, Checker, FALSE, LocalId, Path, Result, Span, State, Step, Type};
 
-pub(crate) fn result_path(ty: &Type, name: &str, local: &Type) -> Option<Path> {
+pub(crate) fn result_slot<'a>(ty: &'a Type, name: &str, local: &Type) -> Option<(Path, &'a Type)> {
     let Type::Record { fields, .. } = ty else {
         return None;
     };
@@ -13,10 +13,15 @@ pub(crate) fn result_path(ty: &Type, name: &str, local: &Type) -> Option<Path> {
         let Type::Union(members) = &field.ty else {
             return None;
         };
-        let member = members.iter().position(|member| member == local)?;
-        path.push(Step::Variant(member));
+        if let Some(member) = members.iter().position(|member| member == local) {
+            path.push(Step::Variant(member));
+            return Some((path, &members[member]));
+        }
+        if !matches!(local, Type::Union(_)) || !field.ty.accepts(local) {
+            return None;
+        }
     }
-    Some(path)
+    Some((path, &field.ty))
 }
 
 impl Checker<'_> {
@@ -55,8 +60,16 @@ impl Checker<'_> {
         if alias.backing != Some(Backing::Result) {
             return Err(Self::unsupported(span));
         }
-        let mut prefix =
-            result_path(target_type, &alias.field, ty).ok_or_else(|| Self::unsupported(span))?;
+        let (mut prefix, backing) =
+            result_slot(target_type, &alias.field, ty).ok_or_else(|| Self::unsupported(span))?;
+        let value = if backing != ty {
+            if !path.is_empty() || !self.guards.spend(value.weight() + 1) {
+                return Err(Self::unsupported(span));
+            }
+            value.clone().convert(ty, backing, self.guards, span)?
+        } else {
+            value.select(path, self.guards)
+        };
         let complete = self
             .proofs
             .completions
@@ -67,7 +80,7 @@ impl Checker<'_> {
         if guard == FALSE {
             return Ok(());
         }
-        let mut value = value.select(path, self.guards).under(guard, self.guards);
+        let mut value = value.under(guard, self.guards);
         let target_index = self
             .blocks
             .iter()

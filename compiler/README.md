@@ -63,6 +63,7 @@ compiler/target/debug/meowy run compiler/examples/alias-writes.mwy
 compiler/target/debug/meowy run compiler/examples/alias-restarts.mwy
 compiler/target/debug/meowy run compiler/examples/discarded-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/widened-aliases.mwy
+compiler/target/debug/meowy run compiler/examples/union-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -334,7 +335,8 @@ implementation work.
   references, records and closed unions, preserving current component activity.
   [Mutable reference fields](OWNERSHIP.md#mutable-reference-fields) support direct
   and nested writes on completed fixed records. [Borrowed emitted-name writes](OWNERSHIP.md#borrowed-emitted-alias-writes)
-  synchronize identical backing or an [exact union member](OWNERSHIP.md#widened-borrowed-alias-backing).
+  synchronize identical backing, an [exact union member](OWNERSHIP.md#widened-borrowed-alias-backing),
+  or [whole union views](OWNERSHIP.md#whole-union-alias-assignment) with explicit tag conversion.
   Restart supports reset or independent slots;
   written published outer result slots enclosing an inner Restart remain gated.
   [Discarded borrowed aliases](OWNERSHIP.md#discarded-borrowed-alias-writes) retain
@@ -417,7 +419,8 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, non-scalar exclusive borrows,
 borrows of owned temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, borrowed emitted-alias
-writes to published result owners enclosing an inner Restart, proper-subset union views,
+writes to published result owners enclosing an inner Restart, addresses/field writes
+through proper-subset union views,
 mutable primary slots and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.

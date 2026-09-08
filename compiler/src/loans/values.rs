@@ -294,6 +294,29 @@ impl<'a> Graph<'a> {
         Ok(())
     }
 
+    pub(crate) fn retag(
+        &mut self,
+        source: Bundle,
+        sources: &[Type],
+        targets: &[Type],
+        span: Span,
+    ) -> Result<Bundle> {
+        let unsupported = || Diagnostic::unsupported("unknown borrowed union projection", span);
+        let mut result = Bundle::new();
+        for (mut component, id) in source {
+            self.charge(component.len() + targets.len() + 1)?;
+            let Some(Step::Variant(index)) = component.first() else {
+                return Err(unsupported());
+            };
+            let member = sources.get(*index).ok_or_else(unsupported)?;
+            if let Some(index) = targets.iter().position(|ty| ty == member) {
+                component[0] = Step::Variant(index);
+                result.insert(component, id);
+            }
+        }
+        Ok(result)
+    }
+
     pub(crate) fn convert(&mut self, value: &Expr, to: &Type, path: &[Step]) -> Result<Bundle> {
         self.convert_mode(value, to, path, true)
     }
@@ -333,19 +356,7 @@ impl<'a> Graph<'a> {
                     return Err(unsupported());
                 }
                 let source = self.project_mode(value, &[], take)?;
-                let mut result = Bundle::new();
-                for (mut component, id) in source {
-                    self.charge(component.len() + targets.len() + 1)?;
-                    let Some(Step::Variant(index)) = component.first() else {
-                        return Err(unsupported());
-                    };
-                    let member = sources.get(*index).ok_or_else(unsupported)?;
-                    if let Some(index) = targets.iter().position(|ty| ty == member) {
-                        component[0] = Step::Variant(index);
-                        result.insert(component, id);
-                    }
-                }
-                return Ok(result);
+                return self.retag(source, sources, targets, value.span);
             }
             let index = sources
                 .iter()

@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Borrowed alias writes through exact union members verified.
+Updated: 2026-09-08. Whole union-alias assignment verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,26 +40,25 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Widened borrowed-alias backing](OWNERSHIP.md#widened-borrowed-alias-backing) now
-supports an alias whose complete lexical type is one exact member of the completed
-result field's union. Shared result_path selects the mutable field and optional
-Variant step in both origin and loan synchronization. Identical backing is unchanged.
+[Whole union-alias assignment](OWNERSHIP.md#whole-union-alias-assignment) now supports
+fixed borrowed lexical unions contained in larger result unions. Shared result_slot
+returns both the component path and backing type. State::convert remaps result tags,
+origins and bounds; Graph::retag maps loan keys using the same normalized members and
+is reused by ordinary union conversion. Local alias state stays in its lexical domain.
 
-Whole/field writes replace only the local payload, preserving the outer member's
-emission activity, absent defaults, other branches and sibling versions. Nested
-predicates, earlier copies, RHS/Leave effects, cell/source loans, retained lifetimes
-and reset-scope Restart retain their checks. Proper-subset union views and surviving
-published outer result headers remain gated; no broad union conversion was enabled.
+Whole assignments evaluate RHS once, preserve earlier copies and synchronize result
+definitions. Null/reference transitions, nested record variants, branches, Leave,
+reset-scope Restart and discarded effects retain their rules. Addresses/field writes
+through subset views, surviving published headers and allocator-only bounds stay gated.
 
-Seven new library and five native groups pass, including declared/inferred result
-backing, heterogeneous references, nested fields, current tags, old copies and resets.
-All fourteen combined checks pass: 462 library and 481 native tests, 35 Python tests,
-60 examples, editors, contracts and runtime sanitizers. The widened-aliases example
-prints 9, empty.
+Six new library and five native groups pass, including shifted tag indexes, nested
+members, old copies, Leave, retained lifetimes, reset scopes and field/address gates.
+All fourteen combined checks pass: 468 library and 486 native tests, 35 Python tests,
+61 examples, editors, contracts and runtime sanitizers. The union-aliases example
+prints 7, clear, 7.
 
 No runtime/backend representation, syntax, reference fixture or dependency changes.
-Surviving published headers, broader union views, allocator-only alias bounds, lists,
-dynamic origins, owning cleanup, source error APIs, tasks, DWARF and full release remain open.
+Lists, dynamic origins, owning cleanup, source error APIs, tasks, DWARF and full release remain open.
 
 ## Prior implemented milestone
 
@@ -107,7 +106,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 481 native groups, 4 harness tests and 60 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 486 native groups, 4 harness tests and 61 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -600,34 +599,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --all`: all fourteen selected checks passed. Rust:
-  462 library + 481 native (943 total). Python: 16 tooling + 15 runtime + 4 compiler
-  (35). All 60 examples execute in debug/release. Both editors, formatting, Clippy,
+  468 library + 486 native (954 total). Python: 16 tooling + 15 runtime + 4 compiler
+  (35). All 61 examples execute in debug/release. Both editors, formatting, Clippy,
   build, schemas/identities and catalog pass. No selected check was skipped.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
   fatal/admission/guard/fiber probes with approved process access. Runtime/backend
   representations, syntax, reference fixtures and dependencies are unchanged.
-- Seven new library and five native groups cover optional/heterogeneous result
-  members, declared/inferred backing, record payload fields, nested nullable tags,
-  old-copy/source/cell loans, RHS/Leave effects, reset iterations and E303 escapes.
-  Shared paths preserve outer member activity and keep proper-subset union views
-  and surviving published result headers gated.
-- Two old library optional-alias B001 expectations became obsolete; they now accept
-  supported writes, with native execution supplied by the new groups. Broader union
-  views still reject as B001, conflicts as E302 and immutable aliases as E305.
-  All final checks have no failures.
-- Final handoff passes 1001 local links in 99 Markdown files and Git whitespace checks.
-  The widened-aliases example prints 9, empty. Conformance remains 10 passed,
-  13 unsupported, 0 failed. Surviving published headers, broader union views,
+- Six new library and five native groups cover differing lexical/backing tag indexes,
+  null/reference transitions, nested record members, old-copy/source loans, branches,
+  Leave, retained lifetimes, declared/inferred backing and reset iterations. Whole
+  alias stores remap both activity/origins and loan keys; address/field views stay gated.
+- Two historical subset-write B001 expectations now accept supported writes. One
+  initial Restart fixture hit earlier E205 after losing emission exclusivity; its
+  declared backing replacement tests the intended ownership gate. All final checks
+  pass, including existing ordinary union conversion after retag-helper reuse.
+- Final handoff passes 1003 local links in 99 Markdown files and Git whitespace checks.
+  The union-aliases example prints 7, clear, 7. Conformance remains 10 passed,
+  13 unsupported, 0 failed. Surviving published headers, union-view addresses/fields,
   allocator-only alias bounds, lists/exclusive carriers, dynamic origins, owning
   drops, source error APIs, tasks, DWARF and complete release remain unqualified.
 
 ## Next steps
 
 1. Add surviving published result snapshots to restart header merging before lifting their ownership gate.
-   Proper-subset union views need explicit tag/component conversions; allocator-only
-   bounds need their own version proof. Preserve shared result paths, outer member
-   activity, sibling IDs, transient cell lifetime and RHS effects. Lists need bounded
-   summaries; dynamic origins and [OWNING_HIR.md](OWNING_HIR.md) follow those proofs.
+   Union-view addresses/field paths and allocator-only bounds need separate proofs.
+   Preserve lexical/backing tag domains, shared retagging, old copies, transient
+   lifetime and RHS effects. Lists need bounded summaries; dynamic origins and
+   [OWNING_HIR.md](OWNING_HIR.md) cleanup schedules follow those proofs.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

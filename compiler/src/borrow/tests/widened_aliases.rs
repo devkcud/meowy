@@ -105,9 +105,8 @@ pub(crate) fn widened_alias_lifetimes_and_reset_iterations_remain_checked() {
 
 #[test]
 pub(crate) fn widened_union_views_and_allocator_only_aliases_stay_gated() {
-    rejects(
+    accepts(
         "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p=&x};|!flag|{'out->p:=\"x\"}}",
-        "B001",
     );
     rejects(
         "m:@\"memory\";f<m.Allocator>:(p<&int32>){->m.heap};x:1;flag:=true;r:'out{|flag|{'out->h:=f(&x)}}",

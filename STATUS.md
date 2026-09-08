@@ -11,22 +11,22 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Widened borrowed-alias backing](compiler/OWNERSHIP.md#widened-borrowed-alias-backing)
-  supports writes to one exact result-union member. Shared origin/loan paths preserve
-  outer tags, absent defaults, sibling versions, old copies and RHS/Leave effects.
-- All fourteen combined checks pass: 943 Rust (462 library, 481 native), 35 Python,
-  60 debug/release examples, both editors, formatting, Clippy, build and contracts.
+- [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
+  maps lexical tags and reference paths into larger result unions. Old copies,
+  branches/Leave, nested members and reset-iteration behavior remain intact.
+- All fourteen combined checks pass: 954 Rust (468 library, 486 native), 35 Python,
+  61 debug/release examples, both editors, formatting, Clippy, build and contracts.
   Runtime passes 100 groups/profile with sanitizers and required probes. Conformance:
   10 passed, 13 unsupported, 0 failed. Runtime/backend and dependencies unchanged.
-- The [widened-aliases example](compiler/examples/widened-aliases.mwy) updates an
-  optional pointer and preserves the absent path. Surviving published headers, broader
-  union views, lists, dynamic origins, owning cleanup, tasks and full release remain open.
+- The [union-aliases example](compiler/examples/union-aliases.mwy) changes a nullable
+  pointer whose backing admits an extra string member. Surviving published headers,
+  union-view addresses/fields, lists, dynamic origins, owning cleanup and release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Exact-member borrowed aliases and transient storage | List/alias/reference bounds, dynamic origins and drop schedules |
+| Compiler | Whole union-alias assignment and transient storage | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -36,10 +36,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Add surviving published result headers before lifting the ownership gate. Proper-subset union views and
-   allocator-only bounds need separate proofs. Preserve outer tags, shared result
-   paths, sibling versions, transient cell lifetime and RHS effects. Lists need
-   bounded summaries; dynamic origins and [owning cleanup](compiler/OWNING_HIR.md) follow.
+1. Add surviving published result headers before lifting the ownership gate. Union-view addresses/field paths
+   and allocator-only bounds need separate proofs. Preserve both tag domains, old
+   copies, transient cell lifetime and RHS effects. Lists need bounded summaries;
+   dynamic origins and [owning cleanup](compiler/OWNING_HIR.md) follow.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

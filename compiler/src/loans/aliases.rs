@@ -19,12 +19,21 @@ impl Graph<'_> {
         if !self.guards.spend(alias.field.len() + path.len() + 1) {
             return Err(Self::budget());
         }
-        crate::borrow_contract::type_weight(&scope.ty, self.guards, span)?;
+        let weight = crate::borrow_contract::type_weight(&scope.ty, self.guards, span)?;
         if alias.backing != Some(Backing::Result) {
             return Err(Self::budget());
         }
-        let mut prefix = crate::borrow::aliases::result_path(&scope.ty, &alias.field, ty)
-            .ok_or_else(Self::budget)?;
+        let (mut prefix, backing) =
+            crate::borrow::aliases::result_slot(&scope.ty, &alias.field, ty)
+                .ok_or_else(Self::budget)?;
+        let types = if backing != ty {
+            if !path.is_empty() || !self.guards.spend(weight.saturating_mul(2) + 1) {
+                return Err(Self::budget());
+            }
+            Some((ty.clone(), backing.clone()))
+        } else {
+            None
+        };
         let path = path
             .iter()
             .map(|step| match step {
@@ -43,6 +52,11 @@ impl Graph<'_> {
         prefix.extend_from_slice(&path);
         let target = Self::select(scope.result.clone(), &prefix);
         let source = Self::select(self.local(id)?, &path);
+        let source = if let Some((from, to)) = types {
+            self.retag(source, from.members(), to.members(), span)?
+        } else {
+            source
+        };
         let node = self.copied(&source, &target)?;
         self.append(node)?;
         Ok(())

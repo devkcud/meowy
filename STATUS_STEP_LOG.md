@@ -6,6 +6,56 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Whole union-alias validation complete
+
+- All fourteen combined checks pass: 954 Rust (468 library, 486 native), 35 Python,
+  61 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Six new library and five native groups prove remapped tag/reference paths, null
+  transitions, nested members, old copies, branches/Leave, declared backing, reset
+  iterations and lifetime/address/field boundaries. Ordinary conversions also pass.
+- Two old subset-write expectations now accept; an E205 fixture was corrected to
+  isolate the intended Restart gate. Final handoff passes 1003 local links in 99
+  Markdown files and Git whitespace checks. Example prints 7, clear, 7; no failures.
+- Next: surviving published result headers, union-view address/field proofs,
+  allocator-only bounds, bounded lists, dynamic origins and owning cleanup schedules.
+
+### 2026-09-08 — Union-alias native proof and contract
+
+- Full Rust suite passes: 468 library and 486 native tests. Five new native groups
+  run both profiles and verify shifted tags, null/reference changes, nested records,
+  Leave, declared backing, old copies, reset iterations and lifetime/type boundaries.
+- Added explicit subset field-write rejection and union-aliases example for the
+  final gate. Updated ownership/allocator/README contracts. Union-view addresses
+  and field paths remain B001; no runtime/backend representation changes.
+- Next: combined gate, final handoff/diff review and a cohesive commit.
+
+### 2026-09-08 — Borrowed union-view synchronization implemented
+
+- Result slots now describe both the component path and stored view type. Whole
+  proper-subset writes convert origin/activity state into the backing union; loan
+  synchronization uses the same retag helper as ordinary union conversion.
+- Five focused groups initially passed; one Restart fixture hit earlier E205 after
+  losing emission exclusivity. Replaced it with a declared backing type to test the
+  intended ownership gate. Two historical subset-write B001 expectations now accept.
+- Added five native groups for shifted tag indexes, null/reference transitions,
+  nested records, Leave, declared backing, old copies and reset iterations.
+- Next: validate all tests, document remaining address/field gates, add an example
+  and run the combined repository gate. Runtime/backend representations unchanged.
+
+### 2026-09-08 — Borrowed union-view write investigation
+
+- Clean tree at ed8fbc0. State conversion and loan union retagging already map
+  normalized members; alias synchronization currently supports only identical or
+  exact-member views. Backend whole alias stores already convert into backing types.
+- Next: reuse those conversions for whole proper-subset union assignments, preserving
+  tag/activity and reference paths together. Field/address operations through a
+  subset view remain gated; no synthetic reads or repeated expression effects.
+- Validate differing tag indexes, null/reference transitions, old copies, branches,
+  Leave, reset/discarded scopes and lifetime/budget boundaries. No checks yet.
+
 ### 2026-09-08 — Union-member alias write validation complete
 
 - All fourteen combined checks pass: 943 Rust (462 library, 481 native), 35 Python,

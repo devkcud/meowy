@@ -305,7 +305,7 @@ implementation boundary; it does not change language rules.
 - Mutable borrowed emitted names retain initial component snapshots and may be read
   or borrowed. `Proofs::versioned` includes fixed reference-bearing aliases for this
   purpose. Exact-backing assignment and field paths synchronize the result as
-  described below; proper-subset union views and surviving published outer result slots
+  described below; union-view addresses/field paths and surviving published outer result slots
   enclosing an inner Restart remain B001.
 - After the record finishes, `r.view = &next` replaces only that field's origins,
   bounds and activity. Nested paths require a mutable ordinary root and mutable
@@ -345,7 +345,8 @@ implementation boundary; it does not change language rules.
   mutually exclusive scopes may share a result field while keeping guarded values.
   The completed carrier can escape an earlier source only after that component has
   been replaced with a source that survives its receiving scope.
-- Proper-subset union views remain B001 on a returning borrowed-alias write. Proven discarded
+- Whole proper-subset union views use explicit tag/path conversion below. Their
+  addresses and field writes remain B001. Proven discarded
   backing keeps ordinary local versions without a result transfer, as described below.
   Restart supports writes when the result owner is reset by the target or is
   independent of it. Written result owners strictly enclosing a Restart target
@@ -420,10 +421,11 @@ implementation boundary; it does not change language rules.
   result field, as when a field is emitted only on one branch and otherwise defaults
   to null. Writes now support that view when its entire type is one exact concrete
   member of the result union. The lexical type still constrains every RHS.
-- `borrow/aliases.rs::result_path` supplies the same path to origin and loan passes.
+- `borrow/aliases.rs::result_slot` supplies the same path to origin and loan passes.
   It selects a mutable result field and, when types differ, that field's exact
   Variant member. Subsequent field paths descend beneath this member. Identical
-  backing retains the previous path; other conversions remain B001.
+  backing retains the previous path. Whole union views additionally return the
+  backing type for conversion, as described below.
 - Updating a whole alias replaces that member's payload, preserving the enclosing
   member activity established by emission. Field updates replace only their selected
   payload subtree. Other branches, absent defaults and sibling components retain
@@ -431,13 +433,39 @@ implementation boundary; it does not change language rules.
 - Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
   loans keep their existing checks. Returned payloads still satisfy retained-source
   lifetimes. Restart supports reset or independent slots; surviving published outer
-  results remain gated. Views spanning a proper subset of a larger union still need
-  explicit component/tag conversion and are not enabled here.
+  results remain gated. Views spanning a proper subset of a larger union use the
+  whole-assignment conversion below; their addresses and field paths stay gated.
 - The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
   an optional emitted field and preserves the absent path. Library/native tests
   cover declared/inferred backing, heterogeneous references, record payload fields,
   nested nullable tags, old copies, cell loans, escape lifetimes and reset iterations.
   This uses existing layouts, code generation, source syntax and proof budgets.
+
+## Whole union-alias assignment
+
+- A fixed reference-bearing alias with a union type may be wholly assigned when
+  every lexical member belongs to its larger result union. The RHS must still fit
+  the lexical type; assignment cannot introduce a member admitted only by backing.
+  Identical views and exact concrete members retain their prior field-write rules.
+- `result_slot` returns the result path and effective backing type. Whole subset
+  writes reuse `State::convert` to remap active tags, origins and bounds by normalized
+  member identity before replacing the guarded result field. Local alias state keeps
+  its lexical tag domain, so subsequent predicates and copies use the correct indexes.
+- Loan synchronization reuses `Graph::retag`, also used by ordinary union conversion,
+  to map bundle keys into the backing domain. Matching result definitions therefore
+  follow the same members as origin/activity state. RHS expressions run once; no
+  synthetic read is introduced, and old copies retain their original value IDs.
+- Null/reference transitions, nested record members, branches and Leave publish
+  the last completed member. Reset-scope Restart and discarded backing retain their
+  established rules. Physical conflicts and retained-source expiry remain E302/E303.
+- Taking an address or writing a field through a proper-subset union view remains
+  B001 because its lexical tag representation differs from backing. Surviving
+  published result headers and bounded allocator-only aliases remain separate proof
+  work. Type/path copies and member remapping use existing charged budgets.
+- The [union-aliases example](examples/union-aliases.mwy) alternates a nullable
+  reference while backing admits an extra string member. Library/native tests cover
+  shifted indexes, nested members, old copies, branches/Leave, retained lifetimes,
+  declared/inferred backing, reset iterations and address/field/type boundaries.
 
 ## Mutable shared-reference bindings
 

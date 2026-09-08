@@ -1,0 +1,12 @@
+d:@"debug"
+<R>:<{view<&int32><null><string>:=}>
+x:7
+r<R>:{
+    ->view<&int32><null>:=null
+    view=&x
+    |view<&int32>|d.print(*view)
+    view=null
+    |view<null>|d.print("clear")
+    view=&x
+}
+|r.view<&int32>|d.print(*r.view)

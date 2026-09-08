@@ -88,9 +88,8 @@ pub(crate) fn borrowed_alias_writes_keep_unsupported_backing_and_restart_gates()
         "B001",
     );
     accepts("x:1;flag:=true;r:'out{|flag|{'out->p:=&x;p=&x}}");
-    rejects(
+    accepts(
         "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p=&x};|!flag|{'out->p:=\"x\"}}",
-        "B001",
     );
     rejects(
         "m:@\"memory\";f<m.Allocator>:(p<&int32>){->m.heap};x:1;r:{->h:=f(&x)}",
