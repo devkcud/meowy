@@ -142,10 +142,13 @@ impl Checker<'_> {
                                 .get_mut(id)
                                 .ok_or_else(|| Self::unsupported(value.span))?
                                 .state = result.state;
-                        } else if !result.state.origins.is_empty()
-                            || self.program.locals[*id].has_reference()
-                        {
-                            return Err(Self::unsupported(value.span));
+                        } else {
+                            self.unbounded(&result.state, "allocator assignment", value.span)?;
+                            if !result.state.origins.is_empty()
+                                || self.program.locals[*id].has_reference()
+                            {
+                                return Err(Self::unsupported(value.span));
+                            }
                         }
                     }
                     result.flow
@@ -209,12 +212,15 @@ impl Checker<'_> {
                     }
                     if result.next {
                         let next = self.expression(value)?;
-                        if next.flow.next
-                            && (!next.state.origins.is_empty()
-                                || !next.state.bounds.is_empty()
-                                || value.ty != *ty)
-                        {
-                            return Err(Self::unsupported(*span));
+                        if next.flow.next {
+                            self.unbounded(
+                                &next.state,
+                                "allocator bounds in field or indexed assignment",
+                                *span,
+                            )?;
+                            if !next.state.origins.is_empty() || value.ty != *ty {
+                                return Err(Self::unsupported(*span));
+                            }
                         }
                         result.append(next.flow);
                     }

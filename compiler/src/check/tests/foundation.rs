@@ -92,12 +92,12 @@ pub(crate) fn allocator_cell_borrows_keep_local_lifetimes_and_conflicts() {
 }
 
 #[test]
-pub(crate) fn allocator_results_with_borrow_inputs_wait_for_lifetime_bounds() {
+pub(crate) fn allocator_result_signatures_use_lifetime_analysis() {
     for source in [
         r#"m:@"memory";f<m.Allocator>:(view<&int32>){->m.heap}"#,
         r#"m:@"memory";f<m.Allocator>:(cell<&m.Allocator>){->*cell}"#,
         r#"m:@"memory";f: (view<&int32>){->slot:m.heap}"#,
     ] {
-        rejects(source, "B001");
+        accepts(source);
     }
 }

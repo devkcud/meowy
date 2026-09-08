@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Nominal foundation layouts and static heap values verified.
+Updated: 2026-09-08. Immutable allocator return bounds and native behavior verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,35 +40,38 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Foundation values](FOUNDATION.md) now use nominal HIR types for Allocator,
-AllocationFailure and OwnedString. Layouts match the pinned private runtime:
-allocator pointer 8/8, failure {i32,i64,i64} 24/8 and string {ptr,ptr,i64} 24/8.
-Records cannot forge these types. Copyability, destruction and equality are separate:
-Allocator/failure are Copy, owning strings require drops, and exclusive references
-are move-only without referent destruction. Opaque values have no ordinary equality,
-including inside empty lists/nullable unions; compatible scalar primary projection
-and reference-address equality remain supported.
+[Allocator return bounds](ALLOCATOR_BOUNDS.md) replace the blanket signature gate
+for supported immutable shapes. Call substitution attaches active input origins
+and inherited bounds to allocator result components using existing State, paths,
+entered guards and budgets. Locals, records/unions, copies, further calls and shared
+pointee/reborrow snapshots retain the constraints. Escaping/expired use is E303;
+scalar projections and proven inactive alternatives discard only irrelevant parts.
 
-memory.heap produces an ordinary static allocator value with separate binding cells,
-copy/assignment/call behavior, records, lists and nullable alternatives. Cell borrows
-retain existing E302/E303 rules. Only the static heap can produce an allocator in
-source; allocator results with borrow-carrying inputs remain B001 pending conservative
-return-bound tracking. Existing reference-to-cell results use normal origin analysis.
-AllocationFailure can travel through source-lowered calls/shared borrows/unions;
-its native injected facts retain full width, and its fields stay opaque.
+Physical origins remain separate. Typed loan bundles mark allocator components so
+lifetime-only bounds do not become phantom shared loans in either conflict checker.
+Replacing a still-live scalar bound source is allowed; actual reference conflicts
+remain enforced. Full call-entry validation checks nested allocator bounds after
+all arguments return; an argument Leave skips that boundary and later effects.
 
-Source owning storage remains B001. Backend storage/results/expressions requiring
-drops also reject unscheduled ownership. The private string constructor is still
-not source-enabled. Dynamic allocator/view origins, source failure construction,
-error metadata/erasure and initialized-state/drop schedules remain pending.
+Active bounds cannot enter mutable bindings, assignments, field/index writes or
+list construction/append when those operations would discard facts. Bounded list
+call results (including beneath references) and allocator-bound restart-header paths
+remain B001. Static element reborrows retain presence/proof; unbounded static
+allocator variant headers continue to work. Existing heap storage behavior passes.
 
-Ten foundation library/checker probes and two focused source-native groups pass.
-All fourteen combined checks pass: 377 library + 431 native, 35 Python,
-49 debug/release examples, both editors, formatting, Clippy, build and contracts.
-Runtime passes 100 groups/profile with debug/release/ASan/UBSan/LSan and required
-fatal/guard/admission/fiber probes. Both generated heap-handle profiles import only
-libc.so.6. Conformance remains 10 passed, 13 unsupported, 0 failed. No syntax,
-reference fixture, runtime source or dependency changed in this slice.
+Eight new borrow checker groups and three native groups cover lifetime propagation,
+transitive/all-input constraints, shared carriers, null/scalar projections, call
+entry/early Leave, loss-prevention gates and bound fanout. All fourteen combined
+checks pass: 385 library + 434 native, 35 Python, 50 debug/release examples, both
+editors, formatting, Clippy, build and contracts. Runtime passes 100 groups/profile
+in debug/release/ASan/UBSan/LSan with required probes. Conformance stays 10 passed,
+13 unsupported, 0 failed. No runtime, backend ABI, syntax or dependency changed.
+
+The static heap remains the only allocator factory. Allocator parameters are valid
+through their invocation, with actual result constraints substituted at callers;
+physical context-origin facts for custom/arena allocators are not implemented.
+Owning-string construction/views, broader bound carriers, drop schedules and
+source failure/metadata APIs remain pending. No automatic resource cleanup is enabled.
 
 ## Prior implemented milestone
 
@@ -608,42 +611,39 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 377 library
-  + 431 native (808 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 49 examples execute in debug/release. Both editors, formatting, Clippy,
-  pinned build, schemas/identities and catalog pass. Final handoff documentation
-  passes 978 local links in 98 Markdown files.
+- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 385 library
+  + 434 native (819 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 50 examples execute in debug/release; both editors, formatting, Clippy,
+  build, schemas/identities and catalog pass. Final handoff documentation passes
+  984 local links in 99 Markdown files.
 - Runtime debug/release/ASan/UBSan/LSan pass 100 groups/profile plus exact fatal,
-  admission, guard and fiber probes with approved process access. Runtime source
-  was unchanged; no selected check was skipped.
-- Ten focused foundation library/checker tests prove nominal/opaque boundaries,
-  separate drop/Copy rules, rejected unscheduled backend ownership, allocator
-  return-bound gates and local E302/E303 behavior. Native layout matches the actual
-  string descriptor; injected failure facts survive source calls, shared borrowing,
-  full-width copying and present/null union returns. This is transport proof, not
-  source failure construction or automatic cleanup.
-- Native heap coverage passes copies, cells, reference returns, calls, lists/indexed
-  writes, records and nullable branches. An initial fixture used a value ascription
-  as a predicate; corrected to matcher syntax. One documentation anchor was also
-  corrected. No compiler behavior was weakened to satisfy these fixture fixes.
-- Built/ran heap-handles.mwy in both profiles into `/tmp/meowy-heap-debug` and
-  `/tmp/meowy-heap-release`: exact false/heap/2 output, explicit static heap call in
-  retained LLVM and only libc.so.6 in readelf NEEDED.
-- Conformance remains 10 passed, 13 unsupported, 0 failed. Owning source construction,
-  dynamic origins/return bounds, source error APIs, automatic drops, task recovery,
-  cancellation, DWARF and full release/minimum-host qualification remain open.
+  admission, guard and fiber probes with approved process access. Runtime and
+  code-generation representation were unchanged; no selected check was skipped.
+- Eight new allocator borrow groups cover transitive/all-input bounds, local and
+  temporary E303, shared reborrow snapshots, null/scalar selection, nonphysical
+  bounds, mutable/list/header B001 gates and shared-budget exhaustion.
+- Three native groups pass both profiles: exact output/effect order, legal writes
+  with lifetime-only bounds, skipped call entry on Leave and distinct E303/B001
+  rejection codes. allocator-bounds.mwy prints 7 then 8 in both profiles.
+- Initial checks fixed a missing Diagnostic import and an obsolete B001 signature
+  expectation. A new regression exposed phantom physical loans from bounds; typed
+  component roles fixed both conflict paths. The broader reference/restart suite
+  passed afterward. No reference fixture was modified or rejection code weakened.
+- Conformance remains 10 passed, 13 unsupported, 0 failed. Actual dynamic allocator
+  contexts, owning views/constructors, broader bound carriers, automatic cleanup,
+  source error APIs, task recovery/cancellation, DWARF and full release remain open.
 
 ## Next steps
 
-1. Follow [OWNING_HIR.md](OWNING_HIR.md): add dynamic allocator/string-view origins
-   and public allocator-return bounds in `borrow/`, `loans/` and call contracts.
-   Keep the signature gate in `check.rs` until those bounds are proved; only static
-   heap production is currently enabled. Build bounded initialized-state/drop
-   schedules and use the tested panic exits before enabling strings.copy. Verify
-   normal/Leave/Restart/panic, retained/discarded emissions, temporary/call transfer
-   and live-view invalidation. Add source failure construction/metadata without
-   descriptor erasure; preserve nominal layout/Copy/equality and native retry proof.
-   Task::close still needs report drain and child settlement while parents live.
+1. Extend bounded allocator carriers in `borrow/control.rs`, `borrow/value.rs`,
+   `borrow/header.rs` and loan transfers: mutation/list/element/header paths must
+   retain bounds before removing their B001 guards. Add actual symbolic allocator
+   context and string-view origins in `borrow_contract::input/call`, `borrow_value`
+   and typed loan bundles before enabling new factories; current allocator input
+   values have no physical context-origin facts. Follow [OWNING_HIR.md](OWNING_HIR.md)
+   for bounded drop schedules before strings.copy: normal/Leave/Restart/panic,
+   emitted/temporary/call transfers and live-view invalidation need source proof.
+   Keep source AllocationFailure APIs non-erasing; task close still requires live parents.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

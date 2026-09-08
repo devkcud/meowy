@@ -4,6 +4,22 @@ use super::{
 };
 
 impl Checker<'_> {
+    pub(crate) fn unbounded(&mut self, state: &State, feature: &str, span: Span) -> Result<()> {
+        if !self.guards.spend(state.weight() + 1) {
+            return Err(State::budget(span));
+        }
+        let active = self.guards.and(state.present, state.proof);
+        let active = self.guards.and(active, self.assumed);
+        if state
+            .bounds
+            .iter()
+            .any(|bound| self.guards.overlap(active, bound.guard))
+        {
+            return Err(Diagnostic::unsupported(feature, span));
+        }
+        Ok(())
+    }
+
     pub(crate) fn unsupported(span: Span) -> Diagnostic {
         Diagnostic::unsupported("borrow origins outside supported local storage", span)
     }
@@ -44,6 +60,7 @@ impl Checker<'_> {
         if !self.proofs.mutable.contains(&id) {
             self.link_tags(id, &ty, &mut state, span)?;
         } else if !matches!(ty, Type::Reference(_) | Type::Exclusive(_)) {
+            self.unbounded(&state, "mutable allocator storage", span)?;
             state = State::unknown(&ty, self.guards, span)?;
         }
         self.reserve_origins(state.weight() + 1, span)?;
@@ -275,6 +292,9 @@ impl Checker<'_> {
                 return Err(State::budget(span));
             }
             match ty {
+                Type::Foundation(crate::hir::FoundationType::Allocator) => {
+                    valid.insert(path);
+                }
                 Type::Reference(ty) | Type::Exclusive(ty) => {
                     valid.insert(path.clone());
                     if !self
@@ -283,7 +303,7 @@ impl Checker<'_> {
                     {
                         return Err(Self::unsupported(span));
                     }
-                    if ty.has_reference() {
+                    if ty.has_borrowed() {
                         if pending.len() + valid.len() + unions.len() >= MAX_ORIGINS
                             || !self.guards.spend(path.len() + 1)
                         {

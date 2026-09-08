@@ -1,4 +1,5 @@
 mod aggregates;
+mod allocators;
 mod boundaries;
 mod control;
 mod guarded_references;

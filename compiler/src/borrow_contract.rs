@@ -5,6 +5,7 @@ pub(crate) use call::call;
 
 use crate::ast::Span;
 use crate::borrow_value::{MAX_PARTS, Origin, Path, Projection, Result, Source, State, Step};
+use crate::diagnostic::Diagnostic;
 use crate::flow::{Flow, Guard};
 use crate::hir::{LocalId, Type};
 
@@ -67,7 +68,7 @@ pub(crate) fn reference_leaves<'a>(
         }
         match ty {
             Type::Reference(target) | Type::Exclusive(target) => {
-                if nested && target.has_reference() {
+                if nested && target.has_borrowed() {
                     let mut inner = path.clone();
                     inner.push(Step::Deref);
                     pending.push((target.as_ref(), inner, guard));
@@ -133,6 +134,83 @@ pub(crate) fn input(id: LocalId, ty: &Type, flow: &mut Flow, span: Span) -> Resu
         }
     }
     Ok(state)
+}
+
+pub(crate) fn bound_leaves<'a>(
+    ty: &'a Type,
+    state: &State,
+    flow: &mut Flow,
+    span: Span,
+) -> Result<Vec<Leaf<'a>>> {
+    let mut result = Vec::new();
+    let mut pending = vec![(ty, Path::new(), state.present)];
+    while let Some((ty, path, guard)) = pending.pop() {
+        if !flow.spend(path.len() + 1) {
+            return Err(State::budget(span));
+        }
+        if guard == crate::flow::FALSE {
+            continue;
+        }
+        match ty {
+            Type::Foundation(crate::hir::FoundationType::Allocator) => result.push(Leaf {
+                component: path,
+                ty,
+                guard,
+            }),
+            Type::Reference(target) | Type::Exclusive(target) => {
+                if target.has_borrowed() {
+                    let mut nested = path.clone();
+                    nested.push(Step::Deref);
+                    pending.push((target.as_ref(), nested, guard));
+                }
+                result.push(Leaf {
+                    component: path,
+                    ty,
+                    guard,
+                });
+            }
+            Type::Record { primary, fields } => {
+                for (index, ty) in std::iter::once(primary.as_ref())
+                    .chain(fields.iter().map(|field| &field.ty))
+                    .enumerate()
+                {
+                    if ty.has_borrowed() {
+                        let mut nested = path.clone();
+                        nested.push(Step::Slot(index));
+                        pending.push((ty, nested, guard));
+                    }
+                    if pending.len() + result.len() > MAX_PARTS {
+                        return Err(State::budget(span));
+                    }
+                }
+            }
+            Type::Union(members) => {
+                for (index, ty) in members.iter().enumerate() {
+                    if ty.has_borrowed() {
+                        let active = state.member(&path, index, flow);
+                        let active = flow.and(guard, active);
+                        let mut nested = path.clone();
+                        nested.push(Step::Variant(index));
+                        pending.push((ty, nested, active));
+                    }
+                    if pending.len() + result.len() > MAX_PARTS {
+                        return Err(State::budget(span));
+                    }
+                }
+            }
+            Type::List { element, .. } if element.has_allocator_value() => {
+                return Err(Diagnostic::unsupported(
+                    "allocator return bounds in lists",
+                    span,
+                ));
+            }
+            _ => {}
+        }
+        if pending.len() + result.len() > MAX_PARTS {
+            return Err(State::budget(span));
+        }
+    }
+    Ok(result)
 }
 
 pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a Type> {

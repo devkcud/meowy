@@ -181,14 +181,36 @@ impl Checker<'_> {
                     if !flow.next {
                         break;
                     }
-                    flow.append(self.expression(value)?.flow);
+                    let next = self.expression(value)?;
+                    if next.flow.next {
+                        self.unbounded(
+                            &next.state,
+                            "allocator bounds in list elements",
+                            value.span,
+                        )?;
+                    }
+                    flow.append(next.flow);
                 }
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::ListIndex { value, index } | ExprKind::ListAdd { value, item: index } => {
-                flow = self.expression(value)?.flow;
+                let left = self.expression(value)?;
+                flow = left.flow;
                 if flow.next {
-                    flow.append(self.expression(index)?.flow);
+                    self.unbounded(
+                        &left.state,
+                        "allocator bounds in list operations",
+                        value.span,
+                    )?;
+                    let right = self.expression(index)?;
+                    if right.flow.next {
+                        self.unbounded(
+                            &right.state,
+                            "allocator bounds in list operations",
+                            index.span,
+                        )?;
+                    }
+                    flow.append(right.flow);
                 }
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }

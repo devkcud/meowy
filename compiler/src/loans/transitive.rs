@@ -169,7 +169,7 @@ impl Graph<'_> {
             return Ok(Bundle::new());
         };
         self.charge(state.weight() + 1)?;
-        let result = self.bundle(super::values::Value::from(state))?;
+        let result = self.bundle(super::values::Value::from(state), &expr.ty)?;
         let mut node = Node {
             uses,
             defs: result.values().copied().collect(),

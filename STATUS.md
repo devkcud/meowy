@@ -11,27 +11,28 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Nominal foundation values](compiler/FOUNDATION.md) now have checked HIR layouts.
-  Static heap handles support ordinary copies, calls, storage and cell borrows;
-  the [heap-handles example](compiler/examples/heap-handles.mwy) runs in both profiles.
-  AllocationFailure facts retain nominal identity through calls, borrows and unions.
-- Copyability, destruction and equality are separate. Opaque values cannot gain
-  equality from aggregate storage or be forged by record construction. Source owner
-  storage and backend values requiring cleanup schedules remain gated. Allocator
-  returns from borrow-carrying inputs also remain B001 pending public return bounds.
-- All fourteen combined checks pass: 808 Rust (377 library, 431 native), 35 Python,
-  49 debug/release examples, both editors, formatting, Clippy, build and contracts.
-  Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
-  fatal/guard/admission/fiber probes. Both heap-handle ELFs import only libc.so.6.
-- Conformance remains 10 passed, 13 unsupported, 0 failed. Source failure construction,
-  metadata/erasure APIs, dynamic allocator/string-view origins and automatic resource
-  cleanup remain open. Task recovery/cancellation, DWARF and full release are unqualified.
+- [Allocator return bounds](compiler/ALLOCATOR_BOUNDS.md) now follow immutable
+  locals, records/unions, calls and shared reborrow snapshots. Escapes and expired
+  consumption report E303. Active input lifetimes constrain even a returned heap
+  handle; the old blanket signature gate is removed for supported result shapes.
+- Lifetime-only allocator bounds do not create physical loans or forbid replacing
+  still-live scalar storage. Actual references retain their access rules. Mutable,
+  list and restart-header paths that cannot retain allocator bounds remain B001;
+  existing unbounded static heap behavior remains supported.
+- All fourteen combined checks pass: 819 Rust (385 library, 434 native), 35 Python,
+  50 debug/release examples, both editors, formatting, Clippy, build and contracts.
+  Runtime passes 100 groups/profile under debug/release/ASan/UBSan/LSan plus required
+  fatal/admission/guard/fiber probes. Runtime/backend representations did not change.
+- Conformance remains 10 passed, 13 unsupported, 0 failed. The
+  [allocator-bounds example](compiler/examples/allocator-bounds.mwy) exercises the
+  new contract. Actual dynamic allocator contexts, owning string views/constructors,
+  automatic cleanup, source error APIs, task recovery and full release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Nominal foundation layouts, static heap values and panic outcomes | Allocator/view origins and bounded drop schedules |
+| Compiler | Nominal values, allocator return bounds and panic outcomes | Bound carriers, dynamic view/context origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -41,13 +42,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Add dynamic allocator/string-view origins and conservative allocator-return bounds
-   to the existing borrow pipeline, following [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md).
-   Build bounded initialized-state/drop schedules before enabling strings.copy:
-   prove normal/Leave/Restart/panic cleanup with retained/discarded emissions,
-   temporary and call transfers. Add source AllocationFailure construction/metadata
-   without implicit descriptor erasure. Preserve the new static-heap, nominal-value
-   and native allocation/release tests; keep task cleanup/unwinding qualification separate.
+1. Extend allocator bounds to mutable/list/header carriers without losing facts,
+   then model actual dynamic allocator contexts and string-view origins in the same
+   passes. Static heap is still the only allocator factory. Follow
+   [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) for bounded drop schedules before
+   enabling strings.copy: normal/Leave/Restart/panic, retained/discarded emissions,
+   temporary and call transfers must release exactly once. Add source failure APIs
+   without implicit descriptor erasure; keep task cleanup/unwinding qualification separate.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

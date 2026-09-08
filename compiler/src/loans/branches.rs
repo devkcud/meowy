@@ -187,7 +187,10 @@ impl Graph<'_> {
                 }
                 state.merge(part, self.guards, Span::default())?;
             }
-            merged.insert(id, self.bundle(super::values::Value::from(&state))?);
+            merged.insert(
+                id,
+                self.bundle(super::values::Value::from(&state), &self.program.locals[id])?,
+            );
         }
         let mut ends = Vec::new();
         for arm in arms {

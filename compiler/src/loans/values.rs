@@ -8,11 +8,18 @@ use super::{
 pub(crate) struct Value {
     pub(crate) origins: Vec<Origin>,
     pub(crate) bounds: Vec<Origin>,
+    pub(crate) allocator: bool,
 }
 
 impl Value {
     pub(crate) fn iter(&self) -> impl Iterator<Item = &Origin> {
         self.origins.iter().chain(&self.bounds)
+    }
+
+    pub(crate) fn physical(&self) -> impl Iterator<Item = &Origin> {
+        self.origins
+            .iter()
+            .chain(self.bounds.iter().filter(|_| !self.allocator))
     }
 
     pub(crate) fn len(&self) -> usize {
@@ -25,6 +32,7 @@ impl From<Vec<Origin>> for Value {
         Self {
             origins,
             bounds: Vec::new(),
+            allocator: false,
         }
     }
 }
@@ -34,6 +42,7 @@ impl From<&crate::borrow_value::State> for Value {
         Self {
             origins: state.origins.clone(),
             bounds: state.bounds.clone(),
+            allocator: false,
         }
     }
 }
@@ -52,7 +61,7 @@ impl<'a> Graph<'a> {
         Ok(id)
     }
 
-    pub(crate) fn bundle(&mut self, value: impl Into<Value>) -> Result<Bundle> {
+    pub(crate) fn bundle(&mut self, value: impl Into<Value>, ty: &Type) -> Result<Bundle> {
         let value = value.into();
         let mut groups = BTreeMap::<Path, Value>::new();
         for (origins, bound) in [(value.origins, false), (value.bounds, true)] {
@@ -67,7 +76,14 @@ impl<'a> Graph<'a> {
         }
         groups
             .into_iter()
-            .map(|(path, value)| Ok((path, self.value(value)?)))
+            .map(|(path, mut value)| {
+                self.charge(path.len() + 1)?;
+                value.allocator = matches!(
+                    crate::borrow_contract::component_type(ty, &path),
+                    Some(Type::Foundation(crate::hir::FoundationType::Allocator))
+                );
+                Ok((path, self.value(value)?))
+            })
             .collect()
     }
 
@@ -105,7 +121,7 @@ impl<'a> Graph<'a> {
             .get(&id)
             .map(Value::from)
             .unwrap_or_default();
-        let value = self.bundle(origins)?;
+        let value = self.bundle(origins, &self.program.locals[id])?;
         self.locals.insert(id, value.clone());
         Ok(value)
     }
@@ -165,7 +181,7 @@ impl<'a> Graph<'a> {
         let proof = state
             .map(|state| self.guards.and(state.present, state.proof))
             .unwrap_or(FALSE);
-        let value = self.bundle(origins)?;
+        let value = self.bundle(origins, ty)?;
         let mut node = Node {
             uses,
             barrier: (!scalar).then_some(span),
@@ -395,7 +411,7 @@ impl<'a> Graph<'a> {
             ExprKind::Reborrow { .. } | ExprKind::ElementBorrow { .. } => {
                 self.derived(expr, path)?
             }
-            ExprKind::Local(id) if expr.ty.has_reference() => {
+            ExprKind::Local(id) if expr.ty.has_borrowed() => {
                 self.read_local(*id, path, Kind::Read, expr.span, take)?;
                 let local = Self::select(self.local(*id)?, path);
                 self.copy(local)?

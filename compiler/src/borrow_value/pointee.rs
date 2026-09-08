@@ -11,7 +11,7 @@ impl State {
         if !flow.spend(self.weight() + self.size() + 1) {
             return Err(Self::budget(span));
         }
-        let mut state = if ty.has_reference() {
+        let mut state = if ty.has_borrowed() {
             self.prefix(&[Step::Deref])
         } else {
             Self::default()
@@ -28,7 +28,7 @@ impl State {
     }
 
     pub(crate) fn dereferenced(&self, ty: &Type, flow: &mut Flow, span: Span) -> Result<Self> {
-        if ty.has_reference() {
+        if ty.has_borrowed() {
             let state = self.select(&[Step::Deref], flow);
             if flow.exceeded() {
                 return Err(Self::budget(span));
@@ -49,7 +49,18 @@ impl State {
         if !flow.spend(self.weight() + fields.len().saturating_mul(self.size() + 1)) {
             return Err(Self::budget(span));
         }
-        let mut state = if ty.has_reference() {
+        let mut state = if fields.contains(&Projection::Element) && ty.has_borrowed() {
+            if ty.has_reference() || !self.bounds.is_empty() {
+                return Err(crate::diagnostic::Diagnostic::unsupported(
+                    "bounded allocator element reborrow",
+                    span,
+                ));
+            }
+            let mut state = Self::unknown(ty, flow, span)?;
+            state.present = self.present;
+            state.proof = self.proof;
+            state.prefix(&[Step::Deref])
+        } else if ty.has_borrowed() {
             let mut path = vec![Step::Deref];
             for field in fields {
                 let Projection::Field(index) = field else {

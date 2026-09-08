@@ -138,6 +138,10 @@ impl Type {
         }
     }
 
+    pub fn has_borrowed(&self) -> bool {
+        self.has_reference() || self.has_allocator_value()
+    }
+
     pub fn has_equality(&self) -> bool {
         match self {
             Self::Foundation(_) => false,

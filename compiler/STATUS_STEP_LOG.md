@@ -6,6 +6,76 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Allocator lifetime bounds combined validation complete
+
+- All fourteen combined checks pass: 819 Rust (385 library, 434 native), 35 Python,
+  50 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 984 links at gate time. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
+  exact fatal/admission/guard/fiber probes. No runtime/backend representation change.
+- Eight borrow groups and three native groups prove propagated bounds, E303 expiry,
+  call entry and Leave order, nonphysical bound roles, selection and bounded work.
+  Existing reference/restart tests pass; no source reference fixture was changed.
+- Final handoff link check also passes 984 links in 99 Markdown files; Git whitespace
+  checks pass. Remaining B001 gates cover bounded mutation/list/header carriers. Static heap is
+  still the only allocator factory; dynamic contexts need symbolic physical input
+  origins. Next: extend those carriers/origins, then owning view/drop schedules and
+  source failure APIs. No owning constructor or release qualification is enabled.
+
+### 2026-09-08 — Allocator bound native acceptance and documentation
+
+- Eight allocator checker groups plus the existing foundation checks pass. Three new
+  native groups pass debug/release: execution/copies, unrelated scalar writes,
+  shared/nullable/scalar paths, argument Leave and distinct E303/B001 diagnostics.
+- Added allocator-bounds.mwy and ALLOCATOR_BOUNDS.md. The contract documents lifetime
+  constraints separately from physical origins, the static-only allocator factory,
+  caller substitution and remaining mutable/list/restart carrier gates.
+- Broader Rust baseline already passed; final combined gate now includes the new
+  example, field/index gate checks and fanout regression. Runtime/backend unchanged.
+  Next: complete the gate, update current handoff evidence and commit this feature.
+
+### 2026-09-08 — Allocator lifetime source and native proof
+
+- Full Rust pass before final cases: 384 library and 431 native groups passed.
+  New native allocator cases then passed both profiles: unrelated owner writes,
+  transitive/shared copies, nullable/scalar projections and argument Leave effects.
+  Expiry reports E303; unsupported bounded mutation/list storage remains B001.
+- Added shared work-budget fanout proof and allocator-bounds.mwy. Field/indexed
+  assignments now use the same active-bound loss check as mutable bindings/lists.
+- No runtime representation or code generation changed. Next: document public
+  allocator-bound semantics and remaining carrier gates, then run the combined gate,
+  update final evidence and commit this lifetime-analysis change.
+
+### 2026-09-08 — Allocator bounds propagated through immutable values
+
+- Calls now attach conservative bounds to allocator leaves using existing State,
+  component paths, entered guards and budgets. Shared pointee snapshots retain
+  allocator bounds; scalar-only projections and inactive variants discard only
+  irrelevant components. Expired consumption/escape is E303.
+- Seven focused tests pass. Initial validation fixed a missing Diagnostic import
+  and replaced the obsolete signature-gate expectation with accepted analysis.
+  A regression exposed lifetime-only bounds being treated as physical shared loans;
+  typed loan bundles now distinguish allocator bounds in both conflict checks.
+- Mutable/list storage rejects active bounds before losing facts; static heap paths
+  remain available. Static element reborrows retain entry proof/presence and restart
+  shape inspection retains allocator-variant activity without enabling bound headers.
+- Next: broaden shared-reference, restart, temporary and native execution coverage;
+  run the compiler gate and document exact supported boundaries before committing.
+
+### 2026-09-08 — Allocator return-bound investigation
+
+- Existing State separates physical origins from conservative public lifetime bounds.
+  Reuse bounds for allocator results; static heap values carry no dynamic bounds.
+  Calls attach all active input origins/bounds without inventing physical allocator loans.
+- Start with immutable locals, records/unions and shared reborrow snapshots. Keep
+  bounded values out of mutation/list/restart paths that would currently discard
+  their facts; unbounded static heap behavior must keep passing existing coverage.
+- Function inputs remain available throughout their invocation; caller-side contract
+  substitution supplies conservative result bounds. Validate arguments before entry,
+  preserve inactive alternatives and report expired bound use as E303.
+- Validation: implementation/contract inspection only. Next: extend bound paths and
+  pointee transport, add loss-prevention gates and source/native lifetime regressions.
+
 ### 2026-09-08 — Nominal foundation values combined validation complete
 
 - All fourteen combined checks pass: 808 Rust (377 library, 431 native), 35 Python,

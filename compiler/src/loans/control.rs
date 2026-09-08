@@ -71,8 +71,8 @@ impl<'a> Graph<'a> {
             .get(&block.id)
             .map(super::values::Value::from)
             .unwrap_or_default();
-        let result = self.bundle(origins.clone())?;
-        let value = self.bundle(origins)?;
+        let result = self.bundle(origins.clone(), &block.ty)?;
+        let value = self.bundle(origins, &block.ty)?;
         let mut node = Node {
             defs: result.values().copied().collect(),
             ..Node::default()
@@ -131,7 +131,7 @@ impl<'a> Graph<'a> {
                     let span = value.span;
                     let cell = self.register_store(*id, span)?;
                     let value = self.expression(value)?;
-                    let target = if self.program.locals[*id].has_reference() {
+                    let target = if self.program.locals[*id].has_borrowed() {
                         self.local(*id)?
                     } else {
                         Bundle::new()

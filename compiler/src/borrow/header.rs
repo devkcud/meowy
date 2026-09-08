@@ -31,7 +31,7 @@ impl Shape {
                         return Err(State::budget(span));
                     }
                     paths.insert(path.clone());
-                    if target.has_reference() {
+                    if target.has_borrowed() {
                         if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
                             || !guards.spend(path.len() + 1)
                         {

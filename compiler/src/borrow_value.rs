@@ -369,7 +369,7 @@ impl State {
         let mut pending = vec![(ty, Vec::new(), TRUE)];
         while let Some((ty, path, present)) = pending.pop() {
             match ty {
-                Type::Reference(ty) | Type::Exclusive(ty) if ty.has_reference() => {
+                Type::Reference(ty) | Type::Exclusive(ty) if ty.has_borrowed() => {
                     if result.size() + pending.len() >= MAX_PARTS || !flow.spend(path.len() + 1) {
                         return Err(Self::budget(span));
                     }

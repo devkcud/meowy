@@ -203,7 +203,7 @@ impl<'a> Graph<'a> {
                     .fold(1usize, |work, origin| work.saturating_add(origin.weight()));
                 self.charge(work)?;
                 let guard = self.guards.and(guard, *reachable);
-                for origin in self.values[value].iter() {
+                for origin in self.values[value].physical() {
                     if Self::overlap(&place, &origin.source)
                         && self.guards.overlap(guard, origin.guard)
                     {

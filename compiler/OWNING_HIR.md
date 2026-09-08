@@ -209,8 +209,9 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
    [private string ABI](../runtime/STRINGS.md) with static heap, typed native
    allocation failure, deterministic failure tests and allocation/release counting.
    [Nominal failure transport and static heap values](FOUNDATION.md) are now lowerable;
-   failure construction and allocator-return bounds remain pending. Keep source
-   construction gated until ownership and exit acceptance passes.
+   [allocator-return bounds](ALLOCATOR_BOUNDS.md) now cover immutable values and
+   shared snapshots. Failure construction and broader bound carriers remain pending.
+   Keep source construction gated until ownership and exit acceptance passes.
 3. Add resource/view origins and an explicit bounded storage/cleanup plan at the
    HIR checking boundary. Cover live/moved/conditional states, actual initialization
    order, alias identity, discarded emissions and reservation bounds. Reject live

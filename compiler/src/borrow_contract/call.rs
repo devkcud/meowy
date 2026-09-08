@@ -1,4 +1,4 @@
-use super::{Leaf, component_type, leaves, projections, reference_leaves, type_weight};
+use super::{Leaf, component_type, projections, reference_leaves, type_weight};
 use crate::ast::Span;
 use crate::borrow_value::{MAX_PARTS, Origin, Projection, Result, State, Step};
 use crate::flow::{FALSE, Flow, Guard};
@@ -66,7 +66,7 @@ pub(crate) fn call(
     span: Span,
 ) -> Result<State> {
     let mut result = State::unknown(ty, flow, span)?;
-    if !ty.has_reference() {
+    if !ty.has_borrowed() {
         return Ok(result);
     }
     if !flow.spend(result.weight() + result.size()) {
@@ -123,7 +123,7 @@ pub(crate) fn call(
                 if !flow.spend(origin.weight() + fields.len() + leaf.component.len()) {
                     return Err(State::budget(span));
                 }
-                if target.has_reference() {
+                if target.has_borrowed() {
                     candidates.push(Candidate {
                         state,
                         origin,
@@ -145,11 +145,16 @@ pub(crate) fn call(
         }
         let supplied = flow.or(flow.not(leaf.guard), covered);
         result.proof = flow.and(result.proof, supplied);
-        if target.has_reference() {
+        if target.has_borrowed() {
             attach(&mut result, &leaf, candidates, flow, span)?;
         }
     }
-    for leaf in leaves(ty, &result, flow, span)? {
+    let leaves = if bounds.is_empty() {
+        Vec::new()
+    } else {
+        super::bound_leaves(ty, &result, flow, span)?
+    };
+    for leaf in leaves {
         for (bound, guard) in &bounds {
             if !flow.spend(bound.weight() + leaf.component.len() + 1) {
                 return Err(State::budget(span));

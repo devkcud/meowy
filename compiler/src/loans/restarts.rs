@@ -26,7 +26,7 @@ impl Graph<'_> {
             }
             let shape = Shape::new(ty, self.guards, Span::default())?;
             shape.validate(state, true, self.guards, Span::default())?;
-            header.insert(*local, self.bundle(super::values::Value::from(state))?);
+            header.insert(*local, self.bundle(super::values::Value::from(state), ty)?);
         }
         let proof = self.facts.header_inputs.get(&id);
         let (mut node, missing) = self.header_transfer(incoming, &header, proof)?;

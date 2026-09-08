@@ -1,0 +1,18 @@
+memory : @"memory"
+debug : @"debug"
+
+choose <memory.Allocator> : (context <&int32>) {
+    debug.print(*context)
+    -> memory.heap
+}
+
+copy <memory.Allocator> : (handle <memory.Allocator>) {
+    -> handle
+}
+
+context := 7
+handle : choose(&context)
+context = 8
+again : copy(handle)
+
+| again <memory.Allocator> | debug.print(context)

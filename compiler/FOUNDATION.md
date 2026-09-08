@@ -66,11 +66,12 @@ element and replacement after its last use. Evaluating/copying the handle does
 not allocate resource bytes.
 
 The static heap is the only allocator-producing source path. Custom/arena
-allocators and non-static allocator origins remain unavailable. Functions returning
-allocator values from borrow-carrying inputs also remain B001 until conservative
-public return bounds can be represented; returning the heap from such a function
-does not grant an exception to its public lifetime contract. Existing cell-reference
-results continue to use the ordinary borrow analysis.
+allocators and non-static allocator origins remain unavailable. Ordinary functions
+now apply [allocator return bounds](ALLOCATOR_BOUNDS.md) to active borrow-carrying
+inputs; returning the heap does not bypass that public contract. Immutable
+records/unions and shared pointee snapshots preserve the constraints. Operations
+that would lose active bounds in mutable/list/header storage remain B001; existing
+unbounded static values keep their normal storage behavior.
 
 ## Failure transport and remaining gates
 
