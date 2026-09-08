@@ -15,9 +15,11 @@ public:
     void (*const move)(void *, void *) noexcept;
     const Drop drop;
     const std::string_view name;
+    void (*const capture)(void *, void *) noexcept = nullptr;
 };
 
 class Scheduler;
+class Generated;
 
 class Owned final {
 public:
@@ -38,6 +40,7 @@ public:
 
 private:
     friend class Scheduler;
+    friend class Generated;
     enum class Phase : unsigned char { empty, reserved, live };
     [[nodiscard]] OwnedStatus accepts(const ValueOps &ops) const noexcept;
     [[nodiscard]] OwnedStatus fits(const Owned &destination) const noexcept;

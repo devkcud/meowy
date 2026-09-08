@@ -11,7 +11,7 @@ Owned::Owned(std::span<std::byte> storage) noexcept : bytes(storage) {}
 OwnedStatus Owned::accepts(const ValueOps &value) const noexcept {
     if (busy || value.size == 0 || value.alignment == 0 ||
         (value.alignment & (value.alignment - 1)) != 0 || value.move == nullptr ||
-        value.drop == nullptr || value.name.empty()) {
+        (value.drop == nullptr) == (value.capture == nullptr) || value.name.empty()) {
         return OwnedStatus::invalid;
     }
     if (phase != Phase::empty) {
@@ -107,7 +107,12 @@ Panic Owned::drop(void *data) noexcept {
     }
     value.busy = true;
     value.phase = Phase::empty;
-    const auto panic = value.ops->drop(value.bytes.data());
+    Panic panic;
+    if (value.ops->capture != nullptr) {
+        value.ops->capture(value.bytes.data(), &panic);
+    } else {
+        panic = value.ops->drop(value.bytes.data());
+    }
     value.ops = nullptr;
     value.busy = false;
     return panic;

@@ -159,6 +159,14 @@ Slot Stack::transfer(Token token, Stack &destination) noexcept {
     return slot;
 }
 
+Status Stack::can_rebind(Token token, const Stack &destination, Token reserved) const noexcept {
+    if (!valid(token) || entries[token.index].drop == nullptr || !destination.valid(reserved) ||
+        reserved.index + 1 != destination.depth || destination.entries[reserved.index].initialized) {
+        return Status::invalid;
+    }
+    return Status::ok;
+}
+
 Outcome Stack::unwind(Mark mark, Reason reason, Panic panic) noexcept {
     if (!valid(mark) || name(reason) == "invalid" || (reason == Reason::panic) != (panic.code != 0)) {
         return {Status::invalid, reason, panic};

@@ -86,6 +86,7 @@ public:
                              std::string_view name) noexcept;
     [[nodiscard]] Status disarm(Token token) noexcept;
     [[nodiscard]] Slot transfer(Token token, Stack &destination) noexcept;
+    [[nodiscard]] Status can_rebind(Token token, const Stack &destination, Token reserved) const noexcept;
     [[nodiscard]] Outcome unwind(Mark mark, Reason reason,
                                  Panic panic = {}) noexcept;
     [[nodiscard]] std::size_t size() const noexcept;

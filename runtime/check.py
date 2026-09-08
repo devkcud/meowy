@@ -19,6 +19,7 @@ CONTEXT_CASES = 10
 SCHEDULER_CASES = 25
 OWNED_CASES = 14
 GENERATED_CASES = 6
+GENERATED_OWNED_CASES = 7
 
 
 def invoke(args, timeout=60, env=None):
@@ -164,12 +165,22 @@ def check(clang, directory, sanitizers=True):
         print(f"CHECK generated cleanup bridge: {name}", flush=True)
         require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                         "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"), *flags,
-                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/generated.cpp"),
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/owned.cpp"), str(ROOT / "src/generated.cpp"),
                         str(ROOT / "tests/generated.cpp"), "-o", str(generated)]))
         check_cases(invoke([str(generated)], env=env), GENERATED_CASES, "generated cleanup")
         check_fatal(invoke([str(generated), "--fatal-normal"], env=env), False)
         check_fatal(invoke([str(generated), "--fatal-panic"], env=env), True)
         print(f"PASS generated cleanup bridge: {name}; {GENERATED_CASES} cases and 2 fatal subprocesses", flush=True)
+        payload = directory / f"generated-owned-{name}"
+        print(f"CHECK generated payload ownership: {name}", flush=True)
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/owned.cpp"), str(ROOT / "src/generated.cpp"),
+                        str(ROOT / "tests/generated_owned.cpp"), "-o", str(payload)]))
+        check_cases(invoke([str(payload)], env=env), GENERATED_OWNED_CASES, "generated ownership")
+        check_fatal(invoke([str(payload), "--fatal-normal"], env=env), False, "owned fixture")
+        check_fatal(invoke([str(payload), "--fatal-panic"], env=env), True, "owned fixture")
+        print(f"PASS generated payload ownership: {name}; {GENERATED_OWNED_CASES} cases and 2 fatal subprocesses", flush=True)
         stack = directory / f"stack-{name}"
         args = [clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                 "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"),
