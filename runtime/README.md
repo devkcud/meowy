@@ -16,6 +16,7 @@ The runner builds debug, optimized release, and ASan/UBSan executables in a
 temporary directory. Each executes six owning-diagnostic groups and an exact
 fatal-truncation probe, plus 14 cleanup cases and two fatal subprocesses,
 plus six generated-cleanup bridge cases and two exact fatal subprocesses,
+plus seven generated-ownership cases and two fatal transferred-drop probes,
 plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
@@ -54,7 +55,9 @@ storage; it is separate from the cleanup stack's obligation-only transfer.
   borrowed views. The primitive checks destination capacity/alignment and rejects
   overlapping source/destination buffers; it cannot validate arbitrary C++ pointers.
 - A `ValueOps` descriptor supplies size, alignment, move, drop and diagnostic name.
-  It must have static lifetime. Move is infallible and non-suspending: it constructs
+  It must have static lifetime. Generated descriptors may instead supply the output-
+  snapshot drop callback documented in the private bridge; exactly one drop form is
+  valid. Move is infallible and non-suspending: it constructs
   the destination and ends the source object's lifetime without releasing the
   transferred resource. Drop is non-suspending and ends the object's lifetime;
   returning a panic takes the existing fatal P008 cleanup path. Neither callback

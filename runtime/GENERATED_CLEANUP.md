@@ -1,7 +1,7 @@
 # Private generated cleanup bridge
 
 [generated.hpp](include/meowy/generated.hpp) exposes scalar C-linkage calls over the
-existing cleanup Stack and owning Panic snapshot. [generated.cpp](src/generated.cpp)
+existing cleanup Stack, Owned payloads and owning Panic snapshot. [generated.cpp](src/generated.cpp)
 is linked into the compiler's native archive. The interface is private to the pinned
 Linux x86-64 bootstrap; it is not a release ABI or a new Meowy language feature.
 
@@ -56,7 +56,7 @@ lifetime. Bridge reentry returns invalid, including finish during the last callb
 
 Disarm cancels one live cleanup obligation; it does not move or release its payload.
 A compiler must complete actual relocation and arm the new owner before disarming the
-old obligation. This bridge does not yet expose ValueOps or perform payload moves.
+old obligation. The owned transfer operation below performs these steps together.
 
 Unwind validates the mark and cause before releasing entries in reverse order.
 Reserved-but-unarmed and disarmed entries are skipped. Panic exits require a nonzero
@@ -66,6 +66,61 @@ original cause and static operation name. No C++ exception crosses the ABI.
 
 Finish succeeds only with an empty, idle frame. It ends metadata lifetime and never
 silently unwinds live entries. The caller still owns and releases the backing bytes.
+
+## Generated payload ownership
+
+The `meowy_owned_..._v0` family wraps Owned. Its i32 statuses are separate from cleanup
+statuses: ok=0, invalid=1, full=2, misaligned=3, occupied=4, overlap=5. Check each
+function's family; a full cleanup reservation returns 1, not the owner's full=2.
+
+`ops_bytes()` sizes an opaque ValueOps descriptor; `ops_init` initializes caller-owned
+static descriptor storage from payload size/alignment, move callback, drop callback and
+static diagnostic name. The descriptor must remain immutable and alive through every
+owner and transfer that refers to it. Descriptor and owner metadata alignment is bounded by `cleanup_alignment()`; payload
+alignment is supplied by the descriptor.
+The generated move ABI is `void(ptr destination, ptr source)` and the generated drop
+ABI is `void(ptr payload, ptr panic)`. ValueOps accepts exactly one native-return or
+generated-output drop callback. Existing native descriptors keep their original form.
+
+`owned_bytes()` sizes an opaque owner token. Open binds it to separate caller-owned
+payload bytes, initially empty. Reserve validates the descriptor and buffer without
+constructing the payload. `data()` returns the reserved storage for construction;
+commit marks it live. A cancelled constructor releases the reserved token without
+calling drop, after the constructor cleans any initialized pieces itself. Finish
+requires an empty token and never implicitly releases a live payload. While move/drop
+callbacks run, data access, reserve, release, commit and finish reject reentry.
+
+Descriptors, owner metadata, payload buffers, frames and output handles must obey the
+original nonoverlap/lifetime contract. A payload address remains stable while owned;
+it changes only through explicit relocation. Open must not overwrite a live owner,
+and finish must not precede the final armed callback or successful transfer. An owner
+must have one active cleanup obligation; do not duplicate-arm it in multiple frames.
+
+`owned_arm(frame, token, owner)` binds a committed owner's destruction to a reserved
+cleanup slot. It uses the descriptor name and returns the owned drop snapshot into the
+enclosing frame, preserving the original unwind reason and panic. Explicit
+`owned_release(owner)` is a standalone complete-cause release; it is not the callback
+used while an enclosing frame unwinds. A bound owner must stay valid until its cleanup
+obligation is removed; release alone does not disarm that obligation.
+
+`owned_transfer(source_frame, source_token, source_owner, destination_frame,
+destination_token, destination_owner)` requires an active matching source obligation,
+a reserved top destination slot and an empty destination owner. Stack::can_rebind and
+Owned::fits validate all handles, initialization, capacity, alignment and overlapping
+payload storage before mutation. Failed preflight leaves both owners and obligations
+unchanged; the destination slot remains reserved for retry or unwind.
+
+On success, both cleanup frames are held against callback reentry. Owned invokes the
+infallible, non-suspending move callback, which constructs the destination and ends the
+source payload lifetime without releasing the resource. The bridge then arms the new
+obligation and disarms the old one. No callback or suspension occurs between these
+last two changes. Unexpected failure after successful preflight is a fatal protocol
+violation. The old owner is empty, its disarmed entry no longer reads its metadata,
+and the destination retains the static descriptor. Same-frame transfers are supported.
+
+After failed reservation/admission, an initialized untransferred source is still owned
+by its original token. Clean it through that token exactly once. No new allocation,
+implicit byte-copy move, scheduler or C++ exception mechanism implements this transfer.
 
 ## Required compiler exit mapping
 
@@ -96,7 +151,13 @@ handles, nested marks, rejected initialization, callback reentry and snapshot li
 Compiler LLVM probes exercise the real scalar ABI in debug/release, including an
 owning diagnostic captured from callback-local bytes before those bytes are overwritten.
 
-Next define generated payload move/drop descriptors and initialized-state metadata for
-a bounded owning value. Then lower its normal/Leave/Restart cleanup with actual payload
-relocation and exactly-once release. Panic/task support additionally needs retained
-outcomes, child-close progress, cancellation and the pinned unwind mechanism.
+Seven additional runtime groups and two fatal subprocesses per profile exercise owned
+payload relocation and failure preservation. Two additional LLVM-native groups use
+static descriptors and generated move/drop callbacks, including a self-pointer payload,
+rejected short destination and an owned cleanup panic with its original cause intact.
+
+Next define initialized-state/drop schedules for a contract-supported owning HIR value
+and lower normal/Leave/Restart exits, retaining emitted ownership. The bridge and LLVM
+fixtures are executable infrastructure; ordinary Meowy programs still do not use it.
+Panic/task support additionally needs retained outcomes, child-close progress,
+cancellation and the pinned unwind mechanism.

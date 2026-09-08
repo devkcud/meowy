@@ -174,8 +174,10 @@ The [indexed fields example](examples/exclusive-indexed-fields.mwy) borrows a sc
 field inside an emitted list and carries it beyond the lexical alias scope.
 
 The [private generated cleanup bridge](../runtime/GENERATED_CLEANUP.md) is available
-in the native archive and tested by LLVM callback probes. Automatic Meowy owner
-cleanup, task cancellation and DWARF unwinding remain implementation work.
+in the native archive and tested by LLVM callback probes, including static payload
+descriptors, real relocation, failure-preserving ownership transfer and owned-drop
+panic snapshots. Automatic Meowy owner cleanup, task cancellation and DWARF unwinding
+remain implementation work.
 
 ## Implemented language
 
