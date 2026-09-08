@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Private generated cleanup bridge integrated and verified.
+Updated: 2026-09-07. Generated payload relocation and ownership transfer verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
 Indexed scalar fields: `1f8295c`; contract/example: `397b3b2`.
 Complete indexed-path representation: `16e0230`.
@@ -38,26 +39,30 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-A private scalar C ABI now connects generated LLVM callbacks to the existing runtime
-Stack and owning Panic snapshot. Caller-owned frame storage includes fixed-capacity
-entries and callback records; token/mark POD layouts are checked for Linux x86-64.
-Explicit open/mark/reserve/arm/disarm/unwind/finish operations preserve initialization,
-LIFO order, stale/foreign handle rejection and callback reentry protection. Panic
-capture owns callback-local text before destruction and retains truncation metadata.
+The private generated bridge now exposes static ValueOps descriptor initialization,
+opaque Owned metadata and actual payload relocation. Generated move callbacks have a
+scalar pointer ABI; generated drop callbacks write an owning Panic snapshot. Existing
+native-return drop descriptors remain supported, with exactly one drop form required.
+Descriptor/owner storage remains caller-owned and explicitly initialized.
 
-compiler/build.rs embeds cleanup.cpp and generated.cpp in the native archive, with
-source/header invalidation. Two LLVM-native groups exercise actual callbacks in both
-profiles, including exact P008 after overwriting the callback's message buffer.
-The compiler still emits scalar runtime calls for ordinary Meowy programs. Automatic
-owner cleanup, payload move descriptors, task close/cancellation and DWARF are pending;
-no language syntax or reference fixture was broadened by this bridge.
+Atomic transfer reuses Stack::can_rebind and Owned::fits to validate an active matching
+source, reserved destination slot, initialization, capacity, alignment and overlapping
+buffers. Failed preflight preserves both owners and obligations. Successful transfer
+holds both frames against callback reentry, relocates the payload, arms destination
+cleanup, then disarms the source. Owned drop returns its snapshot into the enclosing
+frame, preserving the original panic cause instead of beginning a complete-cause release.
 
-All fourteen combined repository checks pass: 787 Rust (359 library, 428 native),
-35 Python, 48 debug/release examples, Vim/Neovim, 940 links and compiler formatting/
-Clippy/build/schema/catalog/conformance checks. Runtime debug/release/sanitized runs
-pass 85 case groups per profile plus their required fatal, guard, admission and fiber
-probes. Native linkage inspection of a bridge-using ELF found only libc.so.6 in NEEDED.
-The private ABI and exit mapping are documented in runtime/GENERATED_CLEANUP.md.
+Seven native ownership groups and two LLVM-native groups prove self-pointer relocation,
+failed transfer/retry, exactly-once destruction, partial construction, guarded callbacks
+and fatal transferred-drop diagnostics. The archive includes owned.cpp with header/source
+invalidation. Ordinary Meowy programs still do not emit owning-value cleanup or task code.
+
+All fourteen combined checks pass: 789 Rust (361 library, 428 native), 35 Python,
+48 debug/release examples, Vim/Neovim, 940 links and compiler checks. Runtime passes
+92 case groups per debug/release/sanitized profile plus all required fatal/guard/
+admission/fiber probes. A generated ownership ELF imports only libc.so.6.
+Private ABI: runtime/GENERATED_CLEANUP.md. Owning-HIR schedules and release qualification
+remain open; no public language syntax, dependency or reference fixture changed.
 
 ## Prior implemented milestone
 
@@ -597,45 +602,41 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 359 library
-  + 428 native groups (787 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+- Current `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 361 library
+  + 428 native groups (789 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
   All 48 examples execute in debug/release. Vim/Neovim, formatting, Clippy, pinned
   build, schemas/catalog and 940 links in 94 Markdown files pass.
-- Runtime passes all debug, release and ASan/UBSan/LSan checks. Each profile executes
-  85 case groups (6 diagnostics, 14 cleanup, 6 generated bridge, 10 stacks, 10 contexts,
-  25 scheduler, 14 owned values) plus required exact fatal/admission/guard probes.
-  Sanitized fiber checks detect the deliberately expired stack local.
-- Two new LLVM-native groups prove the private C ABI across generated callback code,
-  nested marks, partial construction, complete/leave/restart/cancel metadata and
-  callback-local panic snapshot lifetime. This is not automatic Meowy cleanup lowering.
-- Initial sandboxed runtime run passed debug/release, then LeakSanitizer failed under
-  ptrace. Approved unsandboxed combined verification passed all sanitizer checks.
-- Extracted and linked a bridge-using LLVM fixture against the current native archive;
-  it printed 2, 1. readelf reported only libc.so.6 in NEEDED. An initial temporary
-  extraction regex failed on rustfmt whitespace; corrected without repository changes.
+- Runtime debug/release/ASan/UBSan/LSan pass 92 case groups per profile: 6 diagnostics,
+  14 cleanup, 6 cleanup bridge, 7 generated ownership, 10 stacks, 10 contexts,
+  25 scheduler and 14 owned values, plus required exact fatal/admission/guard probes.
+  The sanitized fiber probe detects its deliberately expired stack local.
+- Seven new native groups prove actual self-pointer relocation, capacity/alignment/
+  occupied/overlap failures and retry, stale/foreign/full obligations, same-frame
+  transfer, partial construction, invalid descriptors and callback reentry. Two new
+  fatal subprocesses per profile preserve complete/panic causes after payload transfer.
+- Two new LLVM-native groups use generated move/drop callbacks and static descriptors.
+  Failed short destinations retain live sources; successful moves rebase self pointers
+  and release once. A failing transferred drop retains the outer panic and copied text.
+- Extracted the ownership LLVM fixture, linked the current archive, and observed
+  output 77, 42, 42. readelf NEEDED contains only libc.so.6. Combined verification used
+  previously approved process access required by LeakSanitizer; no checks were skipped.
 - Conformance remains 10 passed, 13 unsupported, 0 failed. Owning syntax, automatic
   task cancellation, DWARF/pinned unwinding, optimized-compiler and minimum-host/full
-  release qualification remain open. Runtime changes are private, not a release ABI.
+  release qualification remain open. All new interfaces are private bootstrap ABI.
 
 ## Next steps
 
-1. Define generated payload move/drop descriptors over runtime ValueOps/Owned and
-   extend LLVM-native fixtures with real relocation across cleanup frames. Establish
-   destination initialization and arm its obligation before disarming the source;
-   failed capacity/alignment/admission must preserve ownership or release exactly once.
-   The current bridge manages cleanup obligations; disarm itself does not relocate
-   or release payloads. Keep unsupported owning syntax explicitly gated.
-2. Design initialized-state/drop schedules for the first contract-supported owning HIR
+1. Design initialized-state/drop schedules for the first contract-supported owning HIR
    value, then lower normal/Leave/Restart exits with retained emissions. Panic requires
    owning outcomes and qualified landing pads; Task::close needs resumable report drain
    and child settlement while parents live. Existing loan events are not drop schedules.
-3. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
+2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.
-4. Build the manifest/module graph and initial Meowy library layer; implement
+3. Build the manifest/module graph and initial Meowy library layer; implement
    required evaluation and specialization before enabling their reference fixtures.
    Continue root runtime/editor/library tracking alongside compiler work.
-5. Extend diagnostic source identities and evidence without treating bootstrap
+4. Extend diagnostic source identities and evidence without treating bootstrap
    byte-span text as a complete replay artifact. Run the combined repository gate
    after wider integrations; preserve current compiler evidence until code changes.
    Strict conformance still requires zero unsupported cases; this host does not

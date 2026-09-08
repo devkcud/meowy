@@ -11,27 +11,28 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- Added a private generated-code cleanup bridge over the runtime Stack and owning
-  Panic snapshot (`2288ed5`; compiler proof `2da831f`; contract `53f8e6b`).
-  Caller-owned storage, explicit initialized slots, checked token/mark
-  layouts and callback reentry protection preserve reverse-order cleanup.
-- The compiler native archive includes the bridge. LLVM callback probes execute it
-  in debug/release and prove owning panic text survives destruction of its source.
-  Ordinary Meowy programs still have no automatic owner cleanup or task lowering.
-- All fourteen combined checks pass: 787 Rust tests (359 library, 428 native),
-  35 Python, 48 debug/release examples, Vim/Neovim, 940 links, formatting, Clippy,
-  build and schema/catalog checks. Runtime debug/release/ASan/UBSan/LSan pass all
-  85 case groups per profile and required fatal/guard/admission/fiber probes.
-- Sandbox LeakSanitizer failed under ptrace; the approved unsandboxed combined run
-  passed. A bridge-using ELF imports only libc.so.6. Conformance still has 13 unsupported
-  cases. Private ABI proof does not qualify automatic cancellation, DWARF or release.
+- Added private generated payload descriptors, explicit Owned initialization and
+  atomic relocation across cleanup frames (`4df0e44`; LLVM proof `6d2d2b0`;
+  contract `161543e`). Destination compatibility and cleanup
+  slots are preflighted; failure retains the source and successful transfer arms the
+  destination before disarming the old obligation.
+- Generated callbacks preserve self-pointer relocation, exactly-once release and the
+  enclosing panic cause. Static descriptor and caller-owned storage lifetimes remain
+  explicit. Normal Meowy code generation still has no automatic owning-value cleanup.
+- All fourteen combined checks pass: 789 Rust (361 library, 428 native), 35 Python,
+  48 debug/release examples, Vim/Neovim, 940 links, formatting, Clippy, build and
+  schema/catalog checks. Runtime passes 92 case groups per debug/release/sanitized
+  profile plus required fatal/guard/admission/fiber probes.
+- Seven new native ownership groups and two LLVM groups pass. A generated relocation
+  ELF imports only libc.so.6. Conformance still has 13 unsupported cases; private ABI
+  proof does not qualify automatic cancellation, DWARF, minimum hosts or release.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar ownership plus a native archive cleanup bridge | Generated payload descriptors and automatic owning-value cleanup |
-| Runtime | Owning snapshots, cleanup bridge and bounded task prototypes | Payload relocation bridge, task-close progress, cancellation and DWARF |
+| Compiler | Scalar ownership and generated cleanup/payload bridge | Owning-HIR drop schedules and automatic exit cleanup |
+| Runtime | Generated payload relocation, cleanup and bounded task prototypes | Task-close progress, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
 | Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
@@ -40,11 +41,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Define generated payload move/drop descriptors using existing ValueOps/Owned and
-   prove actual relocation across cleanup frames with LLVM-native fixtures. Arm the
-   initialized destination before disarming the source; preserve ownership on failure.
-   Then design owning-HIR drop schedules for normal/Leave/Restart and retained emissions.
-   Keep task-close progress, cancellation and pinned unwinding separate until proved.
+1. Design initialized-state/drop schedules for the first contract-supported owning
+   HIR value, then lower normal/Leave/Restart cleanup with retained emissions and
+   actual payload transfer. Use the tested private bridge; avoid placeholder language
+   syntax. Keep task-close progress, cancellation and pinned unwinding separate until
+   their parent-lifetime and failure-report contracts are proved.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

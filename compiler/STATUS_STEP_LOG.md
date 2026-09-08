@@ -6,6 +6,63 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Generated payload ownership combined validation complete
+
+- All fourteen combined checks pass: 789 Rust (361 library, 428 native), 35 Python,
+  48 debug/release examples, both editors, 940 links, formatting, Clippy, build and
+  schemas/catalog. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 92 case groups per debug/release/ASan/UBSan/LSan profile and required
+  fatal/guard/admission/fiber probes. New coverage is seven ownership groups and two
+  fatal transferred-drop probes per profile, plus two generated LLVM-native groups.
+- Transfer preflights owners and cleanup slots, relocates actual self-pointer payloads,
+  arms destination and disarms source. Failures leave source ownership intact; callbacks
+  cannot reenter either frame. Owning drop retains the enclosing panic cause and text.
+- A relocation fixture linked against the current archive printed 77, 42, 42;
+  readelf NEEDED contains only libc.so.6. Previously approved process access supported
+  sanitizer inspection. No test failure, skipped check, new dependency or source syntax.
+- Runtime ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
+- No remaining bridge blocker. Next: initialized-state/drop schedules for owning HIR,
+  then normal/Leave/Restart cleanup and retained emissions. Automatic Meowy ownership,
+  task cancellation, pinned unwinding and full release qualification remain open.
+
+### 2026-09-07 — Generated payload relocation proof complete
+
+- Seven strict native ownership groups pass: real self-pointer relocation, failed
+  capacity/alignment/occupied/overlapping targets, stale/foreign/full obligations,
+  same-frame transfer, partial initialization, invalid descriptors and callback reentry.
+- Two new LLVM-native groups pass in debug/release. Generated move/drop functions
+  relocate a {self pointer, integer} payload; failed destination capacity keeps the
+  source initialized. Cleanup releases exactly once, and fatal owned drop preserves
+  the original panic with callback text copied before its storage is overwritten.
+- Compiler archive/build invalidation now includes owned.cpp/owned.hpp. No new Meowy
+  syntax or dependency. Next: document private owner ABI and run the combined gate.
+
+### 2026-09-07 — Owned descriptor and atomic transfer bridge implemented
+
+- ValueOps accepts exactly one native-return or generated-output drop callback.
+  Generated descriptors and owner tokens remain opaque caller-owned storage; payload
+  size/alignment/overlap and live-state rules reuse Owned rather than a parallel model.
+- Transfer validates active source and reserved destination obligations plus actual
+  payload compatibility before changing state. Both frames reject callback reentry;
+  relocation precedes destination arming, followed by source disarming.
+- Owned cleanup returns the snapshot into the enclosing unwind, retaining its cause.
+  Existing six generated-cleanup tests pass with the extended bridge in an initial
+  strict native build. New ownership/native LLVM cases and combined validation next.
+
+### 2026-09-07 — Generated payload transfer investigation
+
+- Owned already validates destination capacity/alignment/overlap and blocks callback
+  reentry while moving actual bytes. Keep static ValueOps descriptors and add an
+  output-snapshot drop callback form for generated LLVM without C++ aggregate ABI.
+- Add Stack rebind preflight for a live source and reserved destination obligation.
+  Bridge transfer must preflight both frames and owners before relocation, then arm
+  destination and disarm source without callback access to either cleanup frame.
+- Owned cleanup must return its Panic into the enclosing frame, preserving the original
+  unwind cause; explicit Owned::release would instead start a complete-cause unwind.
+- Read runtime/compiler rules and cleanup contract. No edits or new tests yet.
+  Next: implement descriptor/owner bridge, test failures and exactly-once release,
+  then prove actual LLVM-generated payload relocation and run the combined gate.
+
 ### 2026-09-07 — Generated cleanup bridge combined validation complete
 
 - All fourteen repository checks pass: 787 Rust (359 library, 428 native), 35 Python,
