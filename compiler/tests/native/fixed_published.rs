@@ -91,11 +91,11 @@ pub fn fixed_published_source_lifetimes_and_initialization_remain_checked() {
             "E303",
         ),
         (
-            "x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();'out->p:=&x;p=&y}};v:*r.p",
+            "x:1;y:2;n:=0;r:'out{'loop{'out->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()}};v:*r.p",
             "B001",
         ),
         (
-            "x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();'out->p:=&x;p={p=&y;->&x}}}",
+            "x:1;y:2;n:=0;r:'out{'loop{'out->p:=&x;p={p=&y;->&x};n=n+1;|n<2|'loop.restart()}}",
             "B001",
         ),
     ] {

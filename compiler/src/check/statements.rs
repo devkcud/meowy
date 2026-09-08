@@ -278,6 +278,8 @@ impl Checker {
                                 value.span,
                             )
                         })?;
+                    let entered = self.reach;
+                    let first = self.frames[index].first;
                     if restart {
                         let start = self.frames[index].start;
                         for frame in &self.frames[..index] {
@@ -298,7 +300,12 @@ impl Checker {
                     }
                     self.reach = FALSE;
                     return Ok(vec![if restart {
-                        if self.restarts >= 65_536 || !self.flow.spend(1) {
+                        if self.restarts >= 65_536
+                            || !self.flow.spend(
+                                self.proofs.frontiers.len().checked_ilog2().unwrap_or(0) as usize
+                                    + 4,
+                            )
+                        {
                             return Err(Diagnostic::unsupported(
                                 "restart site budget exhausted",
                                 value.span,
@@ -306,6 +313,14 @@ impl Checker {
                         }
                         let site = self.restarts;
                         self.restarts += 1;
+                        self.proofs.frontiers.insert(
+                            site,
+                            crate::borrow::frontier::Frontier {
+                                target,
+                                first,
+                                entered,
+                            },
+                        );
                         hir::Stmt::Restart { target, site }
                     } else {
                         hir::Stmt::Leave(target)

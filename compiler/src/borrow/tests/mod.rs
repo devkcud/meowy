@@ -13,6 +13,7 @@ mod fixed_published;
 mod guarded_references;
 mod header_activity;
 mod header_components;
+mod late_published;
 mod leaves;
 mod mutable_allocators;
 mod mutable_carriers;

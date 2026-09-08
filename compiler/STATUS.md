@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Changing published alias support verified.
+Updated: 2026-09-08. Late published alias initialization verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,21 +40,23 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Changing published restart results](OWNERSHIP.md#changing-published-restart-results)
-project existing canonical lexical alias headers into result backing. Entry requires
-an initialized surviving alias. Facts.changing_published and refresh_published keep
-alias identity and schedule normal/Leave refreshes before environment restoration.
-Demand-only transfers preserve actual initial/backedge sources and old copies;
-final result retention checks expiry, including mixed allocator bounds.
+[Late published aliases](OWNERSHIP.md#late-published-aliases) may initialize inside
+a restarted body when their emission cannot reach any backedge. Frame.first tracks
+emission IDs separately from reachable-write order. Proofs.frontiers records each
+successful restart's target, first emission index and entered guard; the planner
+requires a matching certificate for every actual site.
 
-Publication updates preserve original binding-event guards across loop resets,
-keeping conditional union members disjoint. Fixed publications retain their separate
-identity proof. Aliases first initialized within the restarted body remain B001.
+Facts.late_published classifies aliases whose binding/emission evidence proves
+all-edge disjointness. Origin and loan passes require these aliases to be absent
+from headers and use their actual Bind/Emit definitions on completing paths. The
+same alias may be late for an outer loop and preinitialized for an inner one.
+Existing backing conversion, binding guards, normal/Leave demand and expiry remain intact.
 
-All ten compiler checks pass: 494 library, 499 native, 20 Python, 63 examples in
-both profiles, formatting, Clippy, build and repository contracts. The
-changing-published example prints 7, 9, 7, 9. Broader initialization, union-view
-addresses/fields, lists, dynamic origins, owning cleanup and full release remain open.
+All ten compiler checks pass: 504 library, 504 native, 20 Python and 64 examples in
+both profiles, plus formatting, Clippy, build and repository contracts. The
+late-published example prints 3, 2, 1, init, 7, 9. Initialization that actually
+survives a backedge still needs stateful emission-flow proof; duplicate emissions
+remain E205. Union-view addresses/fields, lists, dynamic origins and owning cleanup remain open.
 
 ## Prior source-language milestone
 
@@ -121,10 +123,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, fixed/changing published restart proofs, availability, direct call contracts and scalar exclusive local/input permissions; 86 origin, 130 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, fixed/changing/late publication proofs, availability, direct call contracts and scalar exclusive local/input permissions; 96 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 499 native groups, 4 harness tests and 63 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 504 native groups, 4 harness tests and 64 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -617,33 +619,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  494 library + 499 native (993 total). Python: 16 tooling + 4 compiler (20).
-  All 63 examples execute in debug/release. Formatting, Clippy, build, local links,
+  504 library + 504 native (1008 total). Python: 16 tooling + 4 compiler (20).
+  All 64 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
-- Twelve new library groups prove changing alias identity, header prerequisites,
-  unwritten final iterations, widened/nullable tags, normal/Leave scheduling, old
-  copies, cell loans, public/mixed allocator bounds, expiry repair and bounded proof.
-- Seven new native groups and changing-published.mwy execute in both profiles.
-  Summary refresh adds no payload reads, physical accesses or initialization events.
-  Aliases initialized inside the restarted body remain explicitly unsupported.
-- Earlier failures found an updated test's single-element loop lint, stale gate
-  expectations and a missing original binding guard on a conditional union result.
-  All are fixed. The conditional parameter/changed-predicate regression now passes.
+- Ten new library groups prove all-site certificates, missing/corrupt evidence,
+  dead-emission indices, absent initial/backedge headers, nested late/preinitialized
+  roles, initializer restarts, cells, old copies, bounds and initialization gates.
+- Five new native groups and late-published.mwy execute in both profiles. Prefix
+  effects repeat while initialization occurs once. Existing normal/Leave transfers
+  retain source lifetimes without fabricated references or payload reads.
+- Initial test failures were a Debug-bound error in error extraction and a cell
+  fixture emitting into the wrong scope (E222). Both are fixed. Historical native
+  capability cases now exercise publication before a reachable backedge.
 - Conformance remains 10 passed, 13 unsupported, 0 failed. The prior all-area gate
   also passed both editors and runtime 100 groups/profile in debug/release and
   ASan/UBSan/LSan with required probes. Those unchanged components were not rerun.
 - Runtime/backend representations, syntax, reference fixtures and dependencies
-  are unchanged. Fixed publications use identity; changing preinitialized aliases
-  use existing canonical headers and demand-only result transfers. New-alias
-  initialization, union-view addresses/fields, allocator-only alias bounds, lists, dynamic origins,
+  are unchanged. Fixed/changing publication proofs remain intact; late aliases use
+  real definitions after certified restart frontiers. Initialization carried across
+  backedges, union-view addresses/fields, allocator-only alias bounds, lists, dynamic origins,
   owning cleanup, source error APIs, tasks, DWARF and full release remain open.
 
 ## Next steps
 
-1. Extend published initialization beyond aliases live before restart entry,
-   beginning with final-iteration emissions in `borrow/mutable.rs`, `borrow/changing.rs`
-   and `loans/changing.rs`. Prove initialization/duplicate-slot frontiers on every
-   relevant path before relaxing the entry gate; preserve existing source expiry,
+1. Model publication initialization that survives an actual backedge before
+   relaxing `check/statements.rs`'s enclosing-emission gate. Extend stateful slot
+   initialization and duplicate-emission proof while preserving `borrow/frontier.rs`
+   certificates, absent late headers and existing source expiry,
    binding-event guards and demand-only normal/Leave refreshes.
    Keep published backing types distinct from lexical local headers. Prove initial
    and backedge transfer coverage, conditional initialization, lifetime expiry,

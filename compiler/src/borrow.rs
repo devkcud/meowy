@@ -5,6 +5,7 @@ pub(crate) mod changing;
 pub(crate) mod control;
 pub(crate) mod emissions;
 pub(crate) mod exits;
+pub(crate) mod frontier;
 pub(crate) mod header;
 pub(crate) mod mutable;
 pub(crate) mod origins;

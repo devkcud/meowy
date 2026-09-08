@@ -1,0 +1,16 @@
+d:@"debug"
+x:7
+y:9
+n:=3
+r:'out{
+    'again{
+        d.print(n)
+        n=n-1
+        |n>0|'again.restart()
+        'out->p:={d.print("init");->&x}
+        old:p
+        p=&y
+        d.print(*old)
+    }
+}
+d.print(*r.p)

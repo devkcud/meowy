@@ -119,11 +119,8 @@ pub(crate) fn changing_published_expired_headers_require_repair_before_retention
 }
 
 #[test]
-pub(crate) fn changing_published_requires_preexisting_aliases_and_preserves_cell_loans() {
-    rejects(
-        "x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}}",
-        "B001",
-    );
+pub(crate) fn changing_published_requires_safe_initialization_and_preserves_cell_loans() {
+    accepts("x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}}");
     rejects(
         "x:1;y:2;n:=0;r:{->p:=&x;cell:&p;'loop{p=&y;n=n+1;|n<2|'loop.restart()};v:**cell}",
         "E302",

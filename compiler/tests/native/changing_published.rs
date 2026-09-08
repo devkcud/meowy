@@ -173,7 +173,7 @@ pub fn changing_published_loans_expiry_and_initialization_gates_remain_checked()
             "E303",
         ),
         (
-            "x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}}",
+            "x:1;y:2;n:=2;r:'out{'loop{'out->p:=&x;p=&y;n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         (

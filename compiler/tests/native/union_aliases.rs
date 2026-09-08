@@ -114,7 +114,7 @@ pub fn union_alias_source_loans_addresses_and_surviving_results_stay_checked() {
             "B001",
         ),
         (
-            "<R>:<{p<&int32><null><string>:=}>;x:1;n:=2;r<R>:'out{'inner{n=n-1;|n>0|'inner.restart();'out->p<&int32><null>:=null;p=&x}}",
+            "<R>:<{p<&int32><null><string>:=}>;x:1;n:=2;r<R>:'out{'inner{'out->p<&int32><null>:=null;p=&x;n=n-1;|n>0|'inner.restart()}}",
             "B001",
         ),
         (

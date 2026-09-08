@@ -66,6 +66,7 @@ compiler/target/debug/meowy run compiler/examples/widened-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/union-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/fixed-published.mwy
 compiler/target/debug/meowy run compiler/examples/changing-published.mwy
+compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -153,7 +154,9 @@ The [fixed published result example](examples/fixed-published.mwy) updates an em
 pointer before an inner loop and preserves the result after its alias leaves scope.
 The [changing published result example](examples/changing-published.mwy) updates
 an alias initialized before the loop while an older copy keeps its original target.
-Aliases introduced within the restarted body still require broader initialization proofs.
+The [late published result example](examples/late-published.mwy) initializes and
+updates an alias on the completing iteration. Explicit frontier proofs keep such
+emissions off restart edges; initialization that actually crosses an edge remains gated.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;

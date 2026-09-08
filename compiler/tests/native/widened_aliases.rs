@@ -114,7 +114,7 @@ pub fn widened_alias_loans_lifetimes_and_union_view_gates_are_checked() {
             "E303",
         ),
         (
-            "x:1;y:2;flag:=true;n:=2;r:'out{|flag|{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}}};copy:r",
+            "x:1;y:2;flag:=true;n:=2;r:'out{|flag|{'loop{'out->p:=&x;p=&y;n=n-1;|n>0|'loop.restart()}}};copy:r",
             "B001",
         ),
         ("x:1;flag:=true;r:'out{|flag|{'out->p:&x;p=&x}}", "E305"),

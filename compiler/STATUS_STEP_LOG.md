@@ -6,6 +6,64 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Late publication validation complete
+
+- All ten compiler checks pass: 504 library + 504 native (1008 Rust), 20 Python,
+  64 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Explicit restart-frontier certificates distinguish emission IDs from reachable
+  write order and prove late initialization disjoint from every actual backedge.
+  Late aliases remain absent from headers; nested loops can use preinitialized views.
+- Ten new library and five native groups prove initialization timing, RHS restarts,
+  normal/Leave paths, conditional/record backing, cells, old copies, lifetimes and
+  missing/bounded proof. The example prints 3, 2, 1, init, 7, 9. Initial test-only
+  Debug-bound and wrong-target E222 issues are fixed; no remaining failures.
+- Runtime/backend, syntax, reference fixtures and dependencies are unchanged.
+  Prior runtime/editor evidence is preserved, not rerun for this compiler slice.
+- Next: stateful publication initialization across actual backedges before lifting
+  the enclosing-emission gate; preserve duplicate-slot rules and late certificates.
+
+
+### 2026-09-08 - Late publication native boundaries aligned
+
+- Historical native capability cases now place publication before a reachable
+  restart, exercising the unchanged frontend frontier gate. New accepted cases
+  cover completing iterations, initializer restarts, cells and mixed nested scopes.
+- Next: full compiler/native gate, final handoff and commit. No runtime/backend edits.
+
+
+### 2026-09-08 - Late publication focused proof passes
+
+- All ten focused groups pass, including initializer-RHS restarts, nested
+  late/preinitialized roles, all-site certificates and dead-emission index separation.
+- Fixed the cell-reference fixture to name its actual receiving scope after an
+  E222 failure. The earlier test-only Debug-bound build issue is also resolved.
+- Added five native groups and late-published.mwy. Next: historical capability
+  boundary updates, full compiler gate, handoff and commit.
+
+
+### 2026-09-08 - Late publication focused build
+
+- Added ten source/proof groups for completing iterations, records/unions, RHS
+  Leave, cells, old copies, all-site certificates, nested headers and dead emissions.
+- The first build found a test-only Debug requirement on Facts; changed the error
+  extraction without altering production types. Formatting passes.
+- Next: focused tests, native coverage and compiler gate.
+
+
+### 2026-09-08 - Late publication frontier investigation and implementation
+
+- Clean tree at 12d2e2b. The frontend already rejects new enclosing emissions
+  reaching a restart. Emission IDs differ from reachable-write order when dead
+  emissions occur, so block entry now records a separate first-emission index.
+- Successful restart checks publish target/index/guard frontiers. The planner
+  requires metadata for each actual site and classifies late aliases only when
+  their emission is disjoint from every backedge. Origin/loan headers omit those
+  uninitialized aliases while retaining existing normal/Leave publication transfers.
+- Validation pending. Next: final-iteration/mixed-scope tests, malformed/frontier
+  bounds and native execution, then compiler gate. Cross-edge emissions stay gated.
+
+
 ### 2026-09-08 - Changing published alias validation complete
 
 - All ten compiler checks pass: 494 library + 499 native (993 Rust), 20 Python,

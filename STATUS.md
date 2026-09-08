@@ -11,6 +11,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [Late published aliases](compiler/OWNERSHIP.md#late-published-aliases) initialize
+  inside restarted bodies when their emission cannot reach any backedge. Explicit
+  frontier certificates preserve empty headers, actual definitions and source lifetimes.
+
 - [Changing published aliases](compiler/OWNERSHIP.md#changing-published-restart-results)
   now use canonical local headers and demand-only normal/Leave transfers. Binding
   guards, conditional backing, old copies and final source lifetimes are preserved.
@@ -18,8 +22,8 @@ The full documented v0.0.1 release remains incomplete.
 - [Fixed published restart results](compiler/OWNERSHIP.md#fixed-published-restart-results)
   support borrowed alias writes before or after an inner restarted body. Stable
   snapshots retain backing types, conditional fields, old copies and source lifetimes.
-  Changing aliases initialized before entry are also supported; aliases first
-  initialized inside the restarted body remain gated.
+  Changing preinitialized aliases and proven late initialization are supported;
+  initialization carried across an actual backedge remains gated.
 - [Published result snapshots](compiler/OWNERSHIP.md#published-result-snapshots)
   retain backing types, tags, origins and bounds beyond alias lexical scopes.
   Fixed result bundles survive through checked identity; preinitialized changing
@@ -27,20 +31,20 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 993 Rust (494 library, 499 native), 20 Python, 63 examples
+- Current compiler gate: 1008 Rust (504 library, 504 native), 20 Python, 64 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
   dependencies are unchanged; runtime/editor checks were not rerun for this slice.
 - The [union-aliases example](compiler/examples/union-aliases.mwy) changes a nullable
-  pointer whose backing admits an extra string member. New publication initialization,
+  pointer whose backing admits an extra string member. Initialization across backedges,
   union-view addresses/fields, lists, dynamic origins, owning cleanup and release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Whole union-alias assignment, transient storage and changing published aliases | New publication initialization, list bounds, dynamic origins and drop schedules |
+| Compiler | Whole union-alias assignment, transient storage and late published aliases | Stateful publication initialization, list bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -50,8 +54,9 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend publication initialization beyond aliases live before restart entry,
-   starting with final-iteration emissions and explicit initialization frontiers.
+1. Model publication initialization that survives actual backedges before relaxing
+   the enclosing-emission gate. Keep late frontier certificates, duplicate-slot
+   checks and mixed initialization scopes intact.
    Preserve conditional initialization,
    ancestor storage, exact predecessor coverage and no synthetic reads.
    Union-view addresses/field paths

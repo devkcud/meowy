@@ -213,7 +213,7 @@ pub fn transitive_borrow_boundaries_stay_explicit() {
     Case::new("owner:1;cell<&int32><null>:=&owner").runs(b"");
     for source in [
         "owner:1;items:[&owner]",
-        "owner:1;n:=2;holder:'out{'loop{n=n-1;|n>0|'loop.restart();'out->view:=&owner;view=&owner}}",
+        "owner:1;n:=2;holder:'out{'loop{'out->view:=&owner;view=&owner;n=n-1;|n>0|'loop.restart()}}",
     ] {
         let output = Case::new(source).command("build", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");

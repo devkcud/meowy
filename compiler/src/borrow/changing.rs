@@ -38,12 +38,6 @@ impl Checker<'_> {
                 .aliases
                 .get(local)
                 .ok_or_else(|| Self::unsupported(span))?;
-            let state = input.values.get(local).ok_or_else(|| {
-                super::Diagnostic::unsupported(
-                    "published alias must be initialized before restart entry",
-                    alias.span,
-                )
-            })?;
             let ty = self
                 .program
                 .locals
@@ -67,6 +61,25 @@ impl Checker<'_> {
             let Some(super::Step::Slot(index)) = prefix.first() else {
                 return Err(Self::unsupported(span));
             };
+            if self
+                .facts
+                .late_published
+                .get(&id)
+                .is_some_and(|ids| ids.contains(local))
+            {
+                if input.values.contains_key(local)
+                    || !super::frontier::late(self.proofs, id, *local, self.guards, alias.span)?
+                {
+                    return Err(Self::unsupported(alias.span));
+                }
+                continue;
+            }
+            let state = input.values.get(local).ok_or_else(|| {
+                super::Diagnostic::unsupported(
+                    "published alias must be initialized before restart entry",
+                    alias.span,
+                )
+            })?;
             if !self.guards.spend(state.weight() + slots.len() + 1)
                 || !slots.insert((alias.target, *index))
             {

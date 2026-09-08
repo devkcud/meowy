@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/late-published.mwy"),
+            "3\n2\n1\ninit\n7\n9\n",
+        ),
+        (
             include_str!("../../examples/changing-published.mwy"),
             "7\n9\n7\n9\n",
         ),

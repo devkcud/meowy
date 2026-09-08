@@ -23,6 +23,7 @@ pub(crate) fn body(
             + super::activity::weight(&choices)
             + super::published::fixed_weight(&plan.fixed)
             + super::changing::weight(&plan.changing)
+            + super::changing::weight(&plan.late)
             + super::changing::weight(&plan.refresh);
         let seeds = size.saturating_mul(2);
         if used.saturating_add(seeds) > super::MAX_FACT_ORIGINS
@@ -49,6 +50,7 @@ pub(crate) fn body(
             facts: Facts {
                 fixed_published: plan.fixed.clone(),
                 changing_published: plan.changing.clone(),
+                late_published: plan.late.clone(),
                 refresh_published: plan.refresh.clone(),
                 ..Facts::default()
             },
@@ -117,6 +119,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
             + next.published_restarts.len()
             + next.fixed_published.len()
             + next.changing_published.len()
+            + next.late_published.len()
             + next.refresh_published.len()
             + next.merging.len();
         let lookup = program.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
@@ -136,6 +139,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         facts.published_restarts.extend(next.published_restarts);
         facts.fixed_published.extend(next.fixed_published);
         facts.changing_published.extend(next.changing_published);
+        facts.late_published.extend(next.late_published);
         facts.refresh_published.extend(next.refresh_published);
         facts.merging.extend(next.merging);
     }

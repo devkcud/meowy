@@ -166,7 +166,7 @@ pub fn reference_binding_types_and_unsupported_mutation_forms_stay_explicit() {
         ("a:1;b:2;p:&a;p=&b", "E305"),
         ("a:1;b<uint8>:2;p:=&a;p=&b", "E207"),
         (
-            "a:1;n:=2;holder:'out{'loop{n=n-1;|n>0|'loop.restart();'out->view:=&a;view=&a}}",
+            "a:1;n:=2;holder:'out{'loop{'out->view:=&a;view=&a;n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         ("a:1;values:[&a]", "B001"),

@@ -6,6 +6,36 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Late publication validation complete
+
+- All ten compiler checks pass: 1008 Rust (504 library, 504 native), 20 Python,
+  64 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Borrowed aliases may now initialize inside restarted bodies on paths that
+  cannot reach a backedge. Ten library and five native groups cover actual
+  initialization, nested headers, old copies and lifetimes; fixture issues are fixed.
+- Runtime/backend, library, editor and dependencies remain unchanged. Next:
+  stateful publication initialization across actual backedges, then broader
+  ownership, tools, library and distribution work.
+
+
+### 2026-09-08 - Late publication focused proof passes
+
+- Ten source/proof groups pass. Completing-path aliases use actual initialization
+  and remain absent from loop headers; mixed nested scopes and lifetimes are covered.
+- Five native groups and a late-published example are ready. Next: compiler gate,
+  historical expectation updates and commit; runtime/backend and dependencies unchanged.
+
+
+### 2026-09-08 - Late publication initialization
+
+- Compiler work now records and consumes restart initialization frontiers so
+  completing-path aliases can be initialized inside restarted bodies without
+  inventing header references. Validation is pending.
+- Runtime/backend, libraries, editors and dependencies remain unchanged. Next:
+  source/proof/native regressions, compiler gate and commit.
+
+
 ### 2026-09-08 - Changing published alias validation complete
 
 - All ten compiler checks pass: 993 Rust (494 library, 499 native), 20 Python,

@@ -59,6 +59,7 @@ impl Checker {
             leaves: FALSE,
             slots: Slots::new(),
             start: self.writes,
+            first: self.proofs.emissions.len(),
             partial,
             owner: self.owner,
         });

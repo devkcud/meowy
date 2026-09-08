@@ -18,9 +18,6 @@ impl Graph<'_> {
                     + self.blocks.len().checked_ilog2().unwrap_or(0) as usize
                     + 3,
             )?;
-            if !incoming.contains_key(local) || !header.contains_key(local) {
-                return Ok(TRUE);
-            }
             let Some(alias) = self.proofs.aliases.get(local) else {
                 return Ok(TRUE);
             };
@@ -38,6 +35,27 @@ impl Graph<'_> {
                 || !ty.fixed_borrowed_value()
                 || crate::borrow::aliases::result_slot(&scope.ty, &alias.field, ty).is_none()
             {
+                return Ok(TRUE);
+            }
+            if self
+                .facts
+                .late_published
+                .get(&id)
+                .is_some_and(|ids| ids.contains(local))
+            {
+                if incoming.contains_key(local)
+                    || header.contains_key(local)
+                    || !crate::borrow::frontier::late(
+                        self.proofs,
+                        id,
+                        *local,
+                        self.guards,
+                        alias.span,
+                    )?
+                {
+                    return Ok(TRUE);
+                }
+            } else if !incoming.contains_key(local) || !header.contains_key(local) {
                 return Ok(TRUE);
             }
         }

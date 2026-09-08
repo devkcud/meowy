@@ -6,6 +6,7 @@ pub(crate) struct Plan {
     pub(crate) restarts: super::BTreeSet<super::BlockId>,
     pub(crate) fixed: super::published::Fixed,
     pub(crate) changing: super::changing::Views,
+    pub(crate) late: super::changing::Views,
     pub(crate) refresh: super::changing::Views,
 }
 
@@ -135,7 +136,22 @@ pub(crate) fn check(
                     }
                     add(Item::Expression(condition))?;
                 }
-                Stmt::Restart { target, .. } => {
+                Stmt::Restart { target, site } => {
+                    if !guards
+                        .spend(proofs.frontiers.len().checked_ilog2().unwrap_or(0) as usize + 1)
+                    {
+                        return Err(State::budget(Span::default()));
+                    }
+                    if proofs
+                        .frontiers
+                        .get(site)
+                        .is_none_or(|frontier| frontier.target != *target)
+                    {
+                        return Err(crate::diagnostic::Diagnostic::unsupported(
+                            "missing restart initialization frontier",
+                            Span::default(),
+                        ));
+                    }
                     restarts.insert(*target);
                 }
                 Stmt::Leave(_) => {}
@@ -224,6 +240,20 @@ pub(crate) fn check(
         return Err(State::budget(Span::default()));
     }
     let publications = alias_restarts(&parents, &alias_writes, &restarts, guards)?;
+    let mut late = super::changing::Views::new();
+    for (target, ids) in &publications.changing {
+        if !guards.spend(ids.len() + 1) {
+            return Err(State::budget(Span::default()));
+        }
+        for id in ids {
+            if super::frontier::late(proofs, *target, *id, guards, Span::default())? {
+                if !guards.spend(late.len().checked_ilog2().unwrap_or(0) as usize + ids.len() + 2) {
+                    return Err(State::budget(Span::default()));
+                }
+                late.entry(*target).or_default().insert(*id);
+            }
+        }
+    }
     if let Some(span) = exclusive
         && !restarts.is_empty()
     {
@@ -237,6 +267,7 @@ pub(crate) fn check(
         restarts,
         fixed: publications.fixed,
         changing: publications.changing,
+        late,
         refresh: publications.refresh,
     })
 }
