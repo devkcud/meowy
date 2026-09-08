@@ -127,10 +127,7 @@ impl Checker<'_> {
                 Stmt::Assign { id, value } => {
                     let result = self.expression(value)?;
                     if result.flow.next {
-                        if matches!(
-                            self.program.locals[*id],
-                            Type::Reference(_) | Type::Exclusive(_)
-                        ) {
+                        if self.proofs.versioned(self.program, *id) {
                             if !self.proofs.mutable.contains(id)
                                 || self.proofs.aliases.contains_key(id)
                                 || value.ty != self.program.locals[*id]

@@ -1,0 +1,24 @@
+memory : @"memory"
+debug : @"debug"
+
+choose <memory.Allocator> : (context <&int32>) {
+    debug.print(*context)
+    -> memory.heap
+}
+
+context := 7
+handle := memory.heap
+count := 2
+
+'loop {
+    | count == 2 | handle = choose(&context)
+    | count == 1 | handle = memory.heap
+    current : handle
+    debug.print(count)
+    count = count - 1
+    | count > 0 | 'loop.restart()
+}
+
+current : handle
+context = 8
+debug.print(context)

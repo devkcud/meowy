@@ -6,6 +6,64 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Mutable allocator combined validation complete
+
+- All fourteen combined checks pass: 832 Rust (394 library, 438 native), 35 Python,
+  51 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 985 links at gate time. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
+  exact fatal/admission/guard/fiber probes. Runtime/backend unchanged; no skipped checks.
+- Nine new library tests and four native groups prove mutable versions, early Leave,
+  empty/bounded restart states, old-copy/iteration expiry, temporary/slot identity,
+  required physical coverage and nullable pointer overwrite. The example prints
+  7, 2, 1, 8 in both profiles. Existing reference/header behavior remains green.
+- Final handoff verification passes 985 links in 99 Markdown files and Git whitespace
+  checks. Next: bounded record/union/list/emitted-alias carriers with field/element/tag proof,
+  actual dynamic contexts and owning-view/drop schedules. Direct mutable handles and
+  allocator components in reference headers are complete for this slice; owning
+  constructors and full release remain unqualified.
+
+### 2026-09-08 — Mutable allocator native and coverage proof
+
+- Full Rust baseline passed 393 library and 437 native groups. Additional nullable
+  header regressions passed, bringing focused coverage to 19 library and seven
+  native allocator groups, with debug/release execution and distinct E302/E303 codes.
+- Native cases prove empty/bounded restart transitions, prior writes retained on
+  Leave, skipped outer stores, expired-copy rejection and pointer overwrite to null.
+  A raw shape test proves optional allocator bounds cannot replace required physical
+  reference coverage. Ancestor and expired Local/Temporary/Slot sources are covered.
+- Added mutable-allocators.mwy and updated the allocator/foundation contracts.
+  Next: combined validation, final handoff and commit. Runtime/backend unchanged;
+  bounded aggregate/list/emitted-alias mutation and owning construction remain gated.
+
+### 2026-09-08 — Mutable allocator versioning implemented
+
+- Direct allocator locals now retain state through bind/read/assignment and share
+  guarded branch/Leave/restart versions with references. Old copies keep independent
+  bounds; overwrites can discard expired constraints before a later read.
+- Header shapes distinguish optional allocator paths from required reference
+  coverage. Explicit empty allocator CFG values preserve initial/overwrite proofs;
+  canonical restart replay still expires ended Local/Temporary/Slot sources.
+- Sixteen focused allocator tests and three existing native groups pass. Two old
+  B001 expectations became valid programs; replaced them only after observing the
+  new behavior, retaining aggregate/list/alias rejection coverage.
+- Next: test physical coverage separately, broaden native control/expiry cases and
+  verify existing reference/header regressions. Lists/aggregate mutation stay gated.
+
+### 2026-09-08 — Mutable allocator and restart investigation
+
+- Direct allocator locals can reuse reference assignment/version merging. Preserve
+  bound snapshots on bind/read/assignment and capture them at branches/Leave/Restart.
+  Mutable emitted aliases, record/union/list carriers remain separate boundaries.
+- Restart shape must distinguish required physical reference origins from optional
+  allocator bound paths. An empty bound set is a valid static heap value, so CFG
+  versions need explicit empty allocator entries for initial and overwrite edges.
+- Reuse existing canonical replay, source expiry, exact predecessors and budgets.
+  Ended iteration sources become Expired; overwrite-before-read should remain valid,
+  while old copies and active expired reads must report E303.
+- Validation: source/contract inspection only. Next: implement direct mutable handles
+  and optional-bound header proof, then branch/expiry/native regressions and checks.
+
 ### 2026-09-08 — Allocator lifetime bounds combined validation complete
 
 - All fourteen combined checks pass: 819 Rust (385 library, 434 native), 35 Python,

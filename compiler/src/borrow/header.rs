@@ -6,19 +6,26 @@ use super::{
 pub(crate) struct Shape {
     pub(crate) paths: BTreeSet<Path>,
     pub(crate) unions: BTreeMap<Path, usize>,
+    pub(crate) optional: BTreeSet<Path>,
 }
 
 impl Shape {
     pub(crate) fn new(ty: &Type, guards: &mut Guards, span: Span) -> Result<Self> {
-        if !matches!(ty, Type::Reference(_) | Type::Exclusive(_)) {
+        if !matches!(
+            ty,
+            Type::Reference(_)
+                | Type::Exclusive(_)
+                | Type::Foundation(crate::hir::FoundationType::Allocator)
+        ) {
             return Err(Diagnostic::unsupported(
-                "restart header requires a fixed reference type",
+                "restart header requires a fixed reference or allocator type",
                 span,
             ));
         }
         crate::borrow_contract::type_weight(ty, guards, span)?;
         let mut paths = BTreeSet::new();
         let mut unions = BTreeMap::new();
+        let mut optional = BTreeSet::new();
         let mut pending = vec![(ty, Path::new())];
         while let Some((ty, path)) = pending.pop() {
             let lookup = paths.len().checked_ilog2().unwrap_or(0) as usize + 1;
@@ -26,6 +33,15 @@ impl Shape {
                 return Err(State::budget(span));
             }
             match ty {
+                Type::Foundation(crate::hir::FoundationType::Allocator) => {
+                    if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS
+                        || !guards.spend(path.len() + 1)
+                    {
+                        return Err(State::budget(span));
+                    }
+                    optional.insert(path.clone());
+                    paths.insert(path);
+                }
                 Type::Reference(target) | Type::Exclusive(target) => {
                     if paths.len() + unions.len() + pending.len() >= MAX_ORIGINS {
                         return Err(State::budget(span));
@@ -84,7 +100,11 @@ impl Shape {
                 _ => {}
             }
         }
-        Ok(Self { paths, unions })
+        Ok(Self {
+            paths,
+            unions,
+            optional,
+        })
     }
 
     pub(crate) fn validate(
@@ -147,7 +167,9 @@ impl Shape {
                 return Err(State::budget(span));
             }
             let active = guards.and(*active, state.proof);
-            if !guards.implies(active, covered.get(path).copied().unwrap_or(FALSE)) {
+            if !self.optional.contains(path)
+                && !guards.implies(active, covered.get(path).copied().unwrap_or(FALSE))
+            {
                 return Err(Diagnostic::unsupported(
                     "incomplete restart header reference coverage",
                     span,

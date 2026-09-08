@@ -1,4 +1,5 @@
 mod aggregates;
+mod allocator_headers;
 mod allocators;
 mod boundaries;
 mod control;
@@ -6,6 +7,7 @@ mod guarded_references;
 mod header_activity;
 mod header_components;
 mod leaves;
+mod mutable_allocators;
 mod mutable_references;
 mod origins;
 mod reference_slots;

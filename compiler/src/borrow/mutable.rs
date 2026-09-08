@@ -29,6 +29,7 @@ pub(crate) fn check(
     program: &Program,
     guards: &mut Guards,
     params: &[crate::hir::LocalId],
+    proofs: &super::Proofs,
 ) -> Result<Plan> {
     let mut pending = Vec::new();
     for stmt in block.stmts.iter().rev() {
@@ -59,10 +60,7 @@ pub(crate) fn check(
                     }
                 }
                 Stmt::Assign { id, value } => {
-                    if matches!(
-                        program.locals.get(*id),
-                        Some(Type::Reference(_) | Type::Exclusive(_))
-                    ) {
+                    if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
                     }
                     add(Item::Expression(value))?;

@@ -59,7 +59,7 @@ impl Checker<'_> {
         self.complete(&ty, &state, span)?;
         if !self.proofs.mutable.contains(&id) {
             self.link_tags(id, &ty, &mut state, span)?;
-        } else if !matches!(ty, Type::Reference(_) | Type::Exclusive(_)) {
+        } else if !self.proofs.versioned(self.program, id) {
             self.unbounded(&state, "mutable allocator storage", span)?;
             state = State::unknown(&ty, self.guards, span)?;
         }

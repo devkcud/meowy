@@ -1,6 +1,4 @@
-use super::{
-    Checker, Expr, ExprKind, FALSE, Flow, Guard, LocalId, Result, Span, State, TRUE, Type,
-};
+use super::{Checker, Expr, ExprKind, FALSE, Flow, Guard, LocalId, Result, Span, State, TRUE};
 
 pub(crate) type Values = Vec<(LocalId, State)>;
 
@@ -31,11 +29,7 @@ impl Checker<'_> {
         }
         let mut values = Vec::new();
         for (id, value) in &self.locals {
-            if matches!(
-                self.program.locals[*id],
-                Type::Reference(_) | Type::Exclusive(_)
-            ) && self.proofs.mutable.contains(id)
-            {
+            if self.proofs.versioned(self.program, *id) && self.proofs.mutable.contains(id) {
                 if !self.guards.spend(value.state.weight() + 1) {
                     return Err(State::budget(span));
                 }

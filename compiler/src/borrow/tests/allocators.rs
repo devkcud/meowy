@@ -59,8 +59,8 @@ pub(crate) fn allocator_records_and_unions_keep_only_selected_bounds() {
 
 #[test]
 pub(crate) fn allocator_bound_loss_in_mutation_and_lists_is_explicit() {
-    rejects("x:1;a:=f(&x)", "B001");
-    rejects("x:1;a:=m.heap;a=f(&x)", "B001");
+    accepts("x:1;a:=f(&x);copy:a");
+    accepts("x:1;a:=m.heap;a=f(&x);copy:a");
     rejects("x:1;items:[f(&x)]", "B001");
     rejects("x:1;items:=[m.heap];items[1]=f(&x)", "B001");
     rejects("x:1;holder:={->handle:=m.heap};holder.handle=f(&x)", "B001");
@@ -107,10 +107,9 @@ pub(crate) fn allocator_bounds_survive_shared_carriers_and_reborrows() {
 }
 
 #[test]
-pub(crate) fn bounded_reference_restart_headers_remain_explicitly_unsupported() {
-    rejects(
+pub(crate) fn bounded_reference_restart_headers_preserve_allocator_constraints() {
+    accepts(
         "x:1;a:f(&x);p:=&a;again:=true;'loop{|again|{again=false;p=&a;'loop.restart()}};copy:*p",
-        "B001",
     );
     accepts(
         "a<m.Allocator><null>:m.heap;p:=&a;again:=true;'loop{|again|{again=false;p=&a;'loop.restart()}};copy:*p",

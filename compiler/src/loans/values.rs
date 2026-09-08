@@ -74,6 +74,10 @@ impl<'a> Graph<'a> {
                 }
             }
         }
+        for path in crate::borrow_contract::allocator_paths(ty, self.guards, Span::default())? {
+            self.charge(path.len() + 1)?;
+            groups.entry(path).or_default();
+        }
         groups
             .into_iter()
             .map(|(path, mut value)| {
@@ -531,6 +535,20 @@ impl<'a> Graph<'a> {
             | ExprKind::Float(_)
             | ExprKind::String(_)
             | ExprKind::Heap => Bundle::new(),
+        };
+        let value = if self.current.is_empty()
+            || !value.is_empty()
+            || expr.ty != Type::Foundation(crate::hir::FoundationType::Allocator)
+            || !path.is_empty()
+        {
+            value
+        } else {
+            let value = self.bundle(Value::default(), &expr.ty)?;
+            self.append(Node {
+                defs: value.values().copied().collect(),
+                ..Node::default()
+            })?;
+            value
         };
         if expr.ty == Type::Never {
             self.current.clear();

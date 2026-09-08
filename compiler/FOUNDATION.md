@@ -69,9 +69,10 @@ The static heap is the only allocator-producing source path. Custom/arena
 allocators and non-static allocator origins remain unavailable. Ordinary functions
 now apply [allocator return bounds](ALLOCATOR_BOUNDS.md) to active borrow-carrying
 inputs; returning the heap does not bypass that public contract. Immutable
-records/unions and shared pointee snapshots preserve the constraints. Operations
-that would lose active bounds in mutable/list/header storage remain B001; existing
-unbounded static values keep their normal storage behavior.
+records/unions and shared pointee snapshots preserve the constraints. Direct mutable
+allocator bindings also retain versions through branches and restarts. Bounded
+aggregate/list/emitted-alias mutation remains B001; existing unbounded static values
+keep their normal storage behavior.
 
 ## Failure transport and remaining gates
 

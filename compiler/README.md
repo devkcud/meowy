@@ -9,7 +9,8 @@ borrow contracts, shared reborrows, last-use checks for mutable owners, and inli
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
 The [foundation values](FOUNDATION.md) include static heap handles and nominal
 allocation-failure transport. [Allocator return bounds](ALLOCATOR_BOUNDS.md) track
-public input lifetimes through immutable values and shared snapshots. Owning-string
+public input lifetimes through immutable values, direct mutable handles, restart
+headers and shared snapshots. Owning-string
 storage and constructors remain gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
@@ -24,6 +25,7 @@ compiler/target/debug/meowy check compiler/examples/factorial.mwy
 compiler/target/debug/meowy run compiler/examples/hello.mwy
 compiler/target/debug/meowy run compiler/examples/heap-handles.mwy
 compiler/target/debug/meowy run compiler/examples/allocator-bounds.mwy
+compiler/target/debug/meowy run compiler/examples/mutable-allocators.mwy
 compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile release
 compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy

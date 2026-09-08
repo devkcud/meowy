@@ -169,13 +169,10 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         continue;
                     }
-                    let target = if matches!(
-                        self.program.locals[*id],
-                        Type::Reference(_) | Type::Exclusive(_)
-                    ) {
+                    let target = if self.proofs.versioned(self.program, *id) {
                         if !self.merging {
                             return Err(crate::diagnostic::Diagnostic::unsupported(
-                                "missing mutable-reference body proof",
+                                "missing mutable-value body proof",
                                 value.span,
                             ));
                         }

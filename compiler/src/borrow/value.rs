@@ -140,9 +140,7 @@ impl Checker<'_> {
                 state
             }
             ExprKind::Local(id) => {
-                if self.proofs.mutable.contains(id)
-                    && !matches!(expr.ty, Type::Reference(_) | Type::Exclusive(_))
-                {
+                if self.proofs.mutable.contains(id) && !self.proofs.versioned(self.program, *id) {
                     State::unknown(&expr.ty, self.guards, expr.span)?
                 } else {
                     let state = self

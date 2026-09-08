@@ -40,6 +40,16 @@ pub(crate) struct Proofs {
 }
 
 impl Proofs {
+    pub(crate) fn versioned(&self, program: &Program, id: LocalId) -> bool {
+        match program.locals.get(id) {
+            Some(Type::Reference(_) | Type::Exclusive(_)) => true,
+            Some(Type::Foundation(crate::hir::FoundationType::Allocator)) => {
+                !self.aliases.contains_key(&id)
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) fn exclusive_path_type<'a>(
         &self,
         program: &'a Program,

@@ -14,7 +14,7 @@ pub(crate) fn body(
     params: &[LocalId],
     used: usize,
 ) -> Result<(Facts, usize)> {
-    let plan = super::mutable::check(block, program, guards, params)?;
+    let plan = super::mutable::check(block, program, guards, params, proofs)?;
     let span = Span::default();
     let mut headers = Headers::new();
     let mut choices = super::activity::Choices::new();

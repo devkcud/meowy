@@ -207,7 +207,9 @@ impl Checker<'_> {
                     }
                 }
             }
-            if count > super::MAX_ORIGINS || origins.is_empty() {
+            if count > super::MAX_ORIGINS
+                || (origins.is_empty() && !shape.optional.contains(&Vec::new()))
+            {
                 return Err(State::budget(span));
             }
             let mut state = State {

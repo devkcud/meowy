@@ -226,6 +226,52 @@ pub(crate) fn component_type<'a>(mut ty: &'a Type, path: &[Step]) -> Option<&'a 
     Some(ty)
 }
 
+pub(crate) fn allocator_paths(ty: &Type, flow: &mut Flow, span: Span) -> Result<Vec<Path>> {
+    let mut result = Vec::new();
+    let mut pending = vec![(ty, Path::new())];
+    while let Some((ty, path)) = pending.pop() {
+        if !flow.spend(path.len() + 1) {
+            return Err(State::budget(span));
+        }
+        match ty {
+            Type::Foundation(crate::hir::FoundationType::Allocator) => result.push(path),
+            Type::Reference(target) | Type::Exclusive(target) => {
+                let mut nested = path;
+                nested.push(Step::Deref);
+                pending.push((target, nested));
+            }
+            Type::Record { primary, fields } => {
+                for (index, ty) in std::iter::once(primary.as_ref())
+                    .chain(fields.iter().map(|field| &field.ty))
+                    .enumerate()
+                {
+                    if pending.len() + result.len() >= MAX_PARTS || !flow.spend(path.len() + 1) {
+                        return Err(State::budget(span));
+                    }
+                    let mut nested = path.clone();
+                    nested.push(Step::Slot(index));
+                    pending.push((ty, nested));
+                }
+            }
+            Type::Union(members) => {
+                for (index, ty) in members.iter().enumerate() {
+                    if pending.len() + result.len() >= MAX_PARTS || !flow.spend(path.len() + 1) {
+                        return Err(State::budget(span));
+                    }
+                    let mut nested = path.clone();
+                    nested.push(Step::Variant(index));
+                    pending.push((ty, nested));
+                }
+            }
+            _ => {}
+        }
+        if pending.len() + result.len() > MAX_PARTS {
+            return Err(State::budget(span));
+        }
+    }
+    Ok(result)
+}
+
 pub(crate) fn projected_type<'a>(mut ty: &'a Type, path: &[Projection]) -> Option<&'a Type> {
     for step in path {
         ty = match (step, ty) {

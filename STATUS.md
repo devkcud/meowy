@@ -11,28 +11,29 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Allocator return bounds](compiler/ALLOCATOR_BOUNDS.md) now follow immutable
-  locals, records/unions, calls and shared reborrow snapshots. Escapes and expired
-  consumption report E303. Active input lifetimes constrain even a returned heap
-  handle; the old blanket signature gate is removed for supported result shapes.
-- Lifetime-only allocator bounds do not create physical loans or forbid replacing
-  still-live scalar storage. Actual references retain their access rules. Mutable,
-  list and restart-header paths that cannot retain allocator bounds remain B001;
-  existing unbounded static heap behavior remains supported.
-- All fourteen combined checks pass: 819 Rust (385 library, 434 native), 35 Python,
-  50 debug/release examples, both editors, formatting, Clippy, build and contracts.
-  Runtime passes 100 groups/profile under debug/release/ASan/UBSan/LSan plus required
+- [Mutable allocator bounds](compiler/ALLOCATOR_BOUNDS.md#mutable-versions-and-restart)
+  now survive direct binding assignment, branches, short circuits, Leave and Restart.
+  Earlier copies retain their own constraints; overwriting an expired handle before
+  reading it is allowed. Active expired reads remain E303, and cell-borrow conflicts E302.
+- Headers preserve explicit empty allocator versions and optional bound paths,
+  including nullable allocator components beneath shared references. Physical
+  reference paths still require complete origin proof. Ended Local/Temporary/Slot
+  sources stay expired even when the same source site initializes again.
+- All fourteen combined checks pass: 832 Rust (394 library, 438 native), 35 Python,
+  51 debug/release examples, both editors, formatting, Clippy, build and contracts.
+  Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
   fatal/admission/guard/fiber probes. Runtime/backend representations did not change.
 - Conformance remains 10 passed, 13 unsupported, 0 failed. The
-  [allocator-bounds example](compiler/examples/allocator-bounds.mwy) exercises the
-  new contract. Actual dynamic allocator contexts, owning string views/constructors,
-  automatic cleanup, source error APIs, task recovery and full release remain open.
+  [mutable-allocators example](compiler/examples/mutable-allocators.mwy) proves the
+  new loop behavior. Bounded aggregate/list/emitted-alias mutation, actual dynamic
+  allocator contexts, owning string views/constructors and automatic cleanup remain open.
+  Source error APIs, task recovery/cancellation, DWARF and full release remain unqualified.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Nominal values, allocator return bounds and panic outcomes | Bound carriers, dynamic view/context origins and drop schedules |
+| Compiler | Mutable allocator bounds, restart headers and panic outcomes | Aggregate/list bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -42,13 +43,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend allocator bounds to mutable/list/header carriers without losing facts,
-   then model actual dynamic allocator contexts and string-view origins in the same
-   passes. Static heap is still the only allocator factory. Follow
-   [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) for bounded drop schedules before
-   enabling strings.copy: normal/Leave/Restart/panic, retained/discarded emissions,
-   temporary and call transfers must release exactly once. Add source failure APIs
-   without implicit descriptor erasure; keep task cleanup/unwinding qualification separate.
+1. Extend bounded allocator record/union/list carriers and emitted aliases, preserving
+   field/element versions and tag activity before removing their B001 guards.
+   Then add actual dynamic allocator contexts and string-view origins; static heap
+   remains the only factory. Follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md)
+   for bounded drop schedules before strings.copy: normal/Leave/Restart/panic and
+   emitted/temporary/call transfers must release exactly once. Source failure APIs
+   must preserve explicit erasure; task cleanup/unwinding remains separately qualified.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context
