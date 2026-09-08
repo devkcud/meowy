@@ -64,6 +64,7 @@ compiler/target/debug/meowy run compiler/examples/alias-restarts.mwy
 compiler/target/debug/meowy run compiler/examples/discarded-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/widened-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/union-aliases.mwy
+compiler/target/debug/meowy run compiler/examples/fixed-published.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -146,6 +147,11 @@ The [transitive restarts example](examples/transitive-restarts.mwy) carries poin
 to reference-bearing records through a loop while preserving an earlier record copy.
 The [header activity example](examples/header-activity.mwy) carries null and active
 reference variants through successive iterations without inventing a null-path loan.
+
+The [fixed published result example](examples/fixed-published.mwy) updates an emitted
+pointer before an inner loop and preserves the result after its alias leaves scope.
+Writes before or after the restarted body are supported; changing a surviving
+published result inside that body still requires broader header/loan proofs.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;

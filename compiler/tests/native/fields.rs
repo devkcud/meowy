@@ -175,7 +175,7 @@ pub fn mutable_fields_check_shapes_mutability_and_storage_boundaries() {
         ("<I>:<{n<int32>}>;v:{->n:=1};copy<I>:v", "E207"),
         ("v:={->n:=1};v.n=\"wrong\"", "E207"),
         (
-            "owner:1;v:{->view:=&owner;view=&owner;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
+            "owner:1;v:{->view:=&owner;n:=2;'loop{view=&owner;n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         ("v:={->n:=1};r:&v;r.n=2", "B001"),

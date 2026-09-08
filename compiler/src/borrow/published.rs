@@ -1,6 +1,13 @@
-use super::{BTreeMap, BlockId, Checker, FALSE, Guard, Guards, Result, Span, State, Step, Type};
+use super::{
+    BTreeMap, BTreeSet, BlockId, Checker, FALSE, Guard, Guards, Result, Span, State, Step, Type,
+};
 
 pub(crate) type Slots = BTreeMap<(BlockId, usize), Slot>;
+pub(crate) type Fixed = BTreeMap<BlockId, BTreeSet<BlockId>>;
+
+pub(crate) fn fixed_weight(fixed: &Fixed) -> usize {
+    fixed.values().map(|targets| targets.len() + 1).sum()
+}
 
 pub(crate) struct Slot {
     pub(crate) ty: Type,
@@ -10,6 +17,84 @@ pub(crate) struct Slot {
 pub(crate) struct Snapshot {
     pub(crate) slots: Slots,
     pub(crate) entered: Guard,
+}
+
+pub(crate) fn unchanged(
+    initial: &Snapshot,
+    current: &Snapshot,
+    targets: &BTreeSet<BlockId>,
+    guards: &mut Guards,
+    span: Span,
+) -> Result<Guard> {
+    let count = initial.slots.len().saturating_add(current.slots.len());
+    let lookup = count.checked_ilog2().unwrap_or(0) as usize
+        + targets.len().checked_ilog2().unwrap_or(0) as usize
+        + 3;
+    if !guards.spend(count.saturating_mul(lookup) + 1) {
+        return Err(State::budget(span));
+    }
+    if current.entered == FALSE {
+        return Ok(FALSE);
+    }
+    if initial.entered == FALSE {
+        return Ok(current.entered);
+    }
+    let keys = initial
+        .slots
+        .keys()
+        .chain(current.slots.keys())
+        .filter(|(owner, _)| targets.contains(owner))
+        .copied()
+        .collect::<BTreeSet<_>>();
+    let mask = guards.and(initial.entered, current.entered);
+    for key in keys {
+        let (Some(left), Some(right)) = (initial.slots.get(&key), current.slots.get(&key)) else {
+            return Ok(current.entered);
+        };
+        let left_size = crate::borrow_contract::type_weight(&left.ty, guards, span)?;
+        let right_size = crate::borrow_contract::type_weight(&right.ty, guards, span)?;
+        if !guards.spend(left_size + right_size + left.state.weight() + right.state.weight() + 1) {
+            return Err(State::budget(span));
+        }
+        if left.ty != right.ty {
+            return Ok(current.entered);
+        }
+        let shape = super::header::Shape::new(&left.ty, guards, span)?;
+        shape.validate(&left.state, false, guards, span)?;
+        shape.validate(&right.state, false, guards, span)?;
+        let left = left.state.clone().under(mask, guards);
+        let right = right.state.clone().under(mask, guards);
+        if left.present != right.present
+            || left.proof != right.proof
+            || !left
+                .origins
+                .iter()
+                .map(|origin| (&origin.component, &origin.source, origin.guard))
+                .eq(right
+                    .origins
+                    .iter()
+                    .map(|origin| (&origin.component, &origin.source, origin.guard)))
+            || !left
+                .bounds
+                .iter()
+                .map(|origin| (&origin.component, &origin.source, origin.guard))
+                .eq(right
+                    .bounds
+                    .iter()
+                    .map(|origin| (&origin.component, &origin.source, origin.guard)))
+            || !left
+                .active
+                .iter()
+                .map(|active| (&active.component, active.member, active.guard))
+                .eq(right
+                    .active
+                    .iter()
+                    .map(|active| (&active.component, active.member, active.guard)))
+        {
+            return Ok(current.entered);
+        }
+    }
+    Ok(FALSE)
 }
 
 pub(crate) fn capture(

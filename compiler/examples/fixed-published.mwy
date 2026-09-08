@@ -1,0 +1,11 @@
+d:@"debug"
+x:=7
+y:9
+n:=0
+r:'out{
+    {'out->p:=&x;p=&y}
+    'wait{n=n+1;|n<2|'wait.restart()}
+}
+x=11
+d.print(*r.p)
+d.print(x)

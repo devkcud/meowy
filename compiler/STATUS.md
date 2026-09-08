@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Published result snapshot groundwork verified.
+Updated: 2026-09-08. Fixed published restart support verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,17 +40,18 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-Independent published result snapshots now track mutable reference-bearing result
-fields by owning block and backing field type, before final-completion filtering.
-Emissions and returning alias writes update snapshots; block-entry and Restart
-inputs preserve ancestor-owned slots beyond their alias's lexical scope. Reset
-targets and nested results are excluded. Seven new snapshot groups and two native
-groups pass. All ten compiler-gate checks pass: 475 library, 488 native, 20 Python,
-61 examples in both profiles, formatting, Clippy, build and repository contracts.
+[Fixed published restart results](OWNERSHIP.md#fixed-published-restart-results)
+support borrowed alias writes before or after a restarted body. The bounded planner
+records each write's lexical block and emitted owner. Facts.fixed_published certifies
+stable borrowed slots; initial/backedge snapshots check backing types, presence,
+sources, bounds and activity while the existing ancestor result bundle survives.
+The proof adds no payload reads or definitions. Conditional defaults, old copies,
+RHS Leave/restarts, lexical scopes and source lifetimes retain their existing rules.
 
-The surviving-published-result gate remains in place. Snapshot canonicalization,
-initial/backedge merging and CFG demand transfers are the next implementation step;
-the new inputs alone do not authorize additional source behavior.
+All ten compiler checks pass: 482 library, 492 native, 20 Python and 62 examples in
+both profiles, plus formatting, Clippy, build and repository contracts. The
+fixed-published example prints 9 and 11. Published writes inside a restarted body
+remain B001; canonical changing-publication headers and demand transfers are next.
 
 ## Prior source-language milestone
 
@@ -117,10 +118,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, published snapshots, availability, direct call contracts and scalar exclusive local/input permissions; 67 origin, 130 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, fixed published restart proofs, availability, direct call contracts and scalar exclusive local/input permissions; 74 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 488 native groups, 4 harness tests and 61 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 492 native groups, 4 harness tests and 62 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -613,28 +614,32 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  475 library + 488 native (963 total). Python: 16 tooling + 4 compiler (20).
-  All 61 examples execute in debug/release. Formatting, Clippy, build, local links,
+  482 library + 492 native (974 total). Python: 16 tooling + 4 compiler (20).
+  All 62 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
-- Seven new library groups prove published backing tags, scope identity, RHS Leave,
-  conditional initialization, public bounds, reset filtering and bounded coverage.
-  Two new native groups preserve single RHS evaluation and readonly outer slots
-  across inner restarts in both profiles. Existing ownership gates still pass.
-- Initial focused failures exposed a nested mutable test assertion and whole-slot
-  replacement incorrectly using the nonempty-path helper. Both are fixed; the
-  existing E303 diagnostic remains intact. Git whitespace checks passed.
+- Seven new library groups prove scoped writes, stable backing/tag snapshots,
+  conditional fields, nested/RHS restarts, old copies, public bounds, E302/E303,
+  missing/corrupt proof and work limits. Loan proof adds no nodes or values.
+- Four new native groups and fixed-published.mwy execute supported writes around
+  inner restarts in both profiles. Existing in-body published mutation remains B001.
+- Initial full runs found three stale library and seven stale native boundary
+  groups after enabling pre-loop writes. Library sources now assert acceptance;
+  native boundary cases exercise the remaining in-body gate. All final checks pass.
 - Conformance remains 10 passed, 13 unsupported, 0 failed. The prior all-area gate
   also passed both editors and runtime 100 groups/profile in debug/release and
   ASan/UBSan/LSan with required probes. Those unchanged components were not rerun.
 - Runtime/backend representations, syntax, reference fixtures and dependencies
-  are unchanged. Published inputs are not merged canonical headers or CFG proof.
-  Union-view addresses/fields, allocator-only alias bounds, lists, dynamic origins,
+  are unchanged. Fixed publications use identity across restart edges; changing
+  publications still need canonical headers and demand transfers. Union-view
+  addresses/fields, allocator-only alias bounds, lists, dynamic origins,
   owning cleanup, source error APIs, tasks, DWARF and full release remain open.
 
 ## Next steps
 
-1. Consume `Facts.published_inputs` and `Facts.published_restarts` in
-   `borrow/restart.rs` and `loans/restarts.rs` before lifting `mutable::alias_restarts`.
+1. Extend `borrow/restart.rs` and `loans/restarts.rs` for publications changed inside
+   a restarting body before lifting the remaining `mutable::alias_restarts` gate.
+   Reuse raw published inputs and keep the fixed identity case separate from
+   widening, source expiry and new predecessor demand transfers.
    Keep published backing types distinct from lexical local headers. Prove initial
    and backedge transfer coverage, conditional initialization, lifetime expiry,
    old-copy loans and no synthetic reads; run the compiler gate after integration.

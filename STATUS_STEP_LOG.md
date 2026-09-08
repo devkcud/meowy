@@ -6,6 +6,35 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Fixed published restart validation complete
+
+- All ten compiler checks pass: 974 Rust (482 library, 492 native), 20 Python,
+  62 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Borrowed result aliases can be written before/after inner restarted bodies when
+  their reference-bearing slots remain fixed during the body. Snapshot/loan checks
+  preserve conditional fields, old copies, bounds and result-owner lifetimes.
+- Seven library and four native groups plus fixed-published.mwy cover the new behavior.
+  Old boundary expectations now distinguish supported pre-loop writes from in-body
+  writes. Runtime/backend, libraries, editors and dependencies remain unchanged.
+- Next: changing published headers and demand transfers before lifting the remaining
+  gate. Existing broader ownership, library, tools and distribution work remains open.
+
+### 2026-09-08 - Fixed published restart focused proof passes
+
+- Seven compiler source/proof groups pass. Before/after-loop writes now preserve
+  stable published slots, and source lifetimes and in-body mutation gates remain intact.
+- Added four native groups and a fixed-published example. Next: compiler gate,
+  handoff and commit; runtime/backend and dependencies remain unchanged.
+
+### 2026-09-08 - Fixed published restart integration
+
+- Compiler planning now identifies stable surviving results when alias writes are
+  outside the restarted body. Snapshot/loan checks preserve their backing and
+  guarded state without introducing reads. Validation is pending.
+- Runtime/backend, libraries, editors and dependencies are unchanged. Next: source
+  and proof regressions, compiler gate and commit; changing publication headers follow.
+
 ### 2026-09-08 - Published result snapshot validation complete
 
 - All ten compiler checks pass: 963 Rust (475 library, 488 native), 20 Python,

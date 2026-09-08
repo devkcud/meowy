@@ -6,6 +6,79 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Fixed published restart validation complete
+
+- All ten compiler checks pass: 482 library + 492 native (974 Rust), 20 Python,
+  62 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Scoped write ancestry certifies unchanged borrowed result slots across inner
+  restarts. Loan analysis consumes typed initial/backedge snapshots and keeps the
+  same ancestor result IDs without introducing reads or definitions.
+- Seven new library and four native groups prove before/after writes, conditional
+  backing, old copies, RHS restarts/Leave, lifetimes, missing proof and bounded work.
+  The fixed-published example prints 9 and 11. Historical rejection expectations
+  were updated to acceptance or the remaining in-body boundary; final failures zero.
+- Runtime/backend, syntax, reference fixtures and dependencies remain unchanged;
+  runtime/editor evidence is preserved from the prior all-area gate, not rerun.
+- Next: canonical changing-publication headers, source expiry and demand transfers
+  before lifting in-body published mutation. Union views, lists and owning cleanup follow.
+
+### 2026-09-08 - Fixed publication native boundaries aligned
+
+- Updated the remaining seven native boundary groups to reject in-body borrowed
+  result writes. Before/after-loop cases retain their new execution coverage.
+- Lookup charging now includes snapshot key-set construction and map searches.
+  Next: final compiler gate, handoff and commit. Changing published headers stay open.
+
+### 2026-09-08 - Fixed publication library and native execution
+
+- All 482 library groups pass. Native execution passed 485 groups, including the
+  new fixed-publication cases and example; seven remaining copies of the historical
+  pre-loop B001 expectation need updating in existing native boundary groups.
+- Tightened snapshot key-set and map-lookup work charging. No semantic failure was
+  found in the new source behavior. Downstream compiler checks remain pending.
+- Next: update the seven native expectations, rerun the compiler gate and commit.
+
+### 2026-09-08 - Fixed publication historical boundaries updated
+
+- Converted the three additional library B001 expectations to accepted sources.
+  Native mutable-reference/emitted-slot/carrier rejection cases now place writes
+  inside the restarted body, preserving that remaining capability boundary.
+- New native execution groups cover supported outside-body writes and unchanged
+  results. No compiler implementation adjustment was needed for these failures.
+- Next: rerun the compiler gate and record final evidence before committing.
+
+### 2026-09-08 - Fixed publication full-suite expectation changes
+
+- Formatting, Clippy and repository checks passed. Rust library execution reached
+  479 passes and three stale B001 expectations in mutable_references, reference_slots
+  and checker aliases; each writes its alias before the restarted body.
+- These sources are now supported by the scoped-write proof. Next: update their
+  acceptance expectations and native counterparts, then rerun the full compiler gate.
+  Native execution and downstream checks have not run in this attempt.
+
+### 2026-09-08 - Fixed published restart focused proof passes
+
+- All seven focused groups pass: writes before/after loops, lexical expiry,
+  conditional and widened backing, nested loops, RHS Leave/restarts, E302/E303,
+  scoped ancestry, missing/corrupt snapshots and proof work limits.
+- Loan proof checks add no nodes, values or synthetic payload reads. Added four
+  native groups and fixed-published.mwy for the full compiler gate. Formatting passes.
+- Next: full compiler gate, final handoff and commit; in-body published mutation
+  remains B001 pending canonical changing headers and explicit demand transfers.
+
+### 2026-09-08 - Fixed published restart investigation and implementation
+
+- Clean tree at 3669033. The planner rejected ancestor result writes anywhere in
+  their owner, even when no write runs within the restarted body. Record each write's
+  lexical block and validate its bounded ancestry against the restart target.
+- Stable cases now retain an explicit fixed-target proof and initial/backedge
+  publication inputs, including empty inputs. Loan analysis checks backing shapes
+  and guarded state agreement while preserving the existing ancestor result IDs.
+- Validation pending. Writes inside restarted bodies remain B001. Next: prove
+  conditional fields, old copies, RHS restarts, lifetimes and malformed/missing proof;
+  run the compiler gate, then implement changing published headers separately.
+
 ### 2026-09-08 - Published result snapshot validation complete
 
 - All ten compiler checks pass: 475 library + 488 native (963 Rust), 20 Python,

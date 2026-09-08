@@ -26,10 +26,7 @@ pub(crate) fn alias_restart_ownership_uses_emission_targets() {
         "x:1;y:2;n:=2;r:{->p:=&x;'inner{p=&y;n=n-1;|n>0|'inner.restart()}};v:*r.p",
         "B001",
     );
-    rejects(
-        "x:1;y:2;n:=2;r:{->p:=&x;p=&y;'inner{n=n-1;|n>0|'inner.restart()}};v:*r.p",
-        "B001",
-    );
+    accepts("x:1;y:2;n:=2;r:{->p:=&x;p=&y;'inner{n=n-1;|n>0|'inner.restart()}};v:*r.p");
 }
 
 #[test]
@@ -93,7 +90,7 @@ pub(crate) fn alias_restart_ancestry_rejects_missing_cycles_and_exhaustion() {
     use crate::flow::Flow;
     use std::collections::{BTreeMap, BTreeSet};
 
-    let writes = BTreeMap::from([(1, Span::default())]);
+    let writes = BTreeMap::from([((1, 1), Span::default())]);
     let restarts = BTreeSet::from([2]);
     for parents in [
         BTreeMap::from([(1, None)]),

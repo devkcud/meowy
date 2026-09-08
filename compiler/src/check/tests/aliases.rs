@@ -45,16 +45,13 @@ pub(crate) fn alias_discard_paths_preserve_lexical_storage_and_boundaries() {
         "d:@\"debug\";'out{r:{->lost:=1;lost=2;d.print(lost);'out.leave()}}",
         "d:@\"debug\";'out{r:{->items:=[1,2];items[1]=3;d.print(items[1]);'out.leave()}}",
         "r:{->n:=1;copy:=n;copy=2;n=3}",
+        "a:1;r:{->view:=&a;view=&a;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
     ] {
         accepts(source);
     }
     for (source, code) in [
         ("r:{->n:=1;n=\"x\"}", "E207"),
         ("r:{->n:=1;->n:=2}", "E205"),
-        (
-            "a:1;r:{->view:=&a;view=&a;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
-            "B001",
-        ),
     ] {
         rejects(source, code);
     }

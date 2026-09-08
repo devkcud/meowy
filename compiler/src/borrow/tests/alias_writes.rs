@@ -83,10 +83,7 @@ pub(crate) fn borrowed_alias_views_keep_copies_and_discarded_effects() {
 
 #[test]
 pub(crate) fn borrowed_alias_writes_keep_unsupported_backing_and_restart_gates() {
-    rejects(
-        "x:1;y:2;r:{->p:=&x;p=&y;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
-        "B001",
-    );
+    accepts("x:1;y:2;r:{->p:=&x;p=&y;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}");
     accepts("x:1;flag:=true;r:'out{|flag|{'out->p:=&x;p=&x}}");
     accepts(
         "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p=&x};|!flag|{'out->p:=\"x\"}}",

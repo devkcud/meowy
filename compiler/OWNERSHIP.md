@@ -403,7 +403,8 @@ implementation boundary; it does not change language rules.
   versions use existing canonical local headers, so an inner restart can preserve
   the cell and its live sources. Restarting or leaving the target ends that cell;
   copied slot references expire and cannot revive at the next initialization.
-  Published outer result slots still require their separate header-merging proof.
+  Published outer results may remain fixed across an inner restart; writes within
+  that restarted body still need their separate header-merging proof.
 - Leave and panic preserve earlier effects and skip unfinished outer stores. A
   borrowed cell can survive the lexical scope that introduced its alias while the
   target remains active. Reads or calls cannot bypass E302 conflicts or E303 expiry
@@ -432,8 +433,9 @@ implementation boundary; it does not change language rules.
   their sources, tags and loan IDs. No outer union member is inferred from a new RHS.
 - Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
   loans keep their existing checks. Returned payloads still satisfy retained-source
-  lifetimes. Restart supports reset or independent slots; surviving published outer
-  results remain gated. Views spanning a proper subset of a larger union use the
+  lifetimes. Restart supports reset slots and fixed surviving publications; writes
+  inside a restarting body to an ancestor result remain gated. Views spanning a
+  proper subset of a larger union use the
   whole-assignment conversion below; their addresses and field paths stay gated.
 - The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
   an optional emitted field and preserves the absent path. Library/native tests
@@ -459,9 +461,9 @@ implementation boundary; it does not change language rules.
   the last completed member. Reset-scope Restart and discarded backing retain their
   established rules. Physical conflicts and retained-source expiry remain E302/E303.
 - Taking an address or writing a field through a proper-subset union view remains
-  B001 because its lexical tag representation differs from backing. Surviving
-  published result headers and bounded allocator-only aliases remain separate proof
-  work. Type/path copies and member remapping use existing charged budgets.
+  B001 because its lexical tag representation differs from backing. Headers for
+  changing surviving publications and bounded allocator-only aliases remain separate
+  proof work. Type/path copies and member remapping use existing charged budgets.
 - The [union-aliases example](examples/union-aliases.mwy) alternates a nullable
   reference while backing admits an extra string member. Library/native tests cover
   shifted indexes, nested members, old copies, branches/Leave, retained lifetimes,
@@ -482,8 +484,36 @@ implementation boundary; it does not change language rules.
   conditional, without inventing nullable defaults or canonical header activity.
 - Snapshot copies, type walks and stored facts use the existing work and origin
   budgets. These are analysis inputs, not canonical headers or loan transfers.
-  Surviving published alias writes remain B001 until restart widening and CFG
-  demand transfers consume the new inputs together. Runtime behavior is unchanged.
+  Fixed surviving publications now use the identity proof below. Changing a
+  publication inside the restarted body still requires broader canonical headers
+  and CFG demand transfers.
+
+## Fixed published restart results
+
+- Borrowed result aliases may be written before or after a restarted inner body
+  when its reference-bearing result slots stay unchanged inside that body. The bounded
+  planner records both the emitted owner and the lexical block containing each
+  write. Nested blocks and RHS writes count within their enclosing restart region.
+- `Facts.fixed_published` records the surviving result owners certified by that
+  write-scope proof. Entry and backedge publication snapshots, including explicit
+  empty snapshots, supply backing types, component sources, bounds and activity.
+  The loan pass checks active owner/field identity and agreement under the shared
+  entry/backedge guard. The scoped-write proof supplies stability across resets,
+  even when iteration guards have no overlap.
+- The ancestor result keeps its existing bundle IDs across the edge. This identity
+  transfer adds no payload read, copy, definition or loan. Old copies, physical cell
+  loans, inherited bounds and retained-source lifetime checks continue normally.
+  Nullable defaults remain completion behavior; snapshot checks do not initialize
+  an absent slot or reinterpret lexical tags as backing tags.
+- RHS loops finish before their outer store; Leave skips that store while preserving
+  earlier writes. Lexical aliases may end before an inner loop while their result
+  owner remains active. The [fixed-published example](examples/fixed-published.mwy)
+  preserves such a result and releases the replaced source's loan.
+- Assignments anywhere inside a restarted body to an ancestor's borrowed result
+  remain B001, including writes in nested expressions. Missing or malformed ancestry,
+  snapshots and budget exhaustion remain capability failures. Dynamic published
+  headers, union-view addresses/fields, allocator-only aliases and owning cleanup
+  require their separate proofs.
 
 ## Mutable shared-reference bindings
 

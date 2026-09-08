@@ -113,7 +113,7 @@ pub fn mutable_reference_carriers_keep_expiry_loans_and_storage_gates() {
             "E302",
         ),
         (
-            "x:1;r:{->p:=&x;p=&x;n:=2;'loop{n=n-1;|n>0|'loop.restart()}}",
+            "x:1;r:{->p:=&x;n:=2;'loop{p=&x;n=n-1;|n>0|'loop.restart()}}",
             "B001",
         ),
         ("x:1;r:={->p:&x;->list:[1]}", "B001"),

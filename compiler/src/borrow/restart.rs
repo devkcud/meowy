@@ -288,7 +288,9 @@ impl Checker<'_> {
         span: Span,
     ) -> Result<()> {
         let published = self.capture_published(id, span)?;
-        if published.entered != super::FALSE && !published.slots.is_empty() {
+        if published.entered != super::FALSE
+            && (!published.slots.is_empty() || self.facts.fixed_published.contains_key(&id))
+        {
             self.facts.published_restarts.insert(site, published);
         }
         if !self

@@ -4,6 +4,7 @@ use crate::hir::WriteStep;
 pub(crate) struct Plan {
     pub(crate) merging: bool,
     pub(crate) restarts: super::BTreeSet<super::BlockId>,
+    pub(crate) fixed: super::published::Fixed,
 }
 
 pub(crate) enum Item<'a> {
@@ -76,7 +77,10 @@ pub(crate) fn check(
                         && program.locals[*id].has_reference()
                         && alias.backing != Some(super::Backing::Discarded)
                     {
-                        alias_writes.entry(alias.target).or_insert(value.span);
+                        let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;
+                        alias_writes
+                            .entry((alias.target, owner))
+                            .or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
@@ -97,7 +101,10 @@ pub(crate) fn check(
                         && program.locals[*id].has_reference()
                         && alias.backing != Some(super::Backing::Discarded)
                     {
-                        alias_writes.entry(alias.target).or_insert(value.span);
+                        let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;
+                        alias_writes
+                            .entry((alias.target, owner))
+                            .or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
@@ -207,7 +214,7 @@ pub(crate) fn check(
     if owners != [block.id] {
         return Err(State::budget(Span::default()));
     }
-    alias_restarts(&parents, &alias_writes, &restarts, guards)?;
+    let fixed = alias_restarts(&parents, &alias_writes, &restarts, guards)?;
     if let Some(span) = exclusive
         && !restarts.is_empty()
     {
@@ -219,41 +226,72 @@ pub(crate) fn check(
     Ok(Plan {
         merging: write.is_some() || exclusive.is_some(),
         restarts,
+        fixed,
     })
 }
 
 pub(crate) fn alias_restarts(
     parents: &super::BTreeMap<super::BlockId, Option<super::BlockId>>,
-    writes: &super::BTreeMap<super::BlockId, Span>,
+    writes: &super::BTreeMap<(super::BlockId, super::BlockId), Span>,
     restarts: &super::BTreeSet<super::BlockId>,
     guards: &mut Guards,
-) -> Result<()> {
+) -> Result<super::published::Fixed> {
     let lookup = parents.len().checked_ilog2().unwrap_or(0) as usize
         + writes.len().checked_ilog2().unwrap_or(0) as usize
         + 2;
-    for id in writes.keys() {
-        if !guards.spend(lookup) || !parents.contains_key(id) {
+    let mut owners = super::BTreeMap::new();
+    for (target, owner) in writes.keys() {
+        if !guards.spend(lookup) || !parents.contains_key(target) {
             return Err(State::budget(Span::default()));
         }
+        if !owners.contains_key(owner) {
+            owners.insert(*owner, ancestors(parents, *owner, guards)?);
+        }
     }
+    let mut fixed = super::published::Fixed::new();
     for id in restarts {
-        let mut current = *id;
-        for depth in 0.. {
-            if depth >= 256 || !guards.spend(lookup) {
-                return Err(State::budget(Span::default()));
+        let mut above = ancestors(parents, *id, guards)?;
+        above.remove(id);
+        for ((target, owner), span) in writes {
+            if !guards.spend(lookup + above.len() + owners[owner].len() + 1) {
+                return Err(State::budget(*span));
             }
-            let Some(parent) = parents.get(&current) else {
-                return Err(State::budget(Span::default()));
-            };
-            let Some(parent) = parent else { break };
-            if let Some(span) = writes.get(parent) {
+            if !above.contains(target) {
+                continue;
+            }
+            if owners[owner].contains(id) {
                 return Err(crate::diagnostic::Diagnostic::unsupported(
-                    "borrowed emitted result survives an inner restart",
+                    "borrowed emitted result changes inside a surviving restart",
                     *span,
                 ));
             }
-            current = *parent;
+            fixed.entry(*id).or_default().insert(*target);
         }
     }
-    Ok(())
+    Ok(fixed)
+}
+
+pub(crate) fn ancestors(
+    parents: &super::BTreeMap<super::BlockId, Option<super::BlockId>>,
+    id: super::BlockId,
+    guards: &mut Guards,
+) -> Result<super::BTreeSet<super::BlockId>> {
+    let lookup = parents.len().checked_ilog2().unwrap_or(0) as usize + 2;
+    let mut result = super::BTreeSet::new();
+    let mut current = id;
+    loop {
+        if result.len() >= 256
+            || !guards.spend(lookup + result.len() + 1)
+            || !result.insert(current)
+        {
+            return Err(State::budget(Span::default()));
+        }
+        let parent = parents
+            .get(&current)
+            .ok_or_else(|| State::budget(Span::default()))?;
+        let Some(parent) = parent else {
+            return Ok(result);
+        };
+        current = *parent;
+    }
 }

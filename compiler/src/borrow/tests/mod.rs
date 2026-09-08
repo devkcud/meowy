@@ -8,6 +8,7 @@ mod allocators;
 mod boundaries;
 mod control;
 mod discarded_aliases;
+mod fixed_published;
 mod guarded_references;
 mod header_activity;
 mod header_components;

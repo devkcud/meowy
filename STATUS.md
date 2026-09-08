@@ -11,27 +11,31 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [Fixed published restart results](compiler/OWNERSHIP.md#fixed-published-restart-results)
+  support borrowed alias writes before or after an inner restarted body. Stable
+  snapshots retain backing types, conditional fields, old copies and source lifetimes.
+  Writes inside a surviving restarted body remain gated.
 - [Published result snapshots](compiler/OWNERSHIP.md#published-result-snapshots)
   retain backing types, tags, origins and bounds beyond alias lexical scopes.
-  All ten compiler-gate checks pass; header/loan integration still gates additional
-  source support for surviving published results.
+  Fixed result bundles now survive through checked identity. Changing publications
+  still need canonical headers and predecessor demand transfers.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 963 Rust (475 library, 488 native), 20 Python, 61 examples
+- Current compiler gate: 974 Rust (482 library, 492 native), 20 Python, 62 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
   dependencies are unchanged; runtime/editor checks were not rerun for this slice.
 - The [union-aliases example](compiler/examples/union-aliases.mwy) changes a nullable
-  pointer whose backing admits an extra string member. Surviving published headers,
+  pointer whose backing admits an extra string member. Changing published headers,
   union-view addresses/fields, lists, dynamic origins, owning cleanup and release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Whole union-alias assignment, transient storage and published snapshots | Published header/loan integration, list bounds, dynamic origins and drop schedules |
+| Compiler | Whole union-alias assignment, transient storage and fixed published restarts | Changing published headers, list bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -41,8 +45,8 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Integrate independent published inputs into surviving result headers and loan
-   transfers before lifting the ownership gate. Preserve conditional initialization,
+1. Integrate changing publications into result headers and loan transfers before
+   lifting the remaining in-body mutation gate. Preserve conditional initialization,
    ancestor storage, exact predecessor coverage and no synthetic reads.
    Union-view addresses/field paths
    and allocator-only bounds need separate proofs. Preserve both tag domains, old

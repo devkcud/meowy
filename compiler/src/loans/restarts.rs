@@ -30,6 +30,8 @@ impl Graph<'_> {
         }
         let proof = self.facts.header_inputs.get(&id);
         let (mut node, missing) = self.header_transfer(incoming, &header, proof)?;
+        let fixed = self.fixed_published(id, self.facts.published_inputs.get(&id))?;
+        let missing = self.guards.or(missing, fixed);
         for value in header.values().flat_map(|value| value.values()) {
             self.opaque_value(&mut node, *value)?;
         }
@@ -122,6 +124,8 @@ impl Graph<'_> {
         let arm = self.surviving_arm(&ids)?;
         let proof = self.facts.restart_inputs.get(&site);
         let (node, missing) = self.header_transfer(&arm.versions, &header, proof)?;
+        let fixed = self.fixed_published(id, self.facts.published_restarts.get(&site))?;
+        let missing = self.guards.or(missing, fixed);
         self.current = arm.ends;
         let node = self.append(node)?;
         if missing != FALSE {
@@ -129,5 +133,53 @@ impl Graph<'_> {
         }
         self.connect(start, TRUE, true);
         Ok(())
+    }
+
+    pub(crate) fn fixed_published(
+        &mut self,
+        id: BlockId,
+        current: Option<&crate::borrow::published::Snapshot>,
+    ) -> Result<Guard> {
+        self.charge(
+            self.facts
+                .fixed_published
+                .len()
+                .checked_ilog2()
+                .unwrap_or(0) as usize
+                + 1,
+        )?;
+        let Some(targets) = self.facts.fixed_published.get(&id) else {
+            return Ok(FALSE);
+        };
+        let (Some(initial), Some(current)) = (self.facts.published_inputs.get(&id), current) else {
+            return Ok(TRUE);
+        };
+        if current.entered == FALSE {
+            return Ok(FALSE);
+        }
+        for input in [initial, current] {
+            self.charge(input.slots.len().saturating_mul(targets.len() + 1) + 1)?;
+            for ((owner, index), slot) in &input.slots {
+                if !targets.contains(owner) {
+                    continue;
+                }
+                let size =
+                    crate::borrow_contract::type_weight(&slot.ty, self.guards, Span::default())?;
+                self.charge(size + 1)?;
+                let Some(scope) = self.blocks.get(owner) else {
+                    return Ok(current.entered);
+                };
+                let super::Type::Record { fields, .. } = &scope.ty else {
+                    return Ok(current.entered);
+                };
+                let Some(field) = index.checked_sub(1).and_then(|index| fields.get(index)) else {
+                    return Ok(current.entered);
+                };
+                if !field.mutable || field.ty != slot.ty {
+                    return Ok(current.entered);
+                }
+            }
+        }
+        crate::borrow::published::unchanged(initial, current, targets, self.guards, Span::default())
     }
 }

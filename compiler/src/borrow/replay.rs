@@ -19,7 +19,9 @@ pub(crate) fn body(
     let mut headers = Headers::new();
     let mut choices = super::activity::Choices::new();
     for _ in 0..MAX_PASSES {
-        let size = weight(&headers) + super::activity::weight(&choices);
+        let size = weight(&headers)
+            + super::activity::weight(&choices)
+            + super::published::fixed_weight(&plan.fixed);
         let seeds = size.saturating_mul(2);
         if used.saturating_add(seeds) > super::MAX_FACT_ORIGINS
             || !guards.spend(size + plan.restarts.len() + 1)
@@ -42,7 +44,10 @@ pub(crate) fn body(
             published: BTreeMap::new(),
             writes: BTreeMap::new(),
             scopes: Vec::new(),
-            facts: Facts::default(),
+            facts: Facts {
+                fixed_published: plan.fixed.clone(),
+                ..Facts::default()
+            },
             origins: used,
             assumed: TRUE,
             assumed_scopes: Vec::new(),
@@ -106,6 +111,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
             + next.restart_inputs.len()
             + next.published_inputs.len()
             + next.published_restarts.len()
+            + next.fixed_published.len()
             + next.merging.len();
         let lookup = program.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
         if !guards.spend(entries.saturating_mul(lookup)) {
@@ -122,6 +128,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         facts.restart_inputs.extend(next.restart_inputs);
         facts.published_inputs.extend(next.published_inputs);
         facts.published_restarts.extend(next.published_restarts);
+        facts.fixed_published.extend(next.fixed_published);
         facts.merging.extend(next.merging);
     }
     Ok(facts)

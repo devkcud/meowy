@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/fixed-published.mwy"),
+            "9\n11\n",
+        ),
+        (
             include_str!("../../examples/union-aliases.mwy"),
             "7\nclear\n7\n",
         ),
