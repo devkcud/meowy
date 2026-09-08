@@ -169,6 +169,12 @@ impl Checker {
         })?;
         let args: Vec<_> = receiver.into_iter().chain(args.iter()).collect();
         let (kind, ty) = match value {
+            Value::Foundation(item) => {
+                return Err(Diagnostic::unsupported(
+                    format!("runtime call to `{}`", item.name()),
+                    callee.span,
+                ));
+            }
             Value::Print | Value::Panic => {
                 if args.len() != 1 {
                     return Err(Self::error(

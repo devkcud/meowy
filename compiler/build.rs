@@ -124,7 +124,7 @@ pub(crate) fn main() {
     args.push(runtime.display().to_string());
     run(CXX, &args);
     let runtime = archive(&dir, "meowy_runtime", &runtime);
-    for header in ["cleanup.hpp", "generated.hpp", "owned.hpp"] {
+    for header in ["cleanup.hpp", "generated.hpp", "owned.hpp", "strings.hpp"] {
         println!("cargo:rerun-if-changed=../runtime/include/meowy/{header}");
     }
     let source = args
@@ -133,7 +133,7 @@ pub(crate) fn main() {
         .unwrap();
     let dest = args.len() - 1;
     args.extend(["-I../runtime/include".into()]);
-    for name in ["cleanup", "owned", "generated"] {
+    for name in ["cleanup", "owned", "generated", "strings"] {
         let path = format!("../runtime/src/{name}.cpp");
         println!("cargo:rerun-if-changed={path}");
         let object = dir.join(format!("{name}.o"));

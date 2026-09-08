@@ -7,6 +7,7 @@ pub mod check;
 pub mod diagnostic;
 pub mod driver;
 pub(crate) mod flow;
+pub(crate) mod foundation;
 pub mod hir;
 pub mod lexer;
 pub(crate) mod list;

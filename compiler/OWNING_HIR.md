@@ -205,11 +205,11 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
    propagation through scalar failure/call lowering. Preserve its debug/release
    diagnostic/effect tests and generated cleanup/original-cause P008 probes while
    adding actual owning-HIR cleanup edges.
-2. Establish resolved foundational item/type identities for `memory` and `strings`,
-   allocation failure representation and the static heap allocator contract.
-   Implement constructor/move/drop ABI tests with deterministic allocation failure
-   and leak/double-release instrumentation. Keep source construction gated until
-   ownership and exit acceptance passes.
+2. Implemented prerequisites: [foundational identities](FOUNDATION.md) and the
+   [private string ABI](../runtime/STRINGS.md) with static heap, typed native
+   allocation failure, deterministic failure tests and allocation/release counting.
+   Source-level nominal failure storage is still pending. Keep source construction
+   gated until ownership and exit acceptance passes.
 3. Add resource/view origins and an explicit bounded storage/cleanup plan at the
    HIR checking boundary. Cover live/moved/conditional states, actual initialization
    order, alias identity, discarded emissions and reservation bounds. Reject live
@@ -227,4 +227,4 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
 
 The owner schedules above remain a design. Scalar panic propagation is implemented
 and independently tested; it does not validate automatic resource destruction.
-No owning source type, syntax, dependency or reference fixture was added.
+No lowerable owning source type, syntax, dependency or reference fixture was added.

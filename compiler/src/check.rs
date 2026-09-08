@@ -41,7 +41,8 @@ pub(crate) enum Value {
         constant: Option<Constant>,
     },
     Constant(Constant),
-    Module(String),
+    Module(crate::foundation::Module),
+    Foundation(crate::foundation::Item),
     Function {
         id: usize,
         params: Vec<Type>,
@@ -60,6 +61,7 @@ pub(crate) enum Value {
 #[derive(Clone)]
 pub(crate) enum Spec {
     Data(Type),
+    Foundation(hir::FoundationType),
     Function { params: Vec<Type>, result: Type },
 }
 

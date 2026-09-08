@@ -6,6 +6,64 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Foundation and owned-string combined validation complete
+
+- All fourteen combined checks pass: 800 Rust (370 library, 430 native), 35 Python,
+  48 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 974 local links at gate time. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus exact fatal,
+  guard, admission and fiber probes. Seven new string groups prove byte ownership,
+  typed exhaustion/retry, zero-length no-allocation, preflight, reentry and release.
+- Three checker groups, one source-native group and one LLVM-native group validate
+  aliases/shadowing/gates and actual heap copy/transfer/view/cleanup. Extracted LLVM
+  linked to the current archive prints meow and imports only libc.so.6.
+- Final handoff check passes 977 local links in 98 Markdown files and Git whitespace
+  checks. Runtime committed as e547415. No source constructor, automatic cleanup or lowerable
+  nominal error/resource type is enabled. Next: lowerable types, dynamic view/allocator
+  origins and bounded initialized-state/drop schedules; AllocationFailure remains
+  non-descriptor-compatible. Preserve the native and panic-outcome evidence.
+
+### 2026-09-07 — Foundation and string transfer proof
+
+- Three compiler identity groups pass after correcting computed syntax. LLVM-native
+  heap copy/transfer/view/cleanup passes in debug/release with source bytes overwritten.
+  Added ordinary source execution for declaration aliases and lexical shadowing.
+- Private string ABI documents caller/allocator lifetimes, reentry, byte-only alignment,
+  explicit empty ownership and typed exhaustion. It reuses Owned and static descriptors;
+  no source constructor or nominal runtime failure value is enabled yet.
+- Partial memory/strings members fail B001 until modeled, avoiding false E201/E202
+  rejections for documented but unavailable APIs. Source alias/type identity is explicit.
+- Next: combined gate including seven string sanitizer groups, inspect real artifact
+  linkage, record final evidence and commit runtime then compiler integration.
+
+### 2026-09-07 — Foundation identities and owned-string prototype implemented
+
+- Added typed module/item identities for core/debug/memory/strings and gated
+  Allocator/AllocationFailure/Owned type identities. Alias declarations resolve;
+  source storage/construction remains B001, and shadowing cannot forge intrinsics.
+- Private Strings uses the existing Owned state machine, static payload descriptor,
+  explicit byte allocator and typed allocation evidence. Empty values allocate
+  nothing; allocation failure resets reservation for retry. Move/drop and allocator
+  callbacks preserve exactly-once release and reject owner reentry.
+- Seven strict native groups pass. Initial identity tests: two groups passed; the
+  alias fixture used generic-binder syntax instead of computed-type syntax. Corrected
+  the fixture to <(kind)>; no language parser change. Full identity/LLVM tests next,
+  then combined compiler/runtime validation. Source cleanup remains unimplemented.
+
+### 2026-09-07 — Foundational ownership investigation
+
+- memory/strings currently reject at import; core/debug modules use resolved string
+  names. Add explicit module/item/type identities with aliases and shadowing, while
+  keeping runtime owner construction and unavailable storage types gated by B001.
+- Reuse Owned with a static string payload descriptor and explicit heap allocator.
+  Constructor reserves metadata before allocation, copies bytes once, and commits
+  only on success. Failure returns typed allocation evidence with no live owner.
+- Empty strings require no allocation. Allocator callbacks need owner reentry guards;
+  retained allocator state must outlive payloads. Test failures through a native
+  injected allocator, not a source flag or hidden allocation policy.
+- Validation: contract/source inspection only. Next: implement identity resolution
+  and private constructor/view/move/drop, then native/LLVM and compiler gates.
+
 ### 2026-09-07 — Scalar panic outcome combined validation complete
 
 - All fourteen combined checks pass: 795 Rust (366 library, 429 native), 35 Python,

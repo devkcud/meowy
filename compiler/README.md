@@ -7,6 +7,8 @@ narrowing and shared references to local and emitted storage, including guarded
 block results, immutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
+The [foundational ownership identities](FOUNDATION.md) resolve memory/strings aliases;
+resource storage and constructor calls remain explicitly gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 

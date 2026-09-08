@@ -1,6 +1,7 @@
 use super::{Checker, Constant, Result, Spec, Value};
 use crate::ast::{self, ExprKind, Span, TypeKind};
 use crate::diagnostic::Diagnostic;
+use crate::foundation::{Item, Module};
 use crate::hir::{self, Type};
 use std::collections::BTreeMap;
 
@@ -82,7 +83,7 @@ impl Checker {
             TypeKind::Name(name) => {
                 if let Some((module, member)) = name.split_once('.') {
                     if let Value::Module(module) = self.value(module, expr.span)?
-                        && module == "core"
+                        && module == Module::Core
                     {
                         return Self::primitive(member).map(Spec::Data).ok_or_else(|| {
                             if ["int128", "uint128", "Type", "error", "any"].contains(&member) {
@@ -95,6 +96,17 @@ impl Checker {
                                 )
                             }
                         });
+                    }
+                    if let Value::Module(module) = self.value(module, expr.span)? {
+                        if let Some(Item::Type(ty)) = module.item(member) {
+                            return Ok(Spec::Foundation(ty));
+                        }
+                        if module.partial() {
+                            return Err(Diagnostic::unsupported(
+                                format!("type member `{}.{member}`", module.name()),
+                                expr.span,
+                            ));
+                        }
                     }
                     return Err(Self::error(
                         "E202",
@@ -168,7 +180,13 @@ impl Checker {
                 };
                 Ok(Spec::Data(ty))
             }
-            TypeKind::Computed(value) => Ok(Spec::Data(self.type_value(value)?)),
+            TypeKind::Computed(value) => {
+                if let Some(Value::Foundation(Item::Type(ty))) = self.symbol(value)? {
+                    Ok(Spec::Foundation(ty))
+                } else {
+                    Ok(Spec::Data(self.type_value(value)?))
+                }
+            }
             TypeKind::Union(types) => {
                 let types = types
                     .iter()
@@ -199,6 +217,10 @@ impl Checker {
     pub(crate) fn ty(&mut self, expr: &ast::TypeExpr) -> Result<Type> {
         match self.spec(expr)? {
             Spec::Data(ty) => Ok(ty),
+            Spec::Foundation(ty) => Err(Diagnostic::unsupported(
+                format!("storage for `{}`", ty.name()),
+                expr.span,
+            )),
             Spec::Function { .. } => Err(Diagnostic::unsupported(
                 "stored function pointers",
                 expr.span,
@@ -271,13 +293,10 @@ impl Checker {
             ExprKind::Name(name) => Ok(Some(self.value(name, expr.span)?)),
             ExprKind::Group(value) => self.symbol(value),
             ExprKind::Import(name) => {
-                if !["core", "debug"].contains(&name.as_str()) {
-                    return Err(Diagnostic::unsupported(
-                        format!("module import `@\"{name}\"`"),
-                        expr.span,
-                    ));
-                }
-                Ok(Some(Value::Module(name.clone())))
+                let module = Module::resolve(name).ok_or_else(|| {
+                    Diagnostic::unsupported(format!("module import `@\"{name}\"`"), expr.span)
+                })?;
+                Ok(Some(Value::Module(module)))
             }
             ExprKind::TypeValue(ty) => Ok(Some(Value::Type(self.ty(ty)?))),
             ExprKind::TypeQuery(_) => Ok(Some(Value::Type(self.type_value(expr)?))),
@@ -298,19 +317,31 @@ impl Checker {
                     };
                 }
                 if let Some(Value::Module(module)) = self.symbol(value)? {
-                    let result = match (module.as_str(), name.as_str()) {
-                        ("core", "true") => Value::Constant(Constant::Bool(true)),
-                        ("core", "false") => Value::Constant(Constant::Bool(false)),
-                        ("core", "null") => Value::Constant(Constant::Null),
-                        ("debug", "print") => Value::Print,
-                        ("debug", "panic") => Value::Panic,
-                        ("core", name) if Self::primitive(name).is_some() => {
+                    let result = match (module, name.as_str()) {
+                        (Module::Core, "true") => Value::Constant(Constant::Bool(true)),
+                        (Module::Core, "false") => Value::Constant(Constant::Bool(false)),
+                        (Module::Core, "null") => Value::Constant(Constant::Null),
+                        (Module::Debug, "print") => Value::Print,
+                        (Module::Debug, "panic") => Value::Panic,
+                        (Module::Core, name) if Self::primitive(name).is_some() => {
                             Value::Type(Self::primitive(name).expect("primitive"))
+                        }
+                        _ if module.item(name).is_some() => {
+                            Value::Foundation(module.item(name).expect("resolved item"))
+                        }
+                        _ if module.partial() => {
+                            return Err(Diagnostic::unsupported(
+                                format!("module member `{}.{name}`", module.name()),
+                                expr.span,
+                            ));
                         }
                         _ => {
                             return Err(Self::error(
                                 "E201",
-                                format!("module `{module}` has no supported member `{name}`"),
+                                format!(
+                                    "module `{}` has no supported member `{name}`",
+                                    module.name()
+                                ),
                                 expr.span,
                             ));
                         }

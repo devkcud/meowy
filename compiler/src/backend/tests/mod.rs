@@ -6,6 +6,7 @@ mod emitted_borrows;
 mod fields;
 mod generated_cleanup;
 mod generated_owned;
+mod generated_strings;
 mod immutable_aliases;
 mod lists;
 mod mixed_assignments;

@@ -9,6 +9,23 @@ pub type ReborrowId = usize;
 pub type StatementId = usize;
 pub type RestartId = usize;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FoundationType {
+    Allocator,
+    AllocationFailure,
+    OwnedString,
+}
+
+impl FoundationType {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::Allocator => "memory.Allocator",
+            Self::AllocationFailure => "memory.AllocationFailure",
+            Self::OwnedString => "strings.Owned",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ReferenceMode {
     Shared,

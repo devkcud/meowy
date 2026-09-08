@@ -109,6 +109,12 @@ impl Checker {
             | ExprKind::Import(_)
             | ExprKind::TypeValue(_)
             | ExprKind::TypeQuery(_) => match self.symbol(expr)?.expect("symbol") {
+                Value::Foundation(item) => {
+                    return Err(Diagnostic::unsupported(
+                        format!("runtime use of `{}`", item.name()),
+                        expr.span,
+                    ));
+                }
                 Value::Local { id, ty, .. } => {
                     return Ok(self.narrow(hir::Expr {
                         kind: hir::ExprKind::Local(id),
@@ -245,6 +251,10 @@ impl Checker {
             ExprKind::Field { value, name } => {
                 if let Some(symbol) = self.symbol(expr)? {
                     return match symbol {
+                        Value::Foundation(item) => Err(Diagnostic::unsupported(
+                            format!("runtime use of `{}`", item.name()),
+                            expr.span,
+                        )),
                         Value::Constant(value) => Ok(Self::constant_expr(value, expr.span)),
                         _ => Err(Diagnostic::unsupported(
                             "runtime use of intrinsic operation values",

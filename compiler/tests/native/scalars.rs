@@ -82,3 +82,19 @@ value<Float>:-({->1.5})
     )
     .runs(b"false\nfalse\n-5\n-6\n-1.5\n");
 }
+
+#[test]
+pub fn foundation_declarations_preserve_aliases_and_ordinary_shadowing() {
+    let source = r#"m:@"memory";s:@"strings";heap:m.heap;copy:s.copy;kind:s.Owned;<T>:<(kind)>;d:@"debug";d.print("ready");{m:{->heap:7};d.print(m.heap)};strings:@"debug";strings.print("alias")"#;
+    let case = Case::new(source);
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(output.stdout, b"ready\n7\nalias\n");
+        assert!(output.stderr.is_empty());
+    }
+}

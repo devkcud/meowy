@@ -4,9 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Scalar panic outcomes and cleanup evidence verified.
+Updated: 2026-09-07. Foundation identities and private owned strings verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
-Streamed runtime snapshots: `ef935da`.
+Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
 Indexed scalar fields: `1f8295c`; contract/example: `397b3b2`.
@@ -40,38 +40,38 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Scalar panic outcomes](PANIC_OUTCOMES.md) now return i1 success and write results
-only on success, forwarding caller-owned Panic storage across calls and recursion.
-Every generated function/entry has an explicit panic exit. Failed calls skip later
-arguments, pending stores and caller effects; Never retains an unreachable success
-continuation. Root main maps the source entry outcome to exit 0/1 without reprinting.
+[Foundation identities](FOUNDATION.md) resolve core/debug/memory/strings through
+explicit module IDs. Allocator/AllocationFailure/Owned retain distinct nominal
+identities in type aliases, including computed aliases of item types. heap/copy
+item aliases preserve identity and lexical shadowing. These identities are separate
+from lowerable HIR types; runtime storage/calls remain B001. Unmodeled partial
+module members also remain B001 rather than false E201/E202 language rejections.
 
-P001/P002/P003 helpers capture and return. P006 message expressions retain separate
-pending snapshots until complete, so nested failures and scoped exits cannot publish
-an incomplete outer panic. Primitive formatting is shared with output; diagnostics
-still stream byte-for-byte while bounded snapshots retain independent evidence.
-Runtime Panic::append preserves UTF-8 truncation, original lengths and copy independence
-without allocating or changing its layout. The generated archive retains legacy
-terminating helpers but new source lowering does not call them.
+The [private string runtime](../runtime/STRINGS.md) reuses Owned and its static
+ValueOps descriptor. Constructors reserve metadata before explicit byte allocation,
+copy live source text and commit on success. Empty values allocate nothing; typed
+native exhaustion leaves the owner empty for retry. Allocator callbacks reject
+owner reentry; moved payloads retain the original allocator and release once.
+Native failure facts are not yet source-level nominal error storage.
 
-Five new LLVM-native groups prove LIFO cleanup from returned source panics, exact
-original-cause P008, snapshot copying/reset, successful-only result publication,
-complete-cause cleanup after abandoned messages and bounded UTF-8/scalar formatting.
-A new native recursion group proves later arguments/caller effects are skipped.
-These cleanup frames/callbacks are test fixtures; source still has no destructible
-resource, automatically armed cleanup, task recovery or cancellation.
+Three new checker groups validate identities, capability boundaries and shadowing;
+one source-native group executes aliases in debug/release. Seven native runtime
+groups cover allocation/release counts, source overwrite, UTF-8/NUL, empty values,
+retry, storage/descriptor failures, callback reentry and armed panic cleanup.
+One LLVM-native group copies into the actual heap, overwrites source bytes, moves
+through the generated ownership bridge, reads and releases its destination.
 
-All fourteen combined checks pass: 366 library + 429 native groups, 35 Python,
+All fourteen combined checks pass: 370 library + 430 native groups, 35 Python,
 48 debug/release examples, both editors, formatting, Clippy, build and contracts.
-Runtime passes 93 groups per debug/release/ASan/UBSan/LSan profile plus required probes.
-A generated failing-call ELF imports only libc.so.6. Conformance remains 10 passed,
-13 unsupported, 0 failed. No reference fixture, syntax or dependency changed.
+Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required probes.
+The generated heap-string ELF imports only libc.so.6. Conformance remains 10 passed,
+13 unsupported, 0 failed. No source constructor, syntax or dependency was added.
 
-The [owning-HIR design](OWNING_HIR.md) selects strings.Owned. Next establish
-foundational identities, typed allocation failure and static heap contracts, then
-resource/view origins and bounded drop schedules before enabling owner construction.
-Bridge reservation order/top-slot rules still require finite region bounds;
-repeated surviving-ancestor writes need a separately proved reclamation scheme.
+[Scalar panic outcomes](PANIC_OUTCOMES.md) remain implemented and tested, including
+returned-snapshot cleanup and original-cause P008. Automatic resource cleanup is
+still absent. Next add lowerable nominal owner/error types, dynamic view/allocator
+origins and the bounded schedules in [OWNING_HIR.md](OWNING_HIR.md). AllocationFailure
+must not become descriptor-compatible just because its private native layout is small.
 
 ## Prior implemented milestone
 
@@ -611,41 +611,40 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 366 library
-  + 429 native (795 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 48 examples execute in debug/release. Both editors, formatting, Clippy,
-  pinned build, schema/identity and catalog checks pass. Final handoff documentation
-  passes 965 local links in 96 Markdown files.
-- Runtime debug/release/ASan/UBSan/LSan pass 93 groups/profile: 7 diagnostics,
-  14 cleanup, 6 cleanup bridge, 7 generated ownership, 10 stacks, 10 contexts,
-  25 scheduler and 14 owned values; exact fatal/admission/guard/fiber probes pass.
-  Initial sandboxed LSan hit ptrace restrictions; approved process access passed.
-- Five new generated LLVM-native groups prove returned P001/P002/P003/P006 ownership,
-  exact original-cause P008, LIFO release, copied snapshots after source reset,
-  pending-message cancellation, untouched failed-call result storage and full stderr
-  versus bounded UTF-8/scalar evidence. A new recursive native source group proves
-  pending arguments and caller effects are skipped in debug/release.
-- Initial backend validation found two stale index-failure symbol assertions;
-  updated all affected positive/negative IR checks. The new recursion fixture first
-  used wrong emission targets, then hit correct E205 on independent guards; explicit
-  named Leave fixed the fixture. All regressions now pass without checker changes.
-- Built/ran `/tmp/meowy-outcome-linkage` from source with nested failing calls:
-  exact P002, exit 1, no later caller output; retained LLVM contains explicit call
-  outcomes/panic exits. readelf NEEDED contains only libc.so.6.
-- Conformance is 10 passed, 13 unsupported, 0 failed. Automatic owning cleanup,
-  source-level recovery, cancellation, DWARF, minimum hosts and a full release are
-  unqualified. Returned-panic cleanup probes use private native fixture frames.
+- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 370 library
+  + 430 native (800 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 48 examples execute in debug/release; both editors, formatting, Clippy,
+  pinned build, schemas/identities and catalog pass. Final handoff documentation
+  passes 977 local links in 98 Markdown files.
+- Runtime debug/release/ASan/UBSan/LSan pass 100 groups/profile: 7 diagnostics,
+  14 cleanup, 6 cleanup bridge, 7 generated ownership, 7 owned strings, 10 stacks,
+  10 contexts, 25 scheduler and 14 owned values. Exact fatal/admission/guard/fiber
+  probes pass with approved sanitizer process access; no checks skipped.
+- Three new checker groups and one native source group prove module/item/type
+  aliases, ordinary shadowing and source ownership gates. Initial alias fixture
+  incorrectly used generic-binder syntax; corrected it to <(kind)> with no parser change.
+- Seven string groups prove exact allocation/release counts, empty no-allocation
+  ownership, source overwrite, typed failure/retry, occupied/short/misaligned state,
+  allocator callback reentry, descriptor validation and armed panic cleanup.
+- New LLVM-native group passes debug/release with real heap storage and generated
+  Owned transfer. Extracted the fixture and linked the current archive into
+  `/tmp/meowy-string-proof`: output meow, successful release/finish, only libc.so.6
+  in readelf NEEDED. Native source constructors remain unavailable.
+- Conformance is 10 passed, 13 unsupported, 0 failed. Source nominal resource/error
+  storage, dynamic origins, automatic drops, recovery, cancellation, DWARF and full
+  release/minimum-host qualification remain open.
 
 ## Next steps
 
-1. Follow [OWNING_HIR.md](OWNING_HIR.md): establish resolved foundational item/type
-   identities for memory/strings in `check/` and `hir.rs`, typed AllocationFailure
-   and the static heap allocator contract. Keep aliases/shadowing correct; do not
-   recognize ordinary names as intrinsics. Prove private constructor/move/drop
-   behavior, deterministic failure and exactly-once release before source enablement.
-   Then add dynamic string-view origins and bounded ownership/drop schedules using
-   the now-tested panic exits. Preserve `PANIC_OUTCOMES.md` native/debug/release proof.
-   Task::close still needs report drain and child settlement while parents live.
+1. Follow [OWNING_HIR.md](OWNING_HIR.md): extend FoundationType identities in `hir.rs`
+   and `check/` to lowerable nominal resource/error types, then add dynamic string-view
+   and allocator origins in `borrow/` and `loans/`. AllocationFailure stays concrete
+   and non-descriptor-compatible; native failure layout is not a source error contract.
+   Build bounded initialized-state/drop schedules and use the tested panic exits
+   before enabling strings.copy. Verify normal/Leave/Restart/panic, retained/discarded
+   emissions, temporary/call transfer and live-view invalidation in debug/release.
+   Preserve native exactly-once/retry and lexical identity proof. Task::close still
+   needs report drain and child settlement while parent storage remains alive.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.
