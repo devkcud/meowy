@@ -165,7 +165,7 @@ pub fn reference_binding_types_and_unsupported_mutation_forms_stay_explicit() {
     for (source, code) in [
         ("a:1;b:2;p:&a;p=&b", "E305"),
         ("a:1;b<uint8>:2;p:=&a;p=&b", "E207"),
-        ("a:1;holder:{->view:=&a}", "B001"),
+        ("a:1;holder:{->view:=&a;view=&a}", "B001"),
         ("a:1;values:[&a]", "B001"),
         ("a:=1;p:&!a;q:p;v:*p", "E301"),
         ("a:1;b:2;p:=&a;cell:&p;*cell=&b", "B001"),

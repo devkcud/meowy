@@ -11,26 +11,24 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Mutable borrowed carriers](compiler/OWNERSHIP.md#mutable-borrowed-carriers) now
-  include reference-only records and nullable/closed unions. Whole replacement,
-  field RHS effects, current predicates, Leave and Restart preserve component
-  origins and loans. Active expired uses stay E303 and physical conflicts E302.
-- Nine new library tests and five native groups pass, including debug/release
-  execution and missing-origin header proof. All fourteen check categories have
-  passing evidence: 881 Rust (426 library, 455 native), 35 Python, 55 examples,
-  both editors, formatting, Clippy, build, contracts and runtime sanitizers.
-  Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend unchanged.
-- The [mutable-carriers example](compiler/examples/mutable-carriers.mwy) alternates
-  empty/live/empty reference fields through replacement and Restart. Mutable
-  reference fields, emitted aliases, lists and exclusive carriers remain gated.
-  Dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF and the
-  full release remain open.
+- [Mutable reference fields](compiler/OWNERSHIP.md#mutable-reference-fields) support
+  direct/nested writes on completed fixed records. Constructors retain borrowed
+  emitted-name snapshots; writes through those names stay gated. Ordinary copies
+  use independent storage. Nullable tags, sibling loans and restart expiry remain intact.
+- All fourteen combined checks pass: 894 Rust (434 library, 460 native), 35 Python,
+  56 debug/release examples, both editors, formatting, Clippy, build and contracts.
+  Runtime passes 100 groups/profile with sanitizers and required probes. Conformance:
+  10 passed, 13 unsupported, 0 failed. Runtime/backend and dependencies unchanged.
+- The [reference-fields example](compiler/examples/reference-fields.mwy) changes a
+  field's referent and then its former owner. Borrowed alias writes, lists, exclusive
+  carriers, dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF
+  and complete release qualification remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Fixed mutable borrowed carriers, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
+| Compiler | Mutable reference fields, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -40,13 +38,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Add mutable reference fields and emitted aliases with constructor/backing
-   synchronization and lists need bounded element summaries. Preserve current
-   tag observations, post-RHS sibling versions and active-reference header coverage.
-   Then add dynamic allocator contexts and string-view origins. Follow
-   [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) before strings.copy: normal,
-   Leave, Restart, panic and emitted/temporary/call transfers need exactly-once cleanup.
-   Source error APIs and task qualification remain separate.
+1. Implement borrowed emitted-alias writes with origin/result/backing synchronization and branch/restart
+   proof. Preserve constructor-copy independence, sibling versions and current tags.
+   Lists need bounded element summaries. Then add dynamic allocator contexts and
+   string-view origins. Follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) before
+   strings.copy: normal, Leave, Restart, panic and temporary/call/result transfers
+   need exactly-once cleanup. Source error APIs and task qualification remain separate.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

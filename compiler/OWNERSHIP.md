@@ -35,7 +35,7 @@ implementation boundary; it does not change language rules.
   exhaustion takes precedence over tentative lifetime diagnostics. Assigning a
   predicate invalidates its old facts; correlated safe transfers after reassignment
   can still be conservatively rejected until stronger dataflow is implemented.
-- List-bearing mutable carriers, mutable reference fields, wider exclusive shapes
+- List-bearing mutable carriers, borrowed emitted-alias writes, wider exclusive shapes
   and owned-value temporary borrows remain B001. Direct signatures and dispatch
   blocks can carry shared references and immutable record/union carriers.
   These are capability boundaries, not new language errors.
@@ -271,11 +271,11 @@ implementation boundary; it does not change language rules.
 - Ordinary mutable locals may contain fixed Copy shared-reference or allocator
   values, records and closed unions, including nullable references. Eligibility
   uses `Type::fixed_borrowed_value`; nested referents must have supported fixed
-  shapes. Lists, exclusive carriers and mutable emitted aliases remain gated.
+  shapes. Lists, exclusive carriers and borrowed emitted-alias writes remain gated.
 - Whole assignment replaces the stored component versions after RHS completion.
   Copies and earlier argument operands keep their original origins, public lifetime
-  bounds and loans. Existing mutable non-reference fields can be assigned; reference
-  fields remain immutable and change through whole replacement.
+  bounds and loans. Mutable reference fields can be assigned on completed fixed
+  records; each crossed field and the ordinary root must be mutable.
 - Pure field stores use the root state after RHS effects and preserve sibling loan
   IDs. Completed inner writes survive Leave; an unfinished outer write is skipped.
   Reads select the relevant component before checking lifetime. Safe sibling reads
@@ -295,13 +295,42 @@ implementation boundary; it does not change language rules.
   field RHS/Leave effects, old copies, nullable/nested variants, argument snapshots,
   public bounds, transitive sources, header coverage and remaining storage gates.
 
+## Mutable reference fields
+
+- Fixed Copy shared-reference field types, including nullable references and nested
+  carriers, retain field mutability in constructors and signatures. An omitted
+  nullable field defaults to null. Construction enforces ordinary retained-source
+  lifetimes; emitting a reference to the constructor's local still reports E303.
+- Mutable borrowed emitted names retain initial component snapshots and may be read
+  or borrowed. `Proofs::versioned` includes fixed reference-bearing aliases for this
+  purpose. Assignment to those names remains B001; field paths rooted at a borrowed
+  emitted alias also remain B001. Without any permitted mutation of those values,
+  the initial emission and result-storage snapshots remain synchronized.
+- After the record finishes, `r.view = &next` replaces only that field's origins,
+  bounds and activity. Nested paths require a mutable ordinary root and mutable
+  fields at every step. Incompatible mutability remains E206, immutable paths E305
+  and incompatible assignment types E207. Lists and exclusive carriers stay gated.
+- Origin state and loan bundles use the current root after RHS completion. Earlier
+  sibling or whole-record writes survive, old copies retain their own loans, and
+  unchanged sibling IDs are preserved. Leave skips an unfinished outer store while
+  retaining completed inner stores. Live cell borrows prevent overlap as E302.
+- Nullable field predicates use the current stored version, including after a
+  sibling field's effectful RHS. Expired payloads may be inspected and overwritten;
+  active reads remain E303. Restart preserves nullable activity, required physical
+  origin coverage and terminal expired sources. Public input bounds and transitive
+  call-entry validation apply to each reference field as before.
+- The [reference-fields example](examples/reference-fields.mwy) changes a field's
+  referent, then updates its former owner. Library and native tests cover constructor
+  reads, declared defaults, nested fields, old-copy/sibling loans, RHS/Leave effects,
+  current tags, restart, transitive bounds and the emitted-alias write gate.
+
 ## Mutable shared-reference bindings
 
 - Ordinary mutable locals with a fixed `&T` type can be rebound in straight-line
   flow and guarded matcher/short-circuit paths. T may be any currently supported
   referent, including a record, union, bounded list or nested reference.
   Nullable and aggregate bindings follow the fixed carrier rules above; mutable
-  emitted reference fields remain B001.
+  writes through borrowed emitted names remain B001.
 - The physical LocalId remains the same cell. Origin analysis preserves its
   current full State and replaces it only after a returning RHS; initial
   `Facts.locals` snapshots stay unchanged. The loan graph creates fresh immutable
@@ -509,8 +538,8 @@ implementation boundary; it does not change language rules.
   remain valid. Path lookup, bounded depth and refinement scans consume shared
   work budgets; path collection checks its 256-field limit before each push.
 - Mutable primary emissions and mutable fields
-  whose subtree carries references also remain B001; no exclusive reference or
-  emitted reference carrier capability is implied by this metadata.
+  with unsupported list/exclusive subtrees remain B001; borrowed emitted-name writes
+  require separate backing synchronization.
 - List candidate probes compare mutable flags and keep later emitted-name
   dependencies unresolved instead of reading a same-named outer binding. A known
   context permits ordinary once-only checking; unresolved scope-dependent choices
@@ -569,11 +598,13 @@ implementation boundary; it does not change language rules.
   Borrowing a selected reference-free field instead creates only its physical Slot
   origin. A contained reference crossed by `&carrier.view.field` keeps the existing
   pointee reborrow path. Whole-carrier/reference-cell borrows add transitive summaries
-  without replacing the stored value's sources. Exclusive references and mutable
-  reference-bearing fields remain unavailable.
+  without replacing the stored value's sources. Exclusive references and writes
+  through reference-bearing emitted aliases remain unavailable.
 - Only mutable alias IDs enter mutable proofs and omit initializer constant/length caches.
-  Existing mutable Bind/Local analysis seeds unknown activity of the lexical type
+  Unversioned mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
+  Fixed reference-bearing aliases preserve initial component snapshots and reject
+  mutation; later ordinary copies use independent storage versions.
   A later immutable result snapshot cannot reuse a pre-mutation union tag; unrelated
   immutable reference-field origins remain intact. This can conservatively lose
   knowledge about an unmodified mutable field's initial tag.

@@ -177,7 +177,9 @@ impl Checker<'_> {
                     }
                     let mut ty = &self.program.locals[*id];
                     let tracked = self.proofs.versioned(self.program, *id);
-                    if (ty.has_reference() && !tracked) || path.is_empty() {
+                    if (ty.has_reference() && (!tracked || self.proofs.aliases.contains_key(id)))
+                        || path.is_empty()
+                    {
                         return Err(Self::unsupported(*span));
                     }
                     let mut prefix = Vec::new();

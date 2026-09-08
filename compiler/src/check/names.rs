@@ -144,7 +144,7 @@ impl Checker {
                 let mut result = BTreeMap::new();
                 for (name, ty, mutable) in fields {
                     let ty = self.ty(ty)?;
-                    if *mutable && ty.has_reference() {
+                    if *mutable && ty.has_reference() && !ty.fixed_borrowed_value() {
                         return Err(Diagnostic::unsupported(
                             "mutable reference-bearing record fields",
                             expr.span,

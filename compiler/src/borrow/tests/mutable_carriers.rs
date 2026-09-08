@@ -133,7 +133,7 @@ pub(crate) fn mutable_carriers_keep_transitive_and_public_call_bounds() {
 
 #[test]
 pub(crate) fn mutable_carrier_unsupported_storage_stays_explicit() {
-    rejects("x:1;r:={->p:=&x}", "B001");
+    accepts("x:1;r:={->p:=&x}");
     rejects("x:1;r:={->p:&x;->list:[1]}", "B001");
     rejects("x:1;r:={->p:&[1]}", "B001");
     rejects("x:=1;r:={->p:&!x}", "B001");

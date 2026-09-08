@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/reference-fields.mwy"),
+            "7\n9\n8\n1\n",
+        ),
+        (
             include_str!("../../examples/mutable-carriers.mwy"),
             "empty\n7\nempty\n",
         ),

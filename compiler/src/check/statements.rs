@@ -402,7 +402,7 @@ impl Checker {
         if value.ty == Type::Never {
             return Ok(vec![hir::Stmt::Expr(value)]);
         }
-        if mutable && value.ty.has_reference() {
+        if mutable && value.ty.has_reference() && !value.ty.fixed_borrowed_value() {
             return Err(Diagnostic::unsupported(
                 "mutable reference-bearing record fields",
                 span,

@@ -46,7 +46,7 @@ pub(crate) fn reference_bindings_keep_fixed_types_and_carrier_mutation_boundarie
     accepts("a:1;p:={->view:&a}");
     for (source, code) in [
         ("a:1;p:=&a;p=&\"x\"", "E207"),
-        ("a:1;result:{->view:=&a}", "B001"),
+        ("a:1;result:{->view:=&a;view=&a}", "B001"),
         ("a:{->n:=1};p:=&a;p.n=2", "B001"),
         ("a:[1,2];p:=&a;p[1]=3", "B001"),
     ] {

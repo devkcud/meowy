@@ -84,6 +84,7 @@ impl Checker {
         if (!self.places.contains(&id) && !self.proofs.aliases.contains_key(&id))
             || !matches!(ty, Type::Record { .. } | Type::List { .. })
             || (ty.has_reference() && !ty.fixed_borrowed_value())
+            || (mutable && ty.has_reference() && self.proofs.aliases.contains_key(&id))
         {
             return Err(Diagnostic::unsupported(
                 "assignment path requires supported ordinary storage",

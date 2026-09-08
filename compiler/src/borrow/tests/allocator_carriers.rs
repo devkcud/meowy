@@ -103,7 +103,7 @@ pub(crate) fn allocator_carriers_keep_transitive_bounds_and_cell_loans() {
         "a:m.heap;r:={->h:=m.heap;->p:&a};{z:2;b:f(&z);r={->h:=m.heap;->p:&b}};copy:*r.p",
         "E303",
     );
-    rejects("x:1;r:={->h:m.heap;->p:=&x}", "B001");
+    accepts("x:1;r:={->h:m.heap;->p:=&x}");
     rejects("x:1;r:={->h:m.heap;->p:&x;->list:[1]}", "B001");
     rejects("x:1;r:{->h:=f(&x);->p:&x}", "B001");
     accepts("x:1;r:={->p:&x}");

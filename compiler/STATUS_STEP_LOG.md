@@ -6,6 +6,66 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Mutable reference field validation complete
+
+- All fourteen combined checks pass: 894 Rust (434 library, 460 native), 35 Python,
+  56 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Eight new library groups and five native groups prove constructor snapshots,
+  copy independence, declared defaults, nested reference fields, sibling/old-copy/cell
+  loans, RHS/Leave effects, current tags, transitive bounds, restart and alias gates.
+  Immutable alias writes retain E305; mutable borrowed alias writes remain B001.
+- Initial obsolete library/native construction gates were corrected to acceptance
+  or actual unsupported alias mutation. Final tests have no failures. Handoff passes
+  994 local links in 99 Markdown files and Git whitespace checks.
+- Next: borrowed emitted-alias origin/result/backing synchronization, bounded list
+  summaries, dynamic allocator/view origins and owning cleanup schedules.
+
+### 2026-09-08 — Alias mutability diagnostic review
+
+- Restricted the borrowed emitted-alias path gate to mutable names so immutable
+  alias writes retain their established E305 diagnostic. Added a library regression.
+- The combined gate was still in runtime validation; final compiler formatting,
+  lint and tests will see this adjustment. No runtime/backend change.
+- Next: finish the combined gate and record final handoff evidence.
+
+### 2026-09-08 — Reference field native proof and contract
+
+- Full library suite: 434 passed. All five new native groups pass both profiles;
+  full native suite: 459 passed, one stale construction-only B001 expectation failed.
+  Corrected it to an actual emitted-alias write. Production implementation unchanged.
+- Added constructor-copy independence coverage and reference-fields example. Updated
+  ownership/allocator/README contracts with completed-record writes and alias gates.
+- Next: combined gate including the corrected native case and final copy/example
+  additions, then refresh evidence, review and commit. No runtime/ABI changes.
+
+### 2026-09-08 — Mutable reference fields implemented
+
+- Fixed shared-reference field types and constructors are admitted. Borrowed emitted
+  aliases preserve initial versions; whole/field writes through those aliases stay
+  explicitly B001, keeping emitted result snapshots synchronized by immutability.
+- Completed fixed records use existing per-component reference field updates.
+  Eight new library groups pass: nested mutability, constructor reads/defaults,
+  old-copy/sibling/cell loans, RHS/Leave effects, tags, public bounds and restart.
+- Initial library run found six old construction-only B001 expectations. Updated
+  those cases to acceptance or actual unsupported alias mutation; lists, exclusive
+  shapes and invalid mutability still reject. Native proof is pending.
+- Next: native debug/release, example/docs, combined validation and final handoff.
+
+### 2026-09-08 — Mutable reference field investigation
+
+- Clean starting tree at b014d11. Existing field updates preserve reference origins
+  when the root has a fixed borrowed shape; frontend field construction is gated.
+- Mutable emitted names must retain constructor snapshots without authorizing
+  writes that could stale the already emitted result. Direct assignment already
+  rejects versioned aliases; borrowed alias field paths need an explicit gate.
+- Next: enable fixed shared-reference field types/construction and initial snapshots,
+  permit field writes after record completion, and prove aliases remain read-only
+  within this slice. Lists/exclusive carriers/bounded allocator aliases stay gated.
+- No new checks yet. Validate origins, sibling loans, RHS/Leave, tags and restart.
+
 ### 2026-09-08 — Fixed mutable borrowed carrier validation complete
 
 - All fourteen check categories now have passing evidence. Combined run passed
