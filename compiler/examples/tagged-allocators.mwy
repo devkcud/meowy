@@ -1,0 +1,25 @@
+memory : @"memory"
+debug : @"debug"
+
+choose <memory.Allocator> : (context <&int32>) {
+    debug.print(*context)
+    -> memory.heap
+}
+
+handle <memory.Allocator><null> := null
+|handle<null>| debug.print("empty")
+
+{
+    context : 7
+    handle = choose(&context)
+}
+
+|handle<memory.Allocator>| {
+    debug.print("bounded")
+    handle = null
+}
+
+|handle<null>| {
+    copy : handle
+    debug.print("cleared")
+}

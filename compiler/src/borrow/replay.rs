@@ -94,7 +94,8 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
             used,
         )?;
         used = count;
-        let entries = next.locals.len()
+        let entries = next.inspections.len()
+            + next.locals.len()
             + next.blocks.len()
             + next.calls.len()
             + next.returns.len()
@@ -107,6 +108,7 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         if !guards.spend(entries.saturating_mul(lookup)) {
             return Err(State::budget(Span::default()));
         }
+        facts.inspections.extend(next.inspections);
         facts.locals.extend(next.locals);
         facts.blocks.extend(next.blocks);
         facts.calls.extend(next.calls);

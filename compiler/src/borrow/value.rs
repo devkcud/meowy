@@ -172,6 +172,9 @@ impl Checker<'_> {
             }
             ExprKind::TypeTest { value, .. } => {
                 flow = self.inspect(value)?;
+                if flow.next {
+                    self.inspect_tags(expr, value)?;
+                }
                 State::unknown(&expr.ty, self.guards, expr.span)?
             }
             ExprKind::List { values, .. } => {

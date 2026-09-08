@@ -501,6 +501,13 @@ impl<'a> Graph<'a> {
             }
             ExprKind::TypeTest { value, .. } => {
                 self.inspect(value)?;
+                if let Some(proof) = self
+                    .facts
+                    .inspections
+                    .get(&(expr.span.start, expr.span.end))
+                {
+                    self.assume(*proof)?;
+                }
                 Bundle::new()
             }
             ExprKind::Binary { op, left, right } if ["&&", "||"].contains(&op.as_str()) => {

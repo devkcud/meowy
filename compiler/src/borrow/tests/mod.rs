@@ -14,6 +14,7 @@ mod origins;
 mod reference_slots;
 mod restarts;
 mod slots;
+mod tagged_allocators;
 mod temporaries;
 mod temporary_carriers;
 mod transitive;

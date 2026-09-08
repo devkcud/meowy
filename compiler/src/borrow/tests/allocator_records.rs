@@ -99,6 +99,6 @@ pub(crate) fn fixed_record_mutation_keeps_cell_access_rules_and_remaining_gates(
         "E302",
     );
     rejects("x:1;r:={->h:f(&x);->items:[1]}", "B001");
-    rejects("x:1;r:={->h:f(&x);->maybe<int32><null>:null}", "B001");
+    accepts("x:1;r:={->h:f(&x);->maybe<int32><null>:null}");
     rejects("x:1;r:{->h:=f(&x)}", "B001");
 }

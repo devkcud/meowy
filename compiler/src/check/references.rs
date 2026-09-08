@@ -311,7 +311,7 @@ impl Checker {
                 },
                 ty,
                 span: expr.span,
-            });
+            })?;
             if names.peek().is_none() {
                 return Err(error);
             }

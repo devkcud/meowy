@@ -123,11 +123,11 @@ impl Checker {
                     ));
                 }
                 Value::Local { id, ty, .. } => {
-                    return Ok(self.narrow(hir::Expr {
+                    return self.narrow(hir::Expr {
                         kind: hir::ExprKind::Local(id),
                         ty,
                         span: expr.span,
-                    }));
+                    });
                 }
                 Value::Constant(value) => return Ok(Self::constant_expr(value, expr.span)),
                 Value::Function { .. } => {
@@ -297,14 +297,14 @@ impl Checker {
                         Self::error("E201", format!("unknown record field `{name}`"), expr.span)
                     })?;
                 let ty = field.ty.clone();
-                return Ok(self.narrow(hir::Expr {
+                return self.narrow(hir::Expr {
                     kind: hir::ExprKind::Field {
                         value: Box::new(value),
                         index,
                     },
                     ty,
                     span: expr.span,
-                }));
+                });
             }
             ExprKind::Ascribe {
                 value,

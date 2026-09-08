@@ -140,7 +140,8 @@ impl Type {
 
     pub(crate) fn fixed_allocator_part(&self) -> bool {
         match self {
-            Self::Reference(_) | Self::Exclusive(_) | Self::List { .. } | Self::Union(_) => false,
+            Self::Reference(_) | Self::Exclusive(_) | Self::List { .. } => false,
+            Self::Union(types) => types.iter().all(Self::fixed_allocator_part),
             Self::Record { primary, fields } => {
                 primary.fixed_allocator_part()
                     && fields.iter().all(|field| field.ty.fixed_allocator_part())
@@ -149,10 +150,8 @@ impl Type {
         }
     }
 
-    pub(crate) fn fixed_allocator_record(&self) -> bool {
-        matches!(self, Self::Record { .. })
-            && self.has_allocator_value()
-            && self.fixed_allocator_part()
+    pub(crate) fn fixed_allocator_value(&self) -> bool {
+        self.has_allocator_value() && self.fixed_allocator_part()
     }
 
     pub fn has_borrowed(&self) -> bool {

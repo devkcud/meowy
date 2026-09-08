@@ -6,6 +6,55 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Tagged allocator combined validation complete
+
+- All fourteen combined checks pass: 854 Rust (408 library, 446 native), 35 Python,
+  53 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 987 links at gate time. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
+  fatal/admission/guard/fiber probes. Runtime/backend unchanged; no skipped checks.
+- Eight new library and four native groups prove nullable/nested activity, current
+  predicate evidence, expired-payload inspection, RHS/Leave effects, old copies,
+  restart bounds/expiry, function-body facts, E303/E302 and remaining B001 gates.
+- Final handoff passes 987 local links in 99 Markdown files and Git whitespace checks.
+- Next: bounded lists/reference-bearing carriers and emitted-alias synchronization,
+  preserving tag snapshots, field RHS effects and canonical header activity. Then
+  dynamic allocator/view origins and owning drop schedules. Full release incomplete.
+
+### 2026-09-08 — Tagged allocator native proof and contract
+
+- Eight library groups and four native groups pass. Native debug/release execution
+  proves nullable/nested variants, function-body inspection facts, ancestor restart
+  bounds, inactive expired payloads, RHS/Leave effects and old copies. Stale reads,
+  cell conflicts and emitted aliases retain E303/E302/B001 respectively.
+- Added tagged-allocators.mwy and documented current-version tag proof and remaining
+  list/reference/alias limits. A new example registry entry initially used bytes
+  instead of the existing string type; corrected before the native suite passed.
+- Next: formatting, combined repository gate and final handoff. No runtime/backend,
+  dependency, language syntax or reference fixture changes.
+
+### 2026-09-08 — Tagged allocator origin and loan proofs
+
+- Enabled fixed Copy allocator unions and records, retaining list/reference/alias
+  gates. Frontend read snapshots distinguish tags before/after assignment. Tag-only
+  observations relate the current version to those guards; loan CFG consumes the
+  same proof. Existing header activity handles nullable and nested variant paths.
+- Eight focused groups pass: inactive payloads, stale predicates, old copies,
+  nested variants, RHS field effects, Leave, restart expiry and physical E302.
+  First full Rust run passed 407 library and 442 native groups before the eighth
+  focused group. Initial focused run exposed two obsolete B001 expectations only;
+  those now assert acceptance. No reference fixtures or backend/runtime changed.
+- Next: native tagged execution/rejections, contract/example, combined validation.
+
+### 2026-09-08 — Tagged allocator investigation
+
+- Final binding tags cannot prove mutable variant activity after assignment. Capture
+  predicate-site tags and relate them to the current storage version, including
+  pure field reads. Existing canonical headers already model union activity.
+- Keep list/reference carriers and emitted aliases gated; no reference contract or
+  backend change is planned. Validation pending implementation and focused tests.
+- Next: add bounded snapshots, origin/loan proof transfer, mutation/restart tests.
+
 ### 2026-09-08 — Fixed allocator record combined validation complete
 
 - All fourteen combined checks pass: 842 Rust (400 library, 442 native), 35 Python,

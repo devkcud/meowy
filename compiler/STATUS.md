@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Fixed allocator record mutation and native effects verified.
+Updated: 2026-09-08. Tagged allocator mutation and native effects verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,36 +40,32 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Fixed allocator record mutation](ALLOCATOR_BOUNDS.md#fixed-record-mutation) now
-participates in guarded versioning and restart replay. The supported record shape
-contains allocator values but no unions, lists, references or non-Copy constituents;
-nested records are included. Bounded mutable emitted aliases remain gated.
+[Tagged allocator mutation](ALLOCATOR_BOUNDS.md#tagged-mutation) preserves nullable
+and nested closed-union activity in mutable allocator values and fixed records.
+List/reference-bearing mutable carriers, non-Copy values and emitted aliases remain
+gated. Pure field writes retain post-RHS sibling state and copies keep prior bounds.
 
-Whole replacement updates the complete state. Pure field writes replace only their
-component prefix, using the current record after RHS evaluation. Sibling writes and
-whole-record replacement inside the RHS survive the final field store. The loan CFG
-retains untouched sibling IDs and defines only replacement components, preserving
-existing field Use events. Leave keeps completed writes and skips unfinished stores.
-Old copies retain their original contents and constraints after current-record repair.
+Frontend union reads capture site-specific refinement tags. `borrow/tags.rs` links
+those tags to the current stored version at type-test inspection, under parent
+activity. `Facts::inspections` transfers the proof to the loan CFG, including function
+bodies. Earlier predicates cannot narrow a later assignment. Canonical restart
+headers retain possible variants and terminal expired sources while discarding
+prior iteration correlations. Physical reference coverage remains mandatory.
 
-Mutable record reads select the requested component before validating lifetime.
-An expired sibling therefore does not block a scalar projection or another safe field.
-Whole-record consumption and full call entry still validate all relevant bounds.
-Headers without origins are valid only when every path is optional; references retain
-mandatory coverage. Expiry/overwrite proof works per record component across restart.
-Cell conflicts remain E302, expired reads E303 and unmodeled carriers B001.
+Tag-only inspection does not consume allocator payloads. A proven null branch can
+copy null while an active expired allocator use remains E303. An expired value may
+be inspected and repaired without reading its payload. Cell borrows still conflict
+with replacement as E302. The tagged-allocators example prints empty, 7, bounded,
+cleared. Eight library and four native groups cover nullable/nested variants,
+assignment invalidation, field RHS/Leave effects, copies, restart and carrier gates.
 
-Six new library groups and four native groups prove replacement, selective repair,
-nested paths, RHS sibling/root effects, Leave, restart and old copies. All fourteen
-combined checks pass: 400 library + 442 native, 35 Python, 52 debug/release examples,
-both editors, formatting, Clippy, build and contracts. Runtime passes 100 groups/profile
-in debug/release/ASan/UBSan/LSan with required probes. Conformance is 10 passed,
-13 unsupported, 0 failed. No reference fixture, runtime/backend ABI, syntax or dependency changed.
-
-Bounded tagged/list/reference-bearing records and mutable emitted aliases remain
-unsupported. Actual dynamic allocator context origins, owning views/constructors,
-drop schedules and source error APIs are still pending. Static heap is the only
-allocator factory; no automatic resource cleanup is enabled.
+All fourteen combined checks pass: 408 library + 446 native (854 Rust), 35 Python,
+53 debug/release examples, both editors, formatting, Clippy, build and contracts.
+Runtime passes 100 groups/profile with required probes. Conformance remains
+10 passed, 13 unsupported, 0 failed. No reference fixtures, runtime/backend
+representation, syntax or dependencies changed.
+Dynamic allocator context origins, owning views/constructors, drop schedules and
+source error APIs remain pending. Static heap is still the only allocator factory.
 
 ## Prior implemented milestone
 
@@ -117,7 +113,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 428 native groups, 4 harness tests and 48 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 446 native groups, 4 harness tests and 53 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -523,8 +519,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
   shape; compatible scalar comparisons project the primary. Union equality needs
   identical normalized union types, so a raw null comparison can report E222.
 - Immutable binding/result snapshots link type-test tags to actual variant activity,
-  conditioned on the enclosing variant. Mutable reference-free storage reads receive
-  unknown activity, avoiding stale initializer tags after writes. Record fields
+  conditioned on the enclosing variant. Fixed allocator storage retains current
+  activity and links predicate-site tags at inspection; other mutable reference-free
+  storage reads receive unknown activity. Record fields
   preserve mutability in their types. SetPath invalidates the selected region and
   overlapping ancestors/descendants after RHS; disjoint sibling facts survive.
 - Restart edges erase iteration-specific correlations and scoped assumptions.
@@ -609,36 +606,33 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 400 library
-  + 442 native (842 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 52 examples execute in debug/release. Both editors, formatting, Clippy,
+- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 408 library
+  + 446 native (854 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 53 examples execute in debug/release. Both editors, formatting, Clippy,
   build, schemas/identities and catalog pass. Final handoff documentation passes
-  986 local links in 99 Markdown files.
+  987 local links in 99 Markdown files and Git whitespace checks.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
   exact fatal/admission/guard/fiber probes with approved process access. Runtime
   and backend representations were unchanged; no selected check was skipped.
-- Six new record library groups cover whole/field replacement, old-copy expiry,
-  independent sibling reads/repair, nested paths, RHS sibling/root effects, Leave,
-  branch/restart versions, disjoint scalar borrows and remaining carrier gates.
-- Four new native groups pass both profiles: RHS replacement retains new scalar
-  contents while old copies retain prior contents; Leave skips the outer store;
-  nested restart repair succeeds; stale siblings/copies report E303 and unsupported
-  list carriers report B001. allocator-records.mwy prints 9, 2, ready.
-- Two former record B001 expectations became accepted behavior and were updated
-  after observing it; bounded tagged/list/emitted-alias cases remain explicit.
-  A patch context mismatch was corrected while retaining the existing field Use
-  event. Final source checks have no failures or unfinished edits.
+- Eight new tagged library groups cover whole/field replacement, old-copy expiry,
+  inactive payloads, nested parent activity, stale predicate invalidation, RHS effects,
+  Leave, branch/restart versions, cell loans and remaining carrier gates.
+- Four new native groups pass both profiles, including function-body observation
+  facts and null/full/empty nested restart transitions. The tagged-allocators example
+  prints empty, 7, bounded, cleared. Initial obsolete B001 expectations and an example
+  registry string/byte mismatch were corrected; final checks have no failures.
 - Existing reference/header/allocator regressions pass. Conformance remains
-  10 passed, 13 unsupported, 0 failed. Tagged/list/reference carriers, emitted aliases,
-  dynamic contexts/views, owning drops, source error APIs, tasks, DWARF and a complete
-  release remain unqualified.
+  10 passed, 13 unsupported, 0 failed. List/reference-bearing mutable carriers,
+  emitted aliases, dynamic contexts/views, owning drops, source error APIs, tasks,
+  DWARF and a complete release remain unqualified.
 
 ## Next steps
 
-1. Extend bounded tagged/list/reference-bearing carriers and emitted aliases in
-   type eligibility, `Proofs::versioned`, component paths, state updates and loan
-   transfers. Tagged values need current variant proof; lists need element summaries
-   without capacity expansion; emitted aliases need target/backing synchronization.
+1. Extend bounded list/reference-bearing carriers and emitted aliases in type
+   eligibility, `Proofs::versioned`, component paths, state updates and loan transfers.
+   Lists need element summaries without capacity expansion; emitted aliases need
+   target/backing synchronization. Preserve current-version tag observations and
+   canonical restart activity.
    Preserve post-RHS field updates, selective reads and sibling IDs before relaxing
    gates. Then add real symbolic allocator contexts and string-view origins. Follow
    [OWNING_HIR.md](OWNING_HIR.md) for drop schedules before owning constructors,

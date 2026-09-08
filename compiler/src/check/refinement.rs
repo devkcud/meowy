@@ -144,12 +144,20 @@ impl Checker {
         }
     }
 
-    pub(crate) fn narrow(&mut self, value: hir::Expr) -> hir::Expr {
+    pub(crate) fn narrow(&mut self, value: hir::Expr) -> Result<hir::Expr> {
         if let Some(place) = Self::place(&value) {
-            let ty = self.refined(place, &value.ty);
-            Self::coerce(value, ty)
+            let ty = self.refined(place.clone(), &value.ty);
+            if matches!(value.ty, Type::Union(_)) && self.proofs.mutable.contains(&place.0) {
+                crate::borrow_contract::type_weight(&value.ty, &mut self.flow, value.span)?;
+                let tags = self.variants(place, &value.ty);
+                self.flow.spend(tags.len() + 1);
+                self.proofs
+                    .observations
+                    .insert((value.span.start, value.span.end), tags);
+            }
+            Ok(Self::coerce(value, ty))
         } else {
-            value
+            Ok(value)
         }
     }
 

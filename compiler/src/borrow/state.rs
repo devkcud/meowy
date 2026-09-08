@@ -31,6 +31,7 @@ pub(crate) struct Proofs {
     pub(crate) conditions: BTreeMap<(usize, usize), Guard>,
     pub(crate) bindings: BTreeMap<LocalId, Guard>,
     pub(crate) tags: Tags,
+    pub(crate) observations: BTreeMap<(usize, usize), Vec<(Type, Guard)>>,
     pub(crate) mutable: BTreeSet<LocalId>,
     pub(crate) receivers: BTreeSet<LocalId>,
     pub(crate) dispatches: BTreeSet<BlockId>,
@@ -46,7 +47,7 @@ impl Proofs {
             Some(Type::Foundation(crate::hir::FoundationType::Allocator)) => {
                 !self.aliases.contains_key(&id)
             }
-            Some(ty) if ty.fixed_allocator_record() => !self.aliases.contains_key(&id),
+            Some(ty) if ty.fixed_allocator_value() => !self.aliases.contains_key(&id),
             _ => false,
         }
     }
@@ -144,6 +145,7 @@ impl Proofs {
 
 #[derive(Default)]
 pub(crate) struct Facts {
+    pub(crate) inspections: BTreeMap<(usize, usize), Guard>,
     pub(crate) header_inputs: BTreeMap<BlockId, Predecessor>,
     pub(crate) restart_inputs: BTreeMap<crate::hir::RestartId, Predecessor>,
     pub(crate) headers: BTreeMap<BlockId, BTreeMap<LocalId, State>>,

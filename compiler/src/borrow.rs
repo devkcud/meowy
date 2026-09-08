@@ -10,6 +10,7 @@ pub(crate) mod pointee;
 pub(crate) mod replay;
 pub(crate) mod restart;
 pub(crate) mod state;
+pub(crate) mod tags;
 pub(crate) mod value;
 use std::collections::{BTreeMap, BTreeSet};
 

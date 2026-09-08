@@ -11,28 +11,27 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Fixed allocator record mutation](compiler/ALLOCATOR_BOUNDS.md#fixed-record-mutation)
-  now preserves whole-value and pure-field versions, including nested records.
-  Field commits use state after RHS effects, retain sibling writes and preserve
-  earlier copies. Leave skips unfinished stores; restart expiry remains per component.
-- Selected field reads check only the requested bounds. An expired allocator sibling
-  does not block an independent scalar read or repair; whole-record consumption still
-  requires all active bounds. Physical cell conflicts remain E302 and expired uses E303.
-- All fourteen combined checks pass: 842 Rust (400 library, 442 native), 35 Python,
-  52 debug/release examples, both editors, formatting, Clippy, build and contracts.
-  Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
-  fatal/admission/guard/fiber probes. Runtime/backend representations did not change.
-- Conformance stays 10 passed, 13 unsupported, 0 failed. The
-  [allocator-records example](compiler/examples/allocator-records.mwy) demonstrates
-  selective read and repair. Bounded tagged/list/reference-bearing records and
-  emitted aliases remain gated, as do owning constructors and automatic cleanup.
-  Dynamic contexts/views, source error APIs, tasks, DWARF and full release remain open.
+- [Tagged allocator mutation](compiler/ALLOCATOR_BOUNDS.md#tagged-mutation) preserves
+  nullable/nested variant activity through assignment, field writes, Leave and Restart.
+  Predicates use current-value evidence; earlier predicates cannot narrow replacements.
+- Tag-only inspection can examine an expired allocator and allow repair. Null paths
+  can copy null; active expired payload reads remain E303 and cell conflicts E302.
+  Field commits preserve RHS sibling effects and old copies retain prior constraints.
+- All fourteen combined checks pass: 854 Rust (408 library, 446 native), 35 Python,
+  53 debug/release examples, both editors, formatting, Clippy, build and contracts.
+  Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  probes. Conformance stays 10 passed, 13 unsupported, 0 failed. Runtime/backend
+  representations are unchanged.
+- The [tagged-allocators example](compiler/examples/tagged-allocators.mwy) demonstrates
+  inspection and repair. List/reference-bearing mutable carriers and emitted aliases
+  remain gated. Dynamic contexts/views, owning cleanup, source error APIs, tasks,
+  DWARF and full release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable allocator records, restart headers and panic outcomes | Tagged/list/alias bounds, dynamic origins and drop schedules |
+| Compiler | Mutable tagged allocator values, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -42,9 +41,9 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend bounded tagged/list/reference-bearing carriers and emitted aliases with
-   their required variant, element and backing-storage proof before relaxing gates.
-   Preserve pure field RHS effects and independent sibling versions. Then add actual
+1. Extend bounded list/reference-bearing carriers and emitted aliases with element
+   and backing-storage proof before relaxing gates. Preserve current-version tag
+   observations, pure field RHS effects and independent sibling versions. Then add actual
    dynamic allocator contexts and string-view origins; static heap is still the only
    factory. Follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) for drop schedules
    before strings.copy: normal/Leave/Restart/panic and emitted/temporary/call transfers
