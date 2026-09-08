@@ -3,6 +3,7 @@ use super::Case;
 #[test]
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
+        (include_str!("../../examples/exclusive-carried.mwy"), "8\n"),
         (
             include_str!("../../examples/carried-borrows.mwy"),
             "7\n7\n7\n7\n1\n",

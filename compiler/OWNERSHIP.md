@@ -597,8 +597,9 @@ implementation boundary; it does not change language rules.
   visited states, with existing graph/proof work charging. Missing, duplicate or
   unproved initialization and exhausted proof remain B001; ordinary E204/E205 cases
   are preserved. Success is a proof over every explored completion, not one witness.
-- Shared address-taking uses the acquisition proof below; exclusive carried borrows
-  remain B001. Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
+- Shared address-taking uses the acquisition proof below. Local exclusive scalar
+  borrows additionally require the [restart frontier proof](EXCLUSIVE_RESTARTS.md).
+  Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
   reads, storage allocations, ABI changes or dependencies are added by the analysis.
 - The [carried-scalars example](examples/carried-scalars.mwy) prints one initializer,
   three iteration values and the retained field. Stateful reference-bearing
@@ -621,8 +622,9 @@ implementation boundary; it does not change language rules.
 - The [carried-borrows example](examples/carried-borrows.mwy) retains a view across
   three iterations and replaces it after owner completion. Source and native cases
   cover owner resets, function bounds, Leave, scalar widths and storage identity.
-  Exclusive borrows, nullable/reference-bearing initialization and wider value
-  analysis remain separate work. Runtime/backend and dependencies are unchanged.
+  Exclusive loans that cross backedges, nullable/reference-bearing initialization
+  and wider value analysis remain separate work. Local exclusive carried-scalar
+  borrows require their own frontier proof. Runtime/backend and dependencies are unchanged.
 
 ## Mutable shared-reference bindings
 

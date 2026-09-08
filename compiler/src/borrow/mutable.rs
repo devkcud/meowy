@@ -256,6 +256,7 @@ pub(crate) fn check(
     }
     if let Some(span) = exclusive
         && !restarts.is_empty()
+        && proofs.carried.is_empty()
     {
         return Err(crate::diagnostic::Diagnostic::unsupported(
             "exclusive references in restart bodies",

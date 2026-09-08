@@ -7,6 +7,7 @@ pub(crate) mod control;
 pub(crate) mod elements;
 pub(crate) mod emission_init;
 pub(crate) mod emission_value;
+pub(crate) mod exclusive_restarts;
 pub(crate) mod graph;
 pub(crate) mod init;
 pub(crate) mod permissions;

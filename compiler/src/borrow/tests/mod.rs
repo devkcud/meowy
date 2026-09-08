@@ -12,6 +12,7 @@ mod carried_scalars;
 mod changing_published;
 mod control;
 mod discarded_aliases;
+mod exclusive_carried;
 mod fixed_published;
 mod guarded_references;
 mod header_activity;

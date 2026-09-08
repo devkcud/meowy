@@ -6,6 +6,32 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Local exclusive carried-scalar validation complete
+
+- All ten compiler checks pass: 1051 Rust (531 library, 520 native), 20 Python,
+  67 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Local exclusive carried-scalar borrows retain precise authority only after a
+  no-live-exclusive/opaque-ancestry frontier proof. Moves, children, calls, owner
+  resets, Leave and Boolean invalidation preserve their independent checks.
+- Next: prove mixed shared-header precision; exclusive backedge carriage and wider
+  types remain gated. Runtime/backend, dependencies, libraries and editors unchanged.
+
+### 2026-09-08 - Local exclusive carried-scalar focused checks pass
+
+- Formatting, seven source groups and three graph-proof groups pass. Closed loans
+  retain authority; cross-edge descendants, opaque demand and invalid transfers fail.
+- Next: compiler/native gate, final contracts and handoff, then task-only commit.
+
+### 2026-09-08 - Local exclusive carried-scalar implementation
+
+- Added a bounded ancestry/frontier proof before narrowing restart opacity.
+  Copies, header transfers and parents retain exclusive/unknown ancestry.
+- Only carried Bool/Int/Float acquisitions qualify; live exclusive or opaque
+  frontier demand remains B001. Source/graph/native cases and an example are pending.
+- Next: focused regressions, compiler gate, actual handoff evidence and commit.
+  Runtime/backend, dependencies, libraries and editor integration are unchanged.
+
 ### 2026-09-08 - Exclusive restart authority prerequisite identified
 
 - A carried-slot gate change alone is insufficient: exclusive restart bodies are

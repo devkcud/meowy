@@ -144,7 +144,13 @@ impl Graph<'_> {
                 }
             }
         }
-        if restart {
+        let exclusive = self
+            .loans
+            .iter()
+            .any(|loan| loan.mode == ReferenceMode::Exclusive);
+        if restart && exclusive {
+            self.exclusive_restart_frontiers(reach)?;
+        } else if restart {
             self.charge(count)?;
             for value in &mut self.authority {
                 value.opaque = TRUE;

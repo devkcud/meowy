@@ -4,9 +4,8 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Exclusive restart authority investigation complete.
-Shared carried-scalar borrowing is verified; exclusive restart behavior remains gated.
-Full v0.0.1 remains incomplete. No unfinished compiler edits or known failing checks.
+Updated: 2026-09-08. Local exclusive carried-scalar borrowing verified.
+Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
@@ -41,13 +40,16 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-The [exclusive restart authority plan](EXCLUSIVE_RESTARTS.md) records a prerequisite
-before lifting either exclusive gate. `borrow/mutable.rs::check` rejects exclusive
-restart bodies, and `loans/authority.rs::solve_authority` makes restart authority
-opaque. Header transfers do not currently propagate precise loan ancestry.
-The first slice must prove that exclusive loans and all descendants end before
-every reset edge. Exclusive headers stay gated. This step changes documentation
-only; no compiler/runtime/editor execution was rerun.
+The [exclusive restart authority slice](EXCLUSIVE_RESTARTS.md) now follows copies,
+demand-only header transfers and parent edges with conservative ancestry marks.
+Unrooted values and explicit/input/expired opacity propagate independently. Every
+live reset-frontier value must be rooted and free of exclusive or opaque ancestry.
+All exclusive acquisitions in a reset graph must address carried Bool/Int/Float
+slots. Only a successful frontier proof bypasses blanket opacity; precise permission
+checks, explicit opacity, acquisition, lifetime and move checks remain unchanged.
+Seven source groups, three graph groups, five native groups and the example pass.
+All ten compiler checks pass. Exclusive headers and mixed opaque frontier demand
+stay unsupported. The exclusive-carried example prints 8 in debug and release.
 
 [Shared carried scalar borrows](OWNERSHIP.md#shared-carried-scalar-borrows) now record
 Acquire events at actual address construction. Each event requires an active owner
@@ -55,7 +57,8 @@ and initialized slot in the bounded CFG proof. The existing canonical storage,
 source expiry, reference headers, public bounds and last-use checks are unchanged.
 Six new source groups and direct acquisition/reset proofs pass alongside the prior
 carried-slot regressions. Five native groups and the new example pass in debug/release.
-All ten compiler checks pass. Exclusive carried-storage borrowing stays B001.
+All ten compiler checks pass. Exclusive loans crossing backedges stay B001;
+local carried-scalar loans use the separate frontier proof above.
 
 [Carried scalar initialization](OWNERSHIP.md#carried-scalar-initialization) supports
 declared non-nullable Boolean, integer, float and static-string fields/primaries
@@ -68,9 +71,10 @@ Pure Boolean trees preserve value/copy semantics. Other results remain unknown;
 indirect writes invalidate knowledge. Limits are 64 carried slots, 512 known Boolean
 locals/state and 16,384 visited states with shared work charging. Late/frontier and
 reference proofs remain intact. Reference-bearing, nullable, aggregate or inferred
-carried slots and exclusive borrowing of their storage remain B001 pending separate proofs.
+carried slots remain B001 pending separate proofs. Exclusive scalar borrowing uses
+the local-loan frontier proof; wider exclusive restart borrowing remains gated.
 
-All ten compiler checks pass: 521 library, 515 native, 20 Python and 66 examples in
+All ten compiler checks pass: 531 library, 520 native, 20 Python and 67 examples in
 both profiles, formatting, Clippy, build and repository contracts. The carried-borrows
 example prints 7, 7, 7, 7, 1. Runtime/backend, dependencies and reference fixtures
 are unchanged; wider ownership, library and release work remain open.
@@ -140,10 +144,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 113 origin/initialization, 130 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 120 origin/initialization, 133 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 515 native groups, 4 harness tests and 65 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 520 native groups, 4 harness tests and 65 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -636,8 +640,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  521 library + 515 native (1036 total). Python: 16 tooling + 4 compiler (20).
-  All 66 examples execute in debug/release. Formatting, Clippy, build, local links,
+  531 library + 520 native (1051 total). Python: 16 tooling + 4 compiler (20).
+  All 67 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
 - Eleven new source/proof groups cover exactly-once initialization, Boolean copies
   and refinement, owner resets, missing/duplicate results, Leave/panic, effectful RHS
@@ -658,12 +662,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Follow [EXCLUSIVE_RESTARTS.md](EXCLUSIVE_RESTARTS.md). Prove exclusive ancestry
-   ends at every reset frontier, including shared descendants and demand-only
-   `loans/restarts.rs` transfers. Reuse liveness and parent lineage; missing/opaque
-   ancestry is not proof. Only then narrow `loans/authority.rs` blanket opacity and
-   the `borrow/mutable.rs` / `borrow/carried.rs` gates for local carried-scalar loans.
-   Keep exclusive headers unsupported. Preserve acquisition/lifecycle, indirect-write
+1. Refine mixed shared-header precision in `loans/exclusive_restarts.rs` and
+   `loans/restarts.rs` only with complete predecessor ancestry/coverage proof.
+   Explicit header opacity currently rejects even unrelated live shared headers
+   in exclusive bodies. Distinguish that conservative marker from genuinely unknown
+   call/input ancestry; one rooted predecessor is not proof of all predecessors.
+   Keep live exclusive ancestry and exclusive headers unsupported. Preserve acquisition/lifecycle, indirect-write
    Boolean invalidation, moves, last-use conflicts and expiry; run source/native
    regressions and the compiler gate. Keep nullable/reference-bearing initialization
    and wider Boolean/value summaries gated until their own proofs are available.

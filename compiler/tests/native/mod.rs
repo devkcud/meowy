@@ -16,6 +16,7 @@ pub(crate) mod element_writes;
 pub(crate) mod emitted_borrows;
 pub(crate) mod emitted_slots;
 pub(crate) mod examples;
+pub(crate) mod exclusive_carried;
 pub(crate) mod exclusive_elements;
 pub(crate) mod exclusive_fields;
 pub(crate) mod exclusive_functions;

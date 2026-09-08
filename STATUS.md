@@ -11,10 +11,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Exclusive restart authority](compiler/EXCLUSIVE_RESTARTS.md) now has a bounded
-  implementation plan. The body-wide gate and opaque restart authority remain
-  unchanged; shared descendants and demand-only headers need an explicit frontier
-  proof before iteration-local exclusive carried-slot borrows can be enabled.
+- [Local exclusive carried-scalar borrows](compiler/EXCLUSIVE_RESTARTS.md) pass the
+  compiler/native gate. A conservative ancestry proof follows copies, header
+  transfers and parents; live exclusive or opaque demand rejects a backedge.
+  Only certified carried-scalar loans bypass blanket restart opacity.
 
 - [Shared carried-scalar borrowing](compiler/OWNERSHIP.md#shared-carried-scalar-borrows)
   passes source/proof and native debug/release checks. Acquisition
@@ -45,7 +45,7 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 1036 Rust (521 library, 515 native), 20 Python, 66 examples
+- Current compiler gate: 1051 Rust (531 library, 520 native), 20 Python, 67 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
@@ -58,7 +58,7 @@ The full documented v0.0.1 release remains incomplete.
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Whole union-alias assignment, late publications and shared carried-scalar borrows | Exclusive carried borrows, wider initialization, list bounds and drop schedules |
+| Compiler | Whole union-alias assignment, late publications and local exclusive carried-scalar borrows | Mixed shared-header precision, wider initialization, list bounds and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -68,9 +68,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Implement the [exclusive restart authority plan](compiler/EXCLUSIVE_RESTARTS.md):
-   prove no exclusive loan or descendant crosses a reset edge before narrowing
-   opaque authority or either source gate. Keep exclusive headers unsupported;
+1. Refine mixed shared-header precision in the [exclusive restart proof](compiler/EXCLUSIVE_RESTARTS.md)
+   only after proving complete predecessor ancestry. Do not treat a known root on
+   one path as coverage of every path or waive call/input opacity. Keep exclusive
+   headers and live exclusive ancestry across backedges unsupported;
    preserve indirect-write invalidation, move/last-use conflicts and owner expiry.
    Run source/native regressions and the compiler gate after implementation.
    Extend wider initialization/value summaries only after separate proof.

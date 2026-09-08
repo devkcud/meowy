@@ -6,6 +6,44 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Local exclusive carried-scalar validation complete
+
+- All ten compiler checks pass: 531 library + 520 native (1051 Rust), 20 Python,
+  67 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Seven source groups and three graph groups pass; five native groups cover widths,
+  moves, shared/exclusive children, calls, owner reset, captured-store Leave and
+  primary rejection codes. The exclusive-carried example prints 8 in both profiles.
+- Certificates follow rooted/exclusive/opaque ancestry through copies, transfers
+  and parents. Unrooted or opaque frontier values fail closed. Only qualified
+  carried scalar acquisitions with no live exclusive descendants at reset edges
+  bypass blanket opacity; precise permissions and existing proof checks remain.
+- No failing tests remain. Runtime/backend, syntax, fixtures and dependencies are
+  unchanged; runtime/editor evidence is preserved rather than rerun.
+- Next: prove complete mixed shared-header ancestry before narrowing header opacity.
+  Keep call/input uncertainty and actual exclusive carriage unsupported.
+
+### 2026-09-08 - Local exclusive carried-scalar focused checks pass
+
+- Formatting and all ten new source/graph groups pass. Coverage includes widths,
+  moves/children, conflicts, nested backedges, shared/call descendants, owner resets,
+  Leave, Boolean invalidation, unrelated-root gates and bounded/missing ancestry.
+- Five native groups and the example await full compiler verification. No focused
+  failures remain. Next: full gate, final contracts/evidence and task-only commit.
+
+### 2026-09-08 - Local exclusive carried-scalar implementation
+
+- Added exclusive_restarts.rs with conservative rooted/exclusive/opaque ancestry
+  propagated through copies, demand-only transfers and reborrow parents. Unknown
+  roots and input/expired origins fail closed at live reset frontiers.
+- Carried Bool/Int/Float source qualification and frontier success are required
+  before bypassing blanket restart opacity. Existing precise authority, permission,
+  acquisition, storage, move and Boolean-invalidation checks remain in force.
+- Seven source groups, three graph groups, five native groups and exclusive-carried.mwy
+  await validation. Exclusive headers and opaque mixed frontiers remain gated.
+- Next: focused checks and compiler/native gate; record actual results before commit.
+  No runtime/backend, syntax, reference fixture or dependency changes.
+
 ### 2026-09-08 - Exclusive restart authority prerequisite identified
 
 - Inspected body-wide exclusive rejection, static LoanId authority propagation,

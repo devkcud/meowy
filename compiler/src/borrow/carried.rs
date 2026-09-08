@@ -20,10 +20,7 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
     if proofs.carried.is_empty() {
         return Ok(());
     }
-    let lookup = proofs.carried.len().checked_ilog2().unwrap_or(0) as usize + 1;
-    if proofs.carried.len() > MAX_SLOTS
-        || !guards.spend(proofs.aliases.len().saturating_mul(lookup) + proofs.carried.len() + 1)
-    {
+    if proofs.carried.len() > MAX_SLOTS || !guards.spend(proofs.carried.len() + 1) {
         return Err(State::budget(Span::default()));
     }
     for slot in proofs.carried.values() {
@@ -31,21 +28,6 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
             return Err(Diagnostic::unsupported(
                 "non-scalar carried publication",
                 slot.span,
-            ));
-        }
-    }
-    for alias in proofs.aliases.values() {
-        if !guards.spend((alias.field.len() + 1).saturating_mul(lookup)) {
-            return Err(State::budget(alias.span));
-        }
-        if proofs
-            .carried
-            .contains_key(&(alias.target, Some(alias.field.clone())))
-            && let Some(span) = alias.exclusive
-        {
-            return Err(Diagnostic::unsupported(
-                "exclusively borrowing carried publication storage",
-                span,
             ));
         }
     }

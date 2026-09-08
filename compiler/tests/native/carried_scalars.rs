@@ -139,7 +139,7 @@ pub fn carried_scalar_incomplete_repeated_and_exclusive_storage_stay_rejected() 
             "B001",
         ),
         (
-            "<R>:<{n<int32>:=}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:=7;p:&!n;first=false};i=i+1;|i<2|'loop.restart()}}",
+            "<R>:<{n<int32>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->n:=7;p:&!n;i:=0;'again{v:*p;i=i+1;|i<2|'again.restart()};first=false;'loop.restart()}}}",
             "B001",
         ),
         (

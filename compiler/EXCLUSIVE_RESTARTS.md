@@ -1,39 +1,21 @@
-# Exclusive restart authority plan
+# Local exclusive borrows across result-storage restarts
 
-This is an implementation plan, not supported language behavior. Exclusive references
-in bodies containing Restart remain B001. The existing [scalar-slot contract](EXCLUSIVE_SLOTS.md),
-[ownership implementation](OWNERSHIP.md) and [memory reference](../docs/reference/memory.md)
-remain authoritative. Shared carried-scalar borrowing is already supported.
+Declared mutable carried Boolean, integer and float slots support exclusive
+borrowing when the exclusive loan and all descendants end before every reachable
+restart edge. The result cell may survive; the loan must not. This extends the
+[scalar-slot contract](EXCLUSIVE_SLOTS.md) without changing the
+[memory reference](../docs/reference/memory.md) or runtime representation.
 
-## Why acquisition alone is insufficient
+## Supported slice
 
-- `borrow/carried.rs::validate` rejects exclusive borrowing of a carried slot.
-  Removing that restriction still reaches the body-wide rejection in
-  `borrow/mutable.rs::check`: any exclusive expression/input/result combined with
-  a Restart target is unsupported.
-- `loans/authority.rs::solve_authority` sets every value's authority opaque when
-  the graph has a reachable reset edge. `loans/permissions.rs::permission` refuses
-  exclusive access with opaque authority. This is an intentional safety boundary,
-  not a redundant initialization check.
-- `LoanId` identifies a static acquisition site, not one dynamic loop iteration.
-  `Node.copies` propagates authority, while restart headers currently use
-  demand-only `Node.transfers` and explicit opaque values. A frontier audit based
-  only on the current authority map could miss ancestry passing through a header.
-- `Source::Slot` and the canonical storage cell identify the result owner.
-  `loans/emission_init.rs` proves active, initialized storage at acquisition;
-  it does not prove which exclusive loan authorizes a later access.
+All exclusive acquisitions in a reset graph must address carried scalar slots.
+Canonical result owner, root, lexical view and scalar shape are checked. Existing
+backing-type, mutability, acquisition initialization and storage-lifetime checks
+remain independent. Ordinary local/parameter exclusive roots, wider pointees and
+exclusive handles in restart headers remain unsupported in this slice.
 
-## First bounded outcome
-
-Permit exclusive borrows of declared mutable carried Boolean, integer and float
-slots only when the exclusive loan and all its descendants end before every
-reachable restart edge. The result cell may survive an inner restart; the loan
-must not. Exclusive handles in restart headers remain unsupported. This does not
-enable wider exclusive pointees, reference-bearing carried initialization or
-general exclusive borrowing in restarted bodies.
-
-An intended accepted case initializes one result cell, mutates through a local
-exclusive handle, ends that handle's demand, then restarts the inner scope:
+The [exclusive-carried example](examples/exclusive-carried.mwy) initializes a
+result once, mutates its original cell and ends the handle before Restart:
 
 ```meowy
 d:@"debug"
@@ -53,56 +35,73 @@ r<R>:'out{
 d.print(r.n)
 ```
 
-Expected output after implementation is `8` followed by a newline. Today this is
-B001. Setting `first=false` after the indirect store is significant: indirect
-stores and exclusive calls conservatively forget Boolean knowledge. Do not remove
-that invalidation merely to admit the example.
+Both profiles print `8` followed by a newline. Setting `first=false` after the
+indirect store is significant: indirect stores and exclusive calls conservatively
+forget Boolean knowledge. The initialization proof does not infer that a scalar
+store cannot affect another flag. Restoring the flag afterward permits proof;
+losing its value before the backedge can still produce B001.
 
-## Implementation order
+## Frontier proof
 
-1. Establish charged, conservative exclusive ancestry at reset frontiers using
-   the existing loan graph, liveness and parent lineage. Account explicitly for
-   demand-only header transfers, shared descendants, returned views and bounds.
-   Missing or opaque ancestry cannot certify a frontier as free of exclusive loans.
-2. Reject any live exclusive ancestry on a reset edge. Audit actual predecessor
-   demand with reset semantics, not just the syntactic holder's scope or type.
-   A shared child can keep an exclusive parent live after the holder's last use.
-   Preserve demand-only transfers; the proof must not introduce runtime reads.
-3. Narrow blanket restart opacity only after that proof succeeds. Keep explicit
-   header/call opacity and the existing permission coverage checks. A static
-   acquisition site must never authorize another iteration's retained pointer.
-4. Replace the body-wide and carried-slot gates only for the certified slice.
-   Keep exact backing, acquisition initialization, owner lifecycle, move checking,
-   parent suspension, public bounds and Boolean invalidation independent.
-5. Add source and native regressions before claiming support, run the compiler
-   gate, then update contracts and the root/compiler handoff with actual evidence.
+- `borrow/mutable.rs::check` admits candidate exclusive restart bodies only when
+  carried obligations exist. This does not authorize a source program by itself.
+  `loans/exclusive_restarts.rs` must qualify every exclusive acquisition and prove
+  all reset frontiers before the body can pass loan checking.
+- `LoanId` still names a static acquisition site. The certificate follows separate
+  rooted, exclusive and opaque marks through existing `Node.copies`, demand-only
+  `Node.transfers` and reborrow-parent edges. Header transfer metadata is used for
+  conservative ancestry only; it is not converted into a runtime read or precise
+  permission grant.
+- Root acquisitions establish rootedness. Unrooted values become opaque, and that
+  uncertainty propagates to their descendants. Explicit opaque values and input
+  or expired origins remain conservative. Multiple incoming paths merge marks by
+  union; an exclusive or opaque path cannot be erased by a known shared path.
+- Ancestry ignores predicate correlations except unreachable CFG nodes and literal
+  false transfer guards. This prevents predicates from different iterations from
+  cancelling an ancestor. Existing guarded liveness determines frontier demand;
+  any non-false demand for exclusive or opaque ancestry rejects the reset edge.
+- Only a successful certificate bypasses `solve_authority`'s blanket reset opacity.
+  Explicit header/call opacity and all precise authority coverage and permission
+  checks remain unchanged. Shared-only reset bodies retain their previous behavior.
+  An iteration's static loan site cannot authorize a retained earlier-iteration view.
+- Graph construction, header coverage, acquisition initialization, source expiry,
+  move/availability checking, parent suspension and last-use conflicts remain
+  separate requirements. Certificates do not replace any of those proofs.
+- Scratch marks, dependency edges, propagation and liveness consume existing graph
+  work/state budgets. Invalid IDs, unrooted demand or exhausted work fail closed
+  with B001. No flags, allocations or analysis steps are added to generated programs.
 
-## Required regressions
+## Lifetimes and limitations
 
-- Accept local Bool/Int/Float mutation, declared widths, disjoint sibling access
-  and direct owner writes after the exclusive loan's final use.
-- Accept moves and shared/exclusive reborrows that finish within the iteration;
-  retain E301 moved-use and E302 parent/child or sibling-loan conflicts.
-- Reject an exclusive holder crossing an inner backedge with B001, even when its
-  result owner survives. Do not claim this unsupported case as a conformance pass.
-- Reject a shared descendant carried through a mutable header, carrier or call
-  result when it retains exclusive ancestry. Include an unused parent holder and
-  a descendant used only on a later iteration.
-- Exercise initial entry, multiple backedges, nested targets, owner reset, Leave
-  and skipped RHS stores. Reinitializing the same static site must not revive a view.
-- Keep missing/duplicate carried initialization and conservative Boolean-state
-  failures. Contrast restoring the flag after an indirect write with losing the
-  flag's proof through an indirect write or exclusive call.
-- Direct graph cases must reject missing frontier coverage, opaque lineage,
-  malformed transfers and exhausted work without publishing a certificate.
-- Run accepted output and primary rejection checks in debug/release. Preserve
-  shared restart regressions, reference fixtures and the explicit conformance gap.
+Moves and shared/exclusive children can remain local to an iteration. E301 still
+rejects definite moved-handle reads; E302 still rejects owner/child conflicts.
+A shared child, carrier or returned view can retain an exclusive ancestor even
+when the original holder is no longer read. Its demand across a backedge remains
+B001, not a successful language-conformance rejection.
 
-## Evidence boundary
+Owner reset can create a fresh local loan after fresh initialization. Leave keeps
+completed effects and skips unfinished captured stores. Reinitializing a static
+storage site does not revive expired references. Public call bounds and existing
+call/result restrictions continue to apply.
 
-The investigation inspected the body gate, authority propagation, permissions,
-restart transfers and existing authority regressions. No gate was lifted and no
-compiler execution was rerun for this documentation-only step. The last compiler
-gate remains 1036 Rust tests, 20 Python tests and 66 debug/release examples, with
-10 conformance cases passed and 13 unsupported. Runtime/editor evidence is unchanged;
-the full v0.0.1 release remains incomplete.
+Live opaque shared headers conservatively reject mixed bodies containing exclusive
+loans, even when those headers may be unrelated. The next extension must distinguish
+that header marker from genuinely unknown call/input ancestry and prove complete
+predecessor coverage. A rooted path alone is not proof of every incoming path.
+Do not enable exclusive header carriage or weaken explicit opacity as a shortcut.
+Nullable/reference-bearing carried initialization and wider value analysis remain
+separate work.
+
+## Evidence
+
+Seven source groups and three graph groups cover local mutation, widths, moves,
+children, conflicts, nested reset demand, shared/call descendants, owner resets,
+Leave, Boolean invalidation, unrelated-root gates, opaque/unrooted demand and work
+or malformed-transfer failures. Five native groups exercise accepted output and
+primary rejections in debug/release. The example prints 8 in both profiles.
+
+All ten compiler checks pass: 531 library and 520 native tests, 20 Python tests and
+67 debug/release examples, formatting, Clippy, build and repository contracts.
+Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/backend, reference
+fixtures and dependencies are unchanged; runtime/editor checks were not rerun.
+The full v0.0.1 release remains incomplete.

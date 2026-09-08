@@ -56,10 +56,10 @@ holder does not redirect that store. A later Leave or panic can skip the final s
 while preserving earlier mutations and moves. Own-target Leave publishes an
 initialized result; ancestor Leave can discard it and retain only completed effects.
 
-Exclusive restart bodies remain gated, including iteration-local scalar aliases.
-The [restart authority plan](EXCLUSIVE_RESTARTS.md) specifies the first bounded
-slice: carried scalar storage may survive, but exclusive loans and all descendants
-must be proved dead before each backedge. This plan does not lift the current gate.
+Exclusive restart bodies support only the [certified carried-scalar slice](EXCLUSIVE_RESTARTS.md):
+carried scalar storage may survive, but exclusive loans and all descendants must
+end before each backedge. Live opaque ancestry also fails closed. General exclusive
+restart borrowing and exclusive handles in restart headers remain gated.
 Named record fields use the same canonical Slot root plus concrete field indexes.
 Sibling and primary access are disjoint from a named descendant; ancestor and
 whole-owner access still overlap. Indexed/union/reference paths require further

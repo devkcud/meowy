@@ -69,6 +69,7 @@ compiler/target/debug/meowy run compiler/examples/changing-published.mwy
 compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
+compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -167,8 +168,12 @@ Boolean-state proof checks exactly-once initialization and every completing path
 The [carried borrow example](examples/carried-borrows.mwy) acquires a shared view
 after initialization and keeps it across inner restarts while the result owner lives.
 Acquisition checks active, initialized storage; owner expiry and last-use rules
-remain unchanged. Reference-bearing, nullable or inferred carried slots and exclusive
-borrowing of carried storage remain unavailable; effectful Boolean results may prevent proof.
+remain unchanged. The [exclusive carried example](examples/exclusive-carried.mwy)
+mutates a carried scalar through a local exclusive handle whose loan ends before
+Restart. The [frontier proof](EXCLUSIVE_RESTARTS.md) also checks shared descendants;
+exclusive or opaque ancestry crossing a backedge remains unsupported.
+Reference-bearing, nullable or inferred carried slots remain unavailable;
+effectful Boolean results may prevent proof.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
