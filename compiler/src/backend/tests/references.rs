@@ -308,7 +308,7 @@ pub(crate) fn element_references_evaluate_parent_then_index_and_stop_on_divergen
                 assert!(
                     !emit_ir(&program)
                         .unwrap()
-                        .contains("call void @meowy_index_fail_v1")
+                        .contains("call void @meowy_index_capture_v0")
                 );
             }
             let output = native_program(&program, release, false);

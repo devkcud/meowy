@@ -114,6 +114,7 @@ pub(crate) fn main() {
         "-Wall",
         "-Wextra",
         "-Werror",
+        "-I../runtime/include",
         "-c",
         "native/runtime.cpp",
         "-o",

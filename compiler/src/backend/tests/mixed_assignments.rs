@@ -374,7 +374,7 @@ pub(crate) fn mixed_writes_skip_remaining_phases_after_leave() {
             assert_eq!(
                 emit_ir(&program)
                     .unwrap()
-                    .matches("call void @meowy_index_fail_v1")
+                    .matches("call void @meowy_index_capture_v0")
                     .count(),
                 leave
             );

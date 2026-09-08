@@ -62,10 +62,10 @@ impl<'a> Generator<'a> {
             i32::from(op.as_bytes()[0])
         };
         self.line(format!(
-            "call void @meowy_arithmetic_fail_v2(i32 {operation}, i32 {bits}, i32 {}, i64 {left}, i64 {right}, i64 {}, i64 {})",
+            "call void @meowy_arithmetic_capture_v0(ptr %panic, i32 {operation}, i32 {bits}, i32 {}, i64 {left}, i64 {right}, i64 {}, i64 {})",
             i32::from(*signed), span.start, span.end
         ));
-        self.line("unreachable".into());
+        self.jump("panic_exit");
         self.label(&next);
     }
 

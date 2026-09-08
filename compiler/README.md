@@ -382,8 +382,11 @@ panic[P002]: int8 + overflow (left 127, right 1; range -128..127) at bytes 14..1
 Explicit `debug.panic` streams its supplied message once, then appends its P006
 call-site byte span. If message evaluation itself panics or leaves the scope,
 the outer panic does not append a misleading site or terminator. A completed panic
-exits with status 1. These are bootstrap text diagnostics, not the
-release panic artifact format or a recovery/unwind implementation.
+propagates through [explicit call outcomes](PANIC_OUTCOMES.md) to root exit status 1.
+A caller-owned bounded snapshot retains the panic after failing functions return;
+pending outer messages do not replace nested failures. Native probes pass these
+outcomes through cleanup, including original-cause P008. Automatic resource cleanup,
+source-level recovery, task unwinding and release panic artifacts remain unimplemented.
 
 Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, non-scalar exclusive borrows,

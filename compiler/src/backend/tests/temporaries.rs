@@ -242,7 +242,7 @@ pub(crate) fn temporary_bounds_and_exits_skip_later_evaluation() {
         let ir = emit_ir(&program).unwrap();
         entry_slots(&ir);
         if mode != 2 {
-            assert!(!ir.contains("call void @meowy_index_fail_v1"));
+            assert!(!ir.contains("call void @meowy_index_capture_v0"));
         }
         if mode == 0 || mode == 3 {
             assert!(!ir.contains("%local0 = alloca"));

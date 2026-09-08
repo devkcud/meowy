@@ -3,7 +3,7 @@
 This is an implementation design, not an enabled compiler feature. The current
 HIR has no resource destructor. The [private bridge](../runtime/GENERATED_CLEANUP.md)
 proves relocation and destruction through generated LLVM callbacks; it does not
-yet connect source ownership to cleanup. This design implements the ownership
+yet connect source ownership to cleanup. This design guides the ownership
 stage of [COMPILER.md](../COMPILER.md#the-pipeline).
 
 ## First resource
@@ -165,8 +165,10 @@ cleanup metadata exhaustion into the language's allocation failure value.
 
 ## Panic and enablement
 
-The current arithmetic, bounds and explicit-panic helpers print and terminate.
-Adding only normal/Leave/Restart drops would leak resources on those paths.
+[Scalar panic outcomes](PANIC_OUTCOMES.md) now preserve streamed diagnostics and
+propagate a caller-owned snapshot through explicit failure exits. Native probes
+use the returned snapshot for cleanup; ordinary source has no owning drop schedules.
+Adding only normal/Leave/Restart drops would still omit those panic cleanup edges.
 Keep resource construction unavailable to ordinary source until all reachable
 recoverable failures with live owners use an owning outcome and cleanup edges.
 This includes failures inside called scalar functions, not just the constructor
@@ -199,10 +201,10 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
 
 ## Implementation and acceptance order
 
-1. Add owning panic outcomes and explicit propagation to scalar failure/call
-   lowering. Preserve byte-for-byte existing diagnostics and short-circuit effects
-   in debug/release; use generated native callbacks to prove cleanup ordering and
-   original-cause P008 before introducing a source resource.
+1. Implemented prerequisite: [owning panic outcomes](PANIC_OUTCOMES.md) and explicit
+   propagation through scalar failure/call lowering. Preserve its debug/release
+   diagnostic/effect tests and generated cleanup/original-cause P008 probes while
+   adding actual owning-HIR cleanup edges.
 2. Establish resolved foundational item/type identities for `memory` and `strings`,
    allocation failure representation and the static heap allocator contract.
    Implement constructor/move/drop ABI tests with deterministic allocation failure
@@ -223,6 +225,6 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
    for this compiler/runtime integration. Keep unsupported conformance and host
    execution distinct from full release qualification.
 
-This checkpoint records source/contract analysis only. No compiler behavior,
-resource ABI, syntax, dependency or reference fixture changed. Existing bridge
-tests remain prior evidence, not validation of these proposed schedules.
+The owner schedules above remain a design. Scalar panic propagation is implemented
+and independently tested; it does not validate automatic resource destruction.
+No owning source type, syntax, dependency or reference fixture was added.

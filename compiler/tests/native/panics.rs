@@ -200,3 +200,30 @@ pub fn interrupted_panic_messages_do_not_append_the_outer_site() {
         assert_eq!(output.stderr, b"panic[P006]: before ");
     }
 }
+
+#[test]
+pub fn recursive_failure_skips_pending_arguments_and_caller_effects() {
+    let source = r#"
+d:@"debug"
+f<int32>:(x<int32>)'out{|x==0|{'out ->10/x;'out.leave()};->f(x-1)}
+mark<int32>:(){d.print("late argument");->1}
+add<int32>:(a<int32>,b<int32>){d.print("entered");->a+b}
+d.print("start")
+value:=0
+value=add(f(3),mark())
+d.print("late caller")
+"#;
+    let start = source.find("10/x").unwrap();
+    let case = Case::new(source);
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(
+            output.stdout,
+            b"start\n",
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(output.stderr, format!("panic[P002]: int32 / zero divisor (left 10, right 0; range -2147483648..2147483647) at bytes {start}..{}\n", start + 4).as_bytes());
+    }
+}

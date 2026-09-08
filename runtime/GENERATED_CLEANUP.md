@@ -132,10 +132,12 @@ implicit byte-copy move, scheduler or C++ exception mechanism implements this tr
 | Panic | Capture the owning diagnostic before releasing source storage; follow explicit cleanup edges or qualified landing pads to the task root |
 | Cancellation | Request cooperative child cancellation, drain/join children while parent borrows remain valid, then release parent owners |
 
-Backend `block` and Leave/Restart branches currently emit direct control flow; scalar
-panic helpers print and terminate. Replacing these paths needs initialization/transfer
-metadata and a failure outcome, not merely inserting calls to this bridge. Existing
-loan lifecycle events prove availability and borrowing; they are not drop schedules.
+Backend `block` and Leave/Restart branches currently emit direct control flow.
+[Scalar panic outcomes](../compiler/PANIC_OUTCOMES.md) now carry owning snapshots
+through explicit generated failure exits while preserving streamed diagnostics.
+Native probes pass returned snapshots into this bridge with the panic cause; no
+automatic owning-value cleanup is emitted yet. Initialization/transfer metadata
+and drop schedules remain necessary; loan lifecycle events are not drop schedules.
 
 Task::mark/close belongs to the scheduler contract, separate from Stack::mark/unwind.
 Close can suspend, return report_full or retain a release failure. Generated code must

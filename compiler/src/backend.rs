@@ -2,6 +2,7 @@ mod aggregate;
 mod arithmetic;
 mod lists;
 mod output;
+mod panic;
 mod storage;
 
 use crate::hir::{Block, BlockId, Expr, ExprKind, Program, Stmt, Type};
@@ -135,12 +136,14 @@ impl<'a> Generator<'a> {
     pub(crate) fn generate(mut self) -> Result<String, String> {
         for function in &self.program.functions {
             self.begin();
-            let params: Vec<String> = function
+            let mut params: Vec<String> = function
                 .params
                 .iter()
                 .enumerate()
                 .map(|(index, id)| format!("{} %arg{index}", ir_type(&self.program.locals[*id])))
                 .collect();
+            params.insert(0, "ptr %result".into());
+            params.insert(0, "ptr %panic".into());
             for (index, id) in function.params.iter().enumerate() {
                 self.local(*id);
                 self.line(format!(
@@ -151,11 +154,15 @@ impl<'a> Generator<'a> {
             let value = self.block(&function.body)?;
             if !self.ended {
                 let value = self.coerce(&function.body.ty, &function.result, &value)?;
-                self.line(format!("ret {} {value}", ir_type(&function.result)));
+                self.line(format!(
+                    "store {} {value}, ptr %result",
+                    ir_type(&function.result)
+                ));
+                self.line("ret i1 true".into());
             }
+            self.failure_exit();
             self.finish(format!(
-                "define internal {} @meowy_fn_{}({})",
-                ir_type(&function.result),
+                "define internal i1 @meowy_fn_{}({})",
                 function.id,
                 params.join(", ")
             ));
@@ -163,9 +170,11 @@ impl<'a> Generator<'a> {
         self.begin();
         self.block(&self.program.body)?;
         if !self.ended {
-            self.line("ret i32 0".into());
+            self.line("ret i1 true".into());
         }
-        self.finish("define i32 @main()".into());
+        self.failure_exit();
+        self.finish("define internal i1 @meowy_entry(ptr %panic)".into());
+        self.entry();
         let runtime = [
             "declare void @meowy_write_v1(i32, ptr, i64)",
             "declare void @meowy_int_v1(i32, i64)",
@@ -174,11 +183,18 @@ impl<'a> Generator<'a> {
             "declare void @meowy_bool_v1(i32, i1 zeroext)",
             "declare zeroext i1 @meowy_string_equal_v1(ptr, i64, ptr, i64)",
             "declare i32 @meowy_string_compare_v1(ptr, i64, ptr, i64)",
-            "declare void @meowy_panic_v1() noreturn",
-            "declare void @meowy_panic_site_v1(i64, i64) noreturn",
-            "declare void @meowy_arithmetic_fail_v2(i32, i32, i32, i64, i64, i64, i64) noreturn",
-            "declare void @meowy_index_fail_v1(i64, i64, i32, i64, i64) noreturn",
-            "declare void @meowy_list_full_v1(i64, i64, i64, i64) noreturn",
+            "declare i64 @meowy_cleanup_panic_bytes_v0()",
+            "declare void @meowy_panic_begin_v0(ptr, i32)",
+            "declare void @meowy_panic_copy_v0(ptr, ptr)",
+            "declare void @meowy_panic_text_v0(ptr, ptr, i64)",
+            "declare void @meowy_panic_int_v0(ptr, i64)",
+            "declare void @meowy_panic_bool_v0(ptr, i1 zeroext)",
+            "declare void @meowy_panic_uint_v0(ptr, i64)",
+            "declare void @meowy_panic_float_v0(ptr, double, i32)",
+            "declare void @meowy_panic_site_v0(ptr, i64, i64)",
+            "declare void @meowy_arithmetic_capture_v0(ptr, i32, i32, i32, i64, i64, i64, i64)",
+            "declare void @meowy_index_capture_v0(ptr, i64, i64, i32, i64, i64)",
+            "declare void @meowy_list_capture_v0(ptr, i64, i64, i64, i64)",
         ];
         Ok(format!(
             "target triple = \"x86_64-unknown-linux-gnu\"\n\n{}\n\n{}\n{}\n\n{}\n",
@@ -554,12 +570,20 @@ impl<'a> Generator<'a> {
                     }
                     values.push(format!("{} {result}", ir_type(&arg.ty)));
                 }
-                let value = self.value(format!("call {ty} @meowy_fn_{id}({})", values.join(", ")));
+                let result = self.slot(&expression.ty);
+                values.insert(0, format!("ptr {result}"));
+                values.insert(0, "ptr %panic".into());
+                let success = self.value(format!("call i1 @meowy_fn_{id}({})", values.join(", ")));
+                let next = self.name("returned");
+                self.branch(&success, &next, "panic_exit");
+                self.label(&next);
                 if expression.ty == Type::Never {
                     self.line("unreachable".into());
                     self.ended = true;
+                    Ok("undef".into())
+                } else {
+                    Ok(self.value(format!("load {ty}, ptr {result}")))
                 }
-                Ok(value)
             }
             ExprKind::Print { parts, newline } => {
                 self.print(parts, 1)?;
@@ -569,20 +593,7 @@ impl<'a> Generator<'a> {
                 }
                 Ok("0".into())
             }
-            ExprKind::Panic { parts } => {
-                let prefix = self.string("panic[P006]: ");
-                self.print_value(&Type::String, &prefix, 2)?;
-                self.print(parts, 2)?;
-                if !self.ended {
-                    self.line(format!(
-                        "call void @meowy_panic_site_v1(i64 {}, i64 {})",
-                        expression.span.start, expression.span.end
-                    ));
-                    self.line("unreachable".into());
-                    self.ended = true;
-                }
-                Ok("undef".into())
-            }
+            ExprKind::Panic { parts } => self.panic(parts, expression.span),
             ExprKind::Block(block) => self.block(block),
             ExprKind::Field { value, index } => {
                 let result = self.expression(value)?;

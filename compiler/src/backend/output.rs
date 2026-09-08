@@ -28,19 +28,37 @@ impl<'a> Generator<'a> {
     }
 
     pub(crate) fn print_value(&mut self, ty: &Type, value: &str, fd: i32) -> Result<(), String> {
+        self.output_value(ty, value, fd, None)
+    }
+
+    pub(crate) fn output_value(
+        &mut self,
+        ty: &Type,
+        value: &str,
+        fd: i32,
+        panic: Option<&str>,
+    ) -> Result<(), String> {
+        let sink = panic
+            .map(|ptr| format!("ptr {ptr}"))
+            .unwrap_or_else(|| format!("i32 {fd}"));
         match ty {
             Type::Null => {
                 let value = self.string("null");
-                self.print_value(&Type::String, &value, fd)?;
+                self.output_value(&Type::String, &value, fd, panic)?;
             }
             Type::Never => return Err("cannot print a never value".into()),
             Type::Reference(_) | Type::Exclusive(_) => {
                 return Err("shared-reference formatting is unavailable".into());
             }
             Type::List { .. } => return Err("list formatting is unavailable".into()),
-            Type::Bool => self.line(format!(
-                "call void @meowy_bool_v1(i32 {fd}, i1 zeroext {value})"
-            )),
+            Type::Bool => {
+                let name = if panic.is_some() {
+                    "meowy_panic_bool_v0"
+                } else {
+                    "meowy_bool_v1"
+                };
+                self.line(format!("call void @{name}({sink}, i1 zeroext {value})"));
+            }
             Type::Int { bits, signed } => {
                 let value = if *bits < 64 {
                     self.value(format!(
@@ -51,7 +69,12 @@ impl<'a> Generator<'a> {
                     value.to_owned()
                 };
                 let name = if *signed { "int" } else { "uint" };
-                self.line(format!("call void @meowy_{name}_v1(i32 {fd}, i64 {value})"));
+                let name = if panic.is_some() {
+                    format!("meowy_panic_{name}_v0")
+                } else {
+                    format!("meowy_{name}_v1")
+                };
+                self.line(format!("call void @{name}({sink}, i64 {value})"));
             }
             Type::Float { bits } => {
                 let value = if *bits == 32 {
@@ -59,25 +82,35 @@ impl<'a> Generator<'a> {
                 } else {
                     value.to_owned()
                 };
+                let name = if panic.is_some() {
+                    "meowy_panic_float_v0"
+                } else {
+                    "meowy_float_v1"
+                };
                 self.line(format!(
-                    "call void @meowy_float_v1(i32 {fd}, double {value}, i32 {bits})"
+                    "call void @{name}({sink}, double {value}, i32 {bits})"
                 ));
             }
             Type::String => {
                 let pointer = self.value(format!("extractvalue {{ ptr, i64 }} {value}, 0"));
                 let size = self.value(format!("extractvalue {{ ptr, i64 }} {value}, 1"));
+                let name = if panic.is_some() {
+                    "meowy_panic_text_v0"
+                } else {
+                    "meowy_write_v1"
+                };
                 self.line(format!(
-                    "call void @meowy_write_v1(i32 {fd}, ptr {pointer}, i64 {size})"
+                    "call void @{name}({sink}, ptr {pointer}, i64 {size})"
                 ));
             }
             Type::Record { primary, .. } => {
                 let value = self.value(format!("extractvalue {} {value}, 0", ir_type(ty)));
-                self.print_value(primary, &value, fd)?;
+                self.output_value(primary, &value, fd, panic)?;
             }
             Type::Union(_) => {
                 self.union_cases(ty, value, |this, member, ptr| {
                     let value = this.value(format!("load {}, ptr {ptr}", ir_type(member)));
-                    this.print_value(member, &value, fd)
+                    this.output_value(member, &value, fd, panic)
                 })?;
             }
         }

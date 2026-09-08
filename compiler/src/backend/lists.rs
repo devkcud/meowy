@@ -159,7 +159,7 @@ impl<'a> Generator<'a> {
         self.list_guard(
             &invalid,
             format!(
-                "call void @meowy_index_fail_v1(i64 {position}, i64 {length}, i32 {}, i64 {}, i64 {})",
+                "call void @meowy_index_capture_v0(ptr %panic, i64 {position}, i64 {length}, i32 {}, i64 {}, i64 {})",
                 i32::from(signed), span.start, span.end
             ),
         );
@@ -191,7 +191,7 @@ impl<'a> Generator<'a> {
         self.list_guard(
             &full,
             format!(
-                "call void @meowy_list_full_v1(i64 {length}, i64 {capacity}, i64 {}, i64 {})",
+                "call void @meowy_list_capture_v0(ptr %panic, i64 {length}, i64 {capacity}, i64 {}, i64 {})",
                 span.start, span.end
             ),
         );
@@ -208,7 +208,7 @@ impl<'a> Generator<'a> {
         self.branch(invalid, &fail, &next);
         self.label(&fail);
         self.line(call);
-        self.line("unreachable".into());
+        self.jump("panic_exit");
         self.label(&next);
     }
 

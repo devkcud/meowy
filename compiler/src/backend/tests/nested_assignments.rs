@@ -443,7 +443,7 @@ pub(crate) fn nested_assignment_leaves_skip_remaining_indices_rhs_and_stores() {
             assert_eq!(
                 emit_ir(&program)
                     .unwrap()
-                    .matches("call void @meowy_index_fail_v1")
+                    .matches("call void @meowy_index_capture_v0")
                     .count(),
                 leave
             );

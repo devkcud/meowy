@@ -11,34 +11,28 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Owning-HIR design](compiler/OWNING_HIR.md) selects `strings.Owned` and defines
-  initialized state, retained emissions and cleanup schedules. Source enablement
-  first needs owning panic propagation, dynamic string-view origins and foundational
-  types. Repeated ancestor writes need bounded cleanup-entry reclamation.
-  Repository contract checks pass: 16 tooling tests, 957 links, catalog and schemas.
-  No compiler behavior changed or execution suites rerun.
-
-- Added private generated payload descriptors, explicit Owned initialization and
-  atomic relocation across cleanup frames (`4df0e44`; LLVM proof `6d2d2b0`;
-  contract `161543e`). Destination compatibility and cleanup
-  slots are preflighted; failure retains the source and successful transfer arms the
-  destination before disarming the old obligation.
-- Generated callbacks preserve self-pointer relocation, exactly-once release and the
-  enclosing panic cause. Static descriptor and caller-owned storage lifetimes remain
-  explicit. Normal Meowy code generation still has no automatic owning-value cleanup.
-- Prior combined validation passed all fourteen checks: 789 Rust (361 library, 428 native), 35 Python,
-  48 debug/release examples, Vim/Neovim, 940 links, formatting, Clippy, build and
-  schema/catalog checks. Runtime passes 92 case groups per debug/release/sanitized
-  profile plus required fatal/guard/admission/fiber probes.
-- Seven new native ownership groups and two LLVM groups pass. A generated relocation
-  ELF imports only libc.so.6. Conformance still has 13 unsupported cases; private ABI
-  proof does not qualify automatic cancellation, DWARF, minimum hosts or release.
+- [Scalar panic outcomes](compiler/PANIC_OUTCOMES.md) now propagate owning snapshots
+  across generated calls. Results are written only on success; failed calls skip
+  remaining arguments and caller effects. Nested/abandoned panic messages preserve
+  the existing streamed diagnostic bytes and original failure.
+- Runtime snapshots support bounded streamed capture (`ef935da`). Five new native
+  LLVM groups prove returned P001/P002/P003/P006 cleanup, original-cause P008,
+  independent copied evidence, UTF-8 truncation and result publication. Source
+  recursion and all existing scalar/reference/list behavior pass in debug/release.
+- All fourteen combined checks pass: 795 Rust (366 library, 429 native), 35 Python,
+  48 debug/release examples, both editors, formatting, Clippy, build and contracts.
+  Runtime passes 93 groups per debug/release/sanitized profile plus required fatal,
+  guard, admission and fiber probes. A generated outcome ELF imports only libc.so.6.
+- Conformance remains 10 passed, 13 unsupported, 0 failed. Automatic resource cleanup,
+  source recovery, cancellation, DWARF and full release qualification remain open.
+  The [owning-HIR design](compiler/OWNING_HIR.md) keeps strings.Owned gated until its
+  foundational types, allocation failures, origins and drop schedules are implemented.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Scalar ownership, generated bridge and owning-HIR design | Owning panic propagation, then bounded resource cleanup |
+| Compiler | Scalar ownership, generated bridge and explicit panic outcomes | Foundational owner types and bounded cleanup schedules |
 | Runtime | Generated payload relocation, cleanup and bounded task prototypes | Task-close progress, cancellation and DWARF |
 | Standard library | Foundational compiler intrinsics only | Concrete module loading and first Meowy library layer |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -48,12 +42,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Implement owning panic outcomes and explicit synchronous failure propagation
-   across scalar calls, following [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md).
-   Prove diagnostic/effect preservation and original-cause cleanup in debug/release.
-   Then add foundational identities, typed allocation failure and string-view origins
-   before enabling bounded strings.Owned cleanup. Keep task-close progress,
-   cancellation and pinned unwinding separate until their contracts are proved.
+1. Establish resolved foundational item/type identities for memory/strings, typed
+   allocation failure and the static heap allocator contract, following
+   [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md). Prove constructor failure and
+   exactly-once release in the private ABI before enabling strings.Owned source.
+   Add dynamic string-view origins and bounded ownership/drop schedules, retaining
+   the new synchronous panic outcome tests. Keep task close/cancellation and pinned
+   unwinding separate until their contracts are proved.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

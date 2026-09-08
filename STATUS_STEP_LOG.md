@@ -6,6 +6,78 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Scalar panic outcome combined validation complete
+
+- All fourteen combined checks pass: 795 Rust (366 library, 429 native), 35 Python,
+  48 debug/release examples, both editors, 963 links in 96 Markdown files, formatting,
+  Clippy, build, schemas/identities and catalog. Conformance: 10 passed, 13 unsupported.
+- Runtime passes 93 groups/profile in debug/release/ASan/UBSan/LSan plus required
+  exact fatal/admission/guard/fiber probes. Approved process access resolves the
+  initial LSan ptrace limitation; no skipped checks or remaining failures.
+- Five new LLVM-native groups exercise actual source outcomes with caller cleanup:
+  LIFO, original-cause P008, copied snapshots, failed-result nonpublication, abandoned
+  messages and bounded UTF-8 evidence. New recursive source case passes both profiles.
+- A generated nested-call failure ELF prints exact P002, exits 1 and skips caller
+  effects; retained LLVM has explicit failure edges. readelf imports only libc.so.6.
+- Final handoff link check passes 965 local links in 96 Markdown files; Git
+  whitespace checks pass. Runtime snapshot support committed as ef935da.
+  Next: foundational identities,
+  typed allocation failure/static heap contracts, then owner/view origins and
+  bounded drop schedules. No source owning type, automatic cleanup or release claim.
+
+### 2026-09-07 — Scalar outcome source acceptance and contract
+
+- The recursive fixture now uses explicit named Leave after its base-case emission;
+  the checker's E205 rejection of independent guarded emissions was correct. Its
+  debug/release run passes and skips pending arguments and caller effects.
+- Added result-storage/boolean-outcome checks and primitive/union/primary message
+  capture. Documented private scalar call/capture ABI in compiler/PANIC_OUTCOMES.md,
+  updated owning-HIR prerequisites and the cleanup bridge integration boundary.
+- Full combined repository gate is running with approved sanitizer process access.
+  No source resource or automatic cleanup frame has been enabled. Next: finish the
+  combined gate, inspect generated linkage, update handoff and commit cohesive changes.
+
+### 2026-09-07 — Panic outcome and runtime proofs
+
+- Backend suite passes 66 groups after updating stale call-symbol assertions.
+  New generated probes pass: returned P001/P002/P003/P006 snapshots drive LIFO
+  cleanup and exact original-cause P008; copied snapshots survive source reset;
+  abandoned outer panic messages preserve complete-cause cleanup; UTF-8 truncation
+  retains full stderr and bounded independent evidence.
+- Runtime passes debug/release/sanitized, seven diagnostic groups and all other
+  cleanup/ownership/context/scheduler probes. Initial sanitizer run failed only
+  because LeakSanitizer cannot inspect through sandbox ptrace; approved rerun passed.
+- Additional result-publication and scalar-format probes pass. One new recursive
+  source test initially emitted into inner blocks rather than its function; fixed
+  the test's emission targets. Focused panic rerun and combined gate are next.
+
+### 2026-09-07 — Explicit panic capture and call lowering implemented
+
+- Generated functions now return i1 success and write results only on success;
+  failures branch to a shared function exit carrying caller-owned Panic storage.
+  Main maps the entry outcome to exit 0/1. Nested explicit panic messages own
+  pending snapshots, copied only after their full message/site completes.
+- Runtime capture reuses formatting and bounded Panic append, preserving original
+  streamed bytes while retaining independent UTF-8/truncation evidence for cleanup.
+- Initial backend run: 64 passed, two failed solely because IR assertions expected
+  the replaced index-failure symbol. Updated those checks and related negative IR
+  assertions to the new capture call; execution passed for the other groups.
+- Next: exercise chunk boundaries, native call/cleanup outcomes and P008, rerun
+  focused suites, then combined validation. Automatic owner cleanup remains absent.
+
+### 2026-09-07 — Scalar panic outcome investigation
+
+- Scalar failures currently terminate inside runtime helpers; direct function calls
+  return values without an outcome. Use a caller-owned Panic plus i1 success and
+  result storage, with one explicit failure exit per generated function/entry.
+- Preserve streamed diagnostic bytes and nested interpolation effects. Each explicit
+  panic needs a separate pending snapshot until its message finishes; nested failure
+  replaces the outcome without publishing an incomplete outer panic.
+- Reuse the runtime Panic snapshot and add bounded append for streamed capture;
+  arithmetic/index/capacity helpers will capture and return rather than terminate.
+- Validation: source/contract inspection; no behavior edits yet. Next: implement
+  capture and call propagation, native failure/cleanup proof, then combined checks.
+
 ### 2026-09-07 — Owning HIR design validation complete
 
 - Repository contract gate passes all four checks: 16 tooling tests, 957 local
