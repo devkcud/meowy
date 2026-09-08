@@ -600,11 +600,11 @@ impl Checker {
         })
     }
 
-    pub(crate) fn list_formattable(ty: &Type) -> bool {
+    pub(crate) fn value_formattable(ty: &Type) -> bool {
         match ty {
-            Type::List { .. } => false,
-            Type::Record { primary, .. } => Self::list_formattable(primary),
-            Type::Union(members) => members.iter().all(Self::list_formattable),
+            Type::List { .. } | Type::Foundation(_) => false,
+            Type::Record { primary, .. } => Self::value_formattable(primary),
+            Type::Union(members) => members.iter().all(Self::value_formattable),
             _ => true,
         }
     }

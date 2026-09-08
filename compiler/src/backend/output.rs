@@ -46,6 +46,7 @@ impl<'a> Generator<'a> {
                 let value = self.string("null");
                 self.output_value(&Type::String, &value, fd, panic)?;
             }
+            Type::Foundation(_) => return Err("foundation value formatting is unavailable".into()),
             Type::Never => return Err("cannot print a never value".into()),
             Type::Reference(_) | Type::Exclusive(_) => {
                 return Err("shared-reference formatting is unavailable".into());

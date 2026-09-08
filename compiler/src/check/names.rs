@@ -99,7 +99,7 @@ impl Checker {
                     }
                     if let Value::Module(module) = self.value(module, expr.span)? {
                         if let Some(Item::Type(ty)) = module.item(member) {
-                            return Ok(Spec::Foundation(ty));
+                            return Ok(Spec::Data(Type::Foundation(ty)));
                         }
                         if module.partial() {
                             return Err(Diagnostic::unsupported(
@@ -182,7 +182,7 @@ impl Checker {
             }
             TypeKind::Computed(value) => {
                 if let Some(Value::Foundation(Item::Type(ty))) = self.symbol(value)? {
-                    Ok(Spec::Foundation(ty))
+                    Ok(Spec::Data(Type::Foundation(ty)))
                 } else {
                     Ok(Spec::Data(self.type_value(value)?))
                 }
@@ -216,11 +216,11 @@ impl Checker {
 
     pub(crate) fn ty(&mut self, expr: &ast::TypeExpr) -> Result<Type> {
         match self.spec(expr)? {
-            Spec::Data(ty) => Ok(ty),
-            Spec::Foundation(ty) => Err(Diagnostic::unsupported(
-                format!("storage for `{}`", ty.name()),
+            Spec::Data(ty) if ty.has_drop() => Err(Diagnostic::unsupported(
+                "storage requiring owning cleanup schedules",
                 expr.span,
             )),
+            Spec::Data(ty) => Ok(ty),
             Spec::Function { .. } => Err(Diagnostic::unsupported(
                 "stored function pointers",
                 expr.span,

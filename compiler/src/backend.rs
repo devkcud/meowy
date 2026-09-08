@@ -5,7 +5,7 @@ mod output;
 mod panic;
 mod storage;
 
-use crate::hir::{Block, BlockId, Expr, ExprKind, Program, Stmt, Type};
+use crate::hir::{Block, BlockId, Expr, ExprKind, FoundationType, Program, Stmt, Type};
 use std::collections::{BTreeSet, HashMap};
 use std::ffi::c_char;
 use std::path::Path;
@@ -68,6 +68,9 @@ pub(crate) fn ir_type(ty: &Type) -> String {
         Type::Float { bits: 32 } => "float".into(),
         Type::Float { .. } => "double".into(),
         Type::String => "{ ptr, i64 }".into(),
+        Type::Foundation(FoundationType::Allocator) => "ptr".into(),
+        Type::Foundation(FoundationType::AllocationFailure) => "{ i32, i64, i64 }".into(),
+        Type::Foundation(FoundationType::OwnedString) => "{ ptr, ptr, i64 }".into(),
         Type::List { element, capacity } => {
             format!("{{ i64, [{capacity} x {}] }}", ir_type(element))
         }
@@ -134,6 +137,15 @@ impl<'a> Generator<'a> {
     }
 
     pub(crate) fn generate(mut self) -> Result<String, String> {
+        if self.program.locals.iter().any(Type::has_drop)
+            || self
+                .program
+                .functions
+                .iter()
+                .any(|function| function.result.has_drop())
+        {
+            return Err("owning storage requires cleanup schedules".into());
+        }
         for function in &self.program.functions {
             self.begin();
             let mut params: Vec<String> = function
@@ -176,6 +188,7 @@ impl<'a> Generator<'a> {
         self.finish("define internal i1 @meowy_entry(ptr %panic)".into());
         self.entry();
         let runtime = [
+            "declare ptr @meowy_string_heap_v0()",
             "declare void @meowy_write_v1(i32, ptr, i64)",
             "declare void @meowy_int_v1(i32, i64)",
             "declare void @meowy_uint_v1(i32, i64)",
@@ -270,6 +283,9 @@ impl<'a> Generator<'a> {
     }
 
     pub(crate) fn block(&mut self, block: &Block) -> Result<String, String> {
+        if block.ty.has_drop() {
+            return Err("owning block requires cleanup schedules".into());
+        }
         let start = self.name("block");
         let end = self.name("end");
         let slot = self.slot(&block.ty);
@@ -457,6 +473,9 @@ impl<'a> Generator<'a> {
     }
 
     pub(crate) fn expression(&mut self, expression: &Expr) -> Result<String, String> {
+        if expression.ty.has_drop() {
+            return Err("owning value requires cleanup schedules".into());
+        }
         let ty = ir_type(&expression.ty);
         match &expression.kind {
             ExprKind::Null => Ok("0".into()),
@@ -471,6 +490,7 @@ impl<'a> Generator<'a> {
                 Ok(format!("0x{:016X}", value.to_bits()))
             }
             ExprKind::String(value) => Ok(self.string(value)),
+            ExprKind::Heap => Ok(self.value("call ptr @meowy_string_heap_v0()".into())),
             ExprKind::List { values, list } => self.list(values, list),
             ExprKind::ListSize(value) => {
                 let result = self.expression(value)?;

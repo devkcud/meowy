@@ -61,7 +61,6 @@ pub(crate) enum Value {
 #[derive(Clone)]
 pub(crate) enum Spec {
     Data(Type),
-    Foundation(hir::FoundationType),
     Function { params: Vec<Type>, result: Type },
 }
 
@@ -129,6 +128,17 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
             checker.proofs.conditions = checker.guards;
             checker.proofs.tags = checker.tags;
             for function in &program.functions {
+                if function.result.has_allocator_value()
+                    && function
+                        .params
+                        .iter()
+                        .any(|id| program.locals[*id].has_reference())
+                {
+                    return Err(vec![Diagnostic::unsupported(
+                        "allocator return bounds from borrow-carrying inputs",
+                        Span::default(),
+                    )]);
+                }
                 if (function.result.has_exclusive()
                     || function
                         .params

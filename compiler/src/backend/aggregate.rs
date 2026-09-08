@@ -246,6 +246,7 @@ impl<'a> Generator<'a> {
         match ty {
             Type::Null => Ok("true".into()),
             Type::Never => Err("cannot compare a never value".into()),
+            Type::Foundation(_) => Err("foundation values have no ordinary equality".into()),
             Type::Bool | Type::Int { .. } | Type::Reference(_) | Type::Exclusive(_) => {
                 Ok(self.value(format!("icmp eq {} {left}, {right}", ir_type(ty))))
             }

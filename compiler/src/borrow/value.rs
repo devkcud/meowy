@@ -291,7 +291,8 @@ impl Checker<'_> {
             | ExprKind::Bool(_)
             | ExprKind::Int(_)
             | ExprKind::Float(_)
-            | ExprKind::String(_) => State::default(),
+            | ExprKind::String(_)
+            | ExprKind::Heap => State::default(),
         };
         let assumptions = self.assumptions();
         let proof = self.guards.and(state.proof, assumptions);

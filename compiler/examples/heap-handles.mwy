@@ -1,0 +1,19 @@
+memory : @"memory"
+debug : @"debug"
+
+copy <memory.Allocator> : (handle <memory.Allocator>) {
+    -> handle
+}
+
+first : memory.heap
+second : copy(first)
+debug.print(&first == &second)
+
+handles := [first, second]
+index := 1
+view : &handles[index]
+selected : *view
+handles[index] = memory.heap
+
+| selected <memory.Allocator> | debug.print("heap")
+debug.print(handles.size())

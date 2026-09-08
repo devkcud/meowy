@@ -3,6 +3,10 @@ use super::Case;
 #[test]
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
+        (
+            include_str!("../../examples/heap-handles.mwy"),
+            "false\nheap\n2\n",
+        ),
         (include_str!("../../examples/hello.mwy"), "Hello, meowy!\n"),
         (
             include_str!("../../examples/exclusive-indexed-fields.mwy"),

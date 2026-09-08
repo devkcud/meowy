@@ -65,7 +65,12 @@ impl Checker {
                     return Ok(Vec::new());
                 }
                 if let Some(symbol) = self.symbol(value)?
-                    && !matches!(symbol, Value::Local { .. } | Value::Constant(_))
+                    && !matches!(
+                        symbol,
+                        Value::Local { .. }
+                            | Value::Constant(_)
+                            | Value::Foundation(crate::foundation::Item::Heap)
+                    )
                 {
                     if *mutable || ty.is_some() {
                         return Err(Diagnostic::unsupported(

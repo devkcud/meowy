@@ -4,6 +4,7 @@ mod assignments;
 mod bridge;
 mod emitted_borrows;
 mod fields;
+mod foundation;
 mod generated_cleanup;
 mod generated_owned;
 mod generated_strings;

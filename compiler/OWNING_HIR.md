@@ -1,7 +1,7 @@
 # Owning HIR and cleanup schedules
 
-This is an implementation design, not an enabled compiler feature. The current
-HIR has no resource destructor. The [private bridge](../runtime/GENERATED_CLEANUP.md)
+This is an implementation design, not an enabled compiler feature. The
+HIR describes nominal resource layouts but emits no automatic resource destructor. The [private bridge](../runtime/GENERATED_CLEANUP.md)
 proves relocation and destruction through generated LLVM callbacks; it does not
 yet connect source ownership to cleanup. This design guides the ownership
 stage of [COMPILER.md](../COMPILER.md#the-pipeline).
@@ -208,8 +208,9 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
 2. Implemented prerequisites: [foundational identities](FOUNDATION.md) and the
    [private string ABI](../runtime/STRINGS.md) with static heap, typed native
    allocation failure, deterministic failure tests and allocation/release counting.
-   Source-level nominal failure storage is still pending. Keep source construction
-   gated until ownership and exit acceptance passes.
+   [Nominal failure transport and static heap values](FOUNDATION.md) are now lowerable;
+   failure construction and allocator-return bounds remain pending. Keep source
+   construction gated until ownership and exit acceptance passes.
 3. Add resource/view origins and an explicit bounded storage/cleanup plan at the
    HIR checking boundary. Cover live/moved/conditional states, actual initialization
    order, alias identity, discarded emissions and reservation bounds. Reject live
@@ -227,4 +228,4 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
 
 The owner schedules above remain a design. Scalar panic propagation is implemented
 and independently tested; it does not validate automatic resource destruction.
-No lowerable owning source type, syntax, dependency or reference fixture was added.
+Owning source storage remains gated; no syntax, dependency or reference fixture was added.

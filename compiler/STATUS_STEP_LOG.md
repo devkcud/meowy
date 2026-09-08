@@ -6,6 +6,80 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Nominal foundation values combined validation complete
+
+- All fourteen combined checks pass: 808 Rust (377 library, 431 native), 35 Python,
+  49 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 981 links at gate time. Conformance stays 10 passed, 13 unsupported, 0 failed.
+- Runtime rerun passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus exact
+  fatal/admission/guard/fiber probes. No runtime source changes or skipped checks.
+- Native layout proof matches the actual owned-string descriptor; injected failure
+  facts survive shared borrowing, full-width calls and nullable results. Heap source
+  proof covers local/reference identities, returned cell references, list mutation,
+  records and unions. Unscheduled backend owners and unsupported public allocator
+  return bounds reject explicitly; no owning source construction is enabled.
+- Built heap-handles.mwy in both profiles: exact false/heap/2 output and static heap
+  calls in retained LLVM; both ELF NEEDED lists contain only libc.so.6.
+- Final handoff verification passes 978 local links in 98 Markdown files and Git
+  whitespace checks. Next: dynamic allocator/string-view origins, conservative return bounds and bounded
+  drop schedules; then source failure APIs and owning constructors. Preserve the
+  new Copy/drop/equality and native transport evidence. Full release stays incomplete.
+
+### 2026-09-08 — Nominal foundation contract and example
+
+- Added heap-handles.mwy to debug/release examples and updated FOUNDATION.md with
+  nominal layouts, Copy/drop/equality distinctions, static heap provenance and the
+  allocator-return-bound gate. AllocationFailure transport is not error construction.
+- Added nullable/empty-container equality boundaries and preservation of scalar
+  primary projection; native coverage includes returning references to handle cells.
+- Documentation check found an incorrect operator-heading anchor; fixed it to the
+  existing ordinary-operator-domains heading. No reference contract was changed.
+- Next: run all repository/compiler/runtime checks, verify the actual generated heap
+  artifact and record final validation before committing this compiler feature.
+
+### 2026-09-08 — Foundation native layout and capability proof
+
+- Native probes validate foundation layouts against the private string descriptor
+  and carry injected failure facts through real source functions, shared borrows
+  and nullable unions without changing any payload field. Backend rejects owners
+  lacking schedules while exclusive references remain non-destructible.
+- Heap source execution covers separate handle cells, shared element borrows,
+  copies, calls, indexed replacement, records and nullable branches. Initial fixture
+  used an ascription as a boolean; corrected it to predicate matcher syntax.
+- Functions returning allocator values from borrow-carrying inputs now remain B001
+  until conservative public return bounds exist; only static-producing paths and
+  value-only allocator signatures are enabled. Added boundary proof and a heap example.
+- Next: update the foundation contract/handoff, run the combined gate and inspect
+  a generated heap-handle ELF. Dynamic origins and owning drops remain unimplemented.
+
+### 2026-09-07 — Nominal foundation types and heap values implemented
+
+- Foundation types now have nominal HIR identity and target layouts. Copyability,
+  destruction and ordinary equality are separate queries; opaque values do not gain
+  equality through records/lists/unions. Owner storage stays B001 at checking and
+  unscheduled owner values/storage/results reject at the backend boundary.
+- memory.heap now lowers as a static allocator value with ordinary local copies,
+  assignments and calls. References to handle cells retain existing E302/E303 rules;
+  only static heap provenance can currently enter source programs.
+- Six focused checker groups and the existing foundation native group pass. No
+  compiler check failures; new native layout/transport and value-shape tests next.
+  Source string construction, dynamic allocator/view origins and drops remain gated.
+
+### 2026-09-07 — Lowerable foundation type investigation
+
+- Promote FoundationType into nominal HIR types/layouts. Allocator and the scalar
+  AllocationFailure payload are Copy; OwnedString needs destruction and remains
+  source-gated until drop schedules exist. Add a separate destruction query rather
+  than equating non-Copy exclusive references with destructible resources.
+- Enable the static heap handle as an ordinary value with local storage/copy/call
+  behavior. It is the only allocator-producing source path; custom allocator/state
+  lifetime support remains gated. References to handle cells use existing loan rules.
+- AllocationFailure has no ordinary equality and is not descriptor-compatible,
+  despite being Copy. Preserve nominal identity and private fields; no source
+  constructor/error erasure is introduced by transport/layout support.
+- Validation: source/contract inspection only. Next: implement type/layout/value
+  lowering and gates, then native transport, borrower boundaries and compiler checks.
+
 ### 2026-09-07 — Foundation and owned-string combined validation complete
 
 - All fourteen combined checks pass: 800 Rust (370 library, 430 native), 35 Python,

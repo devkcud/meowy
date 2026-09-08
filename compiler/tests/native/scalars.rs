@@ -98,3 +98,46 @@ pub fn foundation_declarations_preserve_aliases_and_ordinary_shadowing() {
         assert!(output.stderr.is_empty());
     }
 }
+
+#[test]
+pub fn heap_handles_copy_through_storage_calls_records_lists_and_unions() {
+    let source = r#"
+m:@"memory"
+d:@"debug"
+pass<m.Allocator>:(value<m.Allocator>){->value}
+cell<&m.Allocator>:(value<&m.Allocator>){->value}
+maybe<m.Allocator><null>:(keep<boolean>){|keep|->m.heap}
+a<m.Allocator>:m.heap
+b:a
+|a<m.Allocator>|d.print(true)
+d.print(&a==&b)
+d.print(&a==&a)
+d.print(cell(&a)==&a)
+items:=[a,b]
+i:=1
+items[i]=m.heap
+d.print(items.size())
+view:&items[i]
+copy:pass(*view)
+record:{->handle:copy}
+|record.handle<m.Allocator>|d.print(true)
+present:maybe(true)
+|present<m.Allocator>|d.print(true)
+absent:maybe(false)
+|absent<null>|d.print(true)
+"#;
+    let case = Case::new(source);
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            output.stdout,
+            b"true\nfalse\ntrue\ntrue\n2\ntrue\ntrue\ntrue\n"
+        );
+        assert!(output.stderr.is_empty());
+    }
+}

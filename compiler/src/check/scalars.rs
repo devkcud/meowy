@@ -276,7 +276,7 @@ impl Checker {
                 left.ty,
                 Type::Int { .. } | Type::Float { .. } | Type::String
             ),
-            "==" | "!=" => true,
+            "==" | "!=" => left.ty.has_equality(),
             _ => false,
         };
         if !valid && !diverges {

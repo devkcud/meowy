@@ -16,12 +16,9 @@ pub(crate) fn foundation_storage_and_construction_stay_gated() {
     for source in [
         r#"m:@"memory";s:@"strings";s.copy("text",m.heap)"#,
         r#"s:@"strings";<S>:<s.Owned>;f<S>:(){->null}"#,
-        r#"m:@"memory";heap<m.Allocator>:m.heap"#,
-        r#"m:@"memory";<E>:<m.AllocationFailure>;f:(e<E>){->e}"#,
         r#"s:@"strings";<S>:<s.Owned>;x<&S>:null"#,
         r#"s:@"strings";x:null;found:x<s.Owned>"#,
         r#"s:@"strings";copy:=s.copy"#,
-        r#"m:@"memory";m.heap"#,
     ] {
         rejects(source, "B001");
     }
@@ -37,4 +34,70 @@ pub(crate) fn module_shadowing_does_not_forge_foundational_identities() {
     rejects(r#"s:{->copy:1};s.copy("text")"#, "B001");
     rejects(r#"m:@"memory";{m:@"debug";<Bad>:<m.Allocator>}"#, "E202");
     rejects(r#"s:@"unavailable""#, "B001");
+}
+
+#[test]
+pub(crate) fn nominal_copy_values_allow_storage_without_resource_construction() {
+    for source in [
+        r#"m:@"memory";heap<m.Allocator>:m.heap;copy:heap;mutable:=copy;mutable=m.heap"#,
+        r#"m:@"memory";<E>:<m.AllocationFailure>;f<E>:(e<E>){->e}"#,
+        r#"m:@"memory";f<m.Allocator>:(a<m.Allocator>){->a};result:f(m.heap)"#,
+        r#"m:@"memory";f<m.AllocationFailure><null>:(e<m.AllocationFailure>){->e}"#,
+        r#"m:@"memory";values<m.AllocationFailure[0]>:[]"#,
+        r#"m:@"memory";a:m.heap;b:a;view:&a;copy:*view"#,
+    ] {
+        accepts(source);
+    }
+}
+
+#[test]
+pub(crate) fn nominal_values_do_not_gain_record_construction_equality_or_fields() {
+    for source in [
+        r#"m:@"memory";a<m.Allocator>:{->value:1}"#,
+        r#"m:@"memory";e<m.AllocationFailure>:{->cause:1;->bytes:5;->alignment:1}"#,
+        r#"m:@"memory";f<m.Allocator>:(e<m.AllocationFailure>){->e}"#,
+    ] {
+        rejects(source, "E207");
+    }
+    for source in [
+        r#"m:@"memory";a:m.heap;b:m.heap;same:a==b"#,
+        r#"m:@"memory";f<boolean>:(a<m.AllocationFailure>,b<m.AllocationFailure>){->a==b}"#,
+        r#"m:@"memory";a:{->slot:m.heap};same:a==a"#,
+        r#"m:@"memory";a:[m.heap];same:a==a"#,
+        r#"m:@"memory";e<m.AllocationFailure><null>:null;same:e==e"#,
+        r#"m:@"memory";e<m.AllocationFailure[0]>:[];same:e==e"#,
+    ] {
+        rejects(source, "E222");
+    }
+    accepts(r#"m:@"memory";r:{->slot:m.heap;->5};same:r==5"#);
+    rejects(
+        r#"m:@"memory";f:(e<m.AllocationFailure>){->e.bytes}"#,
+        "E201",
+    );
+    rejects(r#"m:@"memory";d:@"debug";d.print(m.heap)"#, "B001");
+    rejects(
+        r#"m:@"memory";d:@"debug";f:(e<m.AllocationFailure>){d.print(e)}"#,
+        "B001",
+    );
+}
+
+#[test]
+pub(crate) fn allocator_cell_borrows_keep_local_lifetimes_and_conflicts() {
+    rejects(r#"m:@"memory";f<&m.Allocator>:(){a:m.heap;->&a}"#, "E303");
+    rejects(
+        r#"m:@"memory";a:=m.heap;view:&a;a=m.heap;copy:*view"#,
+        "E302",
+    );
+    accepts(r#"m:@"memory";a:=m.heap;view:&a;copy:*view;a=m.heap"#);
+}
+
+#[test]
+pub(crate) fn allocator_results_with_borrow_inputs_wait_for_lifetime_bounds() {
+    for source in [
+        r#"m:@"memory";f<m.Allocator>:(view<&int32>){->m.heap}"#,
+        r#"m:@"memory";f<m.Allocator>:(cell<&m.Allocator>){->*cell}"#,
+        r#"m:@"memory";f: (view<&int32>){->slot:m.heap}"#,
+    ] {
+        rejects(source, "B001");
+    }
 }

@@ -109,6 +109,13 @@ impl Checker {
             | ExprKind::Import(_)
             | ExprKind::TypeValue(_)
             | ExprKind::TypeQuery(_) => match self.symbol(expr)?.expect("symbol") {
+                Value::Foundation(crate::foundation::Item::Heap) => {
+                    return Ok(hir::Expr {
+                        kind: hir::ExprKind::Heap,
+                        ty: Type::Foundation(hir::FoundationType::Allocator),
+                        span: expr.span,
+                    });
+                }
                 Value::Foundation(item) => {
                     return Err(Diagnostic::unsupported(
                         format!("runtime use of `{}`", item.name()),
@@ -251,6 +258,11 @@ impl Checker {
             ExprKind::Field { value, name } => {
                 if let Some(symbol) = self.symbol(expr)? {
                     return match symbol {
+                        Value::Foundation(crate::foundation::Item::Heap) => Ok(hir::Expr {
+                            kind: hir::ExprKind::Heap,
+                            ty: Type::Foundation(hir::FoundationType::Allocator),
+                            span: expr.span,
+                        }),
                         Value::Foundation(item) => Err(Diagnostic::unsupported(
                             format!("runtime use of `{}`", item.name()),
                             expr.span,
@@ -373,6 +385,14 @@ impl Checker {
     }
 
     pub(crate) fn hint(&mut self, expr: &ast::Expr) -> Option<Type> {
+        if matches!(expr.kind, ExprKind::Name(_) | ExprKind::Field { .. })
+            && matches!(
+                self.symbol(expr).ok().flatten(),
+                Some(Value::Foundation(crate::foundation::Item::Heap))
+            )
+        {
+            return Some(Type::Foundation(hir::FoundationType::Allocator));
+        }
         match &expr.kind {
             ExprKind::List(values) => self.list_hint(values),
             ExprKind::Index { value, .. } => {
@@ -472,9 +492,9 @@ impl Checker {
                         expr.span,
                     ));
                 }
-                if !Self::list_formattable(&value.ty) {
+                if !Self::value_formattable(&value.ty) {
                     return Err(Diagnostic::unsupported(
-                        "bounded-list formatting",
+                        "bounded-list or foundation value formatting",
                         expr.span,
                     ));
                 }

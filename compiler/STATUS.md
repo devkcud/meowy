@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Foundation identities and private owned strings verified.
+Updated: 2026-09-08. Nominal foundation layouts and static heap values verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,38 +40,35 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Foundation identities](FOUNDATION.md) resolve core/debug/memory/strings through
-explicit module IDs. Allocator/AllocationFailure/Owned retain distinct nominal
-identities in type aliases, including computed aliases of item types. heap/copy
-item aliases preserve identity and lexical shadowing. These identities are separate
-from lowerable HIR types; runtime storage/calls remain B001. Unmodeled partial
-module members also remain B001 rather than false E201/E202 language rejections.
+[Foundation values](FOUNDATION.md) now use nominal HIR types for Allocator,
+AllocationFailure and OwnedString. Layouts match the pinned private runtime:
+allocator pointer 8/8, failure {i32,i64,i64} 24/8 and string {ptr,ptr,i64} 24/8.
+Records cannot forge these types. Copyability, destruction and equality are separate:
+Allocator/failure are Copy, owning strings require drops, and exclusive references
+are move-only without referent destruction. Opaque values have no ordinary equality,
+including inside empty lists/nullable unions; compatible scalar primary projection
+and reference-address equality remain supported.
 
-The [private string runtime](../runtime/STRINGS.md) reuses Owned and its static
-ValueOps descriptor. Constructors reserve metadata before explicit byte allocation,
-copy live source text and commit on success. Empty values allocate nothing; typed
-native exhaustion leaves the owner empty for retry. Allocator callbacks reject
-owner reentry; moved payloads retain the original allocator and release once.
-Native failure facts are not yet source-level nominal error storage.
+memory.heap produces an ordinary static allocator value with separate binding cells,
+copy/assignment/call behavior, records, lists and nullable alternatives. Cell borrows
+retain existing E302/E303 rules. Only the static heap can produce an allocator in
+source; allocator results with borrow-carrying inputs remain B001 pending conservative
+return-bound tracking. Existing reference-to-cell results use normal origin analysis.
+AllocationFailure can travel through source-lowered calls/shared borrows/unions;
+its native injected facts retain full width, and its fields stay opaque.
 
-Three new checker groups validate identities, capability boundaries and shadowing;
-one source-native group executes aliases in debug/release. Seven native runtime
-groups cover allocation/release counts, source overwrite, UTF-8/NUL, empty values,
-retry, storage/descriptor failures, callback reentry and armed panic cleanup.
-One LLVM-native group copies into the actual heap, overwrites source bytes, moves
-through the generated ownership bridge, reads and releases its destination.
+Source owning storage remains B001. Backend storage/results/expressions requiring
+drops also reject unscheduled ownership. The private string constructor is still
+not source-enabled. Dynamic allocator/view origins, source failure construction,
+error metadata/erasure and initialized-state/drop schedules remain pending.
 
-All fourteen combined checks pass: 370 library + 430 native groups, 35 Python,
-48 debug/release examples, both editors, formatting, Clippy, build and contracts.
-Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required probes.
-The generated heap-string ELF imports only libc.so.6. Conformance remains 10 passed,
-13 unsupported, 0 failed. No source constructor, syntax or dependency was added.
-
-[Scalar panic outcomes](PANIC_OUTCOMES.md) remain implemented and tested, including
-returned-snapshot cleanup and original-cause P008. Automatic resource cleanup is
-still absent. Next add lowerable nominal owner/error types, dynamic view/allocator
-origins and the bounded schedules in [OWNING_HIR.md](OWNING_HIR.md). AllocationFailure
-must not become descriptor-compatible just because its private native layout is small.
+Ten foundation library/checker probes and two focused source-native groups pass.
+All fourteen combined checks pass: 377 library + 431 native, 35 Python,
+49 debug/release examples, both editors, formatting, Clippy, build and contracts.
+Runtime passes 100 groups/profile with debug/release/ASan/UBSan/LSan and required
+fatal/guard/admission/fiber probes. Both generated heap-handle profiles import only
+libc.so.6. Conformance remains 10 passed, 13 unsupported, 0 failed. No syntax,
+reference fixture, runtime source or dependency changed in this slice.
 
 ## Prior implemented milestone
 
@@ -611,40 +608,42 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 370 library
-  + 430 native (800 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 48 examples execute in debug/release; both editors, formatting, Clippy,
+- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 377 library
+  + 431 native (808 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 49 examples execute in debug/release. Both editors, formatting, Clippy,
   pinned build, schemas/identities and catalog pass. Final handoff documentation
-  passes 977 local links in 98 Markdown files.
-- Runtime debug/release/ASan/UBSan/LSan pass 100 groups/profile: 7 diagnostics,
-  14 cleanup, 6 cleanup bridge, 7 generated ownership, 7 owned strings, 10 stacks,
-  10 contexts, 25 scheduler and 14 owned values. Exact fatal/admission/guard/fiber
-  probes pass with approved sanitizer process access; no checks skipped.
-- Three new checker groups and one native source group prove module/item/type
-  aliases, ordinary shadowing and source ownership gates. Initial alias fixture
-  incorrectly used generic-binder syntax; corrected it to <(kind)> with no parser change.
-- Seven string groups prove exact allocation/release counts, empty no-allocation
-  ownership, source overwrite, typed failure/retry, occupied/short/misaligned state,
-  allocator callback reentry, descriptor validation and armed panic cleanup.
-- New LLVM-native group passes debug/release with real heap storage and generated
-  Owned transfer. Extracted the fixture and linked the current archive into
-  `/tmp/meowy-string-proof`: output meow, successful release/finish, only libc.so.6
-  in readelf NEEDED. Native source constructors remain unavailable.
-- Conformance is 10 passed, 13 unsupported, 0 failed. Source nominal resource/error
-  storage, dynamic origins, automatic drops, recovery, cancellation, DWARF and full
-  release/minimum-host qualification remain open.
+  passes 978 local links in 98 Markdown files.
+- Runtime debug/release/ASan/UBSan/LSan pass 100 groups/profile plus exact fatal,
+  admission, guard and fiber probes with approved process access. Runtime source
+  was unchanged; no selected check was skipped.
+- Ten focused foundation library/checker tests prove nominal/opaque boundaries,
+  separate drop/Copy rules, rejected unscheduled backend ownership, allocator
+  return-bound gates and local E302/E303 behavior. Native layout matches the actual
+  string descriptor; injected failure facts survive source calls, shared borrowing,
+  full-width copying and present/null union returns. This is transport proof, not
+  source failure construction or automatic cleanup.
+- Native heap coverage passes copies, cells, reference returns, calls, lists/indexed
+  writes, records and nullable branches. An initial fixture used a value ascription
+  as a predicate; corrected to matcher syntax. One documentation anchor was also
+  corrected. No compiler behavior was weakened to satisfy these fixture fixes.
+- Built/ran heap-handles.mwy in both profiles into `/tmp/meowy-heap-debug` and
+  `/tmp/meowy-heap-release`: exact false/heap/2 output, explicit static heap call in
+  retained LLVM and only libc.so.6 in readelf NEEDED.
+- Conformance remains 10 passed, 13 unsupported, 0 failed. Owning source construction,
+  dynamic origins/return bounds, source error APIs, automatic drops, task recovery,
+  cancellation, DWARF and full release/minimum-host qualification remain open.
 
 ## Next steps
 
-1. Follow [OWNING_HIR.md](OWNING_HIR.md): extend FoundationType identities in `hir.rs`
-   and `check/` to lowerable nominal resource/error types, then add dynamic string-view
-   and allocator origins in `borrow/` and `loans/`. AllocationFailure stays concrete
-   and non-descriptor-compatible; native failure layout is not a source error contract.
-   Build bounded initialized-state/drop schedules and use the tested panic exits
-   before enabling strings.copy. Verify normal/Leave/Restart/panic, retained/discarded
-   emissions, temporary/call transfer and live-view invalidation in debug/release.
-   Preserve native exactly-once/retry and lexical identity proof. Task::close still
-   needs report drain and child settlement while parent storage remains alive.
+1. Follow [OWNING_HIR.md](OWNING_HIR.md): add dynamic allocator/string-view origins
+   and public allocator-return bounds in `borrow/`, `loans/` and call contracts.
+   Keep the signature gate in `check.rs` until those bounds are proved; only static
+   heap production is currently enabled. Build bounded initialized-state/drop
+   schedules and use the tested panic exits before enabling strings.copy. Verify
+   normal/Leave/Restart/panic, retained/discarded emissions, temporary/call transfer
+   and live-view invalidation. Add source failure construction/metadata without
+   descriptor erasure; preserve nominal layout/Copy/equality and native retry proof.
+   Task::close still needs report drain and child settlement while parents live.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

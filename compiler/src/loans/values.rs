@@ -513,7 +513,8 @@ impl<'a> Graph<'a> {
             | ExprKind::Bool(_)
             | ExprKind::Int(_)
             | ExprKind::Float(_)
-            | ExprKind::String(_) => Bundle::new(),
+            | ExprKind::String(_)
+            | ExprKind::Heap => Bundle::new(),
         };
         if expr.ty == Type::Never {
             self.current.clear();

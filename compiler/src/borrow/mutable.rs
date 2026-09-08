@@ -161,6 +161,7 @@ pub(crate) fn check(
                     | ExprKind::Int(_)
                     | ExprKind::Float(_)
                     | ExprKind::String(_)
+                    | ExprKind::Heap
                     | ExprKind::Local(_)
                     | ExprKind::Borrow(_) => {}
                 }

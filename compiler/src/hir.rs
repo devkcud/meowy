@@ -9,8 +9,8 @@ pub type ReborrowId = usize;
 pub type StatementId = usize;
 pub type RestartId = usize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum FoundationType {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FoundationType {
     Allocator,
     AllocationFailure,
     OwnedString,
@@ -52,6 +52,7 @@ pub enum Type {
         bits: u32,
     },
     String,
+    Foundation(FoundationType),
     List {
         element: Box<Type>,
         capacity: usize,
@@ -103,11 +104,49 @@ impl Type {
             | Self::String
             | Self::Reference(_) => true,
             Self::Exclusive(_) => false,
+            Self::Foundation(ty) => *ty != FoundationType::OwnedString,
             Self::List { element, .. } => element.is_copy(),
             Self::Record { primary, fields } => {
                 primary.is_copy() && fields.iter().all(|field| field.ty.is_copy())
             }
             Self::Union(types) => types.iter().all(Self::is_copy),
+        }
+    }
+
+    pub fn has_drop(&self) -> bool {
+        match self {
+            Self::Foundation(FoundationType::OwnedString) => true,
+            Self::Record { primary, fields } => {
+                primary.has_drop() || fields.iter().any(|field| field.ty.has_drop())
+            }
+            Self::List { element, .. } => element.has_drop(),
+            Self::Union(types) => types.iter().any(Self::has_drop),
+            _ => false,
+        }
+    }
+
+    pub fn has_allocator_value(&self) -> bool {
+        match self {
+            Self::Foundation(FoundationType::Allocator) => true,
+            Self::Record { primary, fields } => {
+                primary.has_allocator_value()
+                    || fields.iter().any(|field| field.ty.has_allocator_value())
+            }
+            Self::List { element, .. } => element.has_allocator_value(),
+            Self::Union(types) => types.iter().any(Self::has_allocator_value),
+            _ => false,
+        }
+    }
+
+    pub fn has_equality(&self) -> bool {
+        match self {
+            Self::Foundation(_) => false,
+            Self::Record { primary, fields } => {
+                primary.has_equality() && fields.iter().all(|field| field.ty.has_equality())
+            }
+            Self::List { element, .. } => element.has_equality(),
+            Self::Union(types) => types.iter().all(Self::has_equality),
+            _ => true,
         }
     }
 
@@ -120,6 +159,10 @@ impl Type {
                 Some((size, size))
             }
             Type::String => Some((16, 8)),
+            Type::Foundation(FoundationType::Allocator) => Some((8, 8)),
+            Type::Foundation(FoundationType::AllocationFailure | FoundationType::OwnedString) => {
+                Some((24, 8))
+            }
             Type::Reference(_) | Type::Exclusive(_) => Some((8, 8)),
             Type::Record { primary, fields } => {
                 let mut size = 0usize;
@@ -316,6 +359,7 @@ pub enum ExprKind {
     Int(i128),
     Float(f64),
     String(String),
+    Heap,
     List {
         values: Vec<Expr>,
         list: Type,
