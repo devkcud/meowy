@@ -57,8 +57,8 @@ case in debug/release without changing the runtime allocator representation.
 | Immutable record fields and closed unions | Retain component paths and variant guards; scalar projections and proven null alternatives do not retain unrelated allocator bounds |
 | Shared borrows/reborrows of allocator cells and carriers | Preserve contained bounds beneath the reference; direct dereference drops only the cell access, while function results also retain their public input bounds |
 | Direct mutable memory.Allocator bindings and assignment | Retain guarded bound versions through branches, Leave and Restart; overwrite-before-read can discard expired bounds |
-| Mutable fixed allocator records and tagged values | Whole replacement and pure field paths preserve per-component bounds and current variant activity; no list or reference members |
-| Bounded mutable list/reference-bearing carriers and mutable emitted aliases | Remain B001; existing unbounded static storage works |
+| Mutable fixed allocator records and tagged values | Whole replacement and pure field paths preserve per-component bounds, shared-reference origins and current variant activity; no lists or exclusive members |
+| Bounded mutable lists, reference-only carriers, mutable reference fields and mutable emitted aliases | Remain B001; existing unbounded static allocator storage works |
 | Field assignment in fixed allocator records | Replace only the selected subtree after RHS completion, retaining sibling effects and constraints |
 | Indexed assignment and list construction/append | Reject active bounds before discarding their facts; existing unbounded static heap lists remain supported |
 | Calls returning allocator lists, including behind references | B001 when input constraints need to be attached to unmodeled element paths |
@@ -91,9 +91,9 @@ loop and empty/bounded transitions in debug/release.
 ## Fixed record mutation
 
 Mutable records containing allocators now participate in the same version and
-restart analysis when their entire shape is free of lists, references and
-non-Copy constituents. Nested records and closed unions are supported. Lists and
-reference-bearing mutable carriers still require additional component summaries.
+restart analysis when their entire shape is free of lists, exclusive references and
+non-Copy constituents. Nested records, closed unions and shared references with
+fixed supported referents are supported. Mutable reference-only carriers remain gated.
 This does not enable bounded mutable emitted aliases during record construction.
 A record returned from a function can carry public input bounds into a mutable
 binding, and ordinary field writes can add them after construction.
@@ -112,9 +112,9 @@ Old copies retain their own constraints after the current record is repaired.
 The [allocator-records example](examples/allocator-records.mwy) demonstrates this
 selective read and repair in debug/release.
 
-Record headers may have no physical origins when every path is an optional
-allocator component. A header containing a physical reference still requires
-reference coverage. Restart expiry and overwrite-before-read apply per component;
+Record headers may have no physical origins when every reference path is inactive.
+A header containing an active physical reference still requires origin coverage;
+allocator lifetime bounds cannot satisfy it. Restart expiry and overwrite-before-read apply per component;
 clearing one field never clears an expired sibling.
 
 Tag-only inspection remains distinct from consuming allocator contents. A scalar
@@ -150,6 +150,32 @@ own variants and bounds. A reference to the mutable cell still prevents replacem
 with E302. The [tagged-allocators example](examples/tagged-allocators.mwy) demonstrates
 inspection and repair after the original public input bound has expired.
 
+## Shared-reference allocator carriers
+
+Fixed mutable allocator records and closed unions can contain shared references,
+including nullable and nested reference components. Whole replacement versions both
+physical origins and allocator bounds. Existing mutable non-reference fields can
+still be assigned; reference fields remain immutable and change through whole
+replacement. Mutable reference-bearing emitted fields remain B001.
+
+Replacing a carrier releases only loans no longer demanded by its current value.
+Old copies retain their own sources. Reading a reference field keeps its pointee
+loan; copying an allocator field retains lifetime bounds without freezing the
+bound source's contents. The [allocator-carriers example](examples/allocator-carriers.mwy)
+replaces a reference to x with one to y, then changes x while retaining an allocator
+bounded by x's lifetime.
+
+Field stores preserve post-RHS sibling references and their loan IDs. Tag tests
+observe current nullable reference activity without reading expired payloads.
+Restart can enter with a null reference and later carry a populated variant; only
+active physical paths require origins. Expired iteration sources remain terminal
+and cannot be revived by the next iteration's local initialization. Shared cell
+borrows and transitive call-input validation retain their existing checks.
+
+This eligibility requires a directly contained allocator somewhere in the value.
+Reference-only mutable aggregates, lists at any depth, exclusive carriers and
+mutable emitted aliases remain separate work. No runtime layout or ABI changes.
+
 ## Evidence and next work
 
 Checker tests cover transitive/all-input bounds, E303 escapes and temporary expiry,
@@ -159,7 +185,8 @@ carrier gates and fanout exhaustion. Native tests verify full execution,
 non-freezing lifetime bounds, skipped call entry and distinct E303/B001 diagnostics
 in debug/release. Existing reference and restart regressions remain required.
 
-Next represent bounded list/reference-bearing carriers, emitted-alias mutation and
+Next represent bounded lists, reference-only mutable carriers, mutable reference
+fields, emitted-alias mutation and
 dynamic string-view origins in these same passes. Keep owning construction gated until the
 [initialized-state/drop schedules](OWNING_HIR.md) prove normal, Leave, Restart and
 panic exits. Runtime task cancellation, native unwinding and release qualification

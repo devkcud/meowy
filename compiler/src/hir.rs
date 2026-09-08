@@ -140,7 +140,8 @@ impl Type {
 
     pub(crate) fn fixed_allocator_part(&self) -> bool {
         match self {
-            Self::Reference(_) | Self::Exclusive(_) | Self::List { .. } => false,
+            Self::Reference(ty) => ty.fixed_allocator_part(),
+            Self::Exclusive(_) | Self::List { .. } => false,
             Self::Union(types) => types.iter().all(Self::fixed_allocator_part),
             Self::Record { primary, fields } => {
                 primary.fixed_allocator_part()

@@ -6,6 +6,57 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Shared-reference allocator carrier validation complete
+
+- All fourteen combined checks pass: 867 Rust (417 library, 450 native), 35 Python,
+  54 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Nine new library tests and four native groups prove mixed carrier versions,
+  physical versus lifetime-only sources, nullable activity, missing-origin rejection,
+  selective reads, post-RHS field commits, Leave, call entry and restart expiry.
+- Final handoff passes 988 local links in 99 Markdown files and Git whitespace checks.
+- Next: reference-only mutable carriers, mutable reference fields, emitted-alias
+  backing synchronization and bounded list summaries. Then dynamic allocator/view
+  origins and owning drop schedules. No unfinished implementation or failing checks.
+
+### 2026-09-08 — Shared-reference allocator carrier native proof
+
+- Eight carrier library groups and four native groups pass; native cases run debug
+  and release. A separate header regression requires origins even when bounds exist.
+- Physical/current and old-copy loans, lifetime-only allocator bounds, field RHS
+  replacement, Leave, nullable inspection/repair, call-entry validation, transitive
+  references, branches and restart are covered. E303/E302 and remaining B001 tested.
+- Added allocator-carriers example and documented exact eligibility/limits. Earlier
+  fixtures were corrected for mutable emitted alias gates, duplicate names and field
+  mutability; no language/reference fixture was changed to hide a production failure.
+- Next: run the combined repository gate, inspect final diff, refresh handoff and commit.
+
+### 2026-09-08 — Shared-reference allocator carrier implementation
+
+- Fixed allocator shapes admit shared references with fixed supported referents;
+  frontend binding/field checks route these through existing state/loan versions.
+  Reference fields themselves remain immutable. Lists and aliases remain gated.
+- Nullable reference restart entry exposed an early empty-origins rejection.
+  Removed that shortcut: canonical shape validation still requires every active
+  physical reference origin; lifetime bounds never satisfy that requirement.
+- Initial full library run passed 414 tests. Additional focused tests then exposed
+  the nullable-header gap and a fixture emitting already expired temporary bounds.
+  Corrected the fixture to test actual call entry through a borrowed allocator field.
+- Next: finish focused coverage, native debug/release proof and the combined gate.
+
+### 2026-09-08 — Shared-reference allocator carrier investigation
+
+- Fixed allocator eligibility currently rejects every reference member. Existing
+  state/loan versions and restart shapes already distinguish physical references
+  from lifetime-only allocator bounds, including transitive component paths.
+- Next: admit fixed shared-reference members, preserve required origin coverage,
+  enable whole replacement and existing mutable non-reference field writes, and
+  prove expiry, old copies, call entry, tag inspection and restart behavior.
+- Clean starting tree. No new checks yet; implementation and validation pending.
+  Lists, exclusive carriers, mutable reference fields and emitted aliases stay gated.
+
 ### 2026-09-08 — Tagged allocator combined validation complete
 
 - All fourteen combined checks pass: 854 Rust (408 library, 446 native), 35 Python,

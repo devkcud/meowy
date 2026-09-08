@@ -10,7 +10,7 @@ bounded lists of copyable reference-free elements. It is not the complete v0.0.1
 The [foundation values](FOUNDATION.md) include static heap handles and nominal
 allocation-failure transport. [Allocator return bounds](ALLOCATOR_BOUNDS.md) track
 public input lifetimes through immutable values, mutable handles/tagged records,
-field writes, restart headers and shared snapshots. Owning-string
+field writes, shared-reference members, restart headers and shared snapshots. Owning-string
 storage and constructors remain gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
@@ -28,6 +28,7 @@ compiler/target/debug/meowy run compiler/examples/allocator-bounds.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-allocators.mwy
 compiler/target/debug/meowy run compiler/examples/allocator-records.mwy
 compiler/target/debug/meowy run compiler/examples/tagged-allocators.mwy
+compiler/target/debug/meowy run compiler/examples/allocator-carriers.mwy
 compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile release
 compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy

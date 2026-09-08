@@ -176,10 +176,10 @@ impl Checker<'_> {
                         return Err(Self::unsupported(*span));
                     }
                     let mut ty = &self.program.locals[*id];
-                    if ty.has_reference() || path.is_empty() {
+                    let tracked = self.proofs.versioned(self.program, *id);
+                    if (ty.has_reference() && !tracked) || path.is_empty() {
                         return Err(Self::unsupported(*span));
                     }
-                    let tracked = self.proofs.versioned(self.program, *id);
                     let mut prefix = Vec::new();
                     let mut result = Flow::new();
                     for step in path {
@@ -216,7 +216,7 @@ impl Checker<'_> {
                     if result.next {
                         let next = self.expression(value)?;
                         if next.flow.next {
-                            if !next.state.origins.is_empty() || value.ty != *ty {
+                            if (!tracked && !next.state.origins.is_empty()) || value.ty != *ty {
                                 return Err(Self::unsupported(*span));
                             }
                             if tracked {

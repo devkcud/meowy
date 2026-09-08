@@ -11,27 +11,26 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
-- [Tagged allocator mutation](compiler/ALLOCATOR_BOUNDS.md#tagged-mutation) preserves
-  nullable/nested variant activity through assignment, field writes, Leave and Restart.
-  Predicates use current-value evidence; earlier predicates cannot narrow replacements.
-- Tag-only inspection can examine an expired allocator and allow repair. Null paths
-  can copy null; active expired payload reads remain E303 and cell conflicts E302.
-  Field commits preserve RHS sibling effects and old copies retain prior constraints.
-- All fourteen combined checks pass: 854 Rust (408 library, 446 native), 35 Python,
-  53 debug/release examples, both editors, formatting, Clippy, build and contracts.
-  Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
-  probes. Conformance stays 10 passed, 13 unsupported, 0 failed. Runtime/backend
-  representations are unchanged.
-- The [tagged-allocators example](compiler/examples/tagged-allocators.mwy) demonstrates
-  inspection and repair. List/reference-bearing mutable carriers and emitted aliases
-  remain gated. Dynamic contexts/views, owning cleanup, source error APIs, tasks,
-  DWARF and full release remain open.
+- [Shared-reference allocator carriers](compiler/ALLOCATOR_BOUNDS.md#shared-reference-allocator-carriers)
+  preserve physical references and allocator lifetime bounds through whole replacement,
+  field RHS effects, Leave and Restart. Current tags permit inactive nullable paths;
+  active expired uses remain E303 and physical conflicts remain E302.
+- Eight new library groups, one required-origin header check and four native groups
+  cover this slice. All fourteen checks pass: 867 Rust (417 library, 450 native),
+  35 Python, 54 debug/release examples, both editors, formatting, Clippy, build and
+  contracts. Runtime passes all 100 groups/profile with sanitizers and required probes.
+  Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend unchanged.
+- The [allocator-carriers example](compiler/examples/allocator-carriers.mwy) shows
+  reference replacement while retaining lifetime-only allocator bounds. Lists,
+  reference-only mutable carriers, mutable reference fields and emitted aliases remain
+  gated. Dynamic contexts/views, owning cleanup, source error APIs, tasks, DWARF and
+  the full release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Mutable tagged allocator values, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
+| Compiler | Shared-reference allocator carriers, restart headers and panic outcomes | List/alias/reference bounds, dynamic origins and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -41,13 +40,13 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Extend bounded list/reference-bearing carriers and emitted aliases with element
-   and backing-storage proof before relaxing gates. Preserve current-version tag
-   observations, pure field RHS effects and independent sibling versions. Then add actual
-   dynamic allocator contexts and string-view origins; static heap is still the only
-   factory. Follow [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) for drop schedules
-   before strings.copy: normal/Leave/Restart/panic and emitted/temporary/call transfers
-   need exactly-once cleanup. Source error APIs and task qualification remain separate.
+1. Extend reference-only mutable carriers and mutable reference fields; emitted aliases need
+   backing synchronization and lists need bounded element summaries. Preserve current
+   tag observations, post-RHS sibling versions and active-reference header coverage.
+   Then add dynamic allocator contexts and string-view origins. Follow
+   [compiler/OWNING_HIR.md](compiler/OWNING_HIR.md) before strings.copy: normal,
+   Leave, Restart, panic and emitted/temporary/call transfers need exactly-once cleanup.
+   Source error APIs and task qualification remain separate.
 2. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 3. Extend aggregate/emitted-name/cross-element constraints in the list-context

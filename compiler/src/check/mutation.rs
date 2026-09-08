@@ -83,10 +83,10 @@ impl Checker {
         };
         if (!self.places.contains(&id) && !self.proofs.aliases.contains_key(&id))
             || !matches!(ty, Type::Record { .. } | Type::List { .. })
-            || ty.has_reference()
+            || (ty.has_reference() && !ty.fixed_allocator_value())
         {
             return Err(Diagnostic::unsupported(
-                "assignment path requires ordinary reference-free storage",
+                "assignment path requires supported ordinary storage",
                 target.span,
             ));
         }

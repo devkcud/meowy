@@ -113,7 +113,7 @@ pub(crate) fn tagged_allocator_leave_preserves_completed_writes() {
 pub(crate) fn tagged_allocator_cell_loans_and_remaining_carriers_stay_checked() {
     rejects(&format!("{NULLABLE}p:&a;a=m.heap;copy:*p"), "E302");
     accepts(&format!("{NULLABLE}p:&a;copy:*p;a=m.heap"));
-    rejects("x:1;r:={->h:f(&x);->p:&x}", "B001");
+    accepts("x:1;r:={->h:f(&x);->p:&x}");
     rejects("x:1;r:={->h:f(&x);->list:[1]}", "B001");
     rejects("x:1;r:{->h<m.Allocator><null>:=f(&x)}", "B001");
 }
