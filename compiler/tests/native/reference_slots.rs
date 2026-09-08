@@ -214,8 +214,8 @@ d.print(owner);d.print(other)
 #[test]
 pub fn reference_slot_storage_keeps_whole_carrier_and_mutation_boundaries() {
     for source in [
-        "owner:1;value:{->view:=&owner;n:=2;'loop{view=&owner;n=n-1;|n>0|'loop.restart()}}",
-        "owner:1;value:{->holder:={->view:&owner;->count:3};n:=2;'loop{holder={->view:&owner;->count:4};n=n-1;|n>0|'loop.restart()}}",
+        "owner:1;n:=2;value:'out{'loop{n=n-1;|n>0|'loop.restart();'out->view:=&owner;view=&owner}}",
+        "owner:1;n:=2;value:'out{'loop{n=n-1;|n>0|'loop.restart();'out->holder:={->view:&owner;->count:3};holder={->view:&owner;->count:4}}}",
         "owner:1;value:{->holder:{->view:&owner;->count:3};address:&!holder.count}",
     ] {
         let output = Case::new(source).command("build", &["--json"]);

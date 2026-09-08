@@ -2,6 +2,7 @@ pub(crate) mod alias_restarts;
 pub(crate) mod alias_writes;
 pub(crate) mod allocator_bounds;
 pub(crate) mod allocator_carriers;
+pub(crate) mod changing_published;
 pub(crate) mod cli;
 pub(crate) mod control;
 pub(crate) mod discarded_aliases;

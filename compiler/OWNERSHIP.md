@@ -403,8 +403,8 @@ implementation boundary; it does not change language rules.
   versions use existing canonical local headers, so an inner restart can preserve
   the cell and its live sources. Restarting or leaving the target ends that cell;
   copied slot references expire and cannot revive at the next initialization.
-  Published outer results may remain fixed across an inner restart; writes within
-  that restarted body still need their separate header-merging proof.
+  Published outer results use fixed identity or preexisting alias header projections;
+  aliases introduced within the restarted body still need initialization proof.
 - Leave and panic preserve earlier effects and skip unfinished outer stores. A
   borrowed cell can survive the lexical scope that introduced its alias while the
   target remains active. Reads or calls cannot bypass E302 conflicts or E303 expiry
@@ -433,8 +433,8 @@ implementation boundary; it does not change language rules.
   their sources, tags and loan IDs. No outer union member is inferred from a new RHS.
 - Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
   loans keep their existing checks. Returned payloads still satisfy retained-source
-  lifetimes. Restart supports reset slots and fixed surviving publications; writes
-  inside a restarting body to an ancestor result remain gated. Views spanning a
+  lifetimes. Restart supports reset slots and preexisting surviving aliases; aliases
+  introduced within a restarting body remain gated. Views spanning a
   proper subset of a larger union use the
   whole-assignment conversion below; their addresses and field paths stay gated.
 - The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
@@ -461,8 +461,8 @@ implementation boundary; it does not change language rules.
   the last completed member. Reset-scope Restart and discarded backing retain their
   established rules. Physical conflicts and retained-source expiry remain E302/E303.
 - Taking an address or writing a field through a proper-subset union view remains
-  B001 because its lexical tag representation differs from backing. Headers for
-  changing surviving publications and bounded allocator-only aliases remain separate
+  B001 because its lexical tag representation differs from backing. Dynamic
+  publication initialization and bounded allocator-only aliases remain separate
   proof work. Type/path copies and member remapping use existing charged budgets.
 - The [union-aliases example](examples/union-aliases.mwy) alternates a nullable
   reference while backing admits an extra string member. Library/native tests cover
@@ -484,9 +484,9 @@ implementation boundary; it does not change language rules.
   conditional, without inventing nullable defaults or canonical header activity.
 - Snapshot copies, type walks and stored facts use the existing work and origin
   budgets. These are analysis inputs, not canonical headers or loan transfers.
-  Fixed surviving publications now use the identity proof below. Changing a
-  publication inside the restarted body still requires broader canonical headers
-  and CFG demand transfers.
+  Fixed surviving publications use the identity proof below. Changing aliases
+  initialized before restart entry project their existing canonical headers;
+  other publication initialization remains separate proof work.
 
 ## Fixed published restart results
 
@@ -509,11 +509,40 @@ implementation boundary; it does not change language rules.
   earlier writes. Lexical aliases may end before an inner loop while their result
   owner remains active. The [fixed-published example](examples/fixed-published.mwy)
   preserves such a result and releases the replaced source's loan.
-- Assignments anywhere inside a restarted body to an ancestor's borrowed result
-  remain B001, including writes in nested expressions. Missing or malformed ancestry,
-  snapshots and budget exhaustion remain capability failures. Dynamic published
-  headers, union-view addresses/fields, allocator-only aliases and owning cleanup
-  require their separate proofs.
+- Changing preinitialized aliases use the projection proof below. Aliases introduced
+  within restarted bodies remain B001. Missing or malformed ancestry, snapshots and
+  budget exhaustion remain capability failures. Dynamic publication initialization,
+  union-view addresses/fields, allocator-only aliases and owning cleanup need separate proofs.
+
+## Changing published restart results
+
+- An initialized mutable borrowed alias may change inside an inner restarted body
+  while its emitted result owner survives. The alias must already have a live local
+  version and compatible published backing when the restarted block is entered.
+  Aliases introduced within that body remain B001, including final-iteration emissions.
+- The planner retains alias identity and schedules refreshes at the restarted block
+  and its ancestors through the result owner. Existing canonical local headers keep
+  lexical tags, origins, bounds and terminal expiry; result projection separately
+  converts them into identical, exact-member or wider-union backing domains.
+  Publication updates retain the original binding-event guard across iteration
+  resets, so conditional backing members remain disjoint even if tested values change.
+- Normal completion refreshes before entry-environment restoration. Leave refreshes
+  at the actual exit, including exits bypassing the loop or alias declaration scope.
+  Final iterations without a store therefore retain backedge sources, and skipped
+  outer stores cannot replace the last completed RHS assignment.
+- Origin refresh does not read or eagerly validate payloads. Final owning-result
+  retention checks all active sources/bounds, so expired iteration locals and
+  temporaries cannot escape; repair before completion retains existing behavior.
+- Loan refresh defines result summaries using demand-only links to current alias
+  versions, including direct reference components. Initial/backedge transfers then
+  carry demand to the actual source snapshots. Refresh creates no physical access,
+  payload use or initialization event; old copies and cell loans retain their IDs.
+- Fixed publications retain their identity proof. Shared backing resolution, union
+  remapping and existing budgets are reused. Nullable defaults, RHS evaluation and
+  ownership diagnostics remain unchanged. Lists, dynamic new-alias initialization,
+  union-view addresses/fields, exclusive carriers and owning cleanup remain open.
+- The [changing-published example](examples/changing-published.mwy) prints current
+  pointers across iterations, then the old copy and the completed result.
 
 ## Mutable shared-reference bindings
 

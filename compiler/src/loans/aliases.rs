@@ -1,19 +1,33 @@
-use super::{Graph, LocalId, Result, Span, Step};
+use super::{Bundle, Graph, LocalId, Result, Span, Step};
 use crate::borrow::Backing;
 use crate::hir::WriteStep;
 
 impl Graph<'_> {
     pub(crate) fn sync_alias(&mut self, id: LocalId, path: &[WriteStep], span: Span) -> Result<()> {
+        let Some((source, target)) = self.alias_values(id, path, span)? else {
+            return Ok(());
+        };
+        let node = self.copied(&source, &target)?;
+        self.append(node)?;
+        Ok(())
+    }
+
+    pub(crate) fn alias_values(
+        &mut self,
+        id: LocalId,
+        path: &[WriteStep],
+        span: Span,
+    ) -> Result<Option<(Bundle, Bundle)>> {
         self.charge(self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize + 1)?;
         let Some(alias) = self.proofs.aliases.get(&id) else {
-            return Ok(());
+            return Ok(None);
         };
         let ty = &self.program.locals[id];
         if !alias.mutable || !ty.has_reference() || !ty.fixed_borrowed_value() {
             return Err(Self::budget());
         }
         if alias.backing == Some(Backing::Discarded) {
-            return Ok(());
+            return Ok(None);
         }
         let scope = self.blocks.get(&alias.target).ok_or_else(Self::budget)?;
         if !self.guards.spend(alias.field.len() + path.len() + 1) {
@@ -57,8 +71,6 @@ impl Graph<'_> {
         } else {
             source
         };
-        let node = self.copied(&source, &target)?;
-        self.append(node)?;
-        Ok(())
+        Ok(Some((source, target)))
     }
 }

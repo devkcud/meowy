@@ -137,7 +137,7 @@ pub fn emitted_slot_aliases_keep_type_and_ownership_boundaries_explicit() {
         ("value:{->n:=1;n=\"wrong\"}", "E207"),
         ("value:{->n:=1;->n:=2}", "E205"),
         (
-            "owner:1;value:{->view:=&owner;n:=2;'loop{view=&owner;n=n-1;|n>0|'loop.restart()}}",
+            "owner:1;n:=2;value:'out{'loop{n=n-1;|n>0|'loop.restart();'out->view:=&owner;view=&owner}}",
             "B001",
         ),
         ("value:{->n:=1;f<int32>:(){->n}}", "B001"),

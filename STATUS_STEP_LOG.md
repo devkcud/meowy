@@ -6,6 +6,37 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Changing published alias validation complete
+
+- All ten compiler checks pass: 993 Rust (494 library, 499 native), 20 Python,
+  63 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Preinitialized borrowed result aliases now change across inner restarts while
+  preserving old copies, conditional backing, RHS/Leave effects and final lifetimes.
+  Twelve new library and seven native groups pass; the conditional guard regression
+  is fixed. The changing-published example prints 7, 9, 7, 9.
+- Runtime/backend, library, editor and dependencies are unchanged. Next: publication
+  initialization for aliases introduced inside restarted bodies; broader ownership,
+  tools, library and distribution work remains open.
+
+
+### 2026-09-08 - Changing published alias focused proof passes
+
+- Ten focused compiler groups pass. Existing alias headers now feed changing
+  published results through read-free normal/Leave transfers and final lifetime checks.
+- Seven native groups and a changing-published example are ready. Next: full
+  compiler gate, boundary expectation updates, handoff and commit.
+
+
+### 2026-09-08 - Changing published alias integration
+
+- Compiler work now projects changing published slots from existing alias headers
+  and refreshes their result summaries on normal/Leave exits without payload reads.
+- Initialization and final lifetime checks are included; validation is pending.
+  Runtime/backend and dependencies are unchanged. Next: source/proof/native tests
+  and compiler gate before committing this slice.
+
+
 ### 2026-09-08 - Fixed published restart validation complete
 
 - All ten compiler checks pass: 974 Rust (482 library, 492 native), 20 Python,

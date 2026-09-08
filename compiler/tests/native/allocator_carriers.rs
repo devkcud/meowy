@@ -86,7 +86,7 @@ pub fn allocator_carrier_lifetimes_loans_and_remaining_gates_are_checked() {
             "E303",
         ),
         (
-            "s:{->h:m.heap;->p:=&x;n:=2;'loop{p=&x;n=n-1;|n>0|'loop.restart()}}",
+            "n:=2;s:'out{->h:m.heap;'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&x}}",
             "B001",
         ),
         ("s:={->h:m.heap;->p:&x;->list:[1]}", "B001"),

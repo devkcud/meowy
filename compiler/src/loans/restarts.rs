@@ -32,6 +32,8 @@ impl Graph<'_> {
         let (mut node, missing) = self.header_transfer(incoming, &header, proof)?;
         let fixed = self.fixed_published(id, self.facts.published_inputs.get(&id))?;
         let missing = self.guards.or(missing, fixed);
+        let changing = self.changing_header(id, incoming, &header)?;
+        let missing = self.guards.or(missing, changing);
         for value in header.values().flat_map(|value| value.values()) {
             self.opaque_value(&mut node, *value)?;
         }

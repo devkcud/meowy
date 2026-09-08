@@ -6,6 +6,101 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Changing published alias validation complete
+
+- All ten compiler checks pass: 494 library + 499 native (993 Rust), 20 Python,
+  63 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Changing aliases initialized before loop entry project existing canonical local
+  headers into result backing. Normal/Leave refreshes precede environment restoration
+  and use demand-only transfers; final result retention validates active expiry.
+- Twelve library and seven native groups prove tags, old copies, untouched final
+  iterations, RHS/nested exits, mixed allocator bounds, expiry repair and proof limits.
+  Original binding guards fix conditional wider-union overlap after reset. The
+  changing-published example prints 7, 9, 7, 9; all earlier failures are resolved.
+- Runtime/backend, syntax, reference fixtures and dependencies are unchanged.
+  Prior runtime/editor evidence is preserved, not rerun for this compiler slice.
+- Next: final-iteration/new-alias publication initialization with explicit frontiers;
+  preserve header source expiry, binding guards, normal/Leave demand and older copies.
+
+
+### 2026-09-08 - Changing publication conditional guard proof passes
+
+- All twelve focused groups pass after preserving binding-event guards in both
+  raw and retained publication updates. Mixed allocator bounds and expiry repair pass.
+- The conditional native regression remains in place. Next: final compiler gate,
+  handoff and commit; source support remains limited to aliases live before entry.
+
+
+### 2026-09-08 - Changing publication guard regression
+
+- All 493 library groups passed. Native execution reached 497 passes and two
+  failures: one stale discarded-alias expectation and a conditional wider-union
+  result whose loop reset lost the guard under which its alias was initialized.
+- Both raw and retained publication updates now use the immutable binding-event
+  guard alongside current reach. Added a parameter/changed-predicate regression;
+  the remaining native expectation now exercises alias initialization inside the loop.
+- Next: focused conditional proof and full compiler gate. No backend change needed.
+
+
+### 2026-09-08 - Changing publication historical gates aligned
+
+- Four historical library cases now accept initialized changing aliases. Native
+  rejection matrices now test aliases first initialized inside restarted bodies,
+  retaining pointer, record, field, union-view and conditional backing shapes.
+- New native groups cover accepted in-body changes and actual outputs. Next: full
+  compiler/native gate, final handoff and commit. Earlier lint failure is fixed.
+
+
+### 2026-09-08 - Changing publication library boundary updates
+
+- Formatting, Clippy and repository checks passed. Library execution reached
+  489 passes, including the eleven new groups, and four obsolete B001 expectations
+  in alias_restarts, discarded_aliases, union_aliases and widened_aliases.
+- Next: assert acceptance for those initialized aliases and move native capability
+  boundaries to aliases introduced inside restarted bodies, then finish the gate.
+
+
+### 2026-09-08 - Changing publication lint and budget coverage
+
+- The first full gate passed formatting/contracts and stopped on a single-element
+  loop in the updated ancestry test. Replaced it with a direct assertion.
+- Tightened map/path lookup charges and added mixed allocator-bound expiry/repair
+  coverage. Next: rerun the compiler gate and update obsolete in-body rejections.
+
+
+### 2026-09-08 - Changing published alias focused proof passes
+
+- All ten new source/proof groups pass: old copies, unwritten final iterations,
+  widened/nullable tags, fields, nested loops, RHS/Leave, public bounds, expiry,
+  pre-loop initialization and demand-only transfer structure/budgets.
+- Added seven native groups and changing-published.mwy (7, 9, 7, 9) for the gate.
+  The first fixed-case run exposed one obsolete B001 expectation, now accepted.
+- Next: compiler/native gate, remaining historical expectation updates, final
+  contract/handoff and commit. Runtime/backend and dependencies remain unchanged.
+
+
+### 2026-09-08 - Changing alias build and exit ordering
+
+- Implementation builds. Six fixed-publication groups passed; the seventh expected
+  B001 for the newly enabled in-body write and now asserts acceptance.
+- Refreshes run before entry-environment restoration on normal/Leave exits, so
+  bypassing a loop through an outer Leave cannot restore the old published value.
+- Added ten changing source/proof groups. Next: focused proof, native matrix and gate.
+
+
+### 2026-09-08 - Changing published alias investigation and implementation
+
+- Clean tree at 743927e. Existing mutable alias headers already preserve current
+  lexical states and exact initial/backedge demand. Published summaries need refresh
+  at loop/ancestor exits, including Leave paths that bypass normal loop completion.
+- Added changing-alias/refresh schedules, pre-loop initialization proof, shared
+  backing projection helpers, demand-only result transfers and final retained-source
+  validation. Fixed publication identity remains separate. Validation is pending.
+- Next: prove unwritten final iterations, union domains, old copies, RHS effects,
+  Leave, nested loops, expired sources and missing/bounded proof; run the compiler gate.
+
+
 ### 2026-09-08 - Fixed published restart validation complete
 
 - All ten compiler checks pass: 482 library + 492 native (974 Rust), 20 Python,

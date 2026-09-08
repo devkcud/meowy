@@ -149,6 +149,8 @@ impl Proofs {
 pub(crate) struct Facts {
     pub(crate) inspections: BTreeMap<(usize, usize), Guard>,
     pub(crate) fixed_published: super::published::Fixed,
+    pub(crate) changing_published: super::changing::Views,
+    pub(crate) refresh_published: super::changing::Views,
     pub(crate) published_inputs: BTreeMap<BlockId, super::published::Snapshot>,
     pub(crate) published_restarts: BTreeMap<crate::hir::RestartId, super::published::Snapshot>,
     pub(crate) header_inputs: BTreeMap<BlockId, Predecessor>,

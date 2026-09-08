@@ -180,7 +180,7 @@ pub fn reference_temporary_mutation_and_owned_collection_boundaries_stay_explici
     Case::new("owner:1;view<&int32><null>:=&owner").runs(b"");
     for source in [
         "owner:1;items:[&owner]",
-        "owner:1;holder:{->view:=&owner;n:=2;'loop{view=&owner;n=n-1;|n>0|'loop.restart()}}",
+        "owner:1;n:=2;holder:'out{'loop{n=n-1;|n>0|'loop.restart();'out->view:=&owner;view=&owner}}",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");

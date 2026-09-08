@@ -2,6 +2,7 @@ pub(crate) mod access;
 pub(crate) mod aliases;
 pub(crate) mod authority;
 pub(crate) mod branches;
+pub(crate) mod changing;
 pub(crate) mod control;
 pub(crate) mod elements;
 pub(crate) mod graph;

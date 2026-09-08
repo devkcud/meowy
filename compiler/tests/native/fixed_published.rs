@@ -76,7 +76,7 @@ c:optional(false,&x,&y)
 }
 
 #[test]
-pub fn fixed_published_source_lifetimes_and_in_body_writes_remain_checked() {
+pub fn fixed_published_source_lifetimes_and_initialization_remain_checked() {
     for (source, code) in [
         (
             "x:1;y:=2;n:=0;r:{->p:=&x;p=&y;'loop{y=3;n=n+1;|n<2|'loop.restart()}};v:*r.p",
@@ -91,11 +91,11 @@ pub fn fixed_published_source_lifetimes_and_in_body_writes_remain_checked() {
             "E303",
         ),
         (
-            "x:1;y:2;n:=0;r:{->p:=&x;'loop{p=&y;n=n+1;|n<2|'loop.restart()}};v:*r.p",
+            "x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();'out->p:=&x;p=&y}};v:*r.p",
             "B001",
         ),
         (
-            "x:1;y:2;n:=0;r:{->p:=&x;p={'loop{{p=&y};n=n+1;|n<2|'loop.restart()};->&x}}",
+            "x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();'out->p:=&x;p={p=&y;->&x}}}",
             "B001",
         ),
     ] {

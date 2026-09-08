@@ -97,9 +97,8 @@ pub(crate) fn widened_alias_lifetimes_and_reset_iterations_remain_checked() {
     accepts(
         "x:1;y:2;flag:=true;n:=0;r:'loop{|flag|{'loop->p:=&x;p=&y};n=n+1;|n<2|'loop.restart()};|r.p<&int32>|{v:*r.p}",
     );
-    rejects(
+    accepts(
         "x:1;y:2;flag:=true;n:=2;r:'out{|flag|{'out->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}}};copy:r",
-        "B001",
     );
 }
 

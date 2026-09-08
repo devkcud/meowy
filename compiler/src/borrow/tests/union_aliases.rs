@@ -70,9 +70,8 @@ pub(crate) fn union_alias_restarts_and_discarded_effects_keep_versions() {
         "x:1;flag:=true;n:=0;r:'loop{|flag|{'loop->p<&int32><null>:=null;p=&x};|!flag|{'loop->p:=\"x\"};n=n+1;|n<2|'loop.restart()};copy:r",
     );
     accepts("x:1;'out{r:{->p<&int32><null>:=null;p=&x;'out.leave()}}");
-    rejects(
+    accepts(
         "<R>:<{p<&int32><null><string>:=}>;x:1;n:=2;r<R>:{->p<&int32><null>:=null;'inner{p=&x;n=n-1;|n>0|'inner.restart()}}",
-        "B001",
     );
 }
 

@@ -33,10 +33,7 @@ pub(crate) fn fixed_published_headers_preserve_rhs_restarts_and_leave_effects() 
     accepts(
         "x:1;y:2;n:=0;r:'out{->p:=&x;p={p=&y;'loop{v:*p;n=n+1;|n<2|'loop.restart()};'out.leave();->&x}};v:*r.p",
     );
-    rejects(
-        "x:1;y:2;n:=0;r:{->p:=&x;p={'loop{p=&y;n=n+1;|n<2|'loop.restart()};->&x}}",
-        "B001",
-    );
+    accepts("x:1;y:2;n:=0;r:{->p:=&x;p={'loop{p=&y;n=n+1;|n<2|'loop.restart()};->&x}}");
 }
 
 #[test]
@@ -69,23 +66,22 @@ pub(crate) fn fixed_published_planning_uses_the_write_scope_and_validated_ancest
     ]);
     let restarts = BTreeSet::from([2]);
     for owner in [1, 4] {
-        let writes = BTreeMap::from([((1, owner), Span::default())]);
+        let writes = BTreeMap::from([((1, owner, 7), Span::default())]);
         let fixed = alias_restarts(&parents, &writes, &restarts, &mut Flow::default()).unwrap();
-        assert_eq!(fixed, BTreeMap::from([(2, BTreeSet::from([1]))]));
+        assert_eq!(fixed.fixed, BTreeMap::from([(2, BTreeSet::from([1]))]));
     }
-    for owner in [2, 3, 99] {
-        let writes = BTreeMap::from([((1, owner), Span::default())]);
-        assert_eq!(
-            alias_restarts(&parents, &writes, &restarts, &mut Flow::default())
-                .unwrap_err()
-                .code,
-            "B001"
-        );
-    }
-    let writes = BTreeMap::from([((2, 3), Span::default())]);
+    let writes = BTreeMap::from([((1, 99, 7), Span::default())]);
+    assert_eq!(
+        alias_restarts(&parents, &writes, &restarts, &mut Flow::default())
+            .unwrap_err()
+            .code,
+        "B001"
+    );
+    let writes = BTreeMap::from([((2, 3, 7), Span::default())]);
     assert!(
         alias_restarts(&parents, &writes, &restarts, &mut Flow::default())
             .unwrap()
+            .changing
             .is_empty()
     );
 }

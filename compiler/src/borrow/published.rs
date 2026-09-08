@@ -209,6 +209,7 @@ impl Checker<'_> {
         target: BlockId,
         prefix: &[Step],
         value: &State,
+        guard: Guard,
         span: Span,
     ) -> Result<()> {
         let [Step::Slot(index), path @ ..] = prefix else {
@@ -233,13 +234,13 @@ impl Checker<'_> {
         let mut outside = slot
             .state
             .clone()
-            .under(self.guards.not(self.assumed), self.guards);
-        let value = value.clone().under(self.assumed, self.guards);
+            .under(self.guards.not(guard), self.guards);
+        let value = value.clone().under(guard, self.guards);
         let inside = if path.is_empty() {
             value
         } else {
             slot.state
-                .under(self.assumed, self.guards)
+                .under(guard, self.guards)
                 .replaced(path, value, self.guards, span)?
         };
         outside.merge(inside, self.guards, span)?;

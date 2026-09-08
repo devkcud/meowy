@@ -261,6 +261,7 @@ impl Checker<'_> {
             .remove(&id)
             .ok_or_else(|| Self::unsupported(span))?;
         let input = self.predecessor(&target.incoming, span)?;
+        self.changing_header(id, &input, span)?;
         let header = self.widen_header(id, &input.values, span)?;
         self.facts.header_inputs.insert(id, input);
         for (local, state) in &header {
@@ -289,7 +290,9 @@ impl Checker<'_> {
     ) -> Result<()> {
         let published = self.capture_published(id, span)?;
         if published.entered != super::FALSE
-            && (!published.slots.is_empty() || self.facts.fixed_published.contains_key(&id))
+            && (!published.slots.is_empty()
+                || self.facts.fixed_published.contains_key(&id)
+                || self.facts.changing_published.contains_key(&id))
         {
             self.facts.published_restarts.insert(site, published);
         }

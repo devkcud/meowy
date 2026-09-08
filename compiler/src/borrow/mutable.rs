@@ -5,6 +5,15 @@ pub(crate) struct Plan {
     pub(crate) merging: bool,
     pub(crate) restarts: super::BTreeSet<super::BlockId>,
     pub(crate) fixed: super::published::Fixed,
+    pub(crate) changing: super::changing::Views,
+    pub(crate) refresh: super::changing::Views,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Publications {
+    pub(crate) fixed: super::published::Fixed,
+    pub(crate) changing: super::changing::Views,
+    pub(crate) refresh: super::changing::Views,
 }
 
 pub(crate) enum Item<'a> {
@@ -79,7 +88,7 @@ pub(crate) fn check(
                     {
                         let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;
                         alias_writes
-                            .entry((alias.target, owner))
+                            .entry((alias.target, owner, *id))
                             .or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
@@ -103,7 +112,7 @@ pub(crate) fn check(
                     {
                         let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;
                         alias_writes
-                            .entry((alias.target, owner))
+                            .entry((alias.target, owner, *id))
                             .or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
@@ -214,7 +223,7 @@ pub(crate) fn check(
     if owners != [block.id] {
         return Err(State::budget(Span::default()));
     }
-    let fixed = alias_restarts(&parents, &alias_writes, &restarts, guards)?;
+    let publications = alias_restarts(&parents, &alias_writes, &restarts, guards)?;
     if let Some(span) = exclusive
         && !restarts.is_empty()
     {
@@ -226,21 +235,23 @@ pub(crate) fn check(
     Ok(Plan {
         merging: write.is_some() || exclusive.is_some(),
         restarts,
-        fixed,
+        fixed: publications.fixed,
+        changing: publications.changing,
+        refresh: publications.refresh,
     })
 }
 
 pub(crate) fn alias_restarts(
     parents: &super::BTreeMap<super::BlockId, Option<super::BlockId>>,
-    writes: &super::BTreeMap<(super::BlockId, super::BlockId), Span>,
+    writes: &super::BTreeMap<(super::BlockId, super::BlockId, crate::hir::LocalId), Span>,
     restarts: &super::BTreeSet<super::BlockId>,
     guards: &mut Guards,
-) -> Result<super::published::Fixed> {
+) -> Result<Publications> {
     let lookup = parents.len().checked_ilog2().unwrap_or(0) as usize
         + writes.len().checked_ilog2().unwrap_or(0) as usize
         + 2;
     let mut owners = super::BTreeMap::new();
-    for (target, owner) in writes.keys() {
+    for (target, owner, _) in writes.keys() {
         if !guards.spend(lookup) || !parents.contains_key(target) {
             return Err(State::budget(Span::default()));
         }
@@ -248,11 +259,12 @@ pub(crate) fn alias_restarts(
             owners.insert(*owner, ancestors(parents, *owner, guards)?);
         }
     }
-    let mut fixed = super::published::Fixed::new();
+    let mut result = Publications::default();
     for id in restarts {
         let mut above = ancestors(parents, *id, guards)?;
         above.remove(id);
-        for ((target, owner), span) in writes {
+        let mut changed = super::BTreeSet::new();
+        for ((target, owner, local), span) in writes {
             if !guards.spend(lookup + above.len() + owners[owner].len() + 1) {
                 return Err(State::budget(*span));
             }
@@ -260,15 +272,33 @@ pub(crate) fn alias_restarts(
                 continue;
             }
             if owners[owner].contains(id) {
-                return Err(crate::diagnostic::Diagnostic::unsupported(
-                    "borrowed emitted result changes inside a surviving restart",
-                    *span,
-                ));
+                result.changing.entry(*id).or_default().insert(*local);
+                changed.insert(*target);
+                let mut current = *id;
+                loop {
+                    if !guards.spend(lookup + 2) {
+                        return Err(State::budget(*span));
+                    }
+                    result.refresh.entry(current).or_default().insert(*local);
+                    if current == *target {
+                        break;
+                    }
+                    current = parents
+                        .get(&current)
+                        .copied()
+                        .flatten()
+                        .ok_or_else(|| State::budget(*span))?;
+                }
+            } else {
+                result.fixed.entry(*id).or_default().insert(*target);
             }
-            fixed.entry(*id).or_default().insert(*target);
+        }
+        if let Some(targets) = result.fixed.get_mut(id) {
+            targets.retain(|target| !changed.contains(target));
         }
     }
-    Ok(fixed)
+    result.fixed.retain(|_, targets| !targets.is_empty());
+    Ok(result)
 }
 
 pub(crate) fn ancestors(

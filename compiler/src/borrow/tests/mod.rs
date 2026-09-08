@@ -6,6 +6,7 @@ mod allocator_headers;
 mod allocator_records;
 mod allocators;
 mod boundaries;
+mod changing_published;
 mod control;
 mod discarded_aliases;
 mod fixed_published;

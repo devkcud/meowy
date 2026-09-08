@@ -57,6 +57,7 @@ impl Checker<'_> {
         state.present = complete;
         let assumptions = self.assumptions();
         state.proof = self.guards.and(state.proof, assumptions);
+        state = self.finish_published(block.id, state, span)?;
         self.complete(&block.ty, &state, span)?;
         if state.size() != 0 || state.proof != TRUE {
             self.reserve_origins(state.weight() + 1, span)?;

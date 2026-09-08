@@ -17,7 +17,9 @@ impl Checker<'_> {
         let incoming = self.versions(span)?;
         let published = self.capture_published(id, span)?;
         if published.entered != FALSE
-            && (!published.slots.is_empty() || self.facts.fixed_published.contains_key(&id))
+            && (!published.slots.is_empty()
+                || self.facts.fixed_published.contains_key(&id)
+                || self.facts.changing_published.contains_key(&id))
         {
             self.facts.published_inputs.insert(id, published);
         }
@@ -40,6 +42,7 @@ impl Checker<'_> {
     }
 
     pub(crate) fn leave_target(&mut self, id: BlockId, span: Span) -> Result<()> {
+        self.refresh_published(id, span)?;
         let lookup = self.targets.len().checked_ilog2().unwrap_or(0) as usize + 1;
         if !self.guards.spend(lookup) {
             return Err(State::budget(span));
@@ -84,6 +87,9 @@ impl Checker<'_> {
             .targets
             .remove(&id)
             .ok_or_else(|| Self::unsupported(span))?;
+        if returning {
+            self.refresh_published(id, span)?;
+        }
         let normal = if returning { self.assumed } else { FALSE };
         let values = self.capture_versions(&target.incoming, normal, span)?;
         target.exits.push(Arm {

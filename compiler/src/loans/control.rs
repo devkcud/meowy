@@ -97,6 +97,9 @@ impl<'a> Graph<'a> {
             },
         );
         self.statements(&block.stmts)?;
+        if self.merging {
+            self.refresh_published(block.id)?;
+        }
         let mut scope = self.blocks.remove(&block.id).expect("completed scope");
         if self.merging {
             self.charge(scope.incoming.len() + 1)?;
@@ -381,6 +384,9 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::Leave(id) | Stmt::Restart { target: id, .. } => {
                     let restart = matches!(statement, Stmt::Restart { .. });
+                    if self.merging && !restart {
+                        self.refresh_published(*id)?;
+                    }
                     let life = self.blocks.get(id).expect("control scope").life;
                     self.end_scopes(Some((life, restart)))?;
                     if self.merging && !restart {

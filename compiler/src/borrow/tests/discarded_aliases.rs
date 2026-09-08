@@ -89,10 +89,7 @@ pub(crate) fn discarded_aliases_preserve_nested_bounds_and_real_call_entry() {
 
 #[test]
 pub(crate) fn published_result_and_backing_boundaries_remain_explicit() {
-    rejects(
-        "x:1;y:2;n:=2;r:{->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}};v:*r.p",
-        "B001",
-    );
+    accepts("x:1;y:2;n:=2;r:{->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}};v:*r.p");
     rejects("x:1;r:{->p:=&x;y:2;p=&y};v:*r.p", "E303");
     accepts("x:1;flag:=true;r:'target{|flag|{'target->p:=&x;p=&x}}");
     rejects("x:=1;'out{r:{->p:=&!x;'out.leave()}}", "B001");
