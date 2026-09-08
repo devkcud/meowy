@@ -20,6 +20,7 @@ public:
 
 class Scheduler;
 class Generated;
+class Strings;
 
 class Owned final {
 public:
@@ -41,6 +42,7 @@ public:
 private:
     friend class Scheduler;
     friend class Generated;
+    friend class Strings;
     enum class Phase : unsigned char { empty, reserved, live };
     [[nodiscard]] OwnedStatus accepts(const ValueOps &ops) const noexcept;
     [[nodiscard]] OwnedStatus fits(const Owned &destination) const noexcept;

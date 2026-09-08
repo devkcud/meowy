@@ -17,6 +17,7 @@ temporary directory. Each executes seven owning-diagnostic groups and an exact
 fatal-truncation probe, plus 14 cleanup cases and two fatal subprocesses,
 plus six generated-cleanup bridge cases and two exact fatal subprocesses,
 plus seven generated-ownership cases and two fatal transferred-drop probes,
+plus seven private owned-string construction/transfer cases,
 plus 10 stack allocation cases, a kernel admission-refusal subprocess and two
 guard-fault subprocesses. Each profile also runs 10 context cases and a fatal
 cleanup-after-resume subprocess. The sanitizer profile additionally requires an
@@ -43,6 +44,10 @@ omits sanitizer checks. Missing tools, sanitizer failures and unsupported execut
 environments fail the selected checks. LeakSanitizer requires an environment
 without ptrace-based sandbox supervision; run the normal command with the required
 environment access when that restriction applies.
+
+The [owned-string foundation](STRINGS.md) reuses Owned with an explicit static heap
+allocator, typed native allocation failure and descriptor-checked views. It is not
+yet enabled by source-language string constructors.
 
 ## Explicit owned values and task payloads
 

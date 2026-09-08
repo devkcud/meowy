@@ -20,6 +20,7 @@ SCHEDULER_CASES = 25
 OWNED_CASES = 14
 GENERATED_CASES = 6
 GENERATED_OWNED_CASES = 7
+STRING_CASES = 7
 
 
 def invoke(args, timeout=60, env=None):
@@ -181,6 +182,15 @@ def check(clang, directory, sanitizers=True):
         check_fatal(invoke([str(payload), "--fatal-normal"], env=env), False, "owned fixture")
         check_fatal(invoke([str(payload), "--fatal-panic"], env=env), True, "owned fixture")
         print(f"PASS generated payload ownership: {name}; {GENERATED_OWNED_CASES} cases and 2 fatal subprocesses", flush=True)
+        strings = directory / f"strings-{name}"
+        print(f"CHECK owned strings: {name}", flush=True)
+        require(invoke([clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
+                        "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"), *flags,
+                        str(ROOT / "src/cleanup.cpp"), str(ROOT / "src/owned.cpp"),
+                        str(ROOT / "src/generated.cpp"), str(ROOT / "src/strings.cpp"),
+                        str(ROOT / "tests/strings.cpp"), "-o", str(strings)]))
+        check_cases(invoke([str(strings)], env=env), STRING_CASES, "owned string")
+        print(f"PASS owned strings: {name}; {STRING_CASES} cases", flush=True)
         stack = directory / f"stack-{name}"
         args = [clang, "-std=c++20", "-Wall", "-Wextra", "-Wpedantic", "-Werror",
                 "-fno-exceptions", "-fno-rtti", "-I", str(ROOT / "include"),
