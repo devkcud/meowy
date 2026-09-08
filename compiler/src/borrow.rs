@@ -8,6 +8,7 @@ pub(crate) mod header;
 pub(crate) mod mutable;
 pub(crate) mod origins;
 pub(crate) mod pointee;
+pub(crate) mod published;
 pub(crate) mod replay;
 pub(crate) mod restart;
 pub(crate) mod state;

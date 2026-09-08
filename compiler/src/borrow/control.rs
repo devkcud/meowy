@@ -64,6 +64,7 @@ impl Checker<'_> {
         }
         self.close_scope();
         self.blocks.pop();
+        self.end_published(block.id, span)?;
         self.types.remove(&block.id);
         let effective = self.guards.and(state.present, state.proof);
         flow.next = effective != FALSE;

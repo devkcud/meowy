@@ -287,6 +287,10 @@ impl Checker<'_> {
         site: crate::hir::RestartId,
         span: Span,
     ) -> Result<()> {
+        let published = self.capture_published(id, span)?;
+        if published.entered != super::FALSE && !published.slots.is_empty() {
+            self.facts.published_restarts.insert(site, published);
+        }
         if !self
             .guards
             .spend(self.targets.len().checked_ilog2().unwrap_or(0) as usize + 1)

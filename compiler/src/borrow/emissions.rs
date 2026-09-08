@@ -39,6 +39,7 @@ impl Checker<'_> {
             .copied()
             .ok_or_else(|| Self::unsupported(span))?;
         let retained = self.guards.and(written, complete);
+        self.publish(target, field, &value, ty, span)?;
         if retained == FALSE {
             return Ok(());
         }

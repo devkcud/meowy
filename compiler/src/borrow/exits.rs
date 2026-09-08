@@ -15,6 +15,10 @@ impl Checker<'_> {
             return Err(State::budget(span));
         }
         let incoming = self.versions(span)?;
+        let published = self.capture_published(id, span)?;
+        if published.entered != FALSE && !published.slots.is_empty() {
+            self.facts.published_inputs.insert(id, published);
+        }
         self.reserve_origins(
             incoming
                 .iter()

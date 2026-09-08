@@ -39,6 +39,7 @@ pub(crate) fn body(
             blocks: Vec::new(),
             types: BTreeMap::new(),
             results: BTreeMap::new(),
+            published: BTreeMap::new(),
             writes: BTreeMap::new(),
             scopes: Vec::new(),
             facts: Facts::default(),
@@ -103,6 +104,8 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
             + next.headers.len()
             + next.header_inputs.len()
             + next.restart_inputs.len()
+            + next.published_inputs.len()
+            + next.published_restarts.len()
             + next.merging.len();
         let lookup = program.locals.len().checked_ilog2().unwrap_or(0) as usize + 1;
         if !guards.spend(entries.saturating_mul(lookup)) {
@@ -117,6 +120,8 @@ pub(crate) fn check(program: &Program, guards: &mut Guards, proofs: &Proofs) -> 
         facts.headers.extend(next.headers);
         facts.header_inputs.extend(next.header_inputs);
         facts.restart_inputs.extend(next.restart_inputs);
+        facts.published_inputs.extend(next.published_inputs);
+        facts.published_restarts.extend(next.published_restarts);
         facts.merging.extend(next.merging);
     }
     Ok(facts)

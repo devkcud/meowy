@@ -70,6 +70,8 @@ impl Checker<'_> {
         } else {
             value.select(path, self.guards)
         };
+        prefix.extend_from_slice(path);
+        self.update_published(target, &prefix, &value, span)?;
         let complete = self
             .proofs
             .completions
@@ -89,7 +91,6 @@ impl Checker<'_> {
         let active = self.guards.and(value.present, value.proof);
         value.origins = self.retained(value.origins, active, target_index, span)?;
         value.bounds = self.retained(value.bounds, active, target_index, span)?;
-        prefix.extend_from_slice(path);
         let current = self
             .results
             .get(&target)

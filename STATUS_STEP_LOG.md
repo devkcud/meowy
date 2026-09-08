@@ -6,6 +6,34 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Published result snapshot validation complete
+
+- All ten compiler checks pass: 963 Rust (475 library, 488 native), 20 Python,
+  61 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance: 10 passed, 13 unsupported, 0 failed; full release remains incomplete.
+- Independent publication inputs preserve result ownership, backing types, guarded
+  sources/bounds and completed RHS effects. Seven library and two native groups pass.
+- No runtime/backend, library, editor or dependency changes; their previous runtime
+  and editor evidence remains unchanged. Initial focused failures are fixed.
+- Next: canonical published headers and CFG demand transfers before lifting the
+  surviving-result gate; broader ownership, library, tools and distribution remain open.
+
+### 2026-09-08 - Published snapshot focused proof passes
+
+- Eight focused compiler groups pass. Initial test-assertion and whole-value
+  replacement failures are fixed; the existing E303 rejection is preserved.
+- Next: compiler/native/conformance gate, handoff and commit. Runtime, backend,
+  library, editor and dependencies remain unchanged; header/loan integration follows.
+
+### 2026-09-08 - Published result snapshot investigation and implementation
+
+- Added independent compiler publication inputs ahead of surviving-result Restart
+  support. Result owner/field identity, backing types and guarded borrow state are
+  retained separately from final-completion-filtered results.
+- Validation pending; no runtime/backend, library, editor or dependency changes.
+- Next: prove snapshot semantics and run the compiler gate, then integrate header
+  merging and loan transfers before lifting the surviving-result ownership gate.
+
 ### 2026-09-08 — Whole union-alias validation complete
 
 - All fourteen combined checks pass: 954 Rust (468 library, 486 native), 35 Python,

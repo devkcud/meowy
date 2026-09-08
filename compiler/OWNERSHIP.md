@@ -467,6 +467,24 @@ implementation boundary; it does not change language rules.
   shifted indexes, nested members, old copies, branches/Leave, retained lifetimes,
   declared/inferred backing, reset iterations and address/field/type boundaries.
 
+## Published result snapshots
+
+- `borrow/published.rs` records initialized mutable reference-bearing result fields
+  independently of the final-completion-filtered result accumulator. Keys retain
+  the owning block and field index; each snapshot stores the actual backing type,
+  origins, public bounds, variant activity and entry guard.
+- Emissions and returning alias writes update this state once in source order.
+  Exact-member paths and whole union-view conversions reuse the existing alias
+  resolver. An unfinished outer assignment leaves earlier RHS writes intact.
+- Block entry and Restart capture only ancestor-owned published slots. Ending an
+  alias's lexical scope does not remove its result state; ending or restarting the
+  owning block excludes that partial result. Conditional initialization stays
+  conditional, without inventing nullable defaults or canonical header activity.
+- Snapshot copies, type walks and stored facts use the existing work and origin
+  budgets. These are analysis inputs, not canonical headers or loan transfers.
+  Surviving published alias writes remain B001 until restart widening and CFG
+  demand transfers consume the new inputs together. Runtime behavior is unchanged.
+
 ## Mutable shared-reference bindings
 
 - Ordinary mutable locals with a fixed `&T` type can be rebound in straight-line

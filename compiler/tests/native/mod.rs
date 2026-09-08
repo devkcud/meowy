@@ -36,6 +36,7 @@ pub(crate) mod mutable_carriers;
 pub(crate) mod mutable_references;
 pub(crate) mod nested_writes;
 pub(crate) mod panics;
+pub(crate) mod published_snapshots;
 pub(crate) mod reborrows;
 pub(crate) mod reference_blocks;
 pub(crate) mod reference_fields;

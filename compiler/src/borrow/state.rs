@@ -148,6 +148,8 @@ impl Proofs {
 #[derive(Default)]
 pub(crate) struct Facts {
     pub(crate) inspections: BTreeMap<(usize, usize), Guard>,
+    pub(crate) published_inputs: BTreeMap<BlockId, super::published::Snapshot>,
+    pub(crate) published_restarts: BTreeMap<crate::hir::RestartId, super::published::Snapshot>,
     pub(crate) header_inputs: BTreeMap<BlockId, Predecessor>,
     pub(crate) restart_inputs: BTreeMap<crate::hir::RestartId, Predecessor>,
     pub(crate) headers: BTreeMap<BlockId, BTreeMap<LocalId, State>>,
@@ -218,6 +220,7 @@ pub(crate) struct Checker<'a> {
     pub(crate) blocks: Vec<BlockId>,
     pub(crate) types: BTreeMap<BlockId, Type>,
     pub(crate) results: BTreeMap<BlockId, State>,
+    pub(crate) published: super::published::Slots,
     pub(crate) writes: BTreeMap<(BlockId, Option<String>), Guard>,
     pub(crate) scopes: Vec<Vec<LocalId>>,
     pub(crate) facts: Facts,

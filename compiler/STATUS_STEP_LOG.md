@@ -6,6 +6,55 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Published result snapshot validation complete
+
+- All ten compiler checks pass: 475 library + 488 native (963 Rust), 20 Python,
+  61 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance: 10 passed, 13 unsupported, 0 failed. Git whitespace passes.
+- Seven new library groups prove backing tag paths, owner identity beyond lexical
+  scope, skipped outer stores, conditional presence, public bounds and bounded
+  capture. Two native groups prove unchanged RHS effects and readonly outer slots.
+- Earlier test-assertion and whole-value-replacement failures are fixed. No runtime,
+  backend, syntax, reference-fixture or dependency changes; editor/runtime evidence
+  is preserved from the prior all-area gate, not rerun for this analysis slice.
+- Next: merge Facts.published_inputs/published_restarts into canonical restart
+  headers and CFG demand transfers, including conditional initialization and exact
+  predecessor coverage, before lifting the surviving-result gate. Full release open.
+
+### 2026-09-08 - Published snapshot focused proof passes
+
+- All eight focused groups pass: seven new snapshot groups plus the existing
+  published-result boundary regression. Formatting passes; earlier failures fixed.
+- Proof covers backing union tags, surviving lexical scopes, nested field writes,
+  RHS Leave, conditional presence, public bounds, reset ownership and budget errors.
+- Next: compiler/native/conformance gate, final handoff and a cohesive commit.
+
+### 2026-09-08 - Published snapshot whole-value replacement
+
+- The focused run passed four groups and failed four: whole-slot tracking called
+  State::replaced with an empty path, masking one existing E303 as B001. Whole-value
+  snapshots now replace directly; field/member writes retain the path helper.
+- Scope filtering, public bounds, conditional initialization and RHS Leave proof
+  groups already pass. Next: rerun focused tests, then compiler/native gates.
+
+### 2026-09-08 - Published snapshot focused build
+
+- Added seven snapshot proof groups and two native execution groups. The first
+  focused build reported E0499 in a nested mutable test assertion; split the guard
+  calculation from the implication check. Rust formatting passed before the build.
+- No execution evidence yet. Next: rerun focused tests, then the compiler gate.
+
+### 2026-09-08 - Published result snapshot investigation and implementation
+
+- Clean tree at 386607d. Existing result state is filtered by final completion;
+  local restart headers cannot retain independent published updates on backedges.
+- Added a separate bounded publication map with actual backing types, guarded
+  state and owner/field identity. Emissions and alias writes update it; block entry
+  and Restart capture surviving ancestor slots independently of lexical alias scope.
+- Validation pending. The existing surviving-result B001 gate remains necessary.
+- Next: prove snapshot paths, tags, bounds, RHS cancellation and owner filtering;
+  run the compiler gate, then integrate canonical headers and CFG demand transfers.
+
 ### 2026-09-08 — Whole union-alias validation complete
 
 - All fourteen combined checks pass: 954 Rust (468 library, 486 native), 35 Python,

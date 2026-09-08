@@ -16,6 +16,7 @@ mod mutable_allocators;
 mod mutable_carriers;
 mod mutable_references;
 mod origins;
+mod published;
 mod reference_fields;
 mod reference_slots;
 mod restarts;
