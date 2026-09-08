@@ -283,13 +283,60 @@ impl Checker {
                     if restart {
                         let start = self.frames[index].start;
                         for frame in &self.frames[..index] {
-                            for slot in frame.slots.values().flatten() {
-                                if slot.order >= start && self.flow.overlap(self.reach, slot.guard)
-                                {
-                                    return Err(Diagnostic::unsupported(
-                                        "restart after an emission into an enclosing scope",
-                                        value.span,
-                                    ));
+                            for (name, slots) in &frame.slots {
+                                for slot in slots {
+                                    if slot.order >= start
+                                        && self.flow.overlap(self.reach, slot.guard)
+                                    {
+                                        let unsupported = || {
+                                            Diagnostic::unsupported(
+                                                "restart after an emission into an enclosing scope",
+                                                value.span,
+                                            )
+                                        };
+                                        let expected = frame
+                                            .expected
+                                            .as_ref()
+                                            .filter(|_| !frame.partial)
+                                            .ok_or_else(unsupported)?;
+                                        crate::borrow_contract::type_weight(
+                                            expected,
+                                            &mut self.flow,
+                                            value.span,
+                                        )?;
+                                        let (_, ty) = crate::borrow::slot(expected, name)
+                                            .ok_or_else(unsupported)?;
+                                        if !crate::borrow::carried::scalar(ty) || *ty != slot.ty {
+                                            return Err(unsupported());
+                                        }
+                                        let size = name.as_ref().map_or(0, String::len) + 1;
+                                        if !self.flow.spend(size.saturating_mul(
+                                            self.proofs.carried.len().checked_ilog2().unwrap_or(0)
+                                                as usize
+                                                + 2,
+                                        )) {
+                                            return Err(Diagnostic::unsupported(
+                                                "carried publication budget exhausted",
+                                                value.span,
+                                            ));
+                                        }
+                                        let key = (frame.id, name.clone());
+                                        if self.proofs.carried.len()
+                                            >= crate::borrow::carried::MAX_SLOTS
+                                            && !self.proofs.carried.contains_key(&key)
+                                        {
+                                            return Err(Diagnostic::unsupported(
+                                                "carried publication budget exhausted",
+                                                value.span,
+                                            ));
+                                        }
+                                        self.proofs.carried.entry(key).or_insert(
+                                            crate::borrow::carried::Slot {
+                                                ty: ty.clone(),
+                                                span: value.span,
+                                            },
+                                        );
+                                    }
                                 }
                             }
                         }

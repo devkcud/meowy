@@ -119,11 +119,12 @@ impl Checker {
         }
         let mut slots = BTreeMap::new();
         for (name, writes) in &frame.slots {
+            let carried = self.proofs.carried.contains_key(&(frame.id, name.clone()));
             let mut types = Vec::new();
             let mut initialized = FALSE;
             let mut mutable = None;
             for slot in writes {
-                if !self.flow.overlap(slot.guard, self.reach) {
+                if !carried && !self.flow.overlap(slot.guard, self.reach) {
                     continue;
                 }
                 if mutable.is_some_and(|value| value != slot.mutable) {
@@ -139,6 +140,9 @@ impl Checker {
             }
             if types.is_empty() {
                 continue;
+            }
+            if carried {
+                initialized = self.reach;
             }
             if !self.flow.implies(self.reach, initialized) {
                 types.push(Type::Null);

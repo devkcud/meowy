@@ -81,11 +81,12 @@ impl Graph<'_> {
     pub(crate) fn conditional(
         &mut self,
         guard: Guard,
+        condition: Option<super::emission_value::Value>,
         yes: impl FnOnce(&mut Self) -> Result<()>,
         no: impl FnOnce(&mut Self) -> Result<()>,
     ) -> Result<()> {
         if !self.merging {
-            let (left, right) = self.fork(guard)?;
+            let (left, right) = self.fork(guard, condition)?;
             self.current.push(left);
             let scope = self.enter_scope(ScopeKind::Branch)?;
             yes(self)?;
@@ -100,7 +101,7 @@ impl Graph<'_> {
             return Ok(());
         }
         let incoming = self.versions()?;
-        let (left, right) = self.fork(guard)?;
+        let (left, right) = self.fork(guard, condition)?;
         self.current.push(left);
         let scope = self.enter_scope(ScopeKind::Branch)?;
         yes(self)?;

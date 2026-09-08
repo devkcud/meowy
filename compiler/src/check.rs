@@ -148,6 +148,8 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
                     )]);
                 }
             }
+            crate::borrow::carried::validate(&checker.proofs, &mut checker.flow)
+                .map_err(|error| vec![error])?;
             let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
             crate::loans::check(&program, &facts, &checker.proofs, &mut checker.flow)?;
             Ok(program)

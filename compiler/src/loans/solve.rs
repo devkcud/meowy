@@ -155,6 +155,7 @@ impl<'a> Graph<'a> {
 
     pub(crate) fn check(mut self, block: &Block, params: &[LocalId]) -> Result<()> {
         self.build(block, params)?;
+        self.emission_states()?;
         let reach = self.reach()?;
         self.access_evidence(&reach)?;
         for (node, active) in &self.missing_headers {

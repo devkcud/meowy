@@ -104,8 +104,15 @@ impl<'a> Graph<'a> {
         }
     }
 
-    pub(crate) fn fork(&mut self, guard: Guard) -> Result<(usize, usize)> {
-        let branch = self.append(Node::default())?;
+    pub(crate) fn fork(
+        &mut self,
+        guard: Guard,
+        condition: Option<super::emission_value::Value>,
+    ) -> Result<(usize, usize)> {
+        let branch = self.append(Node {
+            condition,
+            ..Node::default()
+        })?;
         let yes = self.node(Node::default())?;
         let no = self.node(Node::default())?;
         self.nodes[branch].next = vec![

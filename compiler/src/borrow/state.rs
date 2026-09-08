@@ -26,6 +26,7 @@ pub(crate) struct Alias {
 
 #[derive(Default)]
 pub(crate) struct Proofs {
+    pub(crate) carried: super::carried::Slots,
     pub(crate) frontiers: BTreeMap<crate::hir::RestartId, super::frontier::Frontier>,
     pub(crate) completions: BTreeMap<BlockId, Guard>,
     pub(crate) emissions: BTreeMap<EmitId, Guard>,

@@ -6,6 +6,54 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Carried scalar initialization validation complete
+
+- All ten compiler checks pass: 515 library + 510 native (1025 Rust), 20 Python,
+  65 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Declared non-nullable scalar slots now retain exactly-once initialization across
+  inner restarts. The existing CFG supplies Boolean updates, branch refinement and
+  owner lifecycle; every explored completion must initialize all deferred slots.
+- Eleven source/proof and six native groups cover copies, effectful RHS snapshots,
+  missing/duplicate initialization, owner reset, Leave/panic, scalar widths and
+  work limits. The example prints init, 0, 1, 2, 7. No test failures remain.
+- Runtime/backend, syntax, reference fixtures and dependencies are unchanged;
+  prior editor/runtime evidence is preserved rather than rerun.
+- Next: shared carried-storage borrowing and owner-reset availability proof;
+  keep nullable/reference-bearing slots and wider value analysis separately gated.
+
+
+### 2026-09-08 - Carried scalar focused proof and native matrix
+
+- All eight source groups pass, including Boolean copies, repeated/uninitialized
+  results, owner resets, partial panic paths and conservative effectful-RHS handling.
+- Added three direct proof/budget groups, six native groups and carried-scalars.mwy
+  (init, 0, 1, 2, 7). Existing late-publication regressions remain green.
+- Next: full compiler/native gate, final handoff and commit. Runtime/backend unchanged.
+
+
+### 2026-09-08 - Carried scalar build and regression coverage
+
+- Implementation builds; all ten existing late-publication groups pass.
+- Added eight source groups covering retained scalar slots and primaries, Boolean
+  updates/copies, owner resets, missing/repeated initialization, Leave/panic,
+  effectful/unknown Boolean values, widths and storage/type gates.
+- Next: focused proof, native output checks and the full compiler gate.
+
+
+### 2026-09-08 - Carried scalar initialization investigation and implementation
+
+- Clean tree at e070005. Primitive declared results can retain storage across
+  backedges without new borrowed-value summaries, but initialization and Boolean
+  control state must be proved independently of iteration-reset BDD assumptions.
+- Added deferred scalar obligations, a bounded CFG state exploration, pure Boolean
+  summaries, semantic Emit/Complete events and result-scope reset handling.
+  All completing paths must initialize exactly once; unknown effects stay conservative.
+- Reference/union/aggregate or undeclared carried results and address-taking of
+  their storage remain gated. Validation pending; next: source/proof/native tests
+  for first flags, reset/reinitialization, Leave/panic, snapshots and work bounds.
+
+
 ### 2026-09-08 - Late publication validation complete
 
 - All ten compiler checks pass: 504 library + 504 native (1008 Rust), 20 Python,

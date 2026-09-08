@@ -6,6 +6,35 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Carried scalar initialization validation complete
+
+- All ten compiler checks pass: 1025 Rust (515 library, 510 native), 20 Python,
+  65 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Declared scalar results can initialize once in an early iteration and survive
+  inner restarts. Boolean/value-copy and owner-reset proofs cover every completion.
+  Eleven source/proof groups and six native groups pass with no runtime changes.
+- Next: shared borrowing of carried storage, then wider initialization and ownership.
+  Library, editor, tools and distribution work remain visible and incomplete.
+
+
+### 2026-09-08 - Carried scalar focused proof passes
+
+- Eight source groups pass for declared scalar initialization across backedges.
+  Three direct proof groups, six native groups and an example are ready for the gate.
+- Next: full compiler verification, handoff and commit. Runtime/backend, editor,
+  library and dependency work remain unchanged.
+
+
+### 2026-09-08 - Carried scalar publication proof
+
+- Compiler work adds stateful initialization for declared scalar slots retained
+  across inner restarts. The proof tracks Boolean flags and owner resets without
+  replaying source effects; validation is pending.
+- Runtime/backend and dependencies are unchanged. Next: source/proof/native
+  regressions, compiler gate, handoff and commit.
+
+
 ### 2026-09-08 - Late publication validation complete
 
 - All ten compiler checks pass: 1008 Rust (504 library, 504 native), 20 Python,

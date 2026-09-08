@@ -81,7 +81,8 @@ impl<'a> Graph<'a> {
         let start = self.node(node)?;
         self.connect(start, TRUE, restarted);
         self.current.push(start);
-        let node = self.copied(&result, &value)?;
+        let mut node = self.copied(&result, &value)?;
+        self.emission_finish(&mut node, block.id)?;
         let end = self.node(node)?;
         self.blocks.insert(
             block.id,
@@ -132,6 +133,7 @@ impl<'a> Graph<'a> {
                 }
                 Stmt::Bind { id, value } => {
                     let span = value.span;
+                    let boolean = self.emission_bool(value)?;
                     let cell = self.register_store(*id, span)?;
                     let value = self.expression(value)?;
                     let target = if self.program.locals[*id].has_borrowed() {
@@ -144,6 +146,10 @@ impl<'a> Graph<'a> {
                         node.barrier = Some(span);
                     }
                     self.event(&mut node, EventKind::Init(cell), span)?;
+                    if let Some(value) = boolean {
+                        node.emissions
+                            .push(super::emission_init::Event::Set(*id, value));
+                    }
                     self.append(node)?;
                     if let Some(state) = self.facts.locals.get(id) {
                         self.assume(state.proof)?;
@@ -195,6 +201,7 @@ impl<'a> Graph<'a> {
                         self.access(Kind::Write, self.storage(*id, Vec::new()), &[], value.span)?;
                     node.access = Some(access);
                     self.event(&mut node, EventKind::Init(self.cell(*id)), value.span)?;
+                    self.emission_set(&mut node, *id, value)?;
                     self.append(node)?;
                     if let Some(target) = target {
                         self.locals.insert(*id, target);
@@ -220,6 +227,11 @@ impl<'a> Graph<'a> {
                     self.append(Node {
                         uses,
                         access: Some(access),
+                        emissions: if self.proofs.carried.is_empty() {
+                            Vec::new()
+                        } else {
+                            vec![super::emission_init::Event::Forget]
+                        },
                         ..Node::default()
                     })?;
                 }
@@ -344,6 +356,7 @@ impl<'a> Graph<'a> {
                     value,
                 } => {
                     let span = value.span;
+                    let emission = self.emission_write(*target, field, &value.ty, span)?;
                     let allowed = self.scalar_emission(*id, *target, field, value)?;
                     let scope = self.blocks.get(target).expect("emission target");
                     let slot = crate::borrow::slot(&scope.ty, field)
@@ -360,6 +373,9 @@ impl<'a> Graph<'a> {
                     };
                     let mut node = self.copied(&value, &result)?;
                     node.barrier = (!allowed).then_some(span);
+                    if let Some(emission) = emission {
+                        node.emissions.push(emission);
+                    }
                     self.append(node)?;
                 }
                 Stmt::If {
@@ -371,8 +387,11 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         continue;
                     }
+                    let guard = self.condition(condition)?;
+                    let test = self.emission_bool(condition)?;
                     self.conditional(
-                        self.condition(condition)?,
+                        guard,
+                        test,
                         |graph| graph.statements(then),
                         |graph| graph.statements(otherwise),
                     )?;

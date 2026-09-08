@@ -221,6 +221,9 @@ impl<'a> Graph<'a> {
             },
             ..Node::default()
         };
+        if !self.proofs.carried.is_empty() && args.iter().any(|arg| arg.ty.has_exclusive()) {
+            node.emissions.push(super::emission_init::Event::Forget);
+        }
         if !returning {
             for id in value.values() {
                 self.opaque_value(&mut node, *id)?;
@@ -527,13 +530,20 @@ impl<'a> Graph<'a> {
                     return Ok(Bundle::new());
                 }
                 let guard = self.condition(left)?;
+                let test = self.emission_bool(left)?;
                 let guard = if op == "&&" {
                     guard
                 } else {
                     self.guards.not(guard)
                 };
+                let test = if op == "&&" {
+                    test
+                } else {
+                    test.map(super::emission_value::Value::negated)
+                };
                 self.conditional(
                     guard,
+                    test,
                     |graph| graph.expression(right).map(|_| ()),
                     |_| Ok(()),
                 )?;

@@ -404,7 +404,8 @@ implementation boundary; it does not change language rules.
   the cell and its live sources. Restarting or leaving the target ends that cell;
   copied slot references expire and cannot revive at the next initialization.
   Published outer results use fixed identity, preexisting alias headers or proven
-  late initialization. Initialization carried across a backedge still needs stateful proof.
+  late initialization. Declared scalar slots use the carried initialization proof;
+  reference-bearing initialization across backedges remains separate work.
 - Leave and panic preserve earlier effects and skip unfinished outer stores. A
   borrowed cell can survive the lexical scope that introduced its alias while the
   target remains active. Reads or calls cannot bypass E302 conflicts or E303 expiry
@@ -434,7 +435,8 @@ implementation boundary; it does not change language rules.
 - Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
   loans keep their existing checks. Returned payloads still satisfy retained-source
   lifetimes. Restart supports reset slots, preinitialized aliases and proven late
-  initialization. Initialization that reaches a backedge remains gated. Views spanning a
+  initialization. Carried scalar slots use a separate stateful proof; other carried
+  initialization remains gated. Views spanning a
   proper subset of a larger union use the
   whole-assignment conversion below; their addresses and field paths stay gated.
 - The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
@@ -462,7 +464,7 @@ implementation boundary; it does not change language rules.
   established rules. Physical conflicts and retained-source expiry remain E302/E303.
 - Taking an address or writing a field through a proper-subset union view remains
   B001 because its lexical tag representation differs from backing. Publication
-  initialization across backedges and bounded allocator-only aliases remain separate
+  reference-bearing initialization across backedges and bounded allocator-only aliases remain separate
   proof work. Type/path copies and member remapping use existing charged budgets.
 - The [union-aliases example](examples/union-aliases.mwy) alternates a nullable
   reference while backing admits an extra string member. Library/native tests cover
@@ -485,8 +487,8 @@ implementation boundary; it does not change language rules.
 - Snapshot copies, type walks and stored facts use the existing work and origin
   budgets. These are analysis inputs, not canonical headers or loan transfers.
   Fixed surviving publications use identity; preinitialized changing aliases use
-  canonical headers. Late aliases use explicit frontier certificates. Initialization
-  carried across a backedge remains separate proof work.
+  canonical headers. Late aliases use explicit frontier certificates. Declared
+  scalar slots use carried initialization proof; reference-bearing slots remain gated.
 
 ## Fixed published restart results
 
@@ -511,7 +513,7 @@ implementation boundary; it does not change language rules.
   preserves such a result and releases the replaced source's loan.
 - Changing preinitialized aliases use projection; completing-path aliases use late
   initialization frontiers. Missing or malformed ancestry, snapshots and budget
-  exhaustion remain capability failures. Initialization carried across backedges,
+  exhaustion remain capability failures. Reference-bearing initialization across backedges,
   union-view addresses/fields, allocator-only aliases and owning cleanup need separate proofs.
 
 ## Changing published restart results
@@ -540,7 +542,7 @@ implementation boundary; it does not change language rules.
   payload use or initialization event; old copies and cell loans retain their IDs.
 - Fixed publications retain their identity proof. Shared backing resolution, union
   remapping and existing budgets are reused. Nullable defaults, RHS evaluation and
-  ownership diagnostics remain unchanged. Lists, initialization surviving backedges,
+  ownership diagnostics remain unchanged. Lists, reference-bearing initialization across backedges,
   union-view addresses/fields, exclusive carriers and owning cleanup remain open.
 - The [changing-published example](examples/changing-published.mwy) prints current
   pointers across iterations, then the old copy and the completed result.
@@ -550,8 +552,9 @@ implementation boundary; it does not change language rules.
 - A borrowed result alias may be initialized inside a restarted body when its
   emission cannot reach any backedge to that body. Completing-iteration aliases
   keep ordinary binding, backing, assignment and normal/Leave publication behavior.
-- The frontend retains the existing check against new enclosing emissions at each
-  restart. Successful sites record their target, checked entry guard and first
+- The frontend checks new enclosing emissions at each restart, except declared
+  scalar obligations deferred to carried-initialization proof. Successful sites
+  record their target, checked entry guard and first
   emission ID at block entry. This ID is separate from the reachable-write counter,
   since dead emissions still have HIR identities.
 - The ownership scan requires a matching certificate for every actual Restart
@@ -566,11 +569,40 @@ implementation boundary; it does not change language rules.
   remain in force. Initializer restarts happen before binding/emission; RHS Leave
   preserves completed stores and skips unfinished ones.
 - Duplicate emissions remain E205, mutability checks remain unchanged and returned
-  references still obey E302/E303. Emissions that actually survive a backedge need
-  a separate stateful initialization proof. Reference-bearing lists, union-view
+  references still obey E302/E303. Declared scalar slots can survive a backedge using
+  the separate stateful proof below. Reference-bearing lists, union-view
   addresses/fields, allocator-only aliases and owning cleanup remain separate work.
 - The [late-published example](examples/late-published.mwy) runs restart prefixes
   three times, initializes once and preserves an old pointer copy after rebinding.
+
+## Carried scalar initialization
+
+- A declared non-nullable boolean, integer, float or static-string result slot may
+  retain its initialization across an inner restart. Named fields and primaries
+  use the same proof. The explicit enclosing result type supplies the storage shape;
+  inferred, nullable, aggregate, allocator and reference-bearing carried slots stay gated.
+- The frontend defers only eligible enclosing-emission and completion obligations.
+  Current-iteration duplicate emissions and type/mutability rules are unchanged.
+  Every deferred slot must pass a separate initialization proof before native lowering.
+- The proof explores bounded states on the existing loan CFG: initialized-slot
+  bits, active result scopes and Boolean local values. Inner restarts preserve
+  ancestor initialization; restarting or discarding an owner clears its slots.
+  Normal and Leave completion require every carried slot initialized exactly once.
+- Boolean local/literal trees using !, &&, ||, == and != retain value and copy semantics. Conditions
+  refine Boolean states; unknown values conservatively explore both alternatives.
+  Expressions containing effects remain unknown as a whole, so a post-RHS store
+  cannot reinterpret an operand evaluated before those effects. Indirect stores and
+  exclusive calls invalidate Boolean knowledge. Source effects are never replayed.
+- The limits are 64 carried slots, 512 known Boolean locals per state and 16,384
+  visited states, with existing graph/proof work charging. Missing, duplicate or
+  unproved initialization and exhausted proof remain B001; ordinary E204/E205 cases
+  are preserved. Success is a proof over every explored completion, not one witness.
+- Address-taking of a carried alias remains B001 pending storage-availability proof.
+  Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
+  reads, storage allocations, ABI changes or dependencies are added by the analysis.
+- The [carried-scalars example](examples/carried-scalars.mwy) prints one initializer,
+  three iteration values and the retained field. Stateful reference-bearing
+  publications, broader Boolean/value analysis and owning cleanup remain separate work.
 
 ## Mutable shared-reference bindings
 

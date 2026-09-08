@@ -10,6 +10,8 @@ pub(crate) struct Edge {
 
 #[derive(Default)]
 pub(crate) struct Node {
+    pub(crate) condition: Option<super::emission_value::Value>,
+    pub(crate) emissions: Vec<super::emission_init::Event>,
     pub(crate) uses: Vec<usize>,
     pub(crate) defs: Vec<usize>,
     pub(crate) transfers: Vec<(usize, usize, Guard)>,

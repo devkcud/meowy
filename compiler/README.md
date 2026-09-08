@@ -67,6 +67,7 @@ compiler/target/debug/meowy run compiler/examples/union-aliases.mwy
 compiler/target/debug/meowy run compiler/examples/fixed-published.mwy
 compiler/target/debug/meowy run compiler/examples/changing-published.mwy
 compiler/target/debug/meowy run compiler/examples/late-published.mwy
+compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -156,7 +157,14 @@ The [changing published result example](examples/changing-published.mwy) updates
 an alias initialized before the loop while an older copy keeps its original target.
 The [late published result example](examples/late-published.mwy) initializes and
 updates an alias on the completing iteration. Explicit frontier proofs keep such
-emissions off restart edges; initialization that actually crosses an edge remains gated.
+emissions off restart edges. Declared scalar slots can also retain initialization
+across an edge using the separate proof below; other carried initialization remains gated.
+
+The [carried scalar example](examples/carried-scalars.mwy) initializes a declared
+result field on the first iteration and retains it across inner restarts. A bounded
+Boolean-state proof checks exactly-once initialization and every completing path.
+Reference-bearing, nullable or inferred carried slots and borrowing their storage
+remain unavailable; effectful Boolean results may prevent proof.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;

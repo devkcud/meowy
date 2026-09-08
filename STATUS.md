@@ -11,6 +11,10 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [Carried scalar initialization](compiler/OWNERSHIP.md#carried-scalar-initialization)
+  proves exactly-once emission across inner restarts for declared non-nullable
+  scalar results, including Boolean flags, owner resets and completing paths.
+
 - [Late published aliases](compiler/OWNERSHIP.md#late-published-aliases) initialize
   inside restarted bodies when their emission cannot reach any backedge. Explicit
   frontier certificates preserve empty headers, actual definitions and source lifetimes.
@@ -23,7 +27,7 @@ The full documented v0.0.1 release remains incomplete.
   support borrowed alias writes before or after an inner restarted body. Stable
   snapshots retain backing types, conditional fields, old copies and source lifetimes.
   Changing preinitialized aliases and proven late initialization are supported;
-  initialization carried across an actual backedge remains gated.
+  declared scalar initialization can also survive backedges after stateful proof.
 - [Published result snapshots](compiler/OWNERSHIP.md#published-result-snapshots)
   retain backing types, tags, origins and bounds beyond alias lexical scopes.
   Fixed result bundles survive through checked identity; preinitialized changing
@@ -31,20 +35,20 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 1008 Rust (504 library, 504 native), 20 Python, 64 examples
+- Current compiler gate: 1025 Rust (515 library, 510 native), 20 Python, 65 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
   dependencies are unchanged; runtime/editor checks were not rerun for this slice.
 - The [union-aliases example](compiler/examples/union-aliases.mwy) changes a nullable
-  pointer whose backing admits an extra string member. Initialization across backedges,
+  pointer whose backing admits an extra string member. Wider carried initialization,
   union-view addresses/fields, lists, dynamic origins, owning cleanup and release remain open.
 
 ## Still to build or qualify
 
 | Area | Current boundary | Next useful work |
 | --- | --- | --- |
-| Compiler | Whole union-alias assignment, transient storage and late published aliases | Stateful publication initialization, list bounds, dynamic origins and drop schedules |
+| Compiler | Whole union-alias assignment, late publications and carried scalar initialization | Carried storage borrows, wider initialization, list bounds and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
@@ -54,9 +58,9 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Model publication initialization that survives actual backedges before relaxing
-   the enclosing-emission gate. Keep late frontier certificates, duplicate-slot
-   checks and mixed initialization scopes intact.
+1. Prove shared borrowing and owner-reset availability for carried scalar storage,
+   then extend wider initialization/value summaries. Preserve late certificates,
+   duplicate-slot checks and result-scope resets.
    Preserve conditional initialization,
    ancestor storage, exact predecessor coverage and no synthetic reads.
    Union-view addresses/field paths
