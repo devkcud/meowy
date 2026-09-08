@@ -4,8 +4,8 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-07. Generated payload relocation and ownership transfer verified.
-Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain in this slice.
+Updated: 2026-09-07. Owning HIR schedule design recorded and documentation validated.
+Full v0.0.1 remains incomplete. Compiler behavior is unchanged.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
 Indexed scalar fields: `1f8295c`; contract/example: `397b3b2`.
@@ -39,6 +39,17 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
+The [owning-HIR design](OWNING_HIR.md) selects documented `strings.Owned` as the
+first destructible value and records initialized state, exit schedules, retained
+emissions and observable drop traces. It is not implemented source ownership.
+Source enablement requires owning panic propagation through scalar calls, dynamic
+string-view origins and resolved foundational types/typed allocation failure.
+Current bridge reservation order and top-slot rules require finite region bounds;
+repeated surviving-ancestor writes remain unsupported until reclamation is proved.
+Repository contract checks pass: 16 tooling tests, 957 links, catalog and schemas.
+No compiler/runtime behavior changed or execution suites rerun; their checks below
+are prior evidence. No unfinished edits or failing checks remain in this design slice.
+
 The private generated bridge now exposes static ValueOps descriptor initialization,
 opaque Owned metadata and actual payload relocation. Generated move callbacks have a
 scalar pointer ABI; generated drop callbacks write an owning Panic snapshot. Existing
@@ -57,7 +68,7 @@ failed transfer/retry, exactly-once destruction, partial construction, guarded c
 and fatal transferred-drop diagnostics. The archive includes owned.cpp with header/source
 invalidation. Ordinary Meowy programs still do not emit owning-value cleanup or task code.
 
-All fourteen combined checks pass: 789 Rust (361 library, 428 native), 35 Python,
+Prior combined validation passed all fourteen checks: 789 Rust (361 library, 428 native), 35 Python,
 48 debug/release examples, Vim/Neovim, 940 links and compiler checks. Runtime passes
 92 case groups per debug/release/sanitized profile plus all required fatal/guard/
 admission/fiber probes. A generated ownership ELF imports only libc.so.6.
@@ -602,7 +613,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- Current `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 361 library
+- Prior `python3 -B tools/verify.py --all`: all fourteen checks passed. Rust: 361 library
   + 428 native groups (789 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
   All 48 examples execute in debug/release. Vim/Neovim, formatting, Clippy, pinned
   build, schemas/catalog and 940 links in 94 Markdown files pass.
@@ -626,10 +637,14 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Design initialized-state/drop schedules for the first contract-supported owning HIR
-   value, then lower normal/Leave/Restart exits with retained emissions. Panic requires
-   owning outcomes and qualified landing pads; Task::close needs resumable report drain
-   and child settlement while parents live. Existing loan events are not drop schedules.
+1. Follow [OWNING_HIR.md](OWNING_HIR.md): first add owning panic outcomes and explicit
+   synchronous propagation in `backend.rs`, `backend/arithmetic.rs`,
+   `backend/lists.rs` and `backend/output.rs`, including failures across calls.
+   Preserve existing diagnostic bytes/effect order in debug/release and prove original
+   panic cause and cleanup order with generated native callbacks. Then establish
+   foundational item identities, typed allocation failure and dynamic string-view
+   origins before enabling strings.Owned and bounded normal/Leave/Restart cleanup.
+   Task::close still needs report drain and child settlement while parents live.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

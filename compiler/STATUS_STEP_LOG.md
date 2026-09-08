@@ -6,6 +6,46 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-07 — Owning HIR design validation complete
+
+- Repository contract gate passes all four checks: 16 tooling tests, 957 local
+  links in 95 Markdown files, 23 conformance catalog records, seven schemas and
+  six examples. The initial wrong heading anchor was corrected before this run.
+- Documentation only: no Rust/native/runtime/editor suites or Meowy execution
+  rerun. Earlier 789 Rust, 92 runtime groups/profile and 13 unsupported conformance
+  cases remain historical implementation evidence, not proof of owning schedules.
+- No unfinished design edits or validation failures. Automatic owning cleanup is
+  still unimplemented. Next: owning panic outcomes across scalar calls, followed
+  by foundation identities, allocation failure and dynamic string-view origins;
+  use compiler/OWNING_HIR.md acceptance order and observable schedule cases.
+
+### 2026-09-07 — Owning HIR schedule design recorded
+
+- Added compiler/OWNING_HIR.md: strings.Owned first resource, guarded initialized
+  state, region/alias identity, exit/retention rules and observable drop traces.
+- Source enablement requires owning panic propagation across scalar calls, dynamic
+  string-view origins, resolved foundation identities and typed allocation failure.
+  Current bridge reservation order/top-slot rules require finite region bounds;
+  repeated surviving-ancestor writes stay B001 until bounded reclamation is proved.
+- Documentation validation found one incorrect COMPILER.md heading anchor; corrected
+  it to the-pipeline. No compiler/runtime behavior or reference fixtures changed.
+- Next: finish documentation validation, then implement owning panic outcomes and
+  explicit synchronous failure propagation before enabling a destructible HIR type.
+
+### 2026-09-07 — Owning HIR schedule investigation
+
+- Current HIR has no destructible resource: Exclusive is move-only but does not
+  release its referent; String is a literal-backed Copy view. Select the documented
+  strings.Owned/strings.copy path for the first resource without generic containers.
+- Backend erases Statement boundaries, copies emissions, and branches directly on
+  Leave/Restart. Loan events cannot supply destruction order or retained results.
+- The bridge orders cleanup by reservation, requires a top destination for transfer,
+  and retains disarmed entries until unwind. Emissions and repeated ancestor writes
+  need explicit order/capacity handling before automatic lowering can be enabled.
+- Validation: source/contract inspection only; no compiler behavior changed.
+  Next: record concrete initialization, exit, capacity and enablement requirements
+  in compiler/OWNING_HIR.md, then validate documentation links and handoff.
+
 ### 2026-09-07 — Generated payload ownership combined validation complete
 
 - All fourteen combined checks pass: 789 Rust (361 library, 428 native), 35 Python,
