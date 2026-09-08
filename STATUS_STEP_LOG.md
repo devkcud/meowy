@@ -6,6 +6,18 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Exclusive restart authority prerequisite identified
+
+- A carried-slot gate change alone is insufficient: exclusive restart bodies are
+  rejected independently, and reset graphs receive opaque loan authority.
+- Recorded the first bounded slice in compiler/EXCLUSIVE_RESTARTS.md: no exclusive
+  loan or descendant may cross a reset edge. Header ancestry needs explicit proof.
+- Documentation validation passed: 1029 local links in 100 Markdown files and
+  Git whitespace checks. External links were not fetched.
+- Documentation only; no compiler/runtime/editor checks rerun. Last compiler gate
+  remains 1036 Rust, 20 Python, 66 examples; conformance has 13 unsupported cases.
+- Next: implement and validate the frontier proof before narrowing opacity/gates.
+
 ### 2026-09-08 - Shared carried-scalar borrowing validation complete
 
 - All ten compiler checks pass: 1036 Rust (521 library, 515 native), 20 Python,

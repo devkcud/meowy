@@ -4,8 +4,9 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Shared carried-scalar borrowing verified.
-Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
+Updated: 2026-09-08. Exclusive restart authority investigation complete.
+Shared carried-scalar borrowing is verified; exclusive restart behavior remains gated.
+Full v0.0.1 remains incomplete. No unfinished compiler edits or known failing checks.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
@@ -39,6 +40,14 @@ This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider pro
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
+
+The [exclusive restart authority plan](EXCLUSIVE_RESTARTS.md) records a prerequisite
+before lifting either exclusive gate. `borrow/mutable.rs::check` rejects exclusive
+restart bodies, and `loans/authority.rs::solve_authority` makes restart authority
+opaque. Header transfers do not currently propagate precise loan ancestry.
+The first slice must prove that exclusive loans and all descendants end before
+every reset edge. Exclusive headers stay gated. This step changes documentation
+only; no compiler/runtime/editor execution was rerun.
 
 [Shared carried scalar borrows](OWNERSHIP.md#shared-carried-scalar-borrows) now record
 Acquire events at actual address construction. Each event requires an active owner
@@ -649,11 +658,14 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Prove exclusive carried-scalar borrowing before lifting the remaining gate in
-   `borrow/carried.rs`. Reuse `loans/emission_init.rs` acquisition/lifecycle and
-   existing loan authority; preserve indirect-write Boolean invalidation, moved
-   handles, last-use conflicts and owner-reset expiry. Add source/native cases and
-   run the compiler gate after integration. Keep nullable/reference-bearing initialization
+1. Follow [EXCLUSIVE_RESTARTS.md](EXCLUSIVE_RESTARTS.md). Prove exclusive ancestry
+   ends at every reset frontier, including shared descendants and demand-only
+   `loans/restarts.rs` transfers. Reuse liveness and parent lineage; missing/opaque
+   ancestry is not proof. Only then narrow `loans/authority.rs` blanket opacity and
+   the `borrow/mutable.rs` / `borrow/carried.rs` gates for local carried-scalar loans.
+   Keep exclusive headers unsupported. Preserve acquisition/lifecycle, indirect-write
+   Boolean invalidation, moves, last-use conflicts and expiry; run source/native
+   regressions and the compiler gate. Keep nullable/reference-bearing initialization
    and wider Boolean/value summaries gated until their own proofs are available.
    Preserve `borrow/frontier.rs` certificates, absent late headers and source expiry,
    binding-event guards and demand-only normal/Leave refreshes.

@@ -11,6 +11,11 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [Exclusive restart authority](compiler/EXCLUSIVE_RESTARTS.md) now has a bounded
+  implementation plan. The body-wide gate and opaque restart authority remain
+  unchanged; shared descendants and demand-only headers need an explicit frontier
+  proof before iteration-local exclusive carried-slot borrows can be enabled.
+
 - [Shared carried-scalar borrowing](compiler/OWNERSHIP.md#shared-carried-scalar-borrows)
   passes source/proof and native debug/release checks. Acquisition
   requires active, initialized result storage; existing expiry and loan checks remain.
@@ -63,10 +68,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Prove exclusive carried-scalar borrowing before lifting its gate: reuse acquisition,
-   owner lifecycle and loan authority, preserving indirect-write invalidation,
-   move/last-use conflicts and expiry. Run source/native regressions and the compiler
-   gate. Extend wider initialization/value summaries only after separate proof.
+1. Implement the [exclusive restart authority plan](compiler/EXCLUSIVE_RESTARTS.md):
+   prove no exclusive loan or descendant crosses a reset edge before narrowing
+   opaque authority or either source gate. Keep exclusive headers unsupported;
+   preserve indirect-write invalidation, move/last-use conflicts and owner expiry.
+   Run source/native regressions and the compiler gate after implementation.
+   Extend wider initialization/value summaries only after separate proof.
    Preserve late certificates,
    duplicate-slot checks and result-scope resets.
    Preserve conditional initialization,

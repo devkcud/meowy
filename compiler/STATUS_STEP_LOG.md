@@ -6,6 +6,23 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Exclusive restart authority prerequisite identified
+
+- Inspected body-wide exclusive rejection, static LoanId authority propagation,
+  permission coverage, reset-edge liveness and demand-only restart transfers.
+  Acquire events establish initialized storage, not iteration-specific authority.
+- Existing authority becomes opaque on reset graphs. Header transfers carry demand
+  but not precise ancestry; simply deleting either gate would not prove safety.
+- Added EXCLUSIVE_RESTARTS.md with affected identities, implementation order and
+  accepted/rejected source/native/graph cases. First scope is iteration-local
+  exclusive loans of carried scalars; every descendant must end before backedges.
+- Documentation validation passed: 1029 local links in 100 Markdown files and
+  Git whitespace checks. External links were not fetched.
+- No compiler behavior changes or compiler/runtime/editor reruns. Prior ten-check
+  gate remains current: 1036 Rust, 20 Python, 66 examples; 13 conformance unsupported.
+- Next: prove reset-frontier ancestry, then narrow opacity and both source gates
+  only for the certified slice. Keep exclusive headers and wider types unsupported.
+
 ### 2026-09-08 - Shared carried-scalar borrowing validation complete
 
 - All ten compiler checks pass: 521 library + 515 native (1036 Rust), 20 Python,
