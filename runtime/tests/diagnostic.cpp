@@ -106,6 +106,40 @@ void copied_truncation_metadata_survives_source_reuse() {
     check(first.code == 0 && first.message().empty() && !first.truncated());
 }
 
+void streamed_chunks_preserve_owned_prefix_and_utf8() {
+    constexpr auto cap = Panic::message_capacity;
+    for (const std::string_view point : {"a", "\xc3\xa9", "\xe2\x82\xac", "\xf0\x9f\x90\xb1"}) {
+        for (std::size_t offset = 0; offset <= point.size(); ++offset) {
+            std::array<char, cap + 8> text;
+            text.fill('x');
+            const auto start = cap - offset;
+            std::copy(point.begin(), point.end(), text.begin() + start);
+            const std::string_view input{text.data(), start + point.size() + 3};
+            const Panic expected{6, input};
+            for (std::size_t split = 0; split <= input.size(); ++split) {
+                Panic value{6, {}};
+                value.append(input.substr(0, split));
+                value.append(input.substr(split));
+                value.append({});
+                check(value.message() == expected.message());
+                check(value.original_size() == expected.original_size());
+                check(value.truncated() == expected.truncated());
+                const Panic copy = value;
+                value.append("ignored tail");
+                check(copy.message() == expected.message());
+                check(value.message() == expected.message());
+                check(value.original_size() == expected.original_size() + 12);
+            }
+        }
+    }
+    Panic value{6, "abc"};
+    value.append(value.message());
+    check(value.message() == "abcabc" && value.original_size() == 6);
+    const Panic copy = value;
+    value.append("def");
+    check(copy.message() == "abcabc" && value.message() == "abcabcdef");
+}
+
 Panic truncated_cleanup(void *) noexcept {
     std::array<char, 260> text;
     text.fill('c');
@@ -134,6 +168,7 @@ public:
 };
 
 constexpr std::array cases{
+    Case{"streamed_chunks_preserve_owned_prefix_and_utf8", streamed_chunks_preserve_owned_prefix_and_utf8},
     Case{"defaults_and_embedded_bytes", defaults_and_embedded_bytes},
     Case{"constructor_captures_live_local_text", constructor_captures_live_local_text},
     Case{"copies_moves_and_replacement_are_independent", copies_moves_and_replacement_are_independent},

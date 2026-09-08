@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 VERSION = "22.1.8"
 CASES = 14
-DIAGNOSTIC_CASES = 6
+DIAGNOSTIC_CASES = 7
 STACK_CASES = 10
 CONTEXT_CASES = 10
 SCHEDULER_CASES = 25

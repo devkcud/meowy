@@ -13,7 +13,7 @@ python3 -B -m unittest discover -s runtime/tests -p 'test_*.py'
 ```
 
 The runner builds debug, optimized release, and ASan/UBSan executables in a
-temporary directory. Each executes six owning-diagnostic groups and an exact
+temporary directory. Each executes seven owning-diagnostic groups and an exact
 fatal-truncation probe, plus 14 cleanup cases and two fatal subprocesses,
 plus six generated-cleanup bridge cases and two exact fatal subprocesses,
 plus seven generated-ownership cases and two fatal transferred-drop probes,
@@ -494,6 +494,12 @@ inside the constructor allows callbacks to return diagnostics formed from local 
 capture-owned text; no scheduler-side copy tries to repair an expired string view.
 If a drop callback destroys its text explicitly, it must construct the `Panic`
 before that destruction.
+
+`append(text)` extends a snapshot from live chunks without allocating, including
+chunks split within a UTF-8 codepoint. It preserves the initial code, bounded prefix
+and total original byte length; the length saturates at `size_t` maximum rather
+than wrapping. Appending after truncation retains the prefix and counts omitted
+bytes. Copying a snapshot before further appends keeps an independent message.
 
 `Panic::message_capacity` is 256 bytes. The value stores only inline bytes and
 scalar lengths: `message()` builds a fresh view into that particular snapshot,

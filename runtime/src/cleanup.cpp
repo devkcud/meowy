@@ -78,15 +78,29 @@ std::string_view name(Reason reason) noexcept {
 }
 
 Panic::Panic(std::uint32_t value, std::string_view text) noexcept
-    : code(value), length(text.size() < message_capacity ? text.size() : message_capacity), original(text.size()) {
-    if (length < original) {
-        while (length != 0 && (static_cast<unsigned char>(text[length]) & 0xc0) == 0x80) {
-            --length;
+    : code(value) {
+    append(text);
+}
+
+void Panic::append(std::string_view text) noexcept {
+    const auto room = message_capacity - length;
+    const auto count = text.size() < room ? text.size() : room;
+    if (original <= message_capacity) {
+        if (count != 0) {
+            std::memmove(bytes.data() + length, text.data(), count);
+            length += count;
+        }
+        if (count < text.size() && (static_cast<unsigned char>(text[count]) & 0xc0) == 0x80) {
+            while (length != 0) {
+                const auto byte = static_cast<unsigned char>(bytes[--length]);
+                if ((byte & 0xc0) != 0x80) {
+                    break;
+                }
+            }
         }
     }
-    if (length != 0) {
-        std::memcpy(bytes.data(), text.data(), length);
-    }
+    const auto limit = std::numeric_limits<std::size_t>::max();
+    original = text.size() > limit - original ? limit : original + text.size();
 }
 
 std::string_view Panic::message() const noexcept {

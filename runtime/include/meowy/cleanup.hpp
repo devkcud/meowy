@@ -16,6 +16,7 @@ public:
     static constexpr std::size_t message_capacity = 256;
     Panic() noexcept = default;
     Panic(std::uint32_t code, std::string_view text) noexcept;
+    void append(std::string_view text) noexcept;
 
     std::uint32_t code = 0;
     [[nodiscard]] std::string_view message() const noexcept;
