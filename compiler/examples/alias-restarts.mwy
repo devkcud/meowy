@@ -1,0 +1,14 @@
+d:@"debug"
+x:=7
+y:9
+n:=0
+r:'loop{
+    ->view:=&x
+    d.print(*view)
+    view=&y
+    n=n+1
+    |n<2|'loop.restart()
+}
+x=8
+d.print(*r.view)
+d.print(x)

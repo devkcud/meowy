@@ -60,6 +60,7 @@ compiler/target/debug/meowy run compiler/examples/mutable-references.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-carriers.mwy
 compiler/target/debug/meowy run compiler/examples/reference-fields.mwy
 compiler/target/debug/meowy run compiler/examples/alias-writes.mwy
+compiler/target/debug/meowy run compiler/examples/alias-restarts.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -331,7 +332,8 @@ implementation work.
   references, records and closed unions, preserving current component activity.
   [Mutable reference fields](OWNERSHIP.md#mutable-reference-fields) support direct
   and nested writes on completed fixed records. [Borrowed emitted-name writes](OWNERSHIP.md#borrowed-emitted-alias-writes)
-  synchronize exact result backing in bodies without Restart.
+  synchronize exact result backing. Restart supports reset or independent slots;
+  written outer result slots enclosing an inner Restart remain gated.
 - Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
   Returning paths merge their possible values; skipped paths retain their incoming
   value, and panicking paths contribute no continuation. Earlier copies stay fixed.
@@ -410,7 +412,7 @@ Unavailable constructs report **B001**, including slices, named list positions,
 reference/owned list elements, other collection APIs, non-scalar exclusive borrows,
 borrows of owned temporary storage, capturing closures, generic/type-producing
 helpers, imports beyond the foundational bootstrap modules, borrowed emitted-alias
-writes with Restart or widened/discarded backing, mutable primary slots and alias
+writes to result owners enclosing an inner Restart, widened/discarded backing, mutable primary slots and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
 The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
@@ -489,8 +491,8 @@ The analysis forgets header-entry and iteration guards, and may widen correlatio
 between independent union fields or owners. Programs needing finer correlations may
 be rejected. Canonical source/bound sets and member activity must converge within
 64 passes and the existing work/storage budgets; incomplete proof reports B001.
-Lists within mutable reference carriers, borrowed alias writes with Restart and
-direct reference formatting require future analysis. A panic during
+Lists within mutable reference carriers, surviving outer alias results across Restart
+and direct reference formatting require future analysis. A panic during
 the RHS skips the store; nested blocks and call arguments retain evaluation order.
 Named emissions use actual slot aliases. Reads and copies of stored references keep
 their pointee origins; selected reference-free field addresses borrow the carrier's
@@ -536,7 +538,7 @@ when another width is needed. Copying a temporary's value within its statement i
 allowed; returning a reference from an inner statement does not extend its owner
 to the surrounding expression. Reference-bearing Copy temporary owners preserve
 their contents beneath the outer cell's lifetime; this does not introduce owned
-cleanup, borrowed alias writes with Restart or reference-bearing list elements.
+cleanup, surviving outer alias results across Restart or reference-bearing list elements.
 At actual function entry, all active argument origins and bounds are validated,
 including nested summaries. Validation follows all returning argument evaluations;
 a later argument that leaves or panics skips the call. Type predicates inspect tags

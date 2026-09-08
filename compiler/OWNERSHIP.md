@@ -305,7 +305,8 @@ implementation boundary; it does not change language rules.
 - Mutable borrowed emitted names retain initial component snapshots and may be read
   or borrowed. `Proofs::versioned` includes fixed reference-bearing aliases for this
   purpose. Exact-backing assignment and field paths synchronize the result as
-  described below; widened/discarded backing and bodies with Restart remain B001.
+  described below; widened/discarded backing and surviving outer result slots
+  enclosing an inner Restart remain B001.
 - After the record finishes, `r.view = &next` replaces only that field's origins,
   bounds and activity. Nested paths require a mutable ordinary root and mutable
   fields at every step. Incompatible mutability remains E206, immutable paths E305
@@ -345,15 +346,44 @@ implementation boundary; it does not change language rules.
   The completed carrier can escape an earlier source only after that component has
   been replaced with a source that survives its receiving scope.
 - Widened or discarded backing remains B001 on a returning borrowed-alias write.
-  Bodies combining borrowed emitted-alias writes with Restart also remain B001:
-  result snapshots still need explicit restart merging. Ordinary mutable carriers
-  and read-only borrowed aliases keep their existing restart support. No list
-  capacity expansion, representation, syntax or runtime changes are introduced.
+  Restart supports writes when the result owner is reset by the target or is
+  independent of it. Written result owners strictly enclosing a Restart target
+  remain B001 until surviving result snapshots participate in header merging.
+  Ordinary mutable carriers and read-only aliases retain existing restart support.
+  No list capacity expansion, representation, syntax or runtime changes are introduced.
 - The [alias-writes example](examples/alias-writes.mwy) replaces an emitted pointer,
   reads an earlier copy, then updates its former owner. Library/native coverage
   includes selected result loans, branches, Leave, nullable tags, transitive/public
   bounds and exact-backing/Restart gates. All extra paths and snapshots use existing
   work and fact budgets.
+
+## Restart ownership for alias writes
+
+- Restart discards its target's own result slots and those in nested scopes. Alias
+  writes in those slots use existing block-entry definitions and per-iteration
+  origin replay: the completed result reflects only the completing iteration.
+  Writes in independent scopes also no longer trigger a body-wide capability gate.
+- `borrow/mutable.rs` records lexical block parents during its bounded HIR scan and
+  associates alias writes with their emission target, not the lexical write site.
+  A charged ancestor walk rejects a written result owner that strictly encloses
+  a Restart target. This remains conservative regardless of statement order;
+  surviving outer results need their own header merging before that gate can lift.
+- Parent tables are capped at 65,536 blocks; parent walks and scan depth at 256.
+  Lookups and storage traversal consume shared proof work. Missing, duplicate or
+  cyclic ancestry and exhausted work fail B001 rather than supplying incomplete proof.
+- Canonical headers still track surviving ordinary mutable references. Copies of
+  references to discarded alias cells become terminal expired sources and cannot
+  revive when the same alias site is initialized next iteration. Actual expired
+  use is E303; overwrite-before-read keeps its existing rules. Cell/source conflicts
+  remain E302, and retained-source lifetime checks remain mandatory on completing paths.
+- Whole/field writes, nullable predicates, nested RHS effects and Leave preserve
+  their order. A Restart from a RHS skips its outer store and discards the target
+  iteration's result. Exact-backing requirements are unchanged; widened/discarded
+  backing and bounded allocator-only aliases remain separate work.
+- The [alias-restarts example](examples/alias-restarts.mwy) initializes a fresh
+  emitted pointer each iteration, changes it, and publishes only the last iteration's
+  value. Library/native tests cover named outer emission targets, inner/outer resets,
+  independent loops, carried input versions, old copies, expired cells and gates.
 
 ## Mutable shared-reference bindings
 

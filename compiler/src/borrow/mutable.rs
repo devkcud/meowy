@@ -9,6 +9,7 @@ pub(crate) struct Plan {
 pub(crate) enum Item<'a> {
     Statement(&'a Stmt),
     Expression(&'a Expr),
+    EndBlock(super::BlockId),
 }
 
 pub(crate) fn push<'a>(
@@ -36,7 +37,9 @@ pub(crate) fn check(
         push(&mut pending, Item::Statement(stmt), 0, guards)?;
     }
     let mut write = None;
-    let mut alias_write = None;
+    let mut alias_writes = super::BTreeMap::new();
+    let mut parents = super::BTreeMap::from([(block.id, None)]);
+    let mut owners = vec![block.id];
     if !guards.spend(params.len() + 1) {
         return Err(State::budget(Span::default()));
     }
@@ -49,11 +52,19 @@ pub(crate) fn check(
     }
     let mut restarts = super::BTreeSet::new();
     while let Some((item, depth)) = pending.pop() {
-        if !guards.spend(1) {
+        let lookup = proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize
+            + alias_writes.len().checked_ilog2().unwrap_or(0) as usize
+            + 1;
+        if !guards.spend(lookup) {
             return Err(State::budget(Span::default()));
         }
         let mut add = |item| push(&mut pending, item, depth + 1, guards);
         match item {
+            Item::EndBlock(id) => {
+                if owners.pop() != Some(id) {
+                    return Err(State::budget(Span::default()));
+                }
+            }
             Item::Statement(stmt) => match stmt {
                 Stmt::Statement { stmts, .. } => {
                     for stmt in stmts.iter().rev() {
@@ -61,8 +72,10 @@ pub(crate) fn check(
                     }
                 }
                 Stmt::Assign { id, value } => {
-                    if proofs.aliases.contains_key(id) && program.locals[*id].has_reference() {
-                        alias_write.get_or_insert(value.span);
+                    if let Some(alias) = proofs.aliases.get(id)
+                        && program.locals[*id].has_reference()
+                    {
+                        alias_writes.entry(alias.target).or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
@@ -79,8 +92,10 @@ pub(crate) fn check(
                 Stmt::SetPath {
                     id, path, value, ..
                 } => {
-                    if proofs.aliases.contains_key(id) && program.locals[*id].has_reference() {
-                        alias_write.get_or_insert(value.span);
+                    if let Some(alias) = proofs.aliases.get(id)
+                        && program.locals[*id].has_reference()
+                    {
+                        alias_writes.entry(alias.target).or_insert(value.span);
                     }
                     if proofs.versioned(program, *id) {
                         write.get_or_insert(value.span);
@@ -120,9 +135,18 @@ pub(crate) fn check(
                 }
                 match &expr.kind {
                     ExprKind::Block(block) => {
+                        add(Item::EndBlock(block.id))?;
                         for stmt in block.stmts.iter().rev() {
                             add(Item::Statement(stmt))?;
                         }
+                        if parents.len() >= 65_536
+                            || !guards
+                                .spend(parents.len().checked_ilog2().unwrap_or(0) as usize + 2)
+                            || parents.insert(block.id, owners.last().copied()).is_some()
+                        {
+                            return Err(State::budget(expr.span));
+                        }
+                        owners.push(block.id);
                     }
                     ExprKind::Binary { left, right, .. } => {
                         if left.ty.has_exclusive() || right.ty.has_exclusive() {
@@ -178,14 +202,10 @@ pub(crate) fn check(
             }
         }
     }
-    if let Some(span) = alias_write
-        && !restarts.is_empty()
-    {
-        return Err(crate::diagnostic::Diagnostic::unsupported(
-            "borrowed emitted-alias writes with restart",
-            span,
-        ));
+    if owners != [block.id] {
+        return Err(State::budget(Span::default()));
     }
+    alias_restarts(&parents, &alias_writes, &restarts, guards)?;
     if let Some(span) = exclusive
         && !restarts.is_empty()
     {
@@ -198,4 +218,40 @@ pub(crate) fn check(
         merging: write.is_some() || exclusive.is_some(),
         restarts,
     })
+}
+
+pub(crate) fn alias_restarts(
+    parents: &super::BTreeMap<super::BlockId, Option<super::BlockId>>,
+    writes: &super::BTreeMap<super::BlockId, Span>,
+    restarts: &super::BTreeSet<super::BlockId>,
+    guards: &mut Guards,
+) -> Result<()> {
+    let lookup = parents.len().checked_ilog2().unwrap_or(0) as usize
+        + writes.len().checked_ilog2().unwrap_or(0) as usize
+        + 2;
+    for id in writes.keys() {
+        if !guards.spend(lookup) || !parents.contains_key(id) {
+            return Err(State::budget(Span::default()));
+        }
+    }
+    for id in restarts {
+        let mut current = *id;
+        for depth in 0.. {
+            if depth >= 256 || !guards.spend(lookup) {
+                return Err(State::budget(Span::default()));
+            }
+            let Some(parent) = parents.get(&current) else {
+                return Err(State::budget(Span::default()));
+            };
+            let Some(parent) = parent else { break };
+            if let Some(span) = writes.get(parent) {
+                return Err(crate::diagnostic::Diagnostic::unsupported(
+                    "borrowed emitted result survives an inner restart",
+                    *span,
+                ));
+            }
+            current = *parent;
+        }
+    }
+    Ok(())
 }

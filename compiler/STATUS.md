@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Exact-backing borrowed emitted-alias writes verified.
+Updated: 2026-09-08. Alias Restart ownership verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,27 +40,27 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Borrowed emitted-alias writes](OWNERSHIP.md#borrowed-emitted-alias-writes) synchronize
-fixed reference-bearing names with exact result backing. Whole assignment and pure
-field paths update guarded origin/result components after RHS completion and redefine
-only corresponding CFG result components. Sibling versions and old copies survive.
-Reference-bearing carriers may include allocator bounds; bounded allocator-only aliases stay gated.
+[Alias Restart ownership](OWNERSHIP.md#restart-ownership-for-alias-writes) now permits
+exact-backing borrowed writes when Restart resets their result slots or targets an
+independent scope. The existing bounded HIR scan records lexical block parents and
+uses alias emission targets. Written result owners strictly enclosing an inner
+Restart remain B001 until surviving result snapshots participate in header merging.
 
-Branches, nullable predicates, nested RHS effects and Leave publish completed writes.
-Each new reference/bound satisfies existing target-slot retention rules. Widened and
-discarded backing remain B001, as do bodies combining these alias writes with Restart.
-Ordinary mutable carriers and read-only aliases retain their existing restart support.
-Physical cell/source conflicts remain E302 and invalid retained lifetimes E303.
+Fresh result slots reuse block-entry definitions and per-iteration origin replay.
+Completing results preserve the last iteration's writes; RHS Restart skips its outer
+store. Canonical ordinary-local headers, nullable observations, old-copy/source/cell
+loans and terminal expiry remain intact. Parent metadata and walks are charged/capped;
+missing/cyclic ancestry and work exhaustion remain B001.
 
-Seven new library and five native groups pass, including result-source publication,
-old-copy/cell loans, RHS/Leave effects, tags, branch-local aliases and allocator roles.
-All fourteen combined checks pass: 441 library and 465 native tests, 35 Python tests,
-57 debug/release examples, editors, contracts and runtime sanitizers. The alias-writes
-example prints 7, 9, 9, 8.
+Seven new library and five native groups pass, including malformed/budget metadata,
+named targets, discarded-iteration sources and expired alias-cell copies. All fourteen
+combined checks pass: 448 library and 470 native tests, 35 Python tests, 58 examples,
+editors, contracts and runtime sanitizers. The alias-restarts example prints 7, 7, 9, 8.
 
 No runtime/backend representation, syntax, reference fixture or dependency changes.
-Broader alias backing/restart proofs, lists/exclusive carriers, dynamic allocator/view
-origins, owning cleanup, source error APIs, tasks, DWARF and full release remain open.
+Surviving result headers, widened/discarded backing, allocator-only alias bounds,
+lists/exclusive carriers, dynamic origins, owning cleanup, source error APIs, tasks,
+DWARF and complete release remain open.
 
 ## Prior implemented milestone
 
@@ -108,7 +108,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 465 native groups, 4 harness tests and 57 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 470 native groups, 4 harness tests and 58 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -188,7 +188,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Facts.merging identifies bodies using reference assignments or exclusive values; the bounded HIR scan
   also identifies their restart targets. Returning expressions retain normal proofs
   after nested scope closure. Assignment-free bodies keep the previous loop path;
-  fixed nullable/aggregate bindings use the same version model; borrowed emitted-alias writes with Restart stay B001.
+  fixed nullable/aggregate bindings use the same version model; written outer result slots enclosing an inner Restart stay B001.
 - Each restarted target in that mode includes all mutable-reference IDs present
   at entry, even when an iteration leaves one unchanged. Initial and feasible
   backedge values accumulate separate actual-origin and lifetime-bound `(Path,
@@ -204,7 +204,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 - Canonical headers partition only observed members. Child activation includes
   its parent, and origins/bounds use their structural path guard. Reference-free
   referents remain traversal cut points, including scalar unions behind nested
-  references. Reference-bearing lists and borrowed emitted-alias writes with Restart remain B001; unsupported activity is never erased to admit a type.
+  references. Reference-bearing lists and written result slots enclosing an inner Restart remain B001; unsupported activity is never erased to admit a type.
 - Every feasible carried source/bound keeps its structural component and role.
   Inputs and live ancestor-owned Local/Slot/Temporary sources survive. Ended or
   target/descendant-owned sources become terminal Source::Expired site identities;
@@ -601,36 +601,35 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --all`: all fourteen selected checks passed. Rust:
-  441 library + 465 native (906 total). Python: 16 tooling + 15 runtime + 4 compiler
-  (35). All 57 examples execute in debug/release. Both editors, formatting, Clippy,
+  448 library + 470 native (918 total). Python: 16 tooling + 15 runtime + 4 compiler
+  (35). All 58 examples execute in debug/release. Both editors, formatting, Clippy,
   build, schemas/identities and catalog pass. No selected check was skipped.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
   fatal/admission/guard/fiber probes with approved process access. Runtime/backend
   representations, syntax, reference fixtures and dependencies are unchanged.
-- Seven new library groups and five native groups cover current emitted results,
-  old copies, physical source/cell loans, selected field/RHS updates, branches,
-  multiple alias views, Leave, nullable tags, transitive/public bounds and allocator
-  roles. Replacing a local-derived component permits outer publication only when
-  the final source survives; retaining the local still reports E303.
-- Four historical library B001 groups became obsolete. Those and native boundary
-  rows now accept supported writes or exercise the remaining Restart gate. Two
-  initial focused fixtures needed explicit named emission targets and the discarded
-  backing boundary. Final combined checks have no failures.
-- Final handoff passes 996 local links in 99 Markdown files and Git whitespace checks.
-  The alias-writes example prints 7, 9, 9, 8. Conformance remains 10 passed,
-  13 unsupported, 0 failed. Alias writes with Restart, widened/discarded backing,
+- Seven new library groups and five native groups cover own/nested slot resets,
+  named outer emission targets, independent loops, RHS Restart/Leave, current nullable
+  tags, canonical input versions, old-copy/source/cell loans and terminal expiry.
+  A copied reference to a discarded alias cell cannot revive next iteration.
+  Missing/cyclic ancestry and exhausted work fail B001. Existing gates still reject
+  written result owners that strictly enclose a Restart target.
+- One initial native fixture used an unproved nullable-reference ascription and
+  correctly failed E208. Added its required predicate; all final checks pass.
+  Existing alias-write/restart regressions stayed green without expectation changes.
+- Final handoff passes 997 local links in 99 Markdown files and Git whitespace checks.
+  The alias-restarts example prints 7, 7, 9, 8. Conformance remains 10 passed,
+  13 unsupported, 0 failed. Surviving outer result headers, widened/discarded backing,
   allocator-only alias bounds, lists/exclusive carriers, dynamic origins, owning
   drops, source error APIs, tasks, DWARF and complete release remain unqualified.
 
 ## Next steps
 
-1. Extend result snapshots into restart header merging before relaxing the
-   body-wide Restart gate in `borrow/mutable.rs`. Widened/discarded backing and
-   allocator-only aliases need their own shape/version proof. Preserve current
-   guarded result replacement, selected CFG result definitions, old copies and RHS
-   sibling effects. Lists need bounded summaries without capacity expansion.
-   Add dynamic allocator/view origins, then follow [OWNING_HIR.md](OWNING_HIR.md)
-   for normal/Leave/Restart/panic and temporary/result cleanup transfer proof.
+1. Extend surviving outer result snapshots into restart header merging before relaxing the strict-ancestor gate in
+   `borrow/mutable.rs`. Widened/discarded backing and allocator-only aliases need
+   separate shape/version proofs. Preserve fresh result definitions, emitted-target
+   ancestry, terminal expiry, old copies and RHS/Leave effects. Lists need bounded
+   summaries without capacity expansion; dynamic allocator/view origins and
+   [OWNING_HIR.md](OWNING_HIR.md) cleanup schedules follow those proofs.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

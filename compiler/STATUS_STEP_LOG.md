@@ -6,6 +6,58 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Alias Restart ownership validation complete
+
+- All fourteen combined checks pass: 918 Rust (448 library, 470 native), 35 Python,
+  58 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Seven new library and five native groups prove own/nested result resets, named
+  emission targets, independent loops, RHS/Leave, nullable tags, canonical input
+  versions, old copies, discarded-cell expiry and bounded ancestry validation.
+- Corrected one E208 native fixture with its required type predicate. Existing
+  tests needed no changed expectations. Final handoff passes 997 local links in
+  99 Markdown files and Git whitespace checks; example prints 7, 7, 9, 8.
+- Next: surviving outer result-header merging before lifting the lexical ownership
+  gate, widened/discarded backing, allocator-only alias bounds, list summaries,
+  dynamic origins and owning cleanup schedules.
+
+### 2026-09-08 — Alias Restart native proof and contract
+
+- Seven focused library groups pass. Five native groups pass debug/release after
+  correcting an E208 fixture with the required nullable-reference type predicate.
+- Native results prove fresh iteration slots, nested target/RHS/Leave effects,
+  canonical input versions, current nullable tags, independent loops and E302/E303.
+  Surviving outer result owners still fail B001; no production defect observed.
+- Added discarded-iteration source coverage, alias-restarts example and ownership/
+  allocator/README contracts. Next: full combined gate, final handoff and commit.
+  Runtime/backend representation and dependencies are unchanged.
+
+### 2026-09-08 — Alias Restart ownership gate implemented
+
+- Existing HIR scan now records block parents and written alias emission targets.
+  Charged ancestor walks reject only written result owners strictly enclosing a
+  Restart target. Reset and independent slots use existing entry/result definitions.
+  Parent count/depth and shared work remain bounded; no origin/CFG gate was erased.
+- Six new source groups pass; initial unchanged suite passed 441 library tests.
+  Added malformed/cyclic/budget ancestry checks and five native groups, pending.
+- Next: validate native targets/RHS/Leave/current tags and expired slot copies,
+  document the surviving-slot boundary, add an example and run the combined gate.
+
+### 2026-09-08 — Alias Restart ownership investigation
+
+- Clean starting tree at 8df3037. Existing block-entry/result definitions and origin
+  replay reset a restarted block's own/nested result slots; only surviving outer
+  result snapshots need additional header merging. The current body-wide gate
+  also blocks independent loops and fresh slots unnecessarily.
+- Next: collect charged lexical block ancestry in the existing bounded HIR scan.
+  Reject when any written borrowed result slot strictly encloses a Restart target;
+  allow reset or independent slots. Preserve exact backing, retained-source rules,
+  canonical local headers and iteration-owned source expiry.
+- Validate fresh-slot aliases, nested/outer targets, RHS exits, copied escape expiry,
+  cell/source loans and remaining surviving-slot gates. No new checks yet.
+
 ### 2026-09-08 — Borrowed alias write validation complete
 
 - All fourteen combined checks pass: 906 Rust (441 library, 465 native), 35 Python,

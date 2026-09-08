@@ -1,4 +1,5 @@
 mod aggregates;
+mod alias_restarts;
 mod alias_writes;
 mod allocator_carriers;
 mod allocator_headers;
