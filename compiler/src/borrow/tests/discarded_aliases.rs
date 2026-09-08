@@ -94,10 +94,7 @@ pub(crate) fn published_result_and_backing_boundaries_remain_explicit() {
         "B001",
     );
     rejects("x:1;r:{->p:=&x;y:2;p=&y};v:*r.p", "E303");
-    rejects(
-        "x:1;flag:=true;r:'target{|flag|{'target->p:=&x;p=&x}}",
-        "B001",
-    );
+    accepts("x:1;flag:=true;r:'target{|flag|{'target->p:=&x;p=&x}}");
     rejects("x:=1;'out{r:{->p:=&!x;'out.leave()}}", "B001");
     rejects(
         "m:@\"memory\";f<m.Allocator>:(p<&int32>){->m.heap};x:1;'out{r:{->h:=f(&x);'out.leave()}}",

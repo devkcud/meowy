@@ -52,6 +52,7 @@ pub(crate) mod temporary_borrows;
 pub(crate) mod transitive_borrows;
 pub(crate) mod transitive_restarts;
 pub(crate) mod unions;
+pub(crate) mod widened_aliases;
 
 use std::fs;
 use std::path::PathBuf;

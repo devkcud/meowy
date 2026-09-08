@@ -20,11 +20,11 @@ impl Graph<'_> {
             return Err(Self::budget());
         }
         crate::borrow_contract::type_weight(&scope.ty, self.guards, span)?;
-        let (mut prefix, backing) =
-            crate::borrow::slot(&scope.ty, &Some(alias.field.clone())).ok_or_else(Self::budget)?;
-        if alias.backing != Some(Backing::Result) || backing != ty {
+        if alias.backing != Some(Backing::Result) {
             return Err(Self::budget());
         }
+        let mut prefix = crate::borrow::aliases::result_path(&scope.ty, &alias.field, ty)
+            .ok_or_else(Self::budget)?;
         let path = path
             .iter()
             .map(|step| match step {

@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Discarded borrowed-alias writes verified.
+Updated: 2026-09-08. Borrowed alias writes through exact union members verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,26 +40,26 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Discarded borrowed-alias writes](OWNERSHIP.md#discarded-borrowed-alias-writes) now
-retain ordinary current-value versions in target-owned transient cells. Proven
-`Backing::Discarded` skips nonexistent result synchronization and surviving-result
-Restart restrictions. Published outer result slots still require their ownership gate.
+[Widened borrowed-alias backing](OWNERSHIP.md#widened-borrowed-alias-backing) now
+supports an alias whose complete lexical type is one exact member of the completed
+result field's union. Shared result_path selects the mutable field and optional
+Variant step in both origin and loan synchronization. Identical backing is unchanged.
 
-Whole/field writes preserve sibling state, old copies, RHS/Leave effects, physical
-loans and transitive bounds. Inner restarts reuse canonical local headers; target
-exit expires copied cell references. Dead payload reads remain E303, conflicts E302,
-and tag inspection/overwrite-before-read can repair an expired transient value.
+Whole/field writes replace only the local payload, preserving the outer member's
+emission activity, absent defaults, other branches and sibling versions. Nested
+predicates, earlier copies, RHS/Leave effects, cell/source loans, retained lifetimes
+and reset-scope Restart retain their checks. Proper-subset union views and surviving
+published outer result headers remain gated; no broad union conversion was enabled.
 
-Seven new library and six native groups pass, including panic-RHS effects, inner
-restarts and target-owned cell lifetimes beyond lexical alias scope. All fourteen
-combined checks pass: 455 library and 476 native tests, 35 Python tests, 59 examples,
-editors, contracts and runtime sanitizers. The discarded-aliases example prints
-9, 9, done.
+Seven new library and five native groups pass, including declared/inferred result
+backing, heterogeneous references, nested fields, current tags, old copies and resets.
+All fourteen combined checks pass: 462 library and 481 native tests, 35 Python tests,
+60 examples, editors, contracts and runtime sanitizers. The widened-aliases example
+prints 9, empty.
 
 No runtime/backend representation, syntax, reference fixture or dependency changes.
-Surviving published result headers, widened backing, allocator-only alias bounds,
-lists/exclusive carriers, dynamic origins, owning cleanup, source error APIs, tasks,
-DWARF and complete release remain open.
+Surviving published headers, broader union views, allocator-only alias bounds, lists,
+dynamic origins, owning cleanup, source error APIs, tasks, DWARF and full release remain open.
 
 ## Prior implemented milestone
 
@@ -107,7 +107,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, availability, direct call contracts and scalar exclusive local/input permissions; 60 origin, 130 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 476 native groups, 4 harness tests and 59 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 481 native groups, 4 harness tests and 60 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -600,34 +600,34 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --all`: all fourteen selected checks passed. Rust:
-  455 library + 476 native (931 total). Python: 16 tooling + 15 runtime + 4 compiler
-  (35). All 59 examples execute in debug/release. Both editors, formatting, Clippy,
+  462 library + 481 native (943 total). Python: 16 tooling + 15 runtime + 4 compiler
+  (35). All 60 examples execute in debug/release. Both editors, formatting, Clippy,
   build, schemas/identities and catalog pass. No selected check was skipped.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
   fatal/admission/guard/fiber probes with approved process access. Runtime/backend
   representations, syntax, reference fixtures and dependencies are unchanged.
-- Seven new library and six native groups cover discarded alias value/field writes,
-  old copies, RHS/Leave/panic effects, repair after payload expiry, lexical versus
-  target cell lifetime, inner Restart, transitive bounds and actual call entry.
-  Expired payload/cell reads remain E303 and physical conflicts E302. Published
-  outer result owners retain their B001 gate.
-- Six historical library gate groups used endless loops or discarded paths; these
-  slots now have supported transient backing. Published-result boundary fixtures
-  now use finite loops, and the discard case accepts. A focused fixture needed an
-  extra non-emitting block wrapper removed. Final checks have no failures.
-- Final handoff passes 999 local links in 99 Markdown files and Git whitespace checks.
-  The discarded-aliases example prints 9, 9, done. Conformance remains 10 passed,
-  13 unsupported, 0 failed. Surviving published result headers, widened backing,
+- Seven new library and five native groups cover optional/heterogeneous result
+  members, declared/inferred backing, record payload fields, nested nullable tags,
+  old-copy/source/cell loans, RHS/Leave effects, reset iterations and E303 escapes.
+  Shared paths preserve outer member activity and keep proper-subset union views
+  and surviving published result headers gated.
+- Two old library optional-alias B001 expectations became obsolete; they now accept
+  supported writes, with native execution supplied by the new groups. Broader union
+  views still reject as B001, conflicts as E302 and immutable aliases as E305.
+  All final checks have no failures.
+- Final handoff passes 1001 local links in 99 Markdown files and Git whitespace checks.
+  The widened-aliases example prints 9, empty. Conformance remains 10 passed,
+  13 unsupported, 0 failed. Surviving published headers, broader union views,
   allocator-only alias bounds, lists/exclusive carriers, dynamic origins, owning
   drops, source error APIs, tasks, DWARF and complete release remain unqualified.
 
 ## Next steps
 
-1. Add surviving published result snapshots to restart header merging before lifting their ownership gate. Widened
-   backing and allocator-only bounds need separate shape/version proofs. Preserve
-   discarded-cell target lifetime, exact published-result updates, terminal expiry,
-   old copies and RHS/Leave/panic effects. Lists need bounded summaries; dynamic
-   origins and [OWNING_HIR.md](OWNING_HIR.md) cleanup schedules follow those proofs.
+1. Add surviving published result snapshots to restart header merging before lifting their ownership gate.
+   Proper-subset union views need explicit tag/component conversions; allocator-only
+   bounds need their own version proof. Preserve shared result paths, outer member
+   activity, sibling IDs, transient cell lifetime and RHS effects. Lists need bounded
+   summaries; dynamic origins and [OWNING_HIR.md](OWNING_HIR.md) follow those proofs.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

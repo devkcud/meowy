@@ -1,4 +1,23 @@
-use super::{Backing, Checker, FALSE, LocalId, Result, Span, State, Step, slot};
+use super::{Backing, Checker, FALSE, LocalId, Path, Result, Span, State, Step, Type};
+
+pub(crate) fn result_path(ty: &Type, name: &str, local: &Type) -> Option<Path> {
+    let Type::Record { fields, .. } = ty else {
+        return None;
+    };
+    let (index, field) = fields
+        .iter()
+        .enumerate()
+        .find(|(_, field)| field.name == name && field.mutable)?;
+    let mut path = vec![Step::Slot(index + 1)];
+    if field.ty != *local {
+        let Type::Union(members) = &field.ty else {
+            return None;
+        };
+        let member = members.iter().position(|member| member == local)?;
+        path.push(Step::Variant(member));
+    }
+    Some(path)
+}
 
 impl Checker<'_> {
     pub(crate) fn sync_alias(
@@ -33,11 +52,11 @@ impl Checker<'_> {
             .get(&target)
             .ok_or_else(|| Self::unsupported(span))?;
         crate::borrow_contract::type_weight(target_type, self.guards, span)?;
-        let (mut prefix, backing) =
-            slot(target_type, &Some(alias.field.clone())).ok_or_else(|| Self::unsupported(span))?;
-        if alias.backing != Some(Backing::Result) || backing != ty {
+        if alias.backing != Some(Backing::Result) {
             return Err(Self::unsupported(span));
         }
+        let mut prefix =
+            result_path(target_type, &alias.field, ty).ok_or_else(|| Self::unsupported(span))?;
         let complete = self
             .proofs
             .completions

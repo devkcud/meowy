@@ -305,7 +305,7 @@ implementation boundary; it does not change language rules.
 - Mutable borrowed emitted names retain initial component snapshots and may be read
   or borrowed. `Proofs::versioned` includes fixed reference-bearing aliases for this
   purpose. Exact-backing assignment and field paths synchronize the result as
-  described below; widened backing and surviving published outer result slots
+  described below; proper-subset union views and surviving published outer result slots
   enclosing an inner Restart remain B001.
 - After the record finishes, `r.view = &next` replaces only that field's origins,
   bounds and activity. Nested paths require a mutable ordinary root and mutable
@@ -328,8 +328,8 @@ implementation boundary; it does not change language rules.
 ## Borrowed emitted-alias writes
 
 - A mutable emitted name containing shared references may be assigned or updated
-  through pure mutable field paths when its fixed Copy type exactly matches its
-  completed result field. Reference-bearing carriers may also contain allocator
+  through pure mutable field paths when its fixed Copy type matches its completed
+  result field or one exact member of that field's union. Reference-bearing carriers may also contain allocator
   lifetime bounds. Allocator-only aliases retain their previous capability boundary.
 - `borrow/aliases.rs` updates the alias's selected result component after RHS
   completion. It masks old state outside the completing write guard, replaces the
@@ -345,7 +345,7 @@ implementation boundary; it does not change language rules.
   mutually exclusive scopes may share a result field while keeping guarded values.
   The completed carrier can escape an earlier source only after that component has
   been replaced with a source that survives its receiving scope.
-- Widened backing remains B001 on a returning borrowed-alias write. Proven discarded
+- Proper-subset union views remain B001 on a returning borrowed-alias write. Proven discarded
   backing keeps ordinary local versions without a result transfer, as described below.
   Restart supports writes when the result owner is reset by the target or is
   independent of it. Written result owners strictly enclosing a Restart target
@@ -379,8 +379,8 @@ implementation boundary; it does not change language rules.
   remain E302, and retained-source lifetime checks remain mandatory on completing paths.
 - Whole/field writes, nullable predicates, nested RHS effects and Leave preserve
   their order. A Restart from a RHS skips its outer store and discards the target
-  iteration's result. Published result backing must still be exact; widened backing
-  and bounded allocator-only aliases remain separate work.
+  iteration's result. Published result backing must match the alias or one exact
+  member; broader union views and bounded allocator-only aliases remain separate work.
 - The [alias-restarts example](examples/alias-restarts.mwy) initializes a fresh
   emitted pointer each iteration, changes it, and publishes only the last iteration's
   value. Library/native tests cover named outer emission targets, inner/outer resets,
@@ -411,8 +411,33 @@ implementation boundary; it does not change language rules.
 - The [discarded-aliases example](examples/discarded-aliases.mwy) changes a transient
   pointer to a target-local value and reads it across an inner restart before Leave.
   Tests distinguish finite, potentially published results from endless or otherwise
-  non-completing paths; only proven discarded backing uses this rule. Widened result
-  backing, allocator-only alias bounds, lists and exclusive carriers remain gated.
+  non-completing paths; only proven discarded backing uses this rule. Broader union
+  views, allocator-only alias bounds, lists and exclusive carriers remain gated.
+
+## Widened borrowed-alias backing
+
+- A reference-bearing alias may have a narrower lexical type than its completed
+  result field, as when a field is emitted only on one branch and otherwise defaults
+  to null. Writes now support that view when its entire type is one exact concrete
+  member of the result union. The lexical type still constrains every RHS.
+- `borrow/aliases.rs::result_path` supplies the same path to origin and loan passes.
+  It selects a mutable result field and, when types differ, that field's exact
+  Variant member. Subsequent field paths descend beneath this member. Identical
+  backing retains the previous path; other conversions remain B001.
+- Updating a whole alias replaces that member's payload, preserving the enclosing
+  member activity established by emission. Field updates replace only their selected
+  payload subtree. Other branches, absent defaults and sibling components retain
+  their sources, tags and loan IDs. No outer union member is inferred from a new RHS.
+- Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
+  loans keep their existing checks. Returned payloads still satisfy retained-source
+  lifetimes. Restart supports reset or independent slots; surviving published outer
+  results remain gated. Views spanning a proper subset of a larger union still need
+  explicit component/tag conversion and are not enabled here.
+- The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
+  an optional emitted field and preserves the absent path. Library/native tests
+  cover declared/inferred backing, heterogeneous references, record payload fields,
+  nested nullable tags, old copies, cell loans, escape lifetimes and reset iterations.
+  This uses existing layouts, code generation, source syntax and proof budgets.
 
 ## Mutable shared-reference bindings
 
@@ -420,7 +445,7 @@ implementation boundary; it does not change language rules.
   flow and guarded matcher/short-circuit paths. T may be any currently supported
   referent, including a record, union, bounded list or nested reference.
   Nullable and aggregate bindings follow the fixed carrier rules above; mutable
-  emitted names with exact backing use synchronized writes below.
+  emitted names with identical or exact-member backing use synchronized writes.
 - The physical LocalId remains the same cell. Origin analysis preserves its
   current full State and replaces it only after a returning RHS; initial
   `Facts.locals` snapshots stay unchanged. The loan graph creates fresh immutable
@@ -629,7 +654,7 @@ implementation boundary; it does not change language rules.
   work budgets; path collection checks its 256-field limit before each push.
 - Mutable primary emissions and mutable fields
   with unsupported list/exclusive subtrees remain B001; borrowed emitted-name writes
-  use the exact-backing synchronization below.
+  use the identical/exact-member synchronization above.
 - List candidate probes compare mutable flags and keep later emitted-name
   dependencies unresolved instead of reading a same-named outer binding. A known
   context permits ordinary once-only checking; unresolved scope-dependent choices
@@ -689,12 +714,12 @@ implementation boundary; it does not change language rules.
   origin. A contained reference crossed by `&carrier.view.field` keeps the existing
   pointee reborrow path. Whole-carrier/reference-cell borrows add transitive summaries
   without replacing the stored value's sources. Exclusive references and writes
-  through reference-bearing emitted aliases require the exact-backing write proof.
+  through reference-bearing emitted aliases require the compatible-member write proof.
 - Only mutable alias IDs enter mutable proofs and omit initializer constant/length caches.
   Unversioned mutable Bind/Local analysis seeds unknown activity of the lexical type
   before emission, preserving narrower type bounds and nullable omission guards.
   Fixed reference-bearing aliases preserve current component snapshots and synchronize
-  exact result backing at writes; ordinary copies use independent storage versions.
+  identical/exact-member result backing at writes; ordinary copies use independent storage versions.
   A later immutable result snapshot cannot reuse a pre-mutation union tag; unrelated
   immutable reference-field origins remain intact. This can conservatively lose
   knowledge about an unmodified mutable field's initial tag.

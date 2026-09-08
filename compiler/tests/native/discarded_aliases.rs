@@ -118,10 +118,6 @@ pub fn discarded_alias_expiry_loans_and_published_results_stay_checked() {
             "x:1;y:2;n:=2;r:{->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}};v:*r.p",
             "B001",
         ),
-        (
-            "x:1;flag:=true;r:'target{|flag|{'target->p:=&x;p=&x}}",
-            "B001",
-        ),
         ("x:1;'out{r:{->p:&x;p=&x;'out.leave()}}", "E305"),
     ] {
         let case = Case::new(source);

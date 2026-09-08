@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/widened-aliases.mwy"),
+            "9\nempty\n",
+        ),
+        (
             include_str!("../../examples/discarded-aliases.mwy"),
             "9\n9\ndone\n",
         ),

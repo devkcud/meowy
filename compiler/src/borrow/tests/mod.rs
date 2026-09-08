@@ -24,6 +24,7 @@ mod tagged_allocators;
 mod temporaries;
 mod temporary_carriers;
 mod transitive;
+mod widened_aliases;
 
 pub(crate) fn accepts(source: &str) {
     let result = crate::compile(source);

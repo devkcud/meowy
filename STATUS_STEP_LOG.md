@@ -6,6 +6,55 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Union-member alias write validation complete
+
+- All fourteen combined checks pass: 943 Rust (462 library, 481 native), 35 Python,
+  60 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan with required
+  fatal/admission/guard/fiber probes. No runtime/backend/ABI or dependency changes.
+- Seven new library and five native groups prove optional/heterogeneous members,
+  declared/inferred backing, nested field/tag updates, sibling/old-copy/cell loans,
+  RHS/Leave, reset iterations, retained lifetimes and explicit broader-view gates.
+- Two historical optional-alias B001 expectations now accept supported writes.
+  Final handoff passes 1001 local links in 99 Markdown files and Git whitespace
+  checks; the widened-aliases example prints 9, empty. No failures remain.
+- Next: surviving published result headers, proper-subset union-view conversions,
+  allocator-only alias bounds, bounded lists, dynamic origins and owning cleanup.
+
+### 2026-09-08 — Widened alias native proof and contract
+
+- Full Rust suite passes: 462 library and 481 native tests. Five new native groups
+  run debug/release and prove optional/heterogeneous members, nested record fields,
+  tags, RHS/Leave effects, old copies, reset iterations and E302/E303/B001/E305.
+- Added declared exact-member backing coverage and widened-aliases example for the
+  final gate. Updated ownership/allocator/README contracts; proper-subset union views
+  and surviving published result headers remain gated. No runtime/backend changes.
+- Next: combined verification, final handoff/diff review and a cohesive commit.
+
+### 2026-09-08 — Exact-member alias write paths implemented
+
+- Origin and loan synchronization share result_path, selecting mutable backing
+  fields and an exact enclosing Variant when types differ. Writes preserve that
+  outer member activity and touch only the selected local payload path.
+- Seven new library groups pass: optional/heterogeneous branches, sibling/RHS state,
+  Leave, cell/old-copy loans, nested tags, escape checks, reset scopes and boundaries.
+- Two old optional-alias B001 expectations became obsolete; updated to acceptance
+  while preserving union-subset and surviving-result gates. Five native groups added.
+- Next: native debug/release proof, example/contracts, full gate and final handoff.
+
+### 2026-09-08 — Widened alias backing investigation
+
+- Clean starting tree at b571859. Frontend/backend already support an alias that
+  addresses one exact concrete member of a wider result field. Write synchronization
+  still requires identical types and therefore rejects optional borrowed aliases.
+- Next: share a checked result-path helper across origin and loan passes, inserting
+  the enclosing Variant component for exact members. Whole/field writes preserve
+  outer member activity and update only their payload; no broad union conversion.
+- Validate optional/heterogeneous result branches, sibling loans, RHS/Leave, restart,
+  escape lifetimes and explicit unsupported union-subset/surviving-result cases.
+  No new checks yet; no runtime/backend changes planned.
+
 ### 2026-09-08 — Discarded borrowed-alias validation complete
 
 - All fourteen combined checks pass: 931 Rust (455 library, 476 native), 35 Python,
