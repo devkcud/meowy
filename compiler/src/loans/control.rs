@@ -298,13 +298,27 @@ impl<'a> Graph<'a> {
                     if self.current.is_empty() {
                         continue;
                     }
-                    let access =
-                        self.access(Kind::Write, self.storage(*id, place.fields), &[], *span)?;
-                    let mut node = Node {
-                        uses: reservation.into_iter().chain(value.into_values()).collect(),
-                        access: Some(access),
-                        ..Node::default()
+                    let (updated, mut node) = if self.proofs.versioned(self.program, *id) {
+                        if first.is_some() {
+                            return Err(Self::budget());
+                        }
+                        let (updated, node) = self.field_version(*id, &place.fields, &value)?;
+                        (Some(updated), node)
+                    } else {
+                        (
+                            None,
+                            Node {
+                                uses: reservation.into_iter().chain(value.into_values()).collect(),
+                                ..Node::default()
+                            },
+                        )
                     };
+                    node.access = Some(self.access(
+                        Kind::Write,
+                        self.storage(*id, place.fields),
+                        &[],
+                        *span,
+                    )?);
                     self.event(
                         &mut node,
                         EventKind::Use {
@@ -314,6 +328,9 @@ impl<'a> Graph<'a> {
                         *span,
                     )?;
                     self.append(node)?;
+                    if let Some(updated) = updated {
+                        self.locals.insert(*id, updated);
+                    }
                 }
                 Stmt::Emit {
                     id,

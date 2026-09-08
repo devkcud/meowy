@@ -108,6 +108,31 @@ impl<'a> Graph<'a> {
         Ok(value)
     }
 
+    pub(crate) fn field_version(
+        &mut self,
+        id: LocalId,
+        fields: &[usize],
+        value: &Bundle,
+    ) -> Result<(Bundle, Node)> {
+        if fields.is_empty() || !self.merging {
+            return Err(Self::budget());
+        }
+        let prefix = fields
+            .iter()
+            .map(|index| Step::Slot(index + 1))
+            .collect::<Vec<_>>();
+        let mut current = self.local(id)?;
+        self.charge((current.len() + value.len() + 1).saturating_mul(prefix.len() + 1))?;
+        current.retain(|path, _| !path.starts_with(&prefix));
+        let target = self.version(value)?;
+        let node = self.copied(value, &target)?;
+        for (path, value) in target {
+            let path = prefix.iter().chain(&path).copied().collect();
+            current.insert(path, value);
+        }
+        Ok((current, node))
+    }
+
     pub(crate) fn copy(&mut self, source: Bundle) -> Result<Bundle> {
         let value = self.version(&source)?;
         let node = self.copied(&source, &value)?;

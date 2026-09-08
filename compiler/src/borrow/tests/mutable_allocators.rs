@@ -67,7 +67,7 @@ pub(crate) fn allocator_cell_borrows_still_conflict_with_replacement() {
 #[test]
 pub(crate) fn unsupported_mutable_allocator_carriers_remain_explicit() {
     rejects("x:1;a<m.Allocator><null>:=f(&x)", "B001");
-    rejects("x:1;a:={->handle:f(&x)}", "B001");
+    accepts("x:1;a:={->handle:f(&x)};copy:a");
     rejects("x:1;result:{->handle:=f(&x)}", "B001");
     accepts("result:{->handle:=m.heap;handle=m.heap}");
 }

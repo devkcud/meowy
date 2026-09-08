@@ -89,7 +89,10 @@ impl Checker<'_> {
                     .collect::<Vec<_>>();
                 self.read(value, &path)
             }
-            ExprKind::Local(id) if !self.proofs.mutable.contains(id) => {
+            ExprKind::Local(id)
+                if !self.proofs.mutable.contains(id)
+                    || self.proofs.versioned(self.program, *id) =>
+            {
                 let state = self
                     .locals
                     .get(id)

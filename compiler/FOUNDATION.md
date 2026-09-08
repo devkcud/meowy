@@ -70,8 +70,9 @@ allocators and non-static allocator origins remain unavailable. Ordinary functio
 now apply [allocator return bounds](ALLOCATOR_BOUNDS.md) to active borrow-carrying
 inputs; returning the heap does not bypass that public contract. Immutable
 records/unions and shared pointee snapshots preserve the constraints. Direct mutable
-allocator bindings also retain versions through branches and restarts. Bounded
-aggregate/list/emitted-alias mutation remains B001; existing unbounded static values
+allocator bindings and fixed records also retain versions through branches and
+restarts, including pure record-field writes. Bounded tagged/list/reference-bearing
+records and emitted-alias mutation remain B001; existing unbounded static values
 keep their normal storage behavior.
 
 ## Failure transport and remaining gates

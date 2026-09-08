@@ -1,5 +1,6 @@
 mod aggregates;
 mod allocator_headers;
+mod allocator_records;
 mod allocators;
 mod boundaries;
 mod control;

@@ -208,7 +208,7 @@ impl Checker<'_> {
                 }
             }
             if count > super::MAX_ORIGINS
-                || (origins.is_empty() && !shape.optional.contains(&Vec::new()))
+                || (origins.is_empty() && shape.optional.len() != shape.paths.len())
             {
                 return Err(State::budget(span));
             }

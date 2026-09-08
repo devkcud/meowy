@@ -53,7 +53,7 @@ pub fn allocator_expiry_and_unmodeled_storage_report_distinct_codes() {
             "load<m.Allocator>:(p<&m.Allocator>){->*p};owner:1;result:{h:get(&owner);->load(&h)}",
             "E303",
         ),
-        ("owner:1;result:={->handle:get(&owner)}", "B001"),
+        ("owner:1;result:{->handle:=get(&owner)}", "B001"),
         ("owner:1;items:[get(&owner)]", "B001"),
     ] {
         let case = Case::new(&format!("{prefix}{body}"));
@@ -166,4 +166,98 @@ again:=true
 "#,
     )
     .runs(b"empty\nempty\n");
+}
+
+#[test]
+pub fn allocator_record_fields_preserve_sibling_effects_and_old_copies() {
+    Case::new(
+        r#"
+m:@"memory"
+d:@"debug"
+make:(context<&int32>){d.print(*context);->h:=m.heap;->other:=m.heap;->n:=0}
+context:5
+record:={->h:=m.heap;->other:=m.heap;->n:=1}
+old:record
+record.h={record=make(&context);record.n=8;->m.heap}
+copy:record.other
+d.print(record.n)
+d.print(old.n)
+"#,
+    )
+    .runs(b"5\n8\n1\n");
+}
+
+#[test]
+pub fn allocator_record_leave_preserves_scalar_writes_and_allows_selective_repair() {
+    Case::new(
+        r#"
+m:@"memory"
+d:@"debug"
+get<m.Allocator>:(context<&int32>){d.print(*context);->m.heap}
+record:={->h:=m.heap;->other:=m.heap;->n:=1}
+'out{
+    context:7
+    record.n={record.other=get(&context);record.n=2;'out.leave();->99}
+}
+d.print(record.n)
+record.other=m.heap
+copy:record
+"#,
+    )
+    .runs(b"7\n2\n");
+}
+
+#[test]
+pub fn nested_allocator_record_restarts_clear_expired_fields_before_use() {
+    Case::new(
+        r#"
+m:@"memory"
+d:@"debug"
+get<m.Allocator>:(context<&int32>){->m.heap}
+record:={->inner:={->h:=m.heap;->n:=0};->other:=m.heap}
+again:=true
+'loop{
+    record.inner.h=m.heap
+    copy:record.inner
+    record.inner.n=record.inner.n+1
+    context:1
+    |again|{again=false;record.inner.h=get(&context);'loop.restart()}
+}
+copy:record
+d.print(record.inner.n)
+"#,
+    )
+    .runs(b"2\n");
+}
+
+#[test]
+pub fn allocator_record_expiry_and_remaining_carriers_reject_before_execution() {
+    let prefix = r#"m:@"memory";get<m.Allocator>:(context<&int32>){->m.heap};"#;
+    for (body, code) in [
+        (
+            "r:={->h:=m.heap;->other:=m.heap};{short:1;r.h={r.other=get(&short);->m.heap}};copy:r.other",
+            "E303",
+        ),
+        (
+            "r:={->h:m.heap};old:={->h:m.heap};{short:1;r={->h:get(&short)};old=r};r={->h:m.heap};copy:old",
+            "E303",
+        ),
+        (
+            "r:={->h:=m.heap};again:=true;'loop{short:1;|again|{again=false;r.h=get(&short);'loop.restart()}};copy:r.h",
+            "E303",
+        ),
+        ("short:1;r:={->h:get(&short);->list:[1]}", "B001"),
+    ] {
+        let case = Case::new(&format!("{prefix}{body}"));
+        for profile in ["debug", "release"] {
+            let output = case.command("run", &["--profile", profile]);
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            assert!(
+                String::from_utf8_lossy(&output.stderr).starts_with(&format!("error[{code}]:")),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
 }

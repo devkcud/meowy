@@ -6,6 +6,62 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 — Fixed allocator record combined validation complete
+
+- All fourteen combined checks pass: 842 Rust (400 library, 442 native), 35 Python,
+  52 debug/release examples, both editors, formatting, Clippy, build, schemas/catalog
+  and 986 links at gate time. Conformance: 10 passed, 13 unsupported, 0 failed.
+- Runtime passes 100 groups/profile in debug/release/ASan/UBSan/LSan plus required
+  exact fatal/admission/guard/fiber probes. Runtime/backend unchanged; no skipped checks.
+- Six new library groups and four native groups prove whole/field state preservation,
+  nested/sibling selective reads, RHS side effects, Leave, restart repair, old copies
+  and access/capability boundaries. allocator-records.mwy prints 9, 2, ready.
+- Final handoff verification passes 986 links in 99 Markdown files and Git whitespace
+  checks. Next: tagged/list/reference carriers and emitted aliases with variant/element/backing
+  proof, then dynamic origins and owning view/drop schedules. This slice supports
+  fixed allocator records only; owning constructors and full release remain incomplete.
+
+### 2026-09-08 — Fixed allocator record native proof and contract
+
+- Full Rust validation passes 400 library and 442 native groups. Six new library
+  groups and four native groups cover replacement, selective reads, nested paths,
+  sibling/root writes during RHS evaluation, Leave, restart repair and old copies.
+- Native output proves scalar field writes remain after a skipped outer store and
+  old copies retain prior contents. Expired bound fields can be repaired without
+  reading them; unrelated fields and disjoint scalar borrows remain usable.
+- Added allocator-records.mwy and documented the exact fixed-record boundary:
+  no union/list/reference members, and bounded mutable emitted aliases stay gated.
+- Next: combined repository validation, final handoff and commit. No runtime/backend
+  change, new owning constructor, reference fixture or dependency.
+
+### 2026-09-08 — Fixed allocator record updates implemented
+
+- Versioned fixed records retain bounds on whole replacement and pure field writes.
+  State replacement occurs after RHS effects; CFG maps retain untouched sibling IDs
+  and define only replaced components. Field writes keep the existing Use event.
+- Mutable projection reads now select before lifetime validation. Header widening
+  allows empty origins only for all-optional shapes; physical references stay required.
+- Twenty-five focused allocator library tests and seven existing native groups pass.
+  Two obsolete record B001 expectations became accepted behavior and were updated;
+  bounded unions/lists/emitted aliases still reject. An edit-context mismatch was
+  corrected before verification, preserving the field-write lifecycle event.
+- Next: native nested/RHS/Leave/restart cases, then full compiler and combined checks.
+  Runtime/backend and source owning construction remain unchanged.
+
+### 2026-09-08 — Fixed allocator record mutation investigation
+
+- Extend versioned storage to reference-free records containing allocators, without
+  unions or lists. Whole replacement can reuse direct-value versions; pure field
+  writes need component replacement after RHS effects, preserving unrelated fields.
+- Reads of mutable record projections must select the requested component before
+  checking lifetime, so an expired sibling does not invalidate an independent field.
+  CFG field writes can retain sibling value IDs and define only replacement components.
+- Generalize empty header acceptance to shapes with only optional allocator paths;
+  physical reference paths still require origins. Keep tagged/list/emitted-alias
+  mutation gated until their distinct activity/index/backing models exist.
+- Validation: source/contract inspection only. Next: implement fixed-record updates,
+  selective reads and headers, then lifetime/effect/native regression proof and checks.
+
 ### 2026-09-08 — Mutable allocator combined validation complete
 
 - All fourteen combined checks pass: 832 Rust (394 library, 438 native), 35 Python,

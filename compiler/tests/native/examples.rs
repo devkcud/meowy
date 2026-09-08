@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/allocator-records.mwy"),
+            "9\n2\nready\n",
+        ),
+        (
             include_str!("../../examples/mutable-allocators.mwy"),
             "7\n2\n1\n8\n",
         ),

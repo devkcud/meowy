@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Mutable allocator bounds and optional-bound restart headers verified.
+Updated: 2026-09-08. Fixed allocator record mutation and native effects verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished edits remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,38 +40,36 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
-[Mutable allocator bounds](ALLOCATOR_BOUNDS.md#mutable-versions-and-restart) now
-reuse the reference version/replay machinery for direct memory.Allocator locals.
-Bind/read/assignment preserves the current state; branch/short-circuit and Leave
-merges retain completed writes and skip unfinished outer stores. Earlier copies
-retain independent constraints. Overwrite-before-read releases an expired handle's
-current bounds without reviving an old copy; active expired uses still report E303.
+[Fixed allocator record mutation](ALLOCATOR_BOUNDS.md#fixed-record-mutation) now
+participates in guarded versioning and restart replay. The supported record shape
+contains allocator values but no unions, lists, references or non-Copy constituents;
+nested records are included. Bounded mutable emitted aliases remain gated.
 
-Header shapes distinguish optional allocator bound paths from required reference
-origins. Typed CFG bundles retain explicit empty allocator entries so static initial
-values and overwrites are valid predecessor states rather than missing evidence.
-References containing allocator components, including nullable pointees, preserve
-bound paths and activity. Physical reference origin coverage remains mandatory.
-Canonical replay reuses stable choices and expires ended Local/Temporary/Slot sources;
-ancestor bounds survive and reinitializing a source site cannot revive old constraints.
+Whole replacement updates the complete state. Pure field writes replace only their
+component prefix, using the current record after RHS evaluation. Sibling writes and
+whole-record replacement inside the RHS survive the final field store. The loan CFG
+retains untouched sibling IDs and defines only replacement components, preserving
+existing field Use events. Leave keeps completed writes and skips unfinished stores.
+Old copies retain their original contents and constraints after current-record repair.
 
-Proofs::versioned centralizes the supported binding types in both passes. Direct
-allocator bindings are supported; bounded mutable record/union/list carriers and
-emitted aliases remain gated. Static aliases/lists retain their previous behavior.
-Lifetime-only bounds still do not invent physical loans; references to the handle
-cell continue to prohibit overlapping replacement. No runtime/backend change.
+Mutable record reads select the requested component before validating lifetime.
+An expired sibling therefore does not block a scalar projection or another safe field.
+Whole-record consumption and full call entry still validate all relevant bounds.
+Headers without origins are valid only when every path is optional; references retain
+mandatory coverage. Expiry/overwrite proof works per record component across restart.
+Cell conflicts remain E302, expired reads E303 and unmodeled carriers B001.
 
-Nine new library tests and four native groups prove guarded writes, early exits,
-empty/bounded restart transitions, old-copy and iteration expiry, temporary/slot
-identity, required reference coverage and nullable pointer overwrite. All fourteen
-combined checks pass: 394 library + 438 native, 35 Python, 51 debug/release examples,
+Six new library groups and four native groups prove replacement, selective repair,
+nested paths, RHS sibling/root effects, Leave, restart and old copies. All fourteen
+combined checks pass: 400 library + 442 native, 35 Python, 52 debug/release examples,
 both editors, formatting, Clippy, build and contracts. Runtime passes 100 groups/profile
-with debug/release/ASan/UBSan/LSan and required probes. Conformance is still 10 passed,
-13 unsupported, 0 failed. No reference fixture, syntax or dependency changed.
+in debug/release/ASan/UBSan/LSan with required probes. Conformance is 10 passed,
+13 unsupported, 0 failed. No reference fixture, runtime/backend ABI, syntax or dependency changed.
 
-Actual dynamic allocator context origins, owning views/constructors, broader carriers,
-initialized-state/drop schedules and source error APIs remain pending. The static
-heap is still the only allocator factory; no automatic resource cleanup is enabled.
+Bounded tagged/list/reference-bearing records and mutable emitted aliases remain
+unsupported. Actual dynamic allocator context origins, owning views/constructors,
+drop schedules and source error APIs are still pending. Static heap is the only
+allocator factory; no automatic resource cleanup is enabled.
 
 ## Prior implemented milestone
 
@@ -611,39 +609,40 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Validation evidence
 
-- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 394 library
-  + 438 native (832 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
-  All 51 examples execute in debug/release. Both editors, formatting, Clippy,
+- `python3 -B tools/verify.py --all`: all fourteen checks pass. Rust: 400 library
+  + 442 native (842 total). Python: 16 tooling + 15 runtime + 4 compiler (35).
+  All 52 examples execute in debug/release. Both editors, formatting, Clippy,
   build, schemas/identities and catalog pass. Final handoff documentation passes
-  985 local links in 99 Markdown files.
+  986 local links in 99 Markdown files.
 - Runtime debug/release/ASan/UBSan/LSan passes 100 groups/profile plus required
-  exact fatal/admission/guard/fiber probes with approved process access. No runtime
-  or backend representation changed, and no selected check was skipped.
-- Nine new library tests cover direct mutable bounds, snapshots, short circuits,
-  Leave effects, restart expiry, temporary/slot sources, nullable pointer overwrite
-  and the distinction between optional bounds and mandatory reference origins.
-  Two obsolete B001 expectations were updated after production behavior was verified;
-  remaining aggregate/list/alias capability tests still reject explicitly.
-- Four new native groups pass debug/release: loop effects and empty transitions,
-  retained inner write/skipped outer store on Leave, E303 old/expired copies versus
-  E302 cell conflicts, and nullable overwrite after a stale bound. The new
-  mutable-allocators.mwy example prints 7, 2, 1, 8 in both profiles.
-- Existing reference, header, scalar and allocator regressions pass. Conformance
-  stays 10 passed, 13 unsupported, 0 failed. Bounded aggregate/list/alias mutation,
-  dynamic contexts/views, owning constructors/drops, source error APIs, tasks,
-  native unwinding and complete release qualification remain open.
+  exact fatal/admission/guard/fiber probes with approved process access. Runtime
+  and backend representations were unchanged; no selected check was skipped.
+- Six new record library groups cover whole/field replacement, old-copy expiry,
+  independent sibling reads/repair, nested paths, RHS sibling/root effects, Leave,
+  branch/restart versions, disjoint scalar borrows and remaining carrier gates.
+- Four new native groups pass both profiles: RHS replacement retains new scalar
+  contents while old copies retain prior contents; Leave skips the outer store;
+  nested restart repair succeeds; stale siblings/copies report E303 and unsupported
+  list carriers report B001. allocator-records.mwy prints 9, 2, ready.
+- Two former record B001 expectations became accepted behavior and were updated
+  after observing it; bounded tagged/list/emitted-alias cases remain explicit.
+  A patch context mismatch was corrected while retaining the existing field Use
+  event. Final source checks have no failures or unfinished edits.
+- Existing reference/header/allocator regressions pass. Conformance remains
+  10 passed, 13 unsupported, 0 failed. Tagged/list/reference carriers, emitted aliases,
+  dynamic contexts/views, owning drops, source error APIs, tasks, DWARF and a complete
+  release remain unqualified.
 
 ## Next steps
 
-1. Extend bounded allocator record/union/list storage and emitted aliases in
-   `borrow/control.rs`, `borrow/value.rs`, `Proofs::versioned`, component paths and
-   loan transfers. Add field/element version and tag proof before relaxing guards;
-   merely marking every borrowed carrier versioned would lose current write effects.
-   Keep explicit empty versions and required-reference/optional-bound distinction in
-   headers. Then add symbolic physical contexts to allocator input/call contracts
-   and string-view origins before new factories. Follow [OWNING_HIR.md](OWNING_HIR.md)
-   for bounded drop schedules before strings.copy; retain normal/Leave/Restart/panic,
-   temporary/result transfer and live-view proof. Source error APIs remain non-erasing.
+1. Extend bounded tagged/list/reference-bearing carriers and emitted aliases in
+   type eligibility, `Proofs::versioned`, component paths, state updates and loan
+   transfers. Tagged values need current variant proof; lists need element summaries
+   without capacity expansion; emitted aliases need target/backing synchronization.
+   Preserve post-RHS field updates, selective reads and sibling IDs before relaxing
+   gates. Then add real symbolic allocator contexts and string-view origins. Follow
+   [OWNING_HIR.md](OWNING_HIR.md) for drop schedules before owning constructors,
+   preserving normal/Leave/Restart/panic and temporary/result transfer proof.
 2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

@@ -57,10 +57,12 @@ case in debug/release without changing the runtime allocator representation.
 | Immutable record fields and closed unions | Retain component paths and variant guards; scalar projections and proven null alternatives do not retain unrelated allocator bounds |
 | Shared borrows/reborrows of allocator cells and carriers | Preserve contained bounds beneath the reference; direct dereference drops only the cell access, while function results also retain their public input bounds |
 | Direct mutable memory.Allocator bindings and assignment | Retain guarded bound versions through branches, Leave and Restart; overwrite-before-read can discard expired bounds |
-| Mutable record/union/list carriers and mutable emitted aliases | Active allocator bounds remain B001; existing unbounded static storage works |
-| Field/indexed assignment and list construction/append | Reject active bounds before discarding their facts; existing unbounded static heap lists remain supported |
+| Mutable fixed allocator records | Whole replacement and pure field paths preserve per-component bounds; no union, list or reference members in this slice |
+| Bounded mutable union/list/reference-bearing carriers and mutable emitted aliases | Remain B001; existing unbounded static storage works |
+| Field assignment in fixed allocator records | Replace only the selected subtree after RHS completion, retaining sibling effects and constraints |
+| Indexed assignment and list construction/append | Reject active bounds before discarding their facts; existing unbounded static heap lists remain supported |
 | Calls returning allocator lists, including behind references | B001 when input constraints need to be attached to unmodeled element paths |
-| Restart headers for direct allocator handles and shared references containing allocator components | Preserve bound paths and variant activity; reference components still require physical origin coverage |
+| Restart headers for direct handles, fixed allocator records and shared references containing allocator components | Preserve bound paths and variant activity; reference components still require physical origin coverage |
 
 ## Mutable versions and restart
 
@@ -86,6 +88,35 @@ iteration counters and prior assignments. The
 [mutable-allocators example](examples/mutable-allocators.mwy) exercises the supported
 loop and empty/bounded transitions in debug/release.
 
+## Fixed record mutation
+
+Mutable records containing allocators now participate in the same version and
+restart analysis when their entire shape is free of unions, lists, references and
+non-Copy constituents. Nested records are supported. Those limits avoid silently
+reusing stale variant activity or discarding unmodeled element/reference summaries.
+This does not enable bounded mutable emitted aliases during record construction.
+A record returned from a function can carry public input bounds into a mutable
+binding, and ordinary field writes can add them after construction.
+
+Whole assignment replaces the current record state. A pure field path replaces
+only that subtree, using the state after the RHS finishes. Earlier sibling writes
+or whole-record replacement inside the RHS survive the final field store. Leave
+preserves completed writes and skips an unfinished outer field store. Unchanged
+CFG components keep their previous IDs; they are not eagerly reread or overwritten.
+
+A field read selects its component before checking lifetime. An expired allocator
+field therefore does not prevent reading an independent scalar/allocator sibling
+or repairing the expired field. Reading the whole record, or passing a reference
+to the whole carrier at call entry, still requires all relevant bounds to be live.
+Old copies retain their own constraints after the current record is repaired.
+The [allocator-records example](examples/allocator-records.mwy) demonstrates this
+selective read and repair in debug/release.
+
+Record headers may have no physical origins when every path is an optional
+allocator component. A header containing a physical reference still requires
+reference coverage. Restart expiry and overwrite-before-read apply per component;
+clearing one field never clears an expired sibling.
+
 Tag-only inspection remains distinct from consuming allocator contents. A scalar
 projection from a temporary carrier can leave its block without carrying an
 unselected allocator field. Retaining the whole emitted carrier still validates
@@ -106,7 +137,7 @@ carrier gates and fanout exhaustion. Native tests verify full execution,
 non-freezing lifetime bounds, skipped call entry and distinct E303/B001 diagnostics
 in debug/release. Existing reference and restart regressions remain required.
 
-Next represent bounded aggregate/list/emitted-alias mutation and dynamic string-view
+Next represent bounded tagged/list/reference-bearing carriers, emitted-alias mutation and dynamic string-view
 origins in these same passes. Keep owning construction gated until the
 [initialized-state/drop schedules](OWNING_HIR.md) prove normal, Leave, Restart and
 panic exits. Runtime task cancellation, native unwinding and release qualification

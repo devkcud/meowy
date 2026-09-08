@@ -1,0 +1,23 @@
+memory : @"memory"
+debug : @"debug"
+
+choose <memory.Allocator> : (context <&int32>) {
+    debug.print(*context)
+    -> memory.heap
+}
+
+record := {
+    -> handle := memory.heap
+    -> count := 1
+}
+
+{
+    context : 9
+    record.handle = choose(&context)
+}
+
+record.count = record.count + 1
+debug.print(record.count)
+record.handle = memory.heap
+copy : record
+debug.print("ready")

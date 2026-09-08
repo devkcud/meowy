@@ -16,9 +16,10 @@ impl Shape {
             Type::Reference(_)
                 | Type::Exclusive(_)
                 | Type::Foundation(crate::hir::FoundationType::Allocator)
-        ) {
+        ) && !ty.fixed_allocator_record()
+        {
             return Err(Diagnostic::unsupported(
-                "restart header requires a fixed reference or allocator type",
+                "restart header requires fixed reference or allocator storage",
                 span,
             ));
         }

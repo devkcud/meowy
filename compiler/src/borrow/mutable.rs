@@ -72,7 +72,12 @@ pub(crate) fn check(
                     add(Item::Expression(value))?;
                     add(Item::Expression(target))?;
                 }
-                Stmt::SetPath { path, value, .. } => {
+                Stmt::SetPath {
+                    id, path, value, ..
+                } => {
+                    if proofs.versioned(program, *id) {
+                        write.get_or_insert(value.span);
+                    }
                     add(Item::Expression(value))?;
                     for step in path.iter().rev() {
                         if let WriteStep::Index(step) = step {

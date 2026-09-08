@@ -46,6 +46,7 @@ impl Proofs {
             Some(Type::Foundation(crate::hir::FoundationType::Allocator)) => {
                 !self.aliases.contains_key(&id)
             }
+            Some(ty) if ty.fixed_allocator_record() => !self.aliases.contains_key(&id),
             _ => false,
         }
     }

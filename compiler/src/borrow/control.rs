@@ -179,6 +179,8 @@ impl Checker<'_> {
                     if ty.has_reference() || path.is_empty() {
                         return Err(Self::unsupported(*span));
                     }
+                    let tracked = self.proofs.versioned(self.program, *id);
+                    let mut prefix = Vec::new();
                     let mut result = Flow::new();
                     for step in path {
                         if !result.next {
@@ -197,8 +199,12 @@ impl Checker<'_> {
                                     .filter(|field| field.mutable)
                                     .ok_or_else(|| Self::unsupported(*span))?;
                                 ty = &field.ty;
+                                prefix.push(super::Step::Slot(index + 1));
                             }
                             WriteStep::Index(step) => {
+                                if tracked {
+                                    return Err(Self::unsupported(*span));
+                                }
                                 let Type::List { element, .. } = ty else {
                                     return Err(Self::unsupported(step.span));
                                 };
@@ -210,13 +216,30 @@ impl Checker<'_> {
                     if result.next {
                         let next = self.expression(value)?;
                         if next.flow.next {
-                            self.unbounded(
-                                &next.state,
-                                "allocator bounds in field or indexed assignment",
-                                *span,
-                            )?;
                             if !next.state.origins.is_empty() || value.ty != *ty {
                                 return Err(Self::unsupported(*span));
+                            }
+                            if tracked {
+                                let current = self
+                                    .locals
+                                    .get(id)
+                                    .ok_or_else(|| Self::unsupported(*span))?
+                                    .state
+                                    .clone();
+                                let state =
+                                    current.replaced(&prefix, next.state, self.guards, *span)?;
+                                self.complete(&self.program.locals[*id], &state, *span)?;
+                                self.reserve_origins(state.weight() + 1, *span)?;
+                                self.locals
+                                    .get_mut(id)
+                                    .ok_or_else(|| Self::unsupported(*span))?
+                                    .state = state;
+                            } else {
+                                self.unbounded(
+                                    &next.state,
+                                    "allocator bounds in field or indexed assignment",
+                                    *span,
+                                )?;
                             }
                         }
                         result.append(next.flow);

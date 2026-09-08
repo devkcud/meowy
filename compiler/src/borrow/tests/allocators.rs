@@ -63,7 +63,7 @@ pub(crate) fn allocator_bound_loss_in_mutation_and_lists_is_explicit() {
     accepts("x:1;a:=m.heap;a=f(&x);copy:a");
     rejects("x:1;items:[f(&x)]", "B001");
     rejects("x:1;items:=[m.heap];items[1]=f(&x)", "B001");
-    rejects("x:1;holder:={->handle:=m.heap};holder.handle=f(&x)", "B001");
+    accepts("x:1;holder:={->handle:=m.heap};holder.handle=f(&x);copy:holder.handle");
     rejects("x:1;items<m.Allocator[1]>:[];more:items.add(f(&x))", "B001");
     rejects(
         "g<m.Allocator[1]>:(v<&int32>){->[m.heap]};x:1;items:g(&x)",

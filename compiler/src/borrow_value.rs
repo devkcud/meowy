@@ -251,6 +251,31 @@ impl State {
         .under(present, flow)
     }
 
+    pub(crate) fn replaced(
+        mut self,
+        path: &[Step],
+        value: Self,
+        flow: &mut Flow,
+        span: Span,
+    ) -> Result<Self> {
+        let work = self.weight()
+            + value.weight()
+            + (self.size() + value.size()).saturating_mul(path.len() + 1);
+        if path.is_empty() || !flow.spend(work) {
+            return Err(Self::budget(span));
+        }
+        let present = flow.and(self.present, value.present);
+        self.origins
+            .retain(|origin| !origin.component.starts_with(path));
+        self.bounds
+            .retain(|origin| !origin.component.starts_with(path));
+        self.active
+            .retain(|active| !active.component.starts_with(path));
+        self.merge(value.prefix(path), flow, span)?;
+        self.present = present;
+        Ok(self)
+    }
+
     pub(crate) fn merge(&mut self, other: Self, flow: &mut Flow, span: Span) -> Result<()> {
         if !flow.spend((self.weight() + other.weight()).saturating_mul(other.size().max(1))) {
             return Err(Self::budget(span));
