@@ -245,6 +245,9 @@ impl<'a> Graph<'a> {
                     let first = path
                         .iter()
                         .position(|step| matches!(step, WriteStep::Index(_)));
+                    if first.is_some() {
+                        crate::borrow::carried::storage(self.proofs, *id, self.guards, *span)?;
+                    }
                     let fields = path
                         .iter()
                         .take(first.unwrap_or(path.len()))

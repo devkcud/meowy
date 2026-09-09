@@ -63,7 +63,6 @@ pub(crate) fn carried_records_reject_incomplete_duplicate_and_mistyped_results()
 pub(crate) fn carried_records_keep_wider_shapes_and_storage_borrows_gated() {
     for (row, value) in [
         ("<{n<int32><null>}>", "{->n:7}"),
-        ("<{n<int32[2]>}>", "{->n:[1,2]}"),
         ("<{n<&int32>}>", "{->n:&x}"),
     ] {
         rejects(
@@ -117,10 +116,6 @@ pub(crate) fn carried_record_shape_checks_reject_non_plain_members() {
     for ty in [
         Type::Reference(Box::new(int.clone())),
         Type::Exclusive(Box::new(int.clone())),
-        Type::List {
-            element: Box::new(int.clone()),
-            capacity: 2,
-        },
         Type::Union(vec![Type::Null, int]),
         Type::Foundation(FoundationType::Allocator),
         Type::Never,

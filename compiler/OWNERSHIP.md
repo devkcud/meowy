@@ -435,7 +435,7 @@ implementation boundary; it does not change language rules.
 - Current nested tag observations, earlier copies, RHS/Leave effects and cell/source
   loans keep their existing checks. Returned payloads still satisfy retained-source
   lifetimes. Restart supports reset slots, preinitialized aliases and proven late
-  initialization. Carried scalar slots use a separate stateful proof; other carried
+  initialization. Carried scalar and reference-free record/list slots use a separate stateful proof; other carried
   initialization remains gated. Views spanning a
   proper subset of a larger union use the
   whole-assignment conversion below; their addresses and field paths stay gated.
@@ -581,7 +581,7 @@ implementation boundary; it does not change language rules.
   retain its initialization across an inner restart. Named fields and primaries
   use the same proof. The explicit enclosing result type supplies the storage shape;
   inferred, nullable, allocator and reference-bearing carried slots stay gated.
-  Reference-free record slots use the bounded extension below; lists stay gated.
+  Reference-free record/list slots use the bounded extensions below.
 - The frontend defers only eligible enclosing-emission and completion obligations.
   Current-iteration duplicate emissions and type/mutability rules are unchanged.
   Every deferred slot must pass a separate initialization proof before native lowering.
@@ -611,8 +611,8 @@ implementation boundary; it does not change language rules.
 - A declared record result slot can retain its whole initialized value across an
   inner restart. Nested records may contain non-nullable Boolean, integer, float,
   static-string and unit members. Record primaries follow the same shape rules.
-  Top-level unit slots, unions, lists, references, allocator and owning types remain
-  outside this carried-initialization slice.
+  Lists follow the separate extension below. Top-level unit slots, unions,
+  references, allocator and owning types remain outside carried initialization.
 - Eligibility visits at most 256 type parts and 32 levels, counting the slot root,
   record primaries and fields. Traversal and field-name work charge the shared proof
   budget. Exhaustion is B001, not permission to skip initialization checks.
@@ -633,6 +633,35 @@ implementation boundary; it does not change language rules.
   regressions also cover nested unit/scalar members, copies, writes, owner resets,
   Leave, partial panics and rejected incomplete or duplicate initialization in
   debug and release.
+
+## Carried reference-free lists
+
+- Declared fixed-capacity lists may retain their initialized length and payload
+  across inner restarts. List elements may be scalar/unit values, plain records or
+  nested lists; records may contain lists too. Named slots and primary values use
+  the same rule. Nullable/union/reference-bearing/foundation/owning shapes remain
+  gated, including unsupported elements beneath zero capacity.
+- Shape traversal visits at most 256 type parts and 32 levels. Each list counts
+  one container plus its element type, independent of capacity. Existing list
+  construction also enforces capacity at most 65,536 and layout at most 1 MiB.
+  Exhausted shape/proof work remains B001. Empty lists still require one completed
+  emission; zero elements do not satisfy whole-slot initialization by themselves.
+- The existing initialized/active-slot proof tracks the entire length/payload
+  value. Copies retain independent storage and length; whole-list replacement,
+  `.add()` results and replacement of a record's list field keep ordinary type and
+  mutability checks. Index reads retain one-based initialized-length checks.
+  Owner reset clears initialization, inner reset preserves ancestor slots, and
+  Leave/panic skips unfinished initializers or replacement stores.
+- `carried::storage` gates direct/projected borrows of a list-containing carried
+  slot, exclusive indexed acquisition and indexed writes before reservations.
+  This includes scalar-field borrows from a record containing a list. Their
+  acquisition/length/reservation proof is a separate slice. Plain scalar/record
+  sibling slots, independent copies and completed-result locals keep existing rules.
+- Ten source/shape/proof groups and seven native groups cover these boundaries.
+  The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
+  the old copy's length and the retained updated list. Native output, dynamic bounds,
+  owner resets, Leave, partial panics and primary rejections are checked in both
+  profiles. No backend, runtime or dependency changes were needed.
 
 ## Shared carried record borrows
 

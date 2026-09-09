@@ -9,6 +9,7 @@ impl Graph<'_> {
         let ExprKind::ExclusivePath { place, path } = &expr.kind else {
             return Err(Self::budget());
         };
+        crate::borrow::carried::storage(self.proofs, place.root, self.guards, expr.span)?;
         let element = self
             .proofs
             .exclusive_path_type(self.program, place, path, self.guards, expr.span)
