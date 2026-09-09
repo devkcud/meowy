@@ -8,6 +8,7 @@ mod allocators;
 mod binding_fields;
 mod boundaries;
 mod carried_borrows;
+mod carried_list_borrows;
 mod carried_lists;
 mod carried_proof;
 mod carried_record_borrows;

@@ -93,7 +93,7 @@ pub(crate) fn storage(proofs: &Proofs, id: LocalId, guards: &mut Guards, span: S
         && shape(&slot.ty, guards, span)? != Some(Shape::Plain)
     {
         return Err(Diagnostic::unsupported(
-            "borrows and indexed writes of carried list storage",
+            "exclusive borrows and indexed writes of carried list storage",
             span,
         ));
     }

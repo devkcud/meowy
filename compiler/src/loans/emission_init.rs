@@ -83,7 +83,6 @@ impl Graph<'_> {
         let Source::Slot { target, view, .. } = source else {
             return Ok(None);
         };
-        crate::borrow::carried::storage(self.proofs, *view, self.guards, span)?;
         self.charge(self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize + 1)?;
         let alias = self.proofs.aliases.get(view).ok_or_else(Self::budget)?;
         self.charge(

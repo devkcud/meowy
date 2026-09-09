@@ -5,6 +5,7 @@ pub(crate) mod allocator_carriers;
 pub(crate) mod binding_fields;
 pub(crate) mod borrow_syntax;
 pub(crate) mod carried_borrows;
+pub(crate) mod carried_list_borrows;
 pub(crate) mod carried_lists;
 pub(crate) mod carried_record_borrows;
 pub(crate) mod carried_records;

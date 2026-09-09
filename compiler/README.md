@@ -82,6 +82,7 @@ compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/carried-records.mwy
 compiler/target/debug/meowy run compiler/examples/carried-lists.mwy
+compiler/target/debug/meowy run compiler/examples/carried-list-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/carried-record-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
@@ -221,8 +222,13 @@ The [carried list example](examples/carried-lists.mwy) initializes once, preserv
 an independent old copy and retains the updated length/payload across inner restarts.
 Nested reference-free lists/records and empty lists use the same bounded whole-slot
 proof. Reads, whole-list replacement/addition and completed-result borrowing retain
-their existing rules. Borrowing original list-containing carried storage and indexed
-writes/reservations remain gated; see [carried lists](OWNERSHIP.md#carried-reference-free-lists).
+their existing rules. Shared borrows of original list-containing carried storage
+and nested element projections retain their owner through inner restarts. Exclusive
+borrows and indexed writes/reservations remain gated; see
+[carried lists](OWNERSHIP.md#carried-reference-free-lists) and
+[shared list borrowing](OWNERSHIP.md#shared-carried-list-borrows). The
+[carried list borrow example](examples/carried-list-borrows.mwy) keeps an element
+view across three iterations after its emitted alias leaves scope.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)

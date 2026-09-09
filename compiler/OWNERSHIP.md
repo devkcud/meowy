@@ -662,16 +662,49 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   mutability checks. Index reads retain one-based initialized-length checks.
   Owner reset clears initialization, inner reset preserves ancestor slots, and
   Leave/panic skips unfinished initializers or replacement stores.
-- `carried::storage` gates direct/projected borrows of a list-containing carried
-  slot, exclusive indexed acquisition and indexed writes before reservations.
-  This includes scalar-field borrows from a record containing a list. Their
-  acquisition/length/reservation proof is a separate slice. Plain scalar/record
-  sibling slots, independent copies and completed-result locals keep existing rules.
+- Shared direct/projected borrows of list-containing carried slots use the
+  acquisition and lifetime proof below. `carried::storage` still gates exclusive
+  acquisition and indexed writes before reservations. This includes exclusive
+  scalar-field borrows from a record containing a list. Plain scalar/record sibling
+  slots, independent copies and completed-result locals keep existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
   The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
   the old copy's length and the retained updated list. Native output, dynamic bounds,
   owner resets, Leave, partial panics and primary rejections are checked in both
   profiles. No backend, runtime or dependency changes were needed.
+
+## Shared carried list borrows
+
+- A shared whole-list or element borrow addresses the original carried slot.
+  Containing records, nested lists and record fields retain canonical Slot/Field/
+  Element sources. `loans/transitive.rs::referenced` applies the collection gate
+  only to exclusive acquisition; every shared root still emits the existing
+  containing-slot Acquire event. The owner must be active and its entire slot
+  initialized, including empty lists. No synthetic payload reads are introduced.
+- Element and field reborrows retain their parent reference identity and authority.
+  Index expressions execute once in source order and check the current initialized
+  length at each selected list. A returning index cannot replace borrowed storage;
+  a canceled index preserves completed effects and skips unfinished acquisition.
+  This adds no new index arithmetic, storage layout or runtime flags.
+- Shared references can survive inner restarts and alias scope exit while the
+  result owner lives. Ending, leaving or restarting that owner expires old sources;
+  reinitializing the same storage cannot revive an old view. Replacing an expired
+  reference before reading it retains the existing overwrite rule. Reference copies
+  and call-returned views retain their own sources and public input bounds.
+- Whole-list replacement remains E302 while a whole/element view is live. Disjoint
+  fields outside the borrowed region remain writable; mutation after final use is
+  allowed. `&items[index]` copies through a shared list reference; `&(items[index])`
+  borrows the selected element. Shared access never grants mutation permission.
+- Known shared list headers can coexist with supported local exclusive scalar
+  sibling loans under the existing complete-header certificate. Genuine call/input
+  opacity and exclusive descendants retain their restart gates. Exclusive carried
+  list acquisition and indexed SetPath reservations remain separate work; nullable,
+  union, reference-bearing and owning carried slots retain their shape gates.
+- Ten source/proof groups and seven native groups cover initialization, physical
+  paths, parent identity, bounds, cancellation, old copies, final use, owner resets,
+  Leave, calls and capability gates in both profiles where applicable. The
+  [carried-list-borrows example](examples/carried-list-borrows.mwy) retains an element
+  view across three iterations. No backend, runtime or dependency changes were needed.
 
 ## Shared carried record borrows
 

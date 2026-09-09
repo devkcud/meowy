@@ -61,13 +61,8 @@ pub(crate) fn carried_lists_preserve_owner_resets_and_leave_completion() {
 }
 
 #[test]
-pub(crate) fn carried_lists_keep_storage_acquisition_and_reservations_gated() {
-    for body in [
-        "p:&items;v:(*p)[1]",
-        "p:&(items[1]);v:*p",
-        "p:&!(items[1]);*p=9",
-        "items[1]=9",
-    ] {
+pub(crate) fn carried_lists_keep_exclusive_acquisition_and_reservations_gated() {
+    for body in ["p:&!(items[1]);*p=9", "items[1]=9"] {
         rejects(
             &format!(
                 "<R>:<{{items<int32[2]>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->items:=[1];{body};first=false;'loop.restart()}}}}}}"
@@ -79,7 +74,7 @@ pub(crate) fn carried_lists_keep_storage_acquisition_and_reservations_gated() {
         "<R>:<{items<int32[2]>:=}>;run<null>:(stop<boolean>){first:=true;r<R>:'out{'loop{|first|{'out->items:=[1];items[{|stop|'out.leave();->1}]=9;first=false;'loop.restart()}}}}",
         "B001",
     );
-    for body in ["p:row.&items", "p:row.&n", "p:row.&!n", "row.items[1]=9"] {
+    for body in ["p:row.&!n", "row.items[1]=9"] {
         rejects(
             &format!(
                 "<Row>:<{{items<int32[2]>:=;n<int32>:=}}>; <R>:<{{row<Row>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row:={{->items:=[1];->n:=2}};{body};first=false;'loop.restart()}}}}}}"
