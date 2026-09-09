@@ -3,6 +3,7 @@ use super::Case;
 #[test]
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
+        (include_str!("../../examples/documentation.mwy"), "5\n"),
         (
             include_str!("../../examples/mixed-headers.mwy"),
             "1\n2\n8\n",

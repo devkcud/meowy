@@ -18,6 +18,7 @@ impl Checker {
         let result = self.stmt_inner(stmt);
         let (_, used) = self.statement.pop().expect("statement lifetime");
         let stmts = result?;
+        self.doc_stage(stmt.span.start)?;
         if used {
             Ok(vec![hir::Stmt::Statement { id, stmts }])
         } else {
@@ -56,7 +57,7 @@ impl Checker {
                         },
                         stmt.span,
                     )?;
-                    let result = self.function(id, name, params, body, result)?;
+                    let result = self.function(id, name, params, body, result, stmt.span)?;
                     if let Some(Value::Function { result: target, .. }) =
                         self.scopes.last_mut().expect("scope").values.get_mut(name)
                     {
@@ -131,6 +132,9 @@ impl Checker {
                     ));
                 }
                 scope.types.insert(name.clone(), spec);
+                if self.documentation.is_some() {
+                    scope.doc_types.insert(name.clone(), stmt.span.start);
+                }
                 Ok(Vec::new())
             }
             StmtKind::Assign { target, value } => {

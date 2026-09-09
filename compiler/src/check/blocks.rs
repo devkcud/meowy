@@ -104,6 +104,9 @@ impl Checker {
                 block.span,
             ));
         }
+        if id == 0 {
+            self.doc_stage(usize::MAX)?;
+        }
         self.scopes.pop();
         Ok(hir::Block { id, ty, stmts })
     }

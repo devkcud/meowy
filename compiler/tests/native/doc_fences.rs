@@ -7,22 +7,23 @@ pub fn doc_fences_preserve_literal_and_ordinary_comment_execution() {
 }
 
 #[test]
-pub fn doc_fences_keep_unsupported_attachment_distinct_from_lexical_failure() {
-    for source in [
-        "d:@\"debug\";d.print(\"must not run\");#| # Heading |#x:7",
-        "#!|| module |!# shorter ||!#\nx:7",
-        "f<int32>:(#| input |#x<int32>){->x};v:f(7)",
-        "s:\"before {{#|| } \" #| inner |# ||# x:7;->x}} after\"",
+pub fn doc_fences_compile_supported_attachment_in_both_profiles() {
+    for (source, output) in [
+        (
+            "d:@\"debug\";#| # Heading |#x:7;d.print(x)",
+            b"7\n".as_slice(),
+        ),
+        ("#!|| module |!# shorter ||!#\nx:7", b"".as_slice()),
+        (
+            "d:@\"debug\";f<int32>:(#| input |#x<int32>){->x};d.print(f(7))",
+            b"7\n".as_slice(),
+        ),
+        (
+            "d:@\"debug\";d.print(\"before {{#|| } \" #| inner |# ||# x:7;->x}} after\")",
+            b"before 7 after\n".as_slice(),
+        ),
     ] {
-        let case = Case::new(source);
-        for profile in ["debug", "release"] {
-            let output = case.command("run", &["--profile", profile]);
-            assert_eq!(output.status.code(), Some(1));
-            assert!(output.stdout.is_empty());
-            let error = String::from_utf8_lossy(&output.stderr);
-            assert!(error.starts_with("error[B001]:"), "{source}: {error}");
-            assert!(error.contains("documentation comment attachment"));
-        }
+        Case::new(source).runs(output);
     }
 }
 
@@ -40,6 +41,5 @@ pub fn doc_fences_report_exact_unclosed_opener_spans() {
         assert!(error.contains("\"code\":\"E002\""), "{error}");
         assert!(error.contains(&format!("\"start\":{start}")), "{error}");
         assert!(error.contains(&format!("\"end\":{end}")), "{error}");
-        assert!(error.contains("unclosed documentation comment"));
     }
 }

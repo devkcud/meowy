@@ -18,6 +18,20 @@ pub(crate) enum TreeNode<'a> {
 }
 
 pub fn parse(source: &str) -> Result<Block, Vec<Diagnostic>> {
+    let parsed = parse_documented(source)?;
+    if !parsed.docs.is_empty() {
+        crate::documentation::Model::new(source, &parsed).map_err(|error| vec![error])?;
+    }
+    Ok(parsed.block)
+}
+
+pub struct Parsed {
+    pub block: Block,
+    pub docs: Vec<lexer::Documentation>,
+    pub marks: Vec<(TokenKind, crate::ast::Span)>,
+}
+
+pub fn parse_documented(source: &str) -> Result<Parsed, Vec<Diagnostic>> {
     let tokens = lexer::lex(source)?;
     let mut parser = Parser::new(tokens);
     if !parser.errors.is_empty() {
@@ -25,7 +39,15 @@ pub fn parse(source: &str) -> Result<Block, Vec<Diagnostic>> {
     }
     let block = parser.block(None, false, 0);
     if parser.errors.is_empty() {
-        Ok(block)
+        parser.docs.sort_by_key(|doc| doc.open.start);
+        parser.docs.dedup_by_key(|doc| doc.open.start);
+        parser.marks.sort_by_key(|(_, span)| (span.end, span.start));
+        parser.marks.dedup();
+        Ok(Parsed {
+            block,
+            docs: parser.docs,
+            marks: parser.marks,
+        })
     } else {
         Err(parser.errors)
     }
@@ -36,29 +58,38 @@ pub(crate) struct Parser {
     pub(crate) pos: usize,
     pub(crate) depth: usize,
     pub(crate) errors: Vec<Diagnostic>,
+    pub(crate) docs: Vec<lexer::Documentation>,
+    pub(crate) marks: Vec<(TokenKind, crate::ast::Span)>,
 }
 
 impl Parser {
     pub(crate) fn new(tokens: Vec<Token>) -> Self {
-        let errors = tokens
+        let docs = tokens.iter().filter_map(Token::documentation).collect();
+        let marks = tokens
             .iter()
-            .find(|token| matches!(token.kind, TokenKind::Doc { .. }))
-            .map(|token| {
-                Diagnostic::unsupported(
-                    "documentation comment attachment and checking",
-                    token.documentation().map_or(token.span, |doc| doc.open),
+            .filter(|token| {
+                !matches!(
+                    token.kind,
+                    TokenKind::Space | TokenKind::Comment | TokenKind::Doc { .. } | TokenKind::Eof
                 )
             })
-            .into_iter()
+            .map(|token| (token.kind, token.span))
             .collect();
         Self {
             tokens: tokens
                 .into_iter()
-                .filter(|token| !matches!(token.kind, TokenKind::Space | TokenKind::Comment))
+                .filter(|token| {
+                    !matches!(
+                        token.kind,
+                        TokenKind::Space | TokenKind::Comment | TokenKind::Doc { .. }
+                    )
+                })
                 .collect(),
             pos: 0,
             depth: 0,
-            errors,
+            errors: Vec::new(),
+            docs,
+            marks,
         }
     }
 

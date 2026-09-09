@@ -58,8 +58,10 @@ for doc build; it does not fetch remote content or copy arbitrary source files.
 
 Doc build requires `--output DIR`, stages its output safely and never uploads it
 or opens a browser implicitly. Failed or unsupported required checks return nonzero;
-unexecuted examples are not reported as executed passes. These are full-language
-tool contracts, not commands currently implemented by the bootstrap.
+unexecuted examples are not reported as executed passes. The bootstrap implements
+standalone doc check/build and explicit example execution; package/default-entry
+selection, assets and full LSP integration remain unavailable. See the documentation
+chapter's implemented profile before relying on broader full-language options.
 
 ## Check, build, and run
 

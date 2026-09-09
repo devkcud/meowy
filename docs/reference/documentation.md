@@ -7,13 +7,45 @@ system. Signatures, type parameters, result alternatives, visibility and ownersh
 facts come from the same analyzed program that the compiler checks. Prose explains
 intent, constraints and examples; it does not override those facts.
 
-This chapter specifies the language/tool contract. The bootstrap lexer recognizes
-matching documentation fences and retains their kind and exact payload spans.
-Unclosed fences report E002 at the opener. Compilation reports B001 for well-formed
-doc fences until attachment/checking is implemented, including inside interpolation.
-Semantic links, documentation commands and example checking remain unavailable;
-lexical recognition and editor highlighting do not establish those features.
-No documentation artifact schema or new numeric diagnostic codes are assigned here.
+This chapter specifies the language/tool contract. The standalone bootstrap now
+implements attachment, checked value/type links, compiler-derived signatures,
+documentation commands and checked/explicitly run examples. Unclosed fences use
+E002; documentation failures use E801-E805 in the shared catalog. Full LSP/rename,
+package documentation and a public serialized index remain separate capabilities.
+
+## Implemented bootstrap profile
+
+Use an explicit `.mwy` source file. Ancestor manifests remain unsupported unless
+`--standalone` deliberately selects an isolated file; imports remain limited to
+the compiler's supported foundational modules. Unsupported language/library code
+in an example remains B001, not a passed rejection or an invented API.
+
+Links use the actual checker scopes and resolved types. Function documentation
+can resolve its parameters; module documentation resolves after the file's
+declarations are checked. Other declaration links follow available bindings at
+that declaration. Builtin targets can be checked without having a local page.
+The standalone public-coverage policy treats top-level declarations and their
+exposed record members as the API, not as a substitute for future facade exports.
+
+`doc build` writes one owned `index.html` with CommonMark rendering and a basic
+responsive layout. It refuses unrelated output files and unowned indexes, stages
+replacement, escapes raw HTML and neutralizes unsafe link schemes. Images render
+as alt text; `--assets` is not implemented in this profile. No source values,
+application initialization, external assets or browser launch are inferred.
+
+`doc check` and `doc build` check examples without executing them. `doc check
+--run-examples` runs only explicitly runnable examples in temporary working
+directories with closed stdin, an empty inherited environment, a default 5000 ms
+execution limit and 1 MiB per captured output stream. `--example-timeout-ms` accepts
+1..60000. Compilation uses the ordinary compiler budgets. These process controls
+are not a security sandbox. Nested documentation examples inside an example are
+not recursively scheduled.
+
+Example failures identify the original fence and example-local line/byte offsets;
+declared links retain exact original source spans, including CRLF/interpolation.
+Automatic example-code rename is deferred rather than claiming complete virtual
+source maps. The renderer labels unexecuted examples as not executed. The pinned
+Markdown dependency is compiler tooling and is not linked into generated programs.
 
 ## Fences and source bytes
 
@@ -166,8 +198,8 @@ unannounced public endpoints or inherited production credentials.
 
 ## Commands and publication
 
-These commands extend the full language's [CLI contract](../cli/README.md);
-they are not implemented bootstrap commands:
+These commands extend the full language's [CLI contract](../cli/README.md).
+The bootstrap implements their standalone forms under the profile above:
 
 | Command | Work performed |
 | --- | --- |
@@ -202,8 +234,8 @@ and internal diagnostic details do not leak into a public site through backlinks
 
 This logical model is not a promised JSON interchange schema. A serialized public
 index must be registered in the artifact/schema contract before compatibility is
-claimed. New diagnostic categories require entries in the shared code catalog;
-this chapter does not repurpose unrelated numeric codes.
+claimed. E801-E805 are assigned to documentation in the shared code catalog;
+unrelated numeric codes are not repurposed.
 
 ## Implementation and qualification
 

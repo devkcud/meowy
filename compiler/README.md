@@ -71,6 +71,8 @@ compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-headers.mwy
+compiler/target/debug/meowy doc check compiler/examples/documentation.mwy --standalone --run-examples
+compiler/target/debug/meowy doc build compiler/examples/documentation.mwy --standalone --output compiler/build/docs
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -181,18 +183,18 @@ Reference-bearing, nullable or inferred carried slots remain unavailable;
 effectful Boolean results may prevent proof.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
-The newer [HTTP](../docs/reference/stdlib/http.md), [TLS](../docs/reference/stdlib/tls.md)
-and [documentation comment](../docs/reference/documentation.md) contracts are not
-complete bootstrap features. The lexer recognizes documentation fences and retains
-declaration/module kind, bar count and exact spans; unterminated fences use E002.
-Well-formed fences report B001 until attachment/checking exists, rather than being
-silently discarded. `meowy doc`, semantic doc links/examples and these network
-libraries remain unimplemented. Their reference examples are not included in the
-native-example count.
+Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)
+now supports structural attachment, checked links, derived signatures, doc check/build,
+safe local API pages and checked/opt-in examples. Use the CLI or `meowy::compile`
+for complete source/documentation checks; the low-level AST checker does not invent
+documentation metadata. E801-E805 identify documentation failures; E002 still marks
+unclosed fences. Full LSP/rename, assets, package documentation and public index
+formats remain separate. [HTTP](../docs/reference/stdlib/http.md) and
+[TLS](../docs/reference/stdlib/tls.md) remain specifications, not executable libraries.
 
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
 LLVM development headers/libraries and the host C/C++ development environment
-must be installed. The Rust workspace has no external crate dependencies.
+must be installed. Markdown tooling uses pinned pulldown-cmark 0.13.4 and locked transitive dependencies. Generated programs do not link compiler Rust crates.
 Cargo builds the C++ bridge and embeds the separate runtime archive in the compiler.
 
 This is a host bootstrap: LLVM's shared library and the pinned Clang/LLD paths

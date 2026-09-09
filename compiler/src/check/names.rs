@@ -68,6 +68,9 @@ impl Checker {
             ));
         }
         scope.values.insert(name.into(), value);
+        if self.documentation.is_some() {
+            scope.doc_values.insert(name.into(), span.start);
+        }
         Ok(())
     }
 
@@ -220,7 +223,12 @@ impl Checker {
                 "storage requiring owning cleanup schedules",
                 expr.span,
             )),
-            Spec::Data(ty) => Ok(ty),
+            Spec::Data(ty) => {
+                if let Some(model) = &mut self.documentation {
+                    model.record_type(expr.span, &ty)?;
+                }
+                Ok(ty)
+            }
             Spec::Function { .. } => Err(Diagnostic::unsupported(
                 "stored function pointers",
                 expr.span,

@@ -66,6 +66,8 @@ impl Parser {
                         ));
                     }
                     parts.push(StringPart::Value(expression));
+                    self.docs.extend(parser.docs);
+                    self.marks.extend(parser.marks);
                     pos = end;
                 }
                 _ => {

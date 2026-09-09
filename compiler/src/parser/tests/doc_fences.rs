@@ -1,42 +1,34 @@
 use crate::ast::Span;
-use crate::parser::parse;
+use crate::parser::{parse, parse_documented};
 
 #[test]
-pub(crate) fn doc_fences_require_attachment_support_in_every_declaration_position() {
-    for (source, opener) in [
-        ("#| summary |#x:1", "#|"),
-        ("#!|| module ||!#\nx:1", "#!||"),
-        ("f<int32>:(#| input |#x<int32>){->x}", "#|"),
-        ("<R>:<{#|| field ||#n<int32>}>", "#||"),
-        ("|false|{#| unused |#}", "#|"),
+pub(crate) fn doc_fences_attach_in_supported_declaration_positions() {
+    for source in [
+        "#| summary |#x:1",
+        "#!|| module ||!#\nx:1",
+        "f<int32>:(#| input |#x<int32>){->x}",
+        "<R>:<{#|| field ||#n<int32>}>",
     ] {
-        let errors = parse(source).unwrap_err();
-        assert_eq!(errors.len(), 1, "{source}");
-        assert_eq!(errors[0].code, "B001");
-        assert!(
-            errors[0]
-                .message
-                .contains("documentation comment attachment")
-        );
-        let start = source.find(opener).unwrap();
-        assert_eq!(errors[0].span, Span::new(start, start + opener.len()));
+        assert!(parse(source).is_ok(), "{source}");
     }
+    assert_eq!(parse("|false|{#| unused |#}").unwrap_err()[0].code, "E801");
 }
 
 #[test]
 pub(crate) fn doc_fences_in_interpolation_keep_original_byte_offsets() {
     let source = "#\u{e9}#\r\ns:\"before {{#|| } \" #| inner |# ||# x:7;->x}} after\"";
-    let errors = parse(source).unwrap_err();
-    assert_eq!(errors[0].code, "B001");
+    let parsed = parse_documented(source).unwrap();
     let start = source.find("#||").unwrap();
-    assert_eq!(errors[0].span, Span::new(start, start + 3));
+    assert_eq!(parsed.docs[0].open, Span::new(start, start + 3));
+    assert!(parse(source).is_ok());
 }
 
 #[test]
-pub(crate) fn doc_fences_do_not_silently_become_ordinary_trivia() {
+pub(crate) fn doc_fences_distinguish_attachment_and_lexical_errors() {
     assert!(parse("# | ordinary | #x:1").is_ok());
     assert!(parse("##x:1").is_ok());
     assert!(parse("x:\"#| literal |#\"").is_ok());
-    assert_eq!(parse("#| |#x:1").unwrap_err()[0].code, "B001");
+    assert!(parse("#| |#x:1").is_ok());
     assert_eq!(parse("#|| unfinished |#").unwrap_err()[0].code, "E002");
+    assert_eq!(parse("#| orphan |#").unwrap_err()[0].code, "E801");
 }

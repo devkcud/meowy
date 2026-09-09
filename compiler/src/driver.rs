@@ -11,6 +11,7 @@ pub const TARGET: &str = "x86_64-unknown-linux-gnu";
 pub const HELP: &str = "meowy 0.0.0 bootstrap compiler
 
 Usage: meowy <check|build|run> FILE [OPTIONS]
+       meowy doc <check|build> FILE [OPTIONS]
        meowy help [COMMAND]
        meowy --version
 
@@ -18,6 +19,8 @@ Commands:
   check                 Parse and check without executing application code
   build                 Produce a Linux x86-64 native executable
   run                   Build and execute; program arguments follow --
+  doc check             Check attachments, links and complete example source
+  doc build             Build a local API site (--output DIR required)
 
 Options:
   --profile debug|release   Select optimization (both check arithmetic)
@@ -27,6 +30,11 @@ Options:
   --quiet                  Suppress successful build messages
   --color auto|always|never Control terminal diagnostic colors
   --help                   Display help
+
+Documentation options:
+  --require-public         Require docs on standalone top-level API declarations
+  --run-examples           Execute run examples (doc check only)
+  --example-timeout-ms N   Per-example limit, 1..60000 (default 5000)
 
 Bootstrap options:
   --standalone             Check one file outside ancestor manifest policy
@@ -45,6 +53,8 @@ pub(crate) enum Action {
     Check,
     Build,
     Run,
+    DocCheck,
+    DocBuild,
 }
 
 #[derive(Debug)]
@@ -60,6 +70,9 @@ pub(crate) struct Options {
     pub(crate) json: bool,
     pub(crate) color: bool,
     pub(crate) args: Vec<OsString>,
+    pub(crate) require_public: bool,
+    pub(crate) run_examples: bool,
+    pub(crate) example_timeout: u64,
 }
 
 pub fn run(args: Vec<OsString>) -> i32 {
@@ -71,7 +84,7 @@ pub fn run(args: Vec<OsString>) -> i32 {
         if args.first().is_some_and(|s| s == "help")
             && args
                 .get(1)
-                .is_some_and(|s| !matches!(s.to_str(), Some("check" | "build" | "run")))
+                .is_some_and(|s| !matches!(s.to_str(), Some("check" | "build" | "run" | "doc")))
         {
             eprintln!("meowy: help is available for check, build, and run");
             return 2;
@@ -110,6 +123,11 @@ pub(crate) fn options(args: Vec<OsString>) -> Result<Options, String> {
         Some("check") => Action::Check,
         Some("build") => Action::Build,
         Some("run") => Action::Run,
+        Some("doc") => match args.next().and_then(|s| s.into_string().ok()).as_deref() {
+            Some("check") => Action::DocCheck,
+            Some("build") => Action::DocBuild,
+            _ => return Err("doc requires check or build".into()),
+        },
         Some(name) => return Err(format!("command '{name}' is unavailable in this bootstrap")),
         None => return Err("expected a command".into()),
     };
@@ -125,6 +143,9 @@ pub(crate) fn options(args: Vec<OsString>) -> Result<Options, String> {
         json: false,
         color: io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none(),
         args: Vec::new(),
+        require_public: false,
+        run_examples: false,
+        example_timeout: 5000,
     };
     while let Some(arg) = args.next() {
         match arg.to_str() {
@@ -149,7 +170,7 @@ pub(crate) fn options(args: Vec<OsString>) -> Result<Options, String> {
                     .ok_or("--target requires a target triple")?;
             }
             Some("--output") => {
-                if action != Action::Build {
+                if !matches!(action, Action::Build | Action::DocBuild) {
                     return Err("--output is allowed only with build".into());
                 }
                 opts.output = Some(
@@ -179,6 +200,18 @@ pub(crate) fn options(args: Vec<OsString>) -> Result<Options, String> {
                 };
             }
             Some("--offline") => {}
+            Some("--require-public") if matches!(action, Action::DocCheck | Action::DocBuild) => {
+                opts.require_public = true
+            }
+            Some("--run-examples") if action == Action::DocCheck => opts.run_examples = true,
+            Some("--example-timeout-ms") if action == Action::DocCheck => {
+                opts.example_timeout = args
+                    .next()
+                    .and_then(|value| value.into_string().ok())
+                    .and_then(|value| value.parse::<u64>().ok())
+                    .filter(|value| (1..=60000).contains(value))
+                    .ok_or("--example-timeout-ms requires 1..60000")?;
+            }
             Some("--standalone") => opts.standalone = true,
             Some("--quiet") => opts.quiet = true,
             Some("--json") => opts.json = true,
@@ -199,6 +232,9 @@ pub(crate) fn options(args: Vec<OsString>) -> Result<Options, String> {
     }
     if opts.entry.extension().is_none_or(|ext| ext != "mwy") {
         return Err("the entry must be a .mwy source file".into());
+    }
+    if action == Action::DocBuild && opts.output.is_none() {
+        return Err("doc build requires --output DIR".into());
     }
     Ok(opts)
 }
@@ -286,6 +322,9 @@ pub(crate) fn execute(opts: &Options) -> i32 {
             return 1;
         }
     };
+    if matches!(opts.action, Action::DocCheck | Action::DocBuild) {
+        return crate::documentation::execute(opts, source, &entry);
+    }
     let program = match crate::compile(source) {
         Ok(program) => program,
         Err(errors) => {

@@ -10,6 +10,7 @@ pub(crate) mod control;
 pub(crate) mod discarded_aliases;
 pub(crate) mod dispatch;
 pub(crate) mod doc_fences;
+pub(crate) mod documentation;
 pub(crate) mod dynamic_lists;
 pub(crate) mod effectful_lists;
 pub(crate) mod element_borrows;

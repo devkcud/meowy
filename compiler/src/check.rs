@@ -1,5 +1,6 @@
 mod aliases;
 mod blocks;
+mod documentation;
 mod expressions;
 mod functions;
 mod indexed;
@@ -69,6 +70,8 @@ pub(crate) struct Scope {
     pub(crate) values: BTreeMap<String, Value>,
     pub(crate) types: BTreeMap<String, Spec>,
     pub(crate) labels: BTreeMap<String, usize>,
+    pub(crate) doc_values: BTreeMap<String, usize>,
+    pub(crate) doc_types: BTreeMap<String, usize>,
 }
 
 #[derive(Clone)]
@@ -115,10 +118,19 @@ pub(crate) struct Checker {
     pub(crate) lengths: BTreeMap<usize, crate::list::Fact>,
     pub(crate) block_lengths: BTreeMap<usize, crate::list::Fact>,
     pub(crate) required: bool,
+    pub(crate) documentation: Option<crate::documentation::Model>,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
+    check_documented(block, None).map(|(program, _)| program)
+}
+
+pub(crate) fn check_documented(
+    block: &ast::Block,
+    docs: Option<crate::documentation::Model>,
+) -> std::result::Result<(hir::Program, Option<crate::documentation::Model>), Vec<Diagnostic>> {
     let mut checker = Checker::new();
+    checker.documentation = docs;
     match checker.block(block, None, None) {
         Ok(body) => {
             let program = hir::Program {
@@ -152,7 +164,11 @@ pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagno
                 .map_err(|error| vec![error])?;
             let facts = crate::borrow::check(&program, &mut checker.flow, &checker.proofs)?;
             crate::loans::check(&program, &facts, &checker.proofs, &mut checker.flow)?;
-            Ok(program)
+            let mut docs = checker.documentation;
+            if let Some(model) = &mut docs {
+                model.finish().map_err(|error| vec![error])?;
+            }
+            Ok((program, docs))
         }
         Err(error) => Err(vec![if checker.flow.exceeded() {
             Diagnostic::unsupported("control-flow proof budget exhausted", block.span)
@@ -206,6 +222,7 @@ impl Checker {
             lengths: BTreeMap::new(),
             block_lengths: BTreeMap::new(),
             required: false,
+            documentation: None,
         }
     }
 

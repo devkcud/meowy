@@ -104,8 +104,8 @@ those explicitly with `:setlocal foldmethod=syntax` if desired.
 Documentation uses `#| ... |#` or `#!| ... |!#`, with longer matching bar runs when
 needed. Wrong-length or wrong-family closers remain documentation text; an unclosed
 fence highlights to EOF. Ordinary comment commands still produce `# %s #`, not
-documentation. The compiler recognizes these fences but currently rejects their
-unimplemented attachment/checking with B001; see the
+documentation. The compiler now checks supported attachment and semantic links;
+the lexical highlighter does not replace those checks. See the
 [documentation contract](../../docs/reference/documentation.md).
 
 ## Values are not keywords

@@ -24,6 +24,7 @@ catalog version and explanation that accompanied its original toolchain.
 | `E5xx` | Projects, imports, and build inputs      | `error[E503]`       |
 | `E6xx` | Native boundaries and linking            | `error[E601]`       |
 | `E7xx` | Diagnostic sessions, repairs, and replay | `error[E702]`       |
+| `E8xx` | Documentation and documentation tools   | `error[E801]`       |
 | `P0xx` | Runtime panics                           | `panic[P003]`       |
 | `T0xx` | Test-runner expectations and supervision | `failure[T002]`     |
 | `F0xx` | Compiler faults                          | `fatal[F001]`       |
@@ -75,6 +76,20 @@ required bar count/closer family; a shorter or longer run is not a mismatched cl
 but payload text. A quote inside interpolation is parsed as part of that
 expression; nested strings are not reported as an unclosed outer string merely
 because they contain another quote.
+
+## Documentation
+
+| Code | Diagnostic and trigger | Evidence and repair direction |
+| --- | --- | --- |
+| `E801` | Orphaned, duplicate or misplaced documentation | Show the doc opener and expected declaration/module position |
+| `E802` | Malformed, unresolved or inaccessible documentation link | Show the link span and resolve against checked bindings, not prose spelling |
+| `E803` | Invalid example metadata or missing required public documentation | Identify the fence attribute or undocumented declaration |
+| `E804` | Documentation example check/output/exit/time/output-budget mismatch | Show the containing fence and example-local diagnostic or execution evidence |
+| `E805` | Unsafe or failed documentation publication | Identify the destination and preserve unrelated or previous valid output |
+
+Unsupported language features and unavailable infrastructure retain B/F diagnostics;
+they never satisfy an expected E-code rejection. These codes do not imply LSP,
+package documentation or release-compatible index support.
 
 ## Collection and numeric constraints
 

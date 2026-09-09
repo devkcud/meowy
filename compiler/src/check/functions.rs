@@ -36,6 +36,11 @@ impl Checker {
             index += 1;
         }
         let count = names.len();
+        if self.documentation.is_some() {
+            for stmt in &stmts[start..index] {
+                self.doc_stage(stmt.span.start)?;
+            }
+        }
         for _ in 0..count {
             let stmt = stmts.get(index).ok_or_else(|| {
                 Self::error(
@@ -86,7 +91,7 @@ impl Checker {
                     stmt.span,
                 ));
             }
-            self.function(id, name, params, body, Some(expected_result))
+            self.function(id, name, params, body, Some(expected_result), stmt.span)
                 .map_err(|error| {
                     if error.code == "B001" && error.message.contains("captur") {
                         Self::error(
@@ -110,10 +115,18 @@ impl Checker {
         params: &[ast::Param],
         body: &ast::Block,
         result: Option<Type>,
+        span: Span,
     ) -> Result<Type> {
         let reach = std::mem::replace(&mut self.reach, TRUE);
         let owner = self.owner;
         self.owner = id + 1;
+        if self.documentation.is_some() {
+            self.scopes
+                .last_mut()
+                .expect("scope")
+                .doc_values
+                .insert(name.into(), span.start);
+        }
         self.scopes.push(Scope::default());
         let mut ids = Vec::new();
         for param in params {
@@ -142,6 +155,7 @@ impl Checker {
             result: result.clone(),
             body: block,
         });
+        self.doc_stage(span.start)?;
         self.scopes.pop();
         self.owner = owner;
         self.reach = reach;

@@ -3,6 +3,7 @@ use crate::diagnostic::Diagnostic;
 
 mod comments;
 pub use comments::Documentation;
+pub(crate) use comments::scan as scan_comment;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenKind {

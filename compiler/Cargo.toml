@@ -17,6 +17,9 @@ path = "src/lib.rs"
 name = "meowy"
 path = "src/main.rs"
 
+[dependencies]
+pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["html"] }
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
