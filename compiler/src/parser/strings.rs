@@ -50,6 +50,9 @@ impl Parser {
                         })
                         .collect();
                     let mut parser = Parser::new(tokens);
+                    if !parser.errors.is_empty() {
+                        return Err(parser.errors.remove(0));
+                    }
                     parser.depth = self.depth;
                     let expression = parser.expr(0, false, true, false)?;
                     if !parser.errors.is_empty() {

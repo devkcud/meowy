@@ -69,8 +69,10 @@ keywords; an unknown name is a lookup problem under `E201` or `E202`.
 | `E003` | Unsupported string escape                                                       | Mark the full escape and list supported forms; escape a literal backslash explicitly if that was intended |
 | `E004` | Incomplete expression or declaration                                            | Show the punctuation that requires an operand, body, or binding value; do not insert a guessed expression |
 
-Unclosed strings and delimited `# ... #` comments use `E002`, including when they
-span multiple lines. A quote inside interpolation is parsed as part of that
+Unclosed strings, ordinary `# ... #` comments and documentation fences use `E002`,
+including when they span multiple lines. For documentation, show the opener and
+required bar count/closer family; a shorter or longer run is not a mismatched closer
+but payload text. A quote inside interpolation is parsed as part of that
 expression; nested strings are not reported as an unclosed outer string merely
 because they contain another quote.
 

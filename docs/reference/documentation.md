@@ -7,9 +7,12 @@ system. Signatures, type parameters, result alternatives, visibility and ownersh
 facts come from the same analyzed program that the compiler checks. Prose explains
 intent, constraints and examples; it does not override those facts.
 
-This chapter specifies the language/tool contract. The bootstrap does not yet
-implement documentation attachment, semantic links, documentation commands or
-example checking. Recognizing text as an ordinary comment is not that support.
+This chapter specifies the language/tool contract. The bootstrap lexer recognizes
+matching documentation fences and retains their kind and exact payload spans.
+Unclosed fences report E002 at the opener. Compilation reports B001 for well-formed
+doc fences until attachment/checking is implemented, including inside interpolation.
+Semantic links, documentation commands and example checking remain unavailable;
+lexical recognition and editor highlighting do not establish those features.
 No documentation artifact schema or new numeric diagnostic codes are assigned here.
 
 ## Fences and source bytes

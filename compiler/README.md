@@ -183,10 +183,12 @@ effectful Boolean results may prevent proof.
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 The newer [HTTP](../docs/reference/stdlib/http.md), [TLS](../docs/reference/stdlib/tls.md)
 and [documentation comment](../docs/reference/documentation.md) contracts are not
-bootstrap features. The lexer may treat a simple documentation-looking block as
-an ordinary comment; that is not correct doc-fence recognition, attachment, link
-checking or example execution. `meowy doc` and these network libraries remain
-unimplemented. Their reference examples are not included in the native-example count.
+complete bootstrap features. The lexer recognizes documentation fences and retains
+declaration/module kind, bar count and exact spans; unterminated fences use E002.
+Well-formed fences report B001 until attachment/checking exists, rather than being
+silently discarded. `meowy doc`, semantic doc links/examples and these network
+libraries remain unimplemented. Their reference examples are not included in the
+native-example count.
 
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
 LLVM development headers/libraries and the host C/C++ development environment

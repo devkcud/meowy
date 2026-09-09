@@ -20,6 +20,9 @@ pub(crate) enum TreeNode<'a> {
 pub fn parse(source: &str) -> Result<Block, Vec<Diagnostic>> {
     let tokens = lexer::lex(source)?;
     let mut parser = Parser::new(tokens);
+    if !parser.errors.is_empty() {
+        return Err(parser.errors);
+    }
     let block = parser.block(None, false, 0);
     if parser.errors.is_empty() {
         Ok(block)
@@ -37,6 +40,17 @@ pub(crate) struct Parser {
 
 impl Parser {
     pub(crate) fn new(tokens: Vec<Token>) -> Self {
+        let errors = tokens
+            .iter()
+            .find(|token| matches!(token.kind, TokenKind::Doc { .. }))
+            .map(|token| {
+                Diagnostic::unsupported(
+                    "documentation comment attachment and checking",
+                    token.documentation().map_or(token.span, |doc| doc.open),
+                )
+            })
+            .into_iter()
+            .collect();
         Self {
             tokens: tokens
                 .into_iter()
@@ -44,7 +58,7 @@ impl Parser {
                 .collect(),
             pos: 0,
             depth: 0,
-            errors: Vec::new(),
+            errors,
         }
     }
 

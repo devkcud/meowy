@@ -1,6 +1,8 @@
 use super::*;
 use crate::ast::*;
 
+mod doc_fences;
+
 pub(crate) fn value(source: &str) -> Expr {
     let block = parse(source).unwrap();
     match block.stmts.into_iter().next().unwrap().kind {

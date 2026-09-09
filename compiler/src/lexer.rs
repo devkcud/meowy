@@ -1,6 +1,9 @@
 use crate::ast::Span;
 use crate::diagnostic::Diagnostic;
 
+mod comments;
+pub use comments::Documentation;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Name,
@@ -11,6 +14,7 @@ pub enum TokenKind {
     Space,
     Newline,
     Comment,
+    Doc { module: bool, bars: usize },
     Eof,
 }
 
@@ -45,20 +49,9 @@ pub fn lex(source: &str) -> Result<Vec<Token>, Vec<Diagnostic>> {
                 TokenKind::Newline
             }
             b'#' => {
-                pos += 1;
-                while pos < bytes.len() && bytes[pos] != b'#' {
-                    pos += 1;
-                }
-                if pos == bytes.len() {
-                    errors.push(Diagnostic::new(
-                        "E002",
-                        "unclosed comment",
-                        Span::new(start, pos),
-                    ));
-                } else {
-                    pos += 1;
-                }
-                TokenKind::Comment
+                let (end, kind) = comments::scan(source, start, &mut errors);
+                pos = end;
+                kind
             }
             b'"' => {
                 pos = scan_string(source, pos, 0, &mut errors);
@@ -221,20 +214,7 @@ pub(crate) fn scan_interpolation(
         match bytes[pos] {
             b'"' => pos = scan_string(source, pos, depth, errors),
             b'#' => {
-                let open = pos;
-                pos += 1;
-                while pos < bytes.len() && bytes[pos] != b'#' {
-                    pos += 1;
-                }
-                if pos < bytes.len() {
-                    pos += 1;
-                } else {
-                    errors.push(Diagnostic::new(
-                        "E002",
-                        "unclosed comment",
-                        Span::new(open, pos),
-                    ));
-                }
+                pos = comments::scan(source, pos, errors).0;
             }
             b'{' => {
                 braces += 1;
