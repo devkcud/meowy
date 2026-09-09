@@ -40,6 +40,8 @@ connects these API choices to stack, heap, static storage, and linker behavior.
 | `@"path"`, `@"fs"`                     | Lexical paths, files, metadata, and directory traversal                              | [Paths and files](io-and-system.md#paths-are-data)                       |
 | `@"env"`, `@"process"`                 | Explicit environment snapshots, argv, and child processes                            | [Processes](io-and-system.md#environment-and-processes)                  |
 | `@"net"`                               | Numeric addresses, DNS, TCP, and UDP                                                 | [Networking](io-and-system.md#network-services)                          |
+| `@"tls"`                               | Explicit trust, authenticated encrypted streams and negotiated protocols             | [TLS transports](tls.md)                                                 |
+| `@"http"`                              | HTTP messages, clients, streaming services and typed route/response contracts          | [Typed HTTP](http.md)                                                    |
 | `@"cli"`                               | Typed application options, subcommands, help, and usage errors                       | [CLI applications](cli.md)                                               |
 | `@"ffi"`                               | Declared native layouts and foreign symbols                                          | [Native APIs](ffi.md)                                                    |
 

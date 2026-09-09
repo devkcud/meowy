@@ -278,6 +278,11 @@ and `truncated : true`; the discarded suffix cannot be recovered by another read
 A zero-length datagram is a message, not end-of-stream. None of these APIs infers
 TLS, an application protocol, or an encoding from a port number.
 
+[TLS](tls.md) supplies a separate authenticated stream contract with explicit trust
+and identity policy. [HTTP](http.md) layers messages, clients, streaming servers
+and typed route/response contracts over qualified transports. Those specified APIs
+do not imply that the bootstrap currently implements network protocols or TLS.
+
 ## Recorded effects
 
 Filesystem, process, environment, network, clock, and entropy observations are
