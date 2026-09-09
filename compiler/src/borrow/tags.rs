@@ -19,7 +19,7 @@ impl Checker<'_> {
         }
         let mut state = match &expr.kind {
             ExprKind::Local(id)
-                if self.proofs.mutable.contains(id)
+                if self.proofs.variable(*id)
                     && self.proofs.versioned(self.program, *id)
                     && self.program.locals[*id].fixed_borrowed_value() =>
             {

@@ -120,7 +120,7 @@ implementation boundary; it does not change language rules.
   without writes. Completeness requires origins for every reference leaf of each
   active member; inactive leaves require none. Unknown activity is represented by
   a bounded disjoint guard partition, never by an unexplained empty origin set.
-- Each immutable local/field tag domain is linked to its constructor or copied
+- Each unchanging owned local/field tag domain is linked to its constructor or copied
   activity at the binding. The link is conditional on binding execution and the
   enclosing active variant, so same-named optional fields in different record
   members cannot impose contradictory unconditional tag facts.
@@ -268,6 +268,16 @@ implementation boundary; it does not change language rules.
 
 ## Mutable borrowed carriers
 
+Bindings with mutable owned fields participate in changing-value analysis even
+when their root binding uses `:`. `Proofs.mutable` retains whole-binding replacement
+permission; `Proofs.fields` records owned mutable descendants and `variable` combines
+them for branch/restart snapshots and refinement invalidation. References do not
+inherit this metadata from their pointees, so shared access remains read-only.
+Fixed reference/allocator-bearing record aliases with mutable fields use the
+existing origin/bound snapshots, publication and refresh machinery. Alias backing
+still matches the declared root slot flag and complete type. This grants no
+permission to replace an immutable root or store a value beyond its owner lifetime.
+
 - Ordinary mutable locals may contain fixed Copy shared-reference or allocator
   values, records and closed unions, including nullable references. Eligibility
   uses `Type::fixed_borrowed_value`; nested referents must have supported fixed
@@ -276,7 +286,7 @@ implementation boundary; it does not change language rules.
 - Whole assignment replaces the stored component versions after RHS completion.
   Copies and earlier argument operands keep their original origins, public lifetime
   bounds and loans. Mutable reference fields can be assigned on completed fixed
-  records; each crossed field and the ordinary root must be mutable.
+  records; the selected field must be mutable, independently of enclosing slots.
 - Pure field stores use the root state after RHS effects and preserve sibling loan
   IDs. Completed inner writes survive Leave; an unfinished outer write is skipped.
   Reads select the relevant component before checking lifetime. Safe sibling reads
@@ -308,8 +318,8 @@ implementation boundary; it does not change language rules.
   described below; union-view addresses/field paths and surviving published outer result slots
   enclosing an inner Restart remain B001.
 - After the record finishes, `r.view = &next` replaces only that field's origins,
-  bounds and activity. Nested paths require a mutable ordinary root and mutable
-  fields at every step. Incompatible mutability remains E206, immutable paths E305
+  bounds and activity. Nested owned paths use the selected field's mutability;
+  enclosing bindings/record fields may be immutable. Incompatible mutability remains E206, immutable selected slots E305
   and incompatible assignment types E207. Lists and exclusive carriers stay gated.
 - Origin state and loan bundles use the current root after RHS completion. Earlier
   sibling or whole-record writes survive, old copies retain their own loans, and
@@ -911,10 +921,10 @@ implementation boundary; it does not change language rules.
   Branch or expected-slot mutability conflicts report E206. Whole incompatible
   record assignment keeps E207, and nullable omissions inherit declared flags.
 - `owner.child.field = rhs` addresses mutable reference-free Copy local
-  storage or fixed borrowed carriers. Every crossed named field must be mutable;
-  an immutable root/path is E305. Shared-reference, temporary and union-root payload targets remain
+  storage or fixed borrowed carriers. The selected named field must be mutable;
+  an immutable selected slot is E305. Shared-reference, temporary and union-root payload targets remain
   B001. A field may hold any currently supported Copy value, including a whole
-  list or record. Mixed paths check every field boundary and initialized index.
+  list or record. Mixed paths inherit list-slot permission at indexes and take each named field's own flag; initialized-index checks remain unchanged.
 - An all-field `SetPath` retains static physical offsets and the target span. RHS evaluates
   once before the selected store. These fixed typed offsets remain valid across
   same-shape Copy owner replacement inside RHS, so no list-style reservation is
@@ -948,7 +958,7 @@ implementation boundary; it does not change language rules.
   record destinations load/coerce from the final slot and inject assignments back
   into it. A concrete Record/List alias inside a wider union field addresses that
   active member's payload for SetPath; a union-typed alias itself has no field/index
-  write path. Every crossed mutable-field and bounds rule still applies.
+  write path. Selected-slot mutability and every bounds rule still apply.
 - Missing, incompatible or non-record final destinations are permitted only when
   the original emission is proved disjoint from target completion. The initialized
   local cell then represents that discarded partial slot until leave/restart/exit.
@@ -1474,9 +1484,9 @@ block typing and actual non-returning effects without changing the backend.
 
 ## Exclusive scalar record fields
 
-The [field contract](EXCLUSIVE_FIELDS.md) admits named scalar paths on ordinary
-mutable reference-free Copy records. `check/references.rs` produces the original
-root/field Place; shared mutable-field validation enforces every crossed boundary.
+The [field contract](EXCLUSIVE_FIELDS.md) admits mutable named scalar fields on
+owned reference-free Copy records. `check/references.rs` produces the original
+root/field Place; shared field lookup retains the selected slot's mutability.
 The existing Borrow HIR, source lifetimes, loan modes and backend addresses are reused.
 
 Normalized fields prove sibling disjointness; whole-owner and ancestor accesses
@@ -1514,7 +1524,7 @@ paths and generated cleanup remain separate contracts.
 ## Exclusive emitted record fields
 
 Mutable emitted record aliases support named scalar-field paths through the same
-bounded resolver used for ordinary records. Every crossed field must be mutable;
+bounded resolver used for ordinary records. Only the selected field must be mutable;
 Alias.exclusive validates the complete backing record, not only the selected scalar.
 A different unselected field still makes widened backing unsupported. Shared union
 views retain their existing compatibility rule.

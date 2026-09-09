@@ -1,9 +1,9 @@
 # Exclusive borrows of emitted scalar storage
 
 After `->name:=value` initializes a boolean, integer or float slot, `&!name` may
-borrow its actual storage exclusively. Mutable emitted reference-free Copy records
-also permit scalar-field paths such as `row.inner.&!n`, with every crossed field
-mutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)
+borrow its actual storage exclusively. Emitted reference-free Copy records also
+permit scalar-field paths such as `row.inner.&!n`, with a mutable selected field
+even when the alias and enclosing record fields are immutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)
 and follows the existing [emission](../docs/reference/values-and-blocks.md) and
 [memory rules](../docs/reference/memory.md). No new HIR operation, backend addressing,
 allocation or runtime cleanup ABI is introduced.
@@ -12,7 +12,8 @@ allocation or runtime cleanup ABI is introduced.
 
 The emitted name enters scope after its initializer returns. Its initializer can
 still resolve an outer binding of the same name. An unknown or not-yet-introduced
-name reports E201. Immutable aliases or crossed fields report E305. The pointee
+name reports E201. Immutable selected slots report E305; an immutable alias can
+still expose a mutable nested field. The pointee
 must be Bool/Int/Float, either a direct scalar alias or a named path through a
 reference-free Copy record. Indexed/union/reference paths, non-scalar exclusive
 pointees and exclusive-reference carriers remain gated.

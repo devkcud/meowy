@@ -94,7 +94,7 @@ impl Checker {
         if let Some(value) = self.exclusive_indexed(expr, span)? {
             return Ok(value);
         }
-        let (place, ty) = self.exclusive_place(expr, span, false)?;
+        let (place, ty, _) = self.exclusive_place(expr, span, false)?;
         let ty = self.exclusive_type(ty, span)?;
         Ok(hir::Expr {
             kind: hir::ExprKind::Borrow(place),
@@ -108,7 +108,7 @@ impl Checker {
         expr: &ast::Expr,
         span: Span,
         indexed: bool,
-    ) -> Result<(hir::Place, Type)> {
+    ) -> Result<(hir::Place, Type, bool)> {
         let mut root = expr;
         let mut steps = Vec::new();
         loop {
@@ -168,9 +168,11 @@ impl Checker {
             }
         }
         let mut ty = ty;
+        let mut mutable = mutable;
         let mut fields = Vec::new();
         for (name, span) in steps.into_iter().rev() {
-            let (index, field) = self.mutable_field(ty, name, span)?;
+            let (index, field, writable) = self.record_field(ty, name, span)?;
+            mutable = writable;
             fields.push(index);
             ty = field;
         }
@@ -188,10 +190,10 @@ impl Checker {
         } else {
             self.exclusive_type(ty.clone(), span)?;
         }
-        if !mutable {
+        if !indexed && !mutable {
             return Err(Self::error(
                 "E305",
-                format!("binding `{name}` is immutable"),
+                "exclusive borrow target is immutable",
                 span,
             ));
         }
@@ -203,7 +205,7 @@ impl Checker {
                 .exclusive
                 .get_or_insert(span);
         }
-        Ok((hir::Place { root: id, fields }, ty))
+        Ok((hir::Place { root: id, fields }, ty, mutable))
     }
 
     pub(crate) fn address_root<'a>(expr: &'a ast::Expr, fields: &mut Vec<String>) -> &'a ast::Expr {

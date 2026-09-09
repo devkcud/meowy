@@ -70,7 +70,11 @@ values <uint8[3]> := [10, 20, 30]
 values[2] = 25
 ```
 
-Writing requires exclusive access to the collection and an existing position.
+Replacing an element requires a mutable containing list slot, exclusive access
+and an existing position. A list stored in an object's `:=` field can have its
+elements replaced even when the object's binding uses `:`. An immutable list
+slot prevents element replacement, but a record element may expose its own mutable
+fields; changing such a field does not replace the element or the list.
 Assignment to position `size() + 1` never appends. Removing an element compacts the
 remaining positions, preserving their order. Borrowed slices and references must
 expire before an operation that moves elements or changes length.

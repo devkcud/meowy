@@ -13,7 +13,7 @@ impl Graph<'_> {
     pub(crate) fn versions(&mut self) -> Result<Versions> {
         let work = self.locals.iter().fold(1usize, |work, (id, value)| {
             work.saturating_add(
-                if self.proofs.mutable.contains(id) && self.proofs.versioned(self.program, *id) {
+                if self.proofs.variable(*id) && self.proofs.versioned(self.program, *id) {
                     value.keys().map(|path| path.len() + 1).sum::<usize>() + 1
                 } else {
                     1
@@ -25,7 +25,7 @@ impl Graph<'_> {
             .locals
             .iter()
             .filter(|(id, _)| {
-                self.proofs.mutable.contains(id) && self.proofs.versioned(self.program, **id)
+                self.proofs.variable(**id) && self.proofs.versioned(self.program, **id)
             })
             .map(|(id, value)| (*id, value.clone()))
             .collect())
@@ -43,7 +43,7 @@ impl Graph<'_> {
                 + 1,
         )?;
         self.locals.retain(|id, _| {
-            !self.proofs.mutable.contains(id)
+            !self.proofs.variable(*id)
                 || !self.proofs.versioned(self.program, *id)
                 || versions.contains_key(id)
         });

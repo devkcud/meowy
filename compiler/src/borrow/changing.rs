@@ -19,7 +19,9 @@ impl Checker<'_> {
         };
         let lookup = input.values.len().checked_ilog2().unwrap_or(0) as usize
             + 3 * self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize
-            + self.proofs.mutable.len().checked_ilog2().unwrap_or(0) as usize
+            + (self.proofs.mutable.len() + self.proofs.fields.len())
+                .checked_ilog2()
+                .unwrap_or(0) as usize
             + self.types.len().checked_ilog2().unwrap_or(0) as usize
             + self
                 .facts
@@ -43,10 +45,9 @@ impl Checker<'_> {
                 .locals
                 .get(*local)
                 .ok_or_else(|| Self::unsupported(span))?;
-            if !alias.mutable
-                || alias.backing != Some(Backing::Result)
-                || !self.proofs.mutable.contains(local)
-                || !ty.has_reference()
+            if alias.backing != Some(Backing::Result)
+                || !self.proofs.variable(*local)
+                || !ty.has_borrowed()
                 || !ty.fixed_borrowed_value()
             {
                 return Err(Self::unsupported(alias.span));

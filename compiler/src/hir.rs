@@ -67,6 +67,20 @@ pub enum Type {
 }
 
 impl Type {
+    pub(crate) fn has_mutable_fields(&self) -> bool {
+        match self {
+            Self::Record { primary, fields } => {
+                primary.has_mutable_fields()
+                    || fields
+                        .iter()
+                        .any(|field| field.mutable || field.ty.has_mutable_fields())
+            }
+            Self::List { element, .. } => element.has_mutable_fields(),
+            Self::Union(types) => types.iter().any(Self::has_mutable_fields),
+            _ => false,
+        }
+    }
+
     pub fn pointee(&self) -> Option<&Type> {
         match self {
             Self::Reference(ty) | Self::Exclusive(ty) => Some(ty),

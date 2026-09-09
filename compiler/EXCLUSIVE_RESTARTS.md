@@ -45,8 +45,8 @@ losing its value before the backedge can still produce B001.
 ## Carried record fields
 
 Declared reference-free carried records admit exclusive borrows of named Boolean,
-integer and float fields, including nested paths. Every crossed field must be
-mutable. The existing source qualifier traverses each concrete field index from
+integer and float fields, including nested paths. The selected field must be
+mutable; an immutable alias or enclosing record field does not freeze it. The existing source qualifier traverses each concrete field index from
 the containing slot type, rejects absent/indexed/non-scalar paths and retains
 canonical owner/root/view checks. Traversal consumes the existing proof budget.
 Whole-record, string, unit, nullable, union, reference-bearing and list paths remain

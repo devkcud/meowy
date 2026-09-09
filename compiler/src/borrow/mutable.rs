@@ -84,7 +84,8 @@ pub(crate) fn check(
                 }
                 Stmt::Assign { id, value } => {
                     if let Some(alias) = proofs.aliases.get(id)
-                        && program.locals[*id].has_reference()
+                        && proofs.versioned(program, *id)
+                        && program.locals[*id].has_borrowed()
                         && alias.backing != Some(super::Backing::Discarded)
                     {
                         let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;
@@ -108,7 +109,8 @@ pub(crate) fn check(
                     id, path, value, ..
                 } => {
                     if let Some(alias) = proofs.aliases.get(id)
-                        && program.locals[*id].has_reference()
+                        && proofs.versioned(program, *id)
+                        && program.locals[*id].has_borrowed()
                         && alias.backing != Some(super::Backing::Discarded)
                     {
                         let owner = *owners.last().ok_or_else(|| State::budget(value.span))?;

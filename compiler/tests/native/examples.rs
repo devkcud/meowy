@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/binding-fields.mwy"),
+            "8\n9\n11\n",
+        ),
+        (
             include_str!("../../examples/carried-lists.mwy"),
             "init\n2\n3\n3\n",
         ),

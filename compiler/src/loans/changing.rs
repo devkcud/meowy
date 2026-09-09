@@ -14,7 +14,9 @@ impl Graph<'_> {
         for local in ids {
             self.charge(
                 self.proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize
-                    + self.proofs.mutable.len().checked_ilog2().unwrap_or(0) as usize
+                    + (self.proofs.mutable.len() + self.proofs.fields.len())
+                        .checked_ilog2()
+                        .unwrap_or(0) as usize
                     + self.blocks.len().checked_ilog2().unwrap_or(0) as usize
                     + 3,
             )?;
@@ -28,10 +30,9 @@ impl Graph<'_> {
                 return Ok(TRUE);
             };
             crate::borrow_contract::type_weight(&scope.ty, self.guards, Span::default())?;
-            if !alias.mutable
-                || alias.backing != Some(crate::borrow::Backing::Result)
-                || !self.proofs.mutable.contains(local)
-                || !ty.has_reference()
+            if alias.backing != Some(crate::borrow::Backing::Result)
+                || !self.proofs.variable(*local)
+                || !ty.has_borrowed()
                 || !ty.fixed_borrowed_value()
                 || crate::borrow::aliases::result_slot(&scope.ty, &alias.field, ty).is_none()
             {

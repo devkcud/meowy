@@ -1,0 +1,12 @@
+d:@"debug"
+object:{
+    ->field:=7
+    field=8
+    ->inner:{->field:=10}
+}
+d.print(object.field)
+object.field=9
+p:object.inner.&!field
+*p=11
+d.print(object.field)
+d.print(object.inner.field)

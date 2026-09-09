@@ -15,7 +15,7 @@ pub(crate) fn reference_field_constructors_preserve_snapshots_and_mutability() {
     accepts("<R>:<{p<&int32><null>:=}>;x:1;r<R>:={};r.p=&x;|r.p<&int32>|{v:*(r.p)}");
     accepts("x:1;flag:=true;r:={|flag|->p:=&x};r.p=null;copy:r");
     rejects("<R>:<{p<&int32>:=}>;x:1;r<R>:{->p:&x}", "E206");
-    rejects("x:1;r:{->p:=&x};r.p=&x", "E305");
+    accepts("x:1;r:{->p:=&x};r.p=&x");
     rejects("x:1;r:={->p:=&x};r.p=&true", "E207");
 }
 
@@ -30,12 +30,12 @@ pub(crate) fn reference_field_versions_preserve_old_copies_and_sibling_loans() {
 }
 
 #[test]
-pub(crate) fn nested_reference_field_updates_require_each_mutable_boundary() {
+pub(crate) fn nested_reference_field_updates_require_a_mutable_leaf() {
     let prefix = "x:=1;y:=2;r:={->c:={->p:=&x;->n:=0};->q:=&y};";
     accepts(&format!("{prefix}r.c.p=&y;x=3;copy:r"));
     accepts(&format!("{prefix}r.c={{->p:=&y;->n:=3}};x=4;copy:r"));
     rejects(&format!("{prefix}old:r.c;r.c.p=&y;x=3;v:*(old.p)"), "E302");
-    rejects("x:1;r:={->c:{->p:=&x}};r.c.p=&x", "E305");
+    accepts("x:1;r:={->c:{->p:=&x}};r.c.p=&x");
     rejects("x:1;r:={->c:={->p:&x}};r.c.p=&x", "E305");
 }
 
@@ -107,7 +107,7 @@ pub(crate) fn reference_fields_keep_cell_borrows_and_public_call_bounds() {
 
 #[test]
 pub(crate) fn borrowed_alias_writes_preserve_unsupported_shapes() {
-    rejects("x:1;r:{->c:{->p:=&x};c.p=&x}", "E305");
+    accepts("x:1;r:{->c:{->p:=&x};c.p=&x}");
     accepts("x:1;y:2;r:{->p:=&x;p=&y}");
     accepts("x:1;r:{->p<&int32><null>:=null;p=&x}");
     accepts("x:1;y:2;r:{->c:={->p:=&x};c.p=&y}");

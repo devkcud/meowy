@@ -4,12 +4,12 @@ use crate::diagnostic::Diagnostic;
 use crate::hir::{self, Type};
 
 impl Checker {
-    pub(crate) fn mutable_field(
+    pub(crate) fn record_field(
         &mut self,
         ty: Type,
         name: &str,
         span: ast::Span,
-    ) -> Result<(usize, Type)> {
+    ) -> Result<(usize, Type, bool)> {
         let Type::Record { fields, .. } = ty else {
             return Err(Diagnostic::unsupported(
                 "mutable field access requires concrete record storage",
@@ -27,14 +27,7 @@ impl Checker {
             .enumerate()
             .find(|(_, field)| field.name == name)
             .ok_or_else(|| Self::error("E201", format!("unknown record field `{name}`"), span))?;
-        if !field.mutable {
-            return Err(Self::error(
-                "E305",
-                format!("field `{name}` is immutable"),
-                span,
-            ));
-        }
-        Ok((index, field.ty))
+        Ok((index, field.ty, field.mutable))
     }
 
     pub(crate) fn write_path(
@@ -90,15 +83,9 @@ impl Checker {
                 target.span,
             ));
         }
-        if !mutable {
-            return Err(Self::error(
-                "E305",
-                format!("binding `{name}` is immutable"),
-                root.span,
-            ));
-        }
         crate::borrow_contract::type_weight(&ty, &mut self.flow, target.span)?;
         let mut ty = ty;
+        let mut mutable = mutable;
         let mut path = Vec::new();
         let mut names = Vec::new();
         let mut indexed = false;
@@ -111,7 +98,8 @@ impl Checker {
             }
             match &step.kind {
                 ExprKind::Field { name, .. } => {
-                    let (index, field) = self.mutable_field(ty, name, step.span)?;
+                    let (index, field, writable) = self.record_field(ty, name, step.span)?;
+                    mutable = writable;
                     path.push(hir::WriteStep::Field(index));
                     if !indexed {
                         names.push(name.clone());
@@ -137,6 +125,13 @@ impl Checker {
         }
         if let Some(hir::WriteStep::Index(last)) = path.last_mut() {
             last.span = target.span;
+        }
+        if !mutable {
+            return Err(Self::error(
+                "E305",
+                "assignment target is immutable",
+                target.span,
+            ));
         }
         let value = self.expr(value, Some(&ty))?;
         self.forget_field(id, &names, target.span)?;

@@ -18,7 +18,7 @@ impl Graph<'_> {
         for (local, state) in states {
             self.charge(state.weight() + 1)?;
             let ty = self.program.locals.get(*local).ok_or_else(Self::budget)?;
-            if !self.proofs.mutable.contains(local) {
+            if !self.proofs.variable(*local) {
                 return Err(Diagnostic::unsupported(
                     "restart header outside mutable reference storage",
                     Span::default(),
@@ -203,7 +203,7 @@ impl Graph<'_> {
                 let Some(field) = index.checked_sub(1).and_then(|index| fields.get(index)) else {
                     return Ok(current.entered);
                 };
-                if !field.mutable || field.ty != slot.ty {
+                if (!field.mutable && !field.ty.has_mutable_fields()) || field.ty != slot.ty {
                     return Ok(current.entered);
                 }
             }

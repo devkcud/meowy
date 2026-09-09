@@ -22,14 +22,17 @@ impl Checker<'_> {
     }
 
     pub(crate) fn versions(&mut self, span: Span) -> Result<Values> {
-        let lookup = self.proofs.mutable.len().checked_ilog2().unwrap_or(0) as usize + 1;
+        let lookup = (self.proofs.mutable.len() + self.proofs.fields.len())
+            .checked_ilog2()
+            .unwrap_or(0) as usize
+            + 1;
         let work = self.locals.len().saturating_mul(lookup);
         if !self.guards.spend(work) {
             return Err(State::budget(span));
         }
         let mut values = Vec::new();
         for (id, value) in &self.locals {
-            if self.proofs.versioned(self.program, *id) && self.proofs.mutable.contains(id) {
+            if self.proofs.versioned(self.program, *id) && self.proofs.variable(*id) {
                 if !self.guards.spend(value.state.weight() + 1) {
                     return Err(State::budget(span));
                 }

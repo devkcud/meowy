@@ -90,8 +90,7 @@ impl Checker<'_> {
                 self.read(value, &path)
             }
             ExprKind::Local(id)
-                if !self.proofs.mutable.contains(id)
-                    || self.proofs.versioned(self.program, *id) =>
+                if !self.proofs.variable(*id) || self.proofs.versioned(self.program, *id) =>
             {
                 let state = self
                     .locals

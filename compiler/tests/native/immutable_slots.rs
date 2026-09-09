@@ -132,11 +132,11 @@ d.print(owner)
 
 #[test]
 pub fn immutable_emitted_aliases_reject_writes_and_escaping_borrows() {
+    Case::new("value:{->child:{->n:=1};child.n=2}").runs(b"");
+    Case::new("value:{->items:[{->n:=1}];items[1].n=2}").runs(b"");
     for (source, code) in [
         ("value:{->n:1;n=2}", "E305"),
-        ("value:{->child:{->n:=1};child.n=2}", "E305"),
         ("value:{->items:[1];items[1]=2}", "E305"),
-        ("value:{->items:[{->n:=1}];items[1].n=2}", "E305"),
         ("value:{->n:1;->view:&n}", "E303"),
         ("value:'out{view:{'out->n:1;->&n};->saved:view}", "E303"),
         ("value:{->items:[1];->view:&(items[1])}", "E303"),
@@ -194,7 +194,7 @@ pub fn immutable_emitted_lists_keep_static_and_dynamic_bounds() {
 #[test]
 pub fn immutable_emitted_borrows_keep_unrepresented_storage_explicit() {
     super::exclusive_references::rejects("value:{->n:1;view:&!n}", "E305");
-    super::exclusive_references::rejects("value:{->row:{->n:=1};view:&!(row.n)}", "E305");
+    Case::new("value:{->row:{->n:=1};view:&!(row.n)}").runs(b"");
     for source in [
         "value:{->row:{->n:=1};view:&!row}",
         "choose:(flag<boolean>)'out{|flag|{'out->n<int32><null>:null;view:&n};|!flag|{'out->n:\"text\"}}",

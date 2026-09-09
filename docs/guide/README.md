@@ -27,6 +27,12 @@ type names, and the contextual `self` are well-known bindings. Names such as
 `:` creates an immutable binding. `:=` creates a mutable binding, and `=` assigns
 to an existing mutable binding.
 
+Binding immutability prevents replacing the bound value. It does not freeze
+mutable fields inside an owned record: `object : { -> field := 7 }` permits
+`object.field = 8`. Shared references remain read-only. The
+[mutability rules](../reference/values-and-blocks.md#mutability) cover nested fields,
+list elements and exclusive borrows.
+
 ```meowy
 limit <uint8> : 10
 count <uint8> := 0

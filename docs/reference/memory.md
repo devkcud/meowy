@@ -82,6 +82,13 @@ For an element, write `&(items[index])` or `&!(items[index])`. The complete
 selected place retains the collection's existing evaluation, bounds and loan
 rules. A selected-field borrow evaluates its receiver once.
 
+An owned field's replacement permission is independent of the containing binding:
+`object : { -> field := 7 }` permits `object.&!field` while preventing replacement
+of `object`. Nested owned field selection uses the final field's permission;
+indexing inherits the list slot's permission. Shared-reference access remains
+read-only and live overlapping loans still prevent mutation. See
+[binding and field mutability](values-and-blocks.md#mutability).
+
 Prefix borrowing happens before following field selection or indexing:
 `&object.field` selects a field through `&object`, and `&items[index]` indexes
 through `&items`. Selecting a copyable value this way may copy it; an explicit

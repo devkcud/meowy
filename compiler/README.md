@@ -19,6 +19,12 @@ The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight pre
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
 [grammar](../docs/reference/syntax.md#operators-and-evaluation-order) for the binding rules.
 
+The [binding and field example](examples/binding-fields.mwy) mutates a `:=` field
+inside and after construction of an object bound with `:`. Binding immutability
+prevents whole-value replacement; each owned field has its own permission. Shared
+references remain read-only. Indexed replacement inherits the containing list
+slot's mutability, while record element fields retain their own flags.
+
 ## Build and run
 
 From the repository root:
@@ -37,6 +43,7 @@ compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile releas
 compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy
 compiler/target/debug/meowy run compiler/examples/pointer-syntax.mwy
+compiler/target/debug/meowy run compiler/examples/binding-fields.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
@@ -310,8 +317,8 @@ implementation work.
   reference. Live aliases, reference operands and retained block results protect
   their owners from writes; conflicting assignments report E302.
 - Exclusive references to mutable ordinary boolean, integer and float locals,
-  including scalar fields of mutable reference-free Copy records. Every crossed
-  field must be mutable. Sibling fields and primary projections are disjoint;
+  including scalar fields of owned reference-free Copy records. The selected
+  field must be mutable; enclosing bindings and record fields may be immutable. Sibling fields and primary projections are disjoint;
   whole-owner/ancestor accesses conflict with live field loans.
   Immutable handles permit scalar stores; replacing a handle requires a mutable
   binding. Moves and reinitialization preserve authority; unavailable holders report
@@ -359,8 +366,8 @@ implementation work.
   receiving block. Record equality compares the full shape, including addresses.
 - Mutable fields in reference-free Copy records. Field mutability is part of the
   type's shape and survives construction, composition, unions and list contexts.
-  Named field paths on mutable local owners support assignment when every crossed
-  field is mutable. Writes preserve other fields and copies; disjoint shared views
+  Named field paths on owned locals support assignment when the selected field
+  is mutable; immutable enclosing bindings/record fields do not freeze descendants. Writes preserve other fields and copies; disjoint shared views
   may stay live, and overlapping views must finish before the store.
 - Mutable emitted names backed by result fields. After `->count:=1`, `count=2`
   updates the returned field; scalar reads and mixed field/index writes use that
@@ -372,8 +379,9 @@ implementation work.
   use; publication cannot carry a reference into its own construction storage.
 - Immutable reference-free emitted names use the same result storage and shared
   borrow lifetimes. Their constant, variant and initialized-length facts remain
-  available. The immutable name cannot be assigned or used to write a nested field
-  or element, including mutable fields inside its value; those writes report E305.
+  available for unchanged slots. The immutable name cannot be reassigned, but
+  mutable fields inside its owned value can change. Indexed replacement inherits
+  the selected list slot's mutability; shared borrows remain read-only.
 - Immutable emitted references and reference-carrying records/unions also use actual
   result cells. Copying a stored reference keeps its original pointee origins and
   input bounds. Borrowing a concrete reference-free field instead follows the
@@ -598,7 +606,7 @@ record overlaps references to any of its fields.
 An assignment with no indices updates only the selected field. Its static offsets
 remain valid when the RHS replaces the same Copy owner; RHS changes to other fields
 are preserved. The final store still conflicts with any overlapping live shared
-view. Immutable roots or crossed fields report E305, and incompatible field
+view. An immutable selected slot reports E305, and incompatible field
 mutability in declared construction or completing branches reports E206. Assignment
 through shared-reference targets or temporary roots remains B001.
 Named emissions register an alias after initialization. Later reads

@@ -94,5 +94,5 @@ pub(crate) fn borrowed_alias_writes_keep_unsupported_backing_and_restart_gates()
         "m:@\"memory\";f<m.Allocator>:(p<&int32>){->m.heap};x:1;r:{->h:=f(&x)}",
         "B001",
     );
-    rejects("x:1;r:{->c:{->p:=&x};c.p=&x}", "E305");
+    accepts("x:1;r:{->c:{->p:=&x};c.p=&x}");
 }

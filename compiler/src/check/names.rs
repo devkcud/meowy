@@ -76,6 +76,9 @@ impl Checker {
 
     pub(crate) fn local(&mut self, ty: Type) -> usize {
         let id = self.locals.len();
+        if ty.has_mutable_fields() {
+            self.proofs.fields.insert(id);
+        }
         self.locals.push(ty);
         self.proofs.bindings.insert(id, self.reach);
         id

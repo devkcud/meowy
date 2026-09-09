@@ -57,7 +57,7 @@ impl Checker<'_> {
             return Err(Self::unsupported(span));
         }
         self.complete(&ty, &state, span)?;
-        if !self.proofs.mutable.contains(&id) {
+        if !self.proofs.variable(id) {
             self.link_tags(id, &ty, &mut state, span)?;
         } else if !self.proofs.versioned(self.program, id) {
             self.unbounded(&state, "mutable allocator storage", span)?;

@@ -1,77 +1,78 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-09. Carried reference-free list initialization is complete and
-passed the compiler gate. No failing checks remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-09. Binding/field mutability is refactored and passed the compiler
+gate. No failing checks remain. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Current compiler slice
 
-`borrow/carried.rs::shape` now classifies eligible storage as Plain or List while
-retaining the existing 256-part/32-level bounded traversal. A list adds one container
-and visits its element type once, independent of capacity. Nested scalar/unit/list/
-record elements are supported; nullable/union/reference/foundation/owning shapes
-remain gated, even under zero capacity. Existing `list.rs` checks still enforce
-capacity at most 65,536, layout at most 1 MiB and one-based initialized-length bounds.
-The frontend's `eligible` interface remains unchanged.
+`:` prevents replacing its binding or field slot; it does not freeze mutable fields
+inside an owned value. `check/mutation.rs::record_field` returns the selected field's
+flag alongside its type/index. Field selection replaces the current permission;
+list indexing inherits it. The final slot must be mutable for assignment or exclusive
+acquisition. Root assignment still requires `:=`. Shared/reference-derived access
+retains existing permission and capability restrictions. Function/dispatch owned
+copies retain field permissions without changing their caller's original value.
 
-The existing `loans/emission_init.rs` state proof tracks the whole initialized
-length/payload slot. It preserves ancestor slots across inner restarts and clears
-owner slots on reset. Empty lists still need one completed emission; no per-element
-initialization or synthetic reads were added. Copies retain independent values,
-whole replacement and `.add()` results keep existing type/length semantics, and
-record list fields can be replaced without indexed reservations. Named fields and
-primary list slots use the same initialization proof.
+`Proofs.mutable` remains whole-root replacement permission. `Type::has_mutable_fields`
+identifies mutable owned descendants without following references; `Checker::local`
+records those IDs in `Proofs.fields`. `Proofs::variable` combines both for refinement
+invalidation and branch/restart state tracking. This keeps immutable bindings with
+changing reference fields out of frozen constructor/tag assumptions. Old copies,
+nullable activity, public input bounds and owner expiry retain their evidence.
 
-`carried::storage` keeps original list-containing carried storage accesses gated
-at three entry points: ordinary Acquire, exclusive indexed acquisition and SetPath
-indexed writes. The latter has its own reservation path and cannot be guarded only
-at Acquire. Gates also cover scalar-field borrows from a record containing a list.
-Independent copies, completed-result locals and plain scalar/record sibling slots
-retain existing rules. These restrictions must remain until their separate
-acquisition/reservation proof is qualified.
+Fixed reference/allocator-bearing record aliases with mutable fields now use existing
+versioned origin/bound snapshots, publication and refresh machinery. A preservation
+case caught an unintended rejection of an unchanged allocator-bound alias; qualified
+record snapshots fix it. Scalar allocator alias limitations remain unchanged.
+`result_slot` resolves backing independently of replacement permission; actual writes
+are authorized at their selected path, and declared alias/root flags still match
+HIR/completed backing. Field updates cannot extend emitted-owner lifetimes.
 
-See [the contract](OWNERSHIP.md#carried-reference-free-lists) and
-[carried-lists.mwy](examples/carried-lists.mwy). No AST/HIR, backend, runtime, editor,
-reference conformance fixture or dependency changes were needed.
+Both origin and loan analyses retain selected-slot checks for indexed exclusive
+paths; carried scalar-field source qualification follows the final field flag.
+Whole-binding replacement, immutable list-element slots and live shared/exclusive
+conflicts remain rejected. The [reference rule](../docs/reference/values-and-blocks.md#mutability)
+and [example](examples/binding-fields.mwy) show the intended inside/outside behavior.
+No backend, runtime, dependency, pointer grammar or reference conformance fixture
+changes were needed.
 
 ## Actual validation
 
-- The first copy/length/replacement regression reproduced B001 at the former
-  enclosing-emission restart gate before implementation.
-- Focused `cargo test --locked --manifest-path compiler/Cargo.toml --target
-  x86_64-unknown-linux-gnu --target-dir compiler/target carried_lists` passed
-  10 source/shape/proof groups and 7 native groups, with native cases in both profiles.
-- Source/proof coverage includes nested/empty/primary lists, records with list
-  fields, independent copies, whole replacement/addition, owner resets, Leave,
-  incomplete/duplicate initialization, type/mutability errors, shape/depth/work
-  limits and storage/reservation gates. Empty-list graph evidence rejects removed
-  or repeated Emit events and confirms no synthetic loan-value uses or acquisitions.
-- Native checks preserve length/payload, dynamic bounds after conditional replacement,
-  once-only initializer effects, old copies, ordinary sibling loans, owner reset,
-  Leave, partial panics and primary diagnostics. Only obsolete list-rejection
-  fixtures were removed after focused source/native proof passed.
+- The user's inside/outside mutation example first reproduced E305 before edits.
+- Eight new source groups and eight native groups pass. Coverage includes immutable
+  roots/enclosing records, selected field/list-slot permissions, reference branches
+  and restart versions, emitted aliases, nullable activity, invalidated predicates,
+  allocator bounds, carried records, function/dispatch copies and captured stores.
+- Existing ancestor-mutability rejection fixtures now include positive debug/release
+  execution where the selected field is mutable. Immutable selected slots, malformed
+  alias metadata, whole-root replacement, E301/E302/E303 and shared-access restrictions
+  remain checked. Capability gates were not relabeled as conformance rejections.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, 604 library and 565 native Rust tests (1169 total), 16 tooling
-  plus 4 compiler-harness Python tests, and 74 examples executed in debug and release.
+  fmt, Clippy, build, 612 library and 573 native Rust tests (1185 total), 16 tooling
+  plus 4 compiler-harness Python tests, and 75 examples in debug and release.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   capabilities remain outside the full language gate.
-- Repository checks cover local links, 23 catalog records and 7 schemas/6 examples.
-  Local-link and whitespace checks passed; external links were not fetched.
-- Editor and separate runtime/sanitizer gates were not rerun; their code is unchanged.
+- Local-link/whitespace checks passed. Repository contracts cover 23 catalog records
+  and 7 schemas/6 examples; external links were not fetched. Editor and the separate
+  runtime/sanitizer gate were not rerun; their code is unchanged.
 
 ## Prior capabilities and other areas
 
-The [pointer syntax migration](BORROW_SYNTAX.md) is complete: tight prefix
-`&`/`&!`/`*`, immediate selected-field `.&`/`.&!`/`.*`, grouping for complete targets.
-The preceding slice passed Vim/Neovim and source migration preservation checks.
+Carried fixed-capacity reference-free lists retain whole initialized length/payload
+through inner restarts. Copies, replacement/addition, nested shapes, owner reset,
+Leave and partial panics are qualified. Shape limits remain 256 parts/32 levels;
+list construction retains capacity 65,536, layout 1 MiB and one-based length checks.
+`carried::storage` still gates original list-containing carried storage at ordinary
+Acquire, exclusive indexed acquisition and indexed SetPath reservations. Plain
+sibling slots, copies and completed results keep their existing rules.
 
-Plain carried records retain shared projections/reborrows while their owner lives.
-Local exclusive Boolean/integer/float fields use exact mutable paths and Acquire;
-every exclusive loan/descendant must end before restart. Shared-header certificates,
-conservative call/input ancestry, old copies, mutability, source expiry and
-E301/E302/E303 remain intact. Whole-record/non-scalar exclusive values, nullable/
-union/reference-bearing/foundation/owning and top-level unit carried slots remain gated.
+Plain carried records retain shared projections and local exclusive scalar-field
+loans; every exclusive loan and descendant must end before restart. Shared headers,
+conservative call/input ancestry and old-copy loans remain independent requirements.
+The pointer syntax migration is complete: tight `&`/`&!`/`*`, immediate-field
+`.&`/`.&!`/`.*` and grouping for complete targets.
 
 Standalone documentation supports attachment, checked links/signatures, E801-E805,
 `doc check`/`doc build`, local API pages and checked/opt-in examples. Net/HTTP/TLS
@@ -82,13 +83,13 @@ and lifecycle implementation precede executable adapters.
 
 | Responsibility | Existing owner |
 | --- | --- |
-| Pointer syntax and precedence | `src/parser/expressions.rs` |
+| Field lookup and selected replacement permission | `src/check/mutation.rs`, `src/check/references.rs`, `src/check/indexed.rs` |
+| Changing owned fields versus replaceable roots | `src/hir.rs`, `src/check/names.rs`, `src/borrow/state.rs` |
+| Refinements and current reference/bound snapshots | `src/check/refinement.rs`, `src/borrow/`, `src/loans/` |
 | Carried shape and collection access gate | `src/borrow/carried.rs` |
-| Frontend carried obligations | `src/check/statements.rs` |
 | Whole-slot initialized/active state and Acquire | `src/loans/emission_init.rs` |
 | Shared direct/projected acquisition | `src/loans/transitive.rs` |
 | Exclusive indexed acquisition and indexed writes | `src/loans/elements.rs`, `src/loans/control.rs` |
-| Shared headers and exclusive restart frontier | `src/loans/restart_headers.rs`, `src/loans/exclusive_restarts.rs` |
 
 ## Still outside this compiler
 
@@ -99,19 +100,18 @@ Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Qualify shared carried-list storage/element borrows through
+1. Keep selected-slot mutability distinct from changing-value tracking in subsequent
+   work. Use `Proofs.mutable` for whole-root permission and `variable` for snapshots/
+   refinements. Do not propagate mutable-field metadata through shared references.
+2. Resume shared carried-list storage/element borrowing in
    `loans/transitive.rs::referenced`, `loans/emission_init.rs::emission_acquire`,
    `list.rs::element_borrow` and `borrow/carried.rs::storage`. Separate shared
-   acquisition from exclusive indexed acquisition/SetPath gates; preserve those
-   latter restrictions until their reservation/lifetime proof is qualified.
-2. Require active whole-slot initialization, actual initialized-length checks,
-   precise projected sources, parent authority and owner expiry. Add source/native
-   cases for inner restarts, nested lists/record fields, old copies, last use,
-   owner completion/reset, Leave and conflicting replacement. Run focused tests
-   and `tools/verify.py --compiler` before relaxing the shared-acquisition gate.
-3. Keep broader carried unions/references/owning cleanup and exclusive header
-   carriage separate. Continue module graphs/library foundations; optional doc
-   polish does not block compiler work. Write new fixtures with migrated pointer
-   syntax and derive byte-span expectations from actual source text.
-4. Keep root/compiler STATUS current after logical steps, commit cohesive validated
-   work and do not push or recreate STEP logs. Full release qualification remains open.
+   acquisition from exclusive/indexed-write gates and keep the latter restricted.
+3. Require active whole-slot initialization, current length bounds, precise sources,
+   parent authority and owner expiry. Cover inner restarts, nested fields/lists,
+   old copies, last use, reset/Leave and conflicts in source/native tests, then run
+   `tools/verify.py --compiler` before relaxing the shared-acquisition gate.
+4. Broader carried shapes, owning cleanup and exclusive header carriage stay separate.
+   Continue module graphs/library foundations, use migrated pointer syntax and keep
+   root/compiler STATUS current. Commit cohesive validated work; do not push or
+   recreate STEP logs. Full release qualification remains open.

@@ -55,17 +55,17 @@ pub(crate) fn field_mutability_is_part_of_inferred_and_declared_shapes() {
 }
 
 #[test]
-pub(crate) fn field_assignment_requires_each_owning_mutable_boundary() {
+pub(crate) fn field_assignment_requires_the_selected_slot_to_be_mutable() {
     accepts("a:1;r:{->view:=&a}");
+    accepts("r:{->n:=1};r.n=2");
+    accepts("r:={->child:{->n:=1}};r.child.n=2");
     accepts("<Bad>:<{view<&int32>:=}>");
     accepts("<Bad>:<{child<{view<&int32>}>:=}>");
 
     accepts("r:={->child:={->n:=1};->label:\"x\"};r.child.n=2");
     accepts("r:={->n:=1;->other:=2};r.n={r={->n:=3;->other:=4};->5}");
     for (source, code) in [
-        ("r:{->n:=1};r.n=2", "E305"),
         ("r:={->n:1};r.n=2", "E305"),
-        ("r:={->child:{->n:=1}};r.child.n=2", "E305"),
         ("r:={->child:={->n:1}};r.child.n=2", "E305"),
         ("r:={->n:=1};p:&r;p.n=2", "B001"),
     ] {

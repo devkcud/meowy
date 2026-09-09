@@ -113,15 +113,8 @@ pub(crate) fn exclusive_carried_record_fields_keep_mutability_shapes_and_boolean
             "B001",
         );
     }
-    for (field, value, mutable, emission) in [
-        ("n<int32>", "n:7", ":=", ":="),
-        ("n<int32>:=", "n:=7", "", ":"),
-    ] {
-        rejects(
-            &format!(
-                "<Row>:<{{{field}}}>;<R>:<{{row<Row>{mutable}}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row{emission}{{->{value}}};p:&!(row.n);first=false;'loop.restart()}}}}}}"
-            ),
-            "E305",
-        );
-    }
+    rejects(
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:7};p:&!(row.n);first=false;'loop.restart()}}}",
+        "E305",
+    );
 }

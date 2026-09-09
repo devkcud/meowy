@@ -35,6 +35,7 @@ pub(crate) struct Proofs {
     pub(crate) tags: Tags,
     pub(crate) observations: BTreeMap<(usize, usize), Vec<(Type, Guard)>>,
     pub(crate) mutable: BTreeSet<LocalId>,
+    pub(crate) fields: BTreeSet<LocalId>,
     pub(crate) receivers: BTreeSet<LocalId>,
     pub(crate) dispatches: BTreeSet<BlockId>,
     pub(crate) calls: BTreeMap<CallId, Guard>,
@@ -43,6 +44,10 @@ pub(crate) struct Proofs {
 }
 
 impl Proofs {
+    pub(crate) fn variable(&self, id: LocalId) -> bool {
+        self.mutable.contains(&id) || self.fields.contains(&id)
+    }
+
     pub(crate) fn versioned(&self, program: &Program, id: LocalId) -> bool {
         match program.locals.get(id) {
             Some(Type::Reference(_) | Type::Exclusive(_)) => true,
@@ -50,7 +55,7 @@ impl Proofs {
                 !self.aliases.contains_key(&id)
             }
             Some(ty) if ty.fixed_borrowed_value() => {
-                !self.aliases.contains_key(&id) || ty.has_reference()
+                !self.aliases.contains_key(&id) || ty.has_reference() || self.fields.contains(&id)
             }
             _ => false,
         }
@@ -64,18 +69,18 @@ impl Proofs {
         guards: &mut crate::flow::Flow,
         span: Span,
     ) -> Option<&'a Type> {
-        if !self.mutable.contains(&place.root)
-            || self.temporaries.contains_key(&place.root)
+        if self.temporaries.contains_key(&place.root)
             || !guards.spend((place.fields.len() + path.len()).saturating_mul(4) + 1)
         {
             return None;
         }
         if let Some(alias) = self.aliases.get(&place.root)
-            && (!alias.mutable || alias.exclusive.is_none() || alias.backing.is_none())
+            && (alias.exclusive.is_none() || alias.backing.is_none())
         {
             return None;
         }
         let mut ty = program.locals.get(place.root)?;
+        let mut mutable = self.mutable.contains(&place.root);
         if !place.fields.is_empty() || !path.is_empty() {
             let weight = crate::borrow_contract::type_weight(ty, guards, span).ok()?;
             if !guards.spend(weight.saturating_mul(2))
@@ -91,9 +96,7 @@ impl Proofs {
                 return None;
             };
             let field = fields.get(*index)?;
-            if !field.mutable {
-                return None;
-            }
+            mutable = field.mutable;
             ty = &field.ty;
         }
         for step in path {
@@ -103,9 +106,7 @@ impl Proofs {
                         return None;
                     };
                     let field = fields.get(*index)?;
-                    if !field.mutable {
-                        return None;
-                    }
+                    mutable = field.mutable;
                     ty = &field.ty;
                 }
                 WriteStep::Index(step) => {
@@ -119,7 +120,8 @@ impl Proofs {
                 }
             }
         }
-        if path.iter().any(|step| matches!(step, WriteStep::Index(_)))
+        if mutable
+            && path.iter().any(|step| matches!(step, WriteStep::Index(_)))
             && matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
         {
             Some(ty)

@@ -73,13 +73,13 @@ pub fn scalar_field_loans_exclude_live_collection_access() {
 
 #[test]
 pub fn every_field_boundary_requires_mutability() {
+    Case::new("r:[{->n:=1}];p:&!(r[1].n)").runs(b"");
+    Case::new("r:=[{->inner:{->n:=1}}];p:&!(r[1].inner.n)").runs(b"");
+    Case::new("r:={->rows:[{->n:=1}]};p:&!(r.rows[1].n)").runs(b"");
+    Case::new("r:{->rows:[{->n:=1}];p:&!(rows[1].n)}").runs(b"");
     for source in [
-        "r:[{->n:=1}];p:&!(r[1].n)",
         "r:=[{->n:1}];p:&!(r[1].n)",
-        "r:=[{->inner:{->n:=1}}];p:&!(r[1].inner.n)",
         "r:=[{->inner:={->n:1}}];p:&!(r[1].inner.n)",
-        "r:={->rows:[{->n:=1}]};p:&!(r.rows[1].n)",
-        "r:{->rows:[{->n:=1}];p:&!(rows[1].n)}",
     ] {
         rejects(source, "E305");
     }

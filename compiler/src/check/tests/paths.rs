@@ -4,6 +4,7 @@ use super::{accepts, rejects};
 pub(crate) fn mixed_writes_check_each_field_and_selected_list_type() {
     for source in [
         "r:={->items:=[1,2];->other:=3};r.items[1]=4",
+        "r:{->items:=[1,2]};r.items[1]=3",
         "r:=[{->n:=1},{->n:=2}];r[2].n=3",
         "r:={->rows:=[{->items:=[1,2]},{->items:=[3,4]}]};r.rows[2].items[1]=5",
         "r:={->rows:=[{->n:=1}]};(r.rows[1]).n=2",
@@ -13,7 +14,6 @@ pub(crate) fn mixed_writes_check_each_field_and_selected_list_type() {
     for (source, code) in [
         ("r:={->items:[1,2]};r.items[1]=3", "E305"),
         ("r:=[{->n:1}];r[1].n=2", "E305"),
-        ("r:{->items:=[1,2]};r.items[1]=3", "E305"),
         ("r:={->items:=[1,2]};p:&r;p.items[1]=3", "B001"),
         ("r:={->items:=[1,2]};r.items[0]=3", "E101"),
         (

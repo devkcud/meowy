@@ -30,10 +30,10 @@ r:{
 
 #[test]
 pub fn alias_roots_and_every_crossed_field_require_mutability() {
+    Case::new("r:{->row:{->n:=1};p:&!(row.n)}").runs(b"");
+    Case::new("r:{->row:={->inner:{->n:=1}};p:&!(row.inner.n)}").runs(b"");
     for source in [
-        "r:{->row:{->n:=1};p:&!(row.n)}",
         "r:{->row:={->n:1};p:&!(row.n)}",
-        "r:{->row:={->inner:{->n:=1}};p:&!(row.inner.n)}",
         "r:{->row:={->inner:={->n:1}};p:&!(row.inner.n)}",
     ] {
         rejects(source, "E305");

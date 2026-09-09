@@ -148,10 +148,11 @@ disappearing as an incidental consequence of a pipeline.
 
 ## Mutability
 
-Bindings and fields are separate mutation boundaries:
+Bindings and fields are separate replacement boundaries. `:` prevents replacing
+that slot; `:=` permits replacement. An immutable binding can own mutable fields:
 
 ```meowy
-counter := {
+counter : {
     -> count <uint32> := 0
     -> label : "requests"
 }
@@ -159,12 +160,25 @@ counter := {
 counter.count = counter.count + 1
 ```
 
-Writing a field requires both a mutable field and exclusive access to its owner.
-The immutable `label` cannot be assigned. A mutable binding can replace the whole
-value with another value of the same type, releasing the previous owned value.
+Writing a field requires that selected field to be mutable and no conflicting
+borrow. The containing owned binding and enclosing record fields need not be
+mutable. Thus `counter.count` can change while `counter` and `counter.label`
+cannot be replaced. Likewise, an immutable `object.inner` can contain a mutable
+`field`: `object.inner.field = value` replaces only that final field.
+
+List indexing inherits the containing list slot's replacement permission. A list
+bound with `:` cannot have its elements replaced, but mutable fields of record
+elements can still change. A field declared `-> items := ...` permits element
+replacement through that list field even when the object binding uses `:`. Bounds and borrow rules
+still apply. A mutable binding can replace its whole value with another value of
+the same type, releasing the previous owned value.
 
 In a record type, `count <uint32> :=` declares a mutable field. Mutability is part
-of a record's shape. Borrowing a mutable owner as `&value` permits reads only.
+of a record's shape. Shared `&value` access permits reads only, regardless of field
+flags. `object.&!field` requires a mutable selected field; whole-value `&!object`
+requires a replaceable object slot and a supported pointee type. An immutable
+binding holding an exclusive reference can still mutate its pointee through that
+reference; replacing the reference itself requires a mutable binding.
 
 ## Dispatch
 
@@ -175,7 +189,9 @@ the receiver is copied, moved, or borrowed. Use `&value.(f)`, equivalently
 
 `value.{ ... }` evaluates the receiver once and binds it as `self` in the block.
 It follows ordinary ownership rules: a move-only receiver moves into that binding.
-`self` is immutable unless the dispatched value is an exclusive reference.
+The `self` binding cannot be replaced. An owned receiver retains its field
+permissions; a shared-reference receiver remains read-only, and an exclusive
+reference retains its pointee permissions.
 
 ```meowy
 increment <int32> : (value <int32>) { -> value + 1 }

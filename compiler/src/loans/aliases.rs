@@ -23,7 +23,7 @@ impl Graph<'_> {
             return Ok(None);
         };
         let ty = &self.program.locals[id];
-        if !alias.mutable || !ty.has_reference() || !ty.fixed_borrowed_value() {
+        if !self.proofs.variable(id) || !ty.has_borrowed() || !ty.fixed_borrowed_value() {
             return Err(Self::budget());
         }
         if alias.backing == Some(Backing::Discarded) {

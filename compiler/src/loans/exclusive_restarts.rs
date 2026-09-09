@@ -39,21 +39,21 @@ impl Graph<'_> {
                 .get(&(target, Some(alias.field.clone())));
             self.charge(fields.len() + 1)?;
             let ty = slot.and_then(|slot| {
-                fields.iter().try_fold(&slot.ty, |ty, step| {
-                    let (Type::Record { fields, .. }, Projection::Field(index)) = (ty, step) else {
-                        return None;
-                    };
-                    fields
-                        .get(*index)
-                        .filter(|field| field.mutable)
-                        .map(|field| &field.ty)
-                })
+                fields
+                    .iter()
+                    .try_fold((&slot.ty, alias.mutable), |(ty, _), step| {
+                        let (Type::Record { fields, .. }, Projection::Field(index)) = (ty, step)
+                        else {
+                            return None;
+                        };
+                        fields.get(*index).map(|field| (&field.ty, field.mutable))
+                    })
             });
             if !origin.component.is_empty()
                 || alias.target != target
                 || alias.root != root
-                || !ty.is_some_and(|ty| {
-                    matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
+                || !ty.is_some_and(|(ty, mutable)| {
+                    mutable && matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
                 })
             {
                 return Err(Diagnostic::unsupported(

@@ -69,12 +69,12 @@ pub fn live_projected_elements_exclude_collection_and_ancestor_access() {
 
 #[test]
 pub fn all_owned_path_boundaries_require_mutability() {
+    Case::new("r:{->xs:=[1]};p:&!(r.xs[1])").runs(b"");
+    Case::new("r:={->inner:{->xs:=[1]}};p:&!(r.inner.xs[1])").runs(b"");
+    Case::new("r:{->row:{->xs:=[1]};p:&!(row.xs[1])}").runs(b"");
     for source in [
-        "r:{->xs:=[1]};p:&!(r.xs[1])",
         "r:={->xs:[1]};p:&!(r.xs[1])",
-        "r:={->inner:{->xs:=[1]}};p:&!(r.inner.xs[1])",
         "r:{->xs:[1];p:&!(xs[1])}",
-        "r:{->row:{->xs:=[1]};p:&!(row.xs[1])}",
         "r:{->row:={->xs:[1]};p:&!(row.xs[1])}",
     ] {
         rejects(source, "E305");

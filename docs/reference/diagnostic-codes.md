@@ -174,7 +174,7 @@ that changed access rights, not just say that a value is unavailable.
 | `E302` | Conflicting accesses to borrowed storage            | Show the active shared/exclusive loan, the conflicting access, and its last required use; shorten the overlap or use disjoint fields       |
 | `E303` | Borrow outlives its storage                         | Show the storage lifetime, borrowed view, and escaping return/capture; return an owner or borrow caller-owned storage                      |
 | `E304` | Moving a non-copyable value through a borrow        | Show the borrowed place and attempted move; keep a borrow or use an explicit consuming/take operation on an owner                          |
-| `E305` | Mutation requires a mutable, exclusive location     | Show the immutable binding or shared access path; request mutation explicitly at the owning boundary                                       |
+| `E305` | Mutation requires a mutable, exclusive location     | Show the selected immutable slot or shared access path; request replacement permission on that slot                                        |
 | `E306` | Storage operation would require implicit allocation | Show the runtime string construction, escaping storage, or other hidden allocation boundary; construct an explicit owner with an allocator |
 | `E307` | Allocator lifetime is too short                     | Show the allocator and allocations that can outlive it; keep the allocator alive until its owners are released                             |
 | `E308` | Owned payload cannot be erased without boxing       | Show the concrete payload and requested erased representation; retain the concrete union or explicitly box it                              |

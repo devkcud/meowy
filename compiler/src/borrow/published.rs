@@ -168,15 +168,13 @@ impl Checker<'_> {
         {
             return Err(State::budget(span));
         }
-        let Some((index, field)) = fields
-            .iter()
-            .enumerate()
-            .find(|(_, slot)| field.as_ref() == Some(&slot.name) && slot.mutable)
-        else {
+        let Some((index, field)) = fields.iter().enumerate().find(|(_, slot)| {
+            field.as_ref() == Some(&slot.name) && (slot.mutable || slot.ty.has_mutable_fields())
+        }) else {
             return Ok(());
         };
         let destination = &field.ty;
-        if !destination.has_reference()
+        if (!destination.has_reference() && !destination.has_mutable_fields())
             || !destination.fixed_borrowed_value()
             || !destination.accepts(ty)
         {

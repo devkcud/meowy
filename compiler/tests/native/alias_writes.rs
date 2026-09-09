@@ -104,12 +104,12 @@ d.print(x)
 
 #[test]
 pub fn borrowed_alias_result_loans_and_remaining_backing_gates_are_checked() {
+    Case::new("x:1;r:{->c:{->p:=&x};c.p=&x}").runs(b"");
     for (source, code) in [
         ("x:=1;y:2;r:{->p:=&x;old:p;p=&y;x=3;v:*old}", "E302"),
         ("x:1;y:=2;r:{->p:=&x;p=&y;y=3};v:*(r.p)", "E302"),
         ("x:1;y:2;r:{->p:=&x;cell:&p;p=&y;v:**cell}", "E302"),
         ("x:1;r:{->p:=&x;y:2;p=&y}", "E303"),
-        ("x:1;r:{->c:{->p:=&x};c.p=&x}", "E305"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

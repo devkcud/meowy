@@ -68,6 +68,8 @@ d.print(**grouped);d.print(*(pointer.field));d.print(nested.*inner.*field)
 
 #[test]
 pub fn dotted_field_loans_preserve_conflicts_and_mutability() {
+    Case::new("object:{->field:=1};p:object.&!field").runs(b"");
+    Case::new("object:={->inner:{->field:=1}};p:object.inner.&!field").runs(b"");
     Case::new(
         r#"
 d:@"debug"
@@ -86,13 +88,7 @@ object.left=4;d.print(object.left)
     ] {
         rejects(source, "E302");
     }
-    for source in [
-        "object:{->field:=1};p:object.&!field",
-        "object:={->field:1};p:object.&!field",
-        "object:={->inner:{->field:=1}};p:object.inner.&!field",
-    ] {
-        rejects(source, "E305");
-    }
+    rejects("object:={->field:1};p:object.&!field", "E305");
 }
 
 #[test]

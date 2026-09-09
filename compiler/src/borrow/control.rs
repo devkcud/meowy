@@ -174,10 +174,11 @@ impl Checker<'_> {
                     value,
                     span,
                 } => {
-                    if !self.locals.contains_key(id) || !self.proofs.mutable.contains(id) {
+                    if !self.locals.contains_key(id) {
                         return Err(Self::unsupported(*span));
                     }
                     let mut ty = &self.program.locals[*id];
+                    let mut mutable = self.proofs.mutable.contains(id);
                     let tracked = self.proofs.versioned(self.program, *id);
                     if (ty.has_reference() && !tracked) || path.is_empty() {
                         return Err(Self::unsupported(*span));
@@ -196,10 +197,9 @@ impl Checker<'_> {
                                 let Type::Record { fields, .. } = ty else {
                                     return Err(Self::unsupported(*span));
                                 };
-                                let field = fields
-                                    .get(*index)
-                                    .filter(|field| field.mutable)
-                                    .ok_or_else(|| Self::unsupported(*span))?;
+                                let field =
+                                    fields.get(*index).ok_or_else(|| Self::unsupported(*span))?;
+                                mutable = field.mutable;
                                 ty = &field.ty;
                                 prefix.push(super::Step::Slot(index + 1));
                             }
@@ -216,6 +216,9 @@ impl Checker<'_> {
                         }
                     }
                     if result.next {
+                        if !mutable {
+                            return Err(Self::unsupported(*span));
+                        }
                         let next = self.expression(value)?;
                         if next.flow.next {
                             if (!tracked && !next.state.origins.is_empty()) || value.ty != *ty {

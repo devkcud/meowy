@@ -5,6 +5,7 @@ mod allocator_carriers;
 mod allocator_headers;
 mod allocator_records;
 mod allocators;
+mod binding_fields;
 mod boundaries;
 mod carried_borrows;
 mod carried_lists;

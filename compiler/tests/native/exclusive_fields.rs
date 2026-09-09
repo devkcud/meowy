@@ -31,6 +31,10 @@ v.c=6;d.print(v.c)
 
 #[test]
 pub fn nested_fields_keep_each_mutable_boundary_and_projection() {
+    Case::new("v:{->n:=1};p:&!(v.n)").runs(b"");
+    Case::new("v:={->inner:{->n:=1}};p:&!(v.inner.n)").runs(b"");
+    Case::new("<R>:<{n<int32>:=}>;f<null>:(v<R>){p:&!(v.n)}").runs(b"");
+    Case::new("v:={->n:=1};v.{p:&!(self.n)}").runs(b"");
     Case::new(
         r#"
 d:@"debug"
@@ -42,12 +46,8 @@ d.print(v.inner.other);d.print(v.tail);d.print(*p)
     )
     .runs(b"4\n5\n6\n");
     for source in [
-        "v:{->n:=1};p:&!(v.n)",
         "v:={->n:1};p:&!(v.n)",
-        "v:={->inner:{->n:=1}};p:&!(v.inner.n)",
         "v:={->inner:={->n:1}};p:&!(v.inner.n)",
-        "<R>:<{n<int32>:=}>;f<null>:(v<R>){p:&!(v.n)}",
-        "v:={->n:=1};v.{p:&!(self.n)}",
     ] {
         rejects(source, "E305");
     }

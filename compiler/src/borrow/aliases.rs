@@ -7,7 +7,7 @@ pub(crate) fn result_slot<'a>(ty: &'a Type, name: &str, local: &Type) -> Option<
     let (index, field) = fields
         .iter()
         .enumerate()
-        .find(|(_, field)| field.name == name && field.mutable)?;
+        .find(|(_, field)| field.name == name)?;
     let mut path = vec![Step::Slot(index + 1)];
     if field.ty != *local {
         let Type::Union(members) = &field.ty else {
@@ -70,7 +70,7 @@ impl Checker<'_> {
             return Ok(None);
         };
         let ty = &self.program.locals[id];
-        if !alias.mutable || !ty.has_reference() || !ty.fixed_borrowed_value() {
+        if !self.proofs.variable(id) || !ty.has_borrowed() || !ty.fixed_borrowed_value() {
             return Err(Self::unsupported(span));
         }
         if alias.backing == Some(Backing::Discarded) {

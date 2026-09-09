@@ -178,8 +178,8 @@ pub fn mixed_write_paths_protect_the_first_collection_and_owning_fields() {
 
 #[test]
 pub fn mixed_write_paths_enforce_mutability_types_and_remaining_boundaries() {
+    Case::new("h:{->items:=[1]};h.items[1]=2").runs(b"");
     for (source, code) in [
-        ("h:{->items:=[1]};h.items[1]=2", "E305"),
         ("h:={->items:[1]};h.items[1]=2", "E305"),
         ("rows:=[{->n:1}];rows[1].n=2", "E305"),
         ("rows:=[{->items:[1]}];rows[1].items[1]=2", "E305"),

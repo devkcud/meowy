@@ -33,13 +33,14 @@ impl Checker {
         let ExprKind::Index { value: base, .. } = &steps[first].kind else {
             unreachable!()
         };
-        let (place, mut ty) = self.exclusive_place(base, span, true)?;
+        let (place, mut ty, mut mutable) = self.exclusive_place(base, span, true)?;
         let mut path = Vec::new();
         let mut diverges = false;
         for step in steps[..=first].iter().rev() {
             match &step.kind {
                 ExprKind::Field { name, .. } => {
-                    let (index, field) = self.mutable_field(ty, name, step.span)?;
+                    let (index, field, writable) = self.record_field(ty, name, step.span)?;
+                    mutable = writable;
                     path.push(hir::WriteStep::Field(index));
                     ty = field;
                 }
@@ -70,6 +71,13 @@ impl Checker {
             step.span = span;
         }
         let result = self.exclusive_type(ty, span)?;
+        if !mutable {
+            return Err(Self::error(
+                "E305",
+                "exclusive borrow target is immutable",
+                span,
+            ));
+        }
         Ok(Some(hir::Expr {
             kind: hir::ExprKind::ExclusivePath { place, path },
             ty: if diverges { Type::Never } else { result },

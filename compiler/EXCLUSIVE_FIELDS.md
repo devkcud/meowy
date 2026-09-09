@@ -1,18 +1,19 @@
 # Exclusive borrows of scalar record fields
 
 `owner.&!field` now borrows a boolean, integer or float field from an ordinary
-mutable reference-free Copy record. Nested named fields and grouping are supported.
+reference-free Copy record. Its binding may be immutable; the selected field
+must be mutable. Nested named fields and grouping are supported.
 This follows the [memory contract](../docs/reference/memory.md) and extends existing
 [scalar exclusive references](EXCLUSIVE_REFERENCES.md). No new reference type,
 allocation, backend operation, runtime ABI or LLVM alias promise is introduced.
 
 ## Storage and mutability
 
-The root must be an ordinary mutable local record whose complete type is Copy and
-contains no references. Every named field crossed by the path must be mutable,
-including enclosing record fields. Unknown names report E201; immutable roots or
-fields report E305. `check/mutation.rs::mutable_field` shares the lookup/mutability
-rule with direct field assignment, keeping both operations consistent.
+The root must be an ordinary owned local record whose complete type is Copy and
+contains no references. The selected field must be mutable; enclosing record fields
+and the root binding need not be replaceable. Unknown names report E201; immutable
+selected fields report E305. `check/mutation.rs::record_field` shares field lookup
+and each slot's flag with direct assignment, keeping both operations consistent.
 
 `check/references.rs` walks the path with existing structural/work limits and the
 256-step write-path cap. The parser and type budgets can stop earlier. The result is

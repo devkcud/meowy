@@ -192,7 +192,7 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
                 fields[0].mutable = false;
             }
         }
-        assert!(
+        assert_eq!(
             checker
                 .proofs
                 .exclusive_path_type(
@@ -205,7 +205,8 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
                     &mut checker.flow,
                     crate::ast::Span { start: 0, end: 0 },
                 )
-                .is_none()
+                .is_none(),
+            change != 2
         );
         let graph = Graph::new(&program, &facts, &checker.proofs, &mut checker.flow);
         let error = graph.check(&program.body, &[]).unwrap_err();

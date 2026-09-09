@@ -97,6 +97,8 @@ d.print(x)
 
 #[test]
 pub fn reference_field_lifetimes_alias_writes_and_mutability_are_checked() {
+    Case::new("x:1;r:{->p:=&x};r.p=&x").runs(b"");
+    Case::new("x:1;r:={->c:{->p:=&x}};r.c.p=&x").runs(b"");
     for (source, code) in [
         ("x:1;r:={->p:=&x};{y:2;r.p=&y};v:*(r.p)", "E303"),
         ("x:=1;y:2;r:={->p:=&x};old:r.p;r.p=&y;x=3;v:*old", "E302"),
@@ -118,8 +120,6 @@ pub fn reference_field_lifetimes_alias_writes_and_mutability_are_checked() {
             "B001",
         ),
         ("r:{x:1;->p:=&x}", "E303"),
-        ("x:1;r:{->p:=&x};r.p=&x", "E305"),
-        ("x:1;r:={->c:{->p:=&x}};r.c.p=&x", "E305"),
         ("<R>:<{p<&int32>:=}>;x:1;r<R>:{->p:&x}", "E206"),
         ("x:1;r:={->p:=&[1]}", "B001"),
     ] {

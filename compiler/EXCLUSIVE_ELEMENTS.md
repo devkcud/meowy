@@ -1,7 +1,7 @@
 # Exclusive scalar borrows through indexed storage
 
 `&!(items[index])` and `rows[index].&!value` borrow initialized scalar storage
-through mutable bounded lists: ordinary locals, named record fields, nested indexed owners and exact-backed
+through owned bounded lists: ordinary locals, named record fields, nested indexed owners and exact-backed
 emitted aliases. Elements may be boolean, integer or float. This implements a
 bounded slice of the existing [collection](../docs/reference/collections.md) and
 [memory](../docs/reference/memory.md) contracts, preserving one-based positions and
@@ -13,11 +13,12 @@ initialized-length checks. Whole-list exclusive references remain unavailable.
 path) and the complete WriteStep sequence. Its scalar leaf may be a list element
 or a mutable record field beneath one or more indexes. It is separate from shared
 ElementBorrow and names no parent reference. `check/indexed.rs` resolves the bounded
-path; `Proofs::exclusive_path_type` independently validates it in both analyses. Frontend and analysis require mutable owner proof. Every crossed
-field must be mutable; projected owners must be reference-free Copy records. A
-mutable binding holding a shared reference is not an owner proof. Nested list
-owners and mutable record fields between indexes use the same reference-free Copy
-proof. Temporary/reference-derived roots and non-scalar pointees remain gated.
+path; `Proofs::exclusive_path_type` independently validates it in both analyses.
+A named field supplies its own mutability; an index inherits its list slot's flag.
+The final slot must be mutable, so immutable lists can expose mutable record
+fields without permitting element replacement. Projected owners must be
+reference-free Copy records. A mutable binding holding a shared reference does
+not grant owned access. Nested paths retain the same owner/shape proof. Temporary/reference-derived roots and non-scalar pointees remain gated.
 An explicit value copy into a new mutable local is a valid independent owner.
 
 Emitted aliases require exact backing for the complete list or containing record,
@@ -37,7 +38,7 @@ After the index returns, a fresh root exclusive loan names Source::Local or
 Source::Slot with mixed Field/Element projections ending at the selected scalar.
 Field acquisition retains the final Field projection and demands enclosing list
 reservations; it adds no synthetic index or extra element projection.
-Its authority comes from mutable-owner proof, not from the reservation or a shared
+Its authority comes from selected-slot and owner proof, not from the reservation or a shared
 pointer. The final acquisition demands the reservation;
 afterward the reservation is dead. A non-returning index creates no exclusive loan
 and has no artificial future reservation demand. Existing work/storage limits cover
@@ -81,7 +82,7 @@ guarded returns and anonymous block results retain existing authority and lifeti
 After the final use, the owner can be accessed again. Local owners cannot escape their
 scope through an element reference (E303). Emitted pointers may outlive their lexical
 alias while its target block lives, but cannot escape that target. Moving a holder
-remains E301/E309; conflicting access is E302 and immutable owner borrowing is E305.
+remains E301/E309; conflicting access is E302 and borrowing an immutable selected slot is E305.
 
 ## Evidence and next work
 

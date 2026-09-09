@@ -137,10 +137,10 @@ s:{->row:={->xs:=[[3]]};p:&!(row.xs[1][1]);*p=4};d.print(s.row.xs[1][1])
 
 #[test]
 pub fn mutable_boundaries_and_complete_backing_remain_required() {
+    Case::new("xs:=[{->inner:{->ys:=[1]}}];p:&!(xs[1].inner.ys[1])").runs(b"");
     for source in [
         "xs:[[1]];p:&!(xs[1][1])",
         "xs:=[{->ys:[1]}];p:&!(xs[1].ys[1])",
-        "xs:=[{->inner:{->ys:=[1]}}];p:&!(xs[1].inner.ys[1])",
         "r:{->xs:[[1]];p:&!(xs[1][1])}",
     ] {
         rejects(source, "E305");
