@@ -623,15 +623,43 @@ implementation boundary; it does not change language rules.
 - Mutable field writes and whole-record replacement retain existing type and
   mutability checks. Old value copies are independent of later record writes.
   The extension adds no backend storage, runtime flags, payload reads or cleanup.
-- Shared and exclusive borrows of original carried record storage, including field
-  projections, remain B001 until their acquisition and lifetime proofs are
-  separately qualified. Ordinary local copies and copied completed results retain
-  existing borrow rules. Supported scalar sibling loans remain available.
+- Shared borrows of original carried record storage and field projections use the
+  acquisition and lifetime proof below. Exclusive record-storage borrows remain
+  B001. Ordinary local copies, copied completed results and supported scalar
+  sibling loans retain their existing borrow rules.
 - The [carried-records example](examples/carried-records.mwy) executes its
   initializer once and retains both fields across three iterations. Native
   regressions also cover nested unit/scalar members, copies, writes, owner resets,
   Leave, partial panics and rejected incomplete or duplicate initialization in
   debug and release.
+
+## Shared carried record borrows
+
+- A shared borrow of a carried record alias or nested field addresses the existing
+  result storage, not a temporary copy. Direct and projected acquisitions use the
+  same containing-slot Acquire event: the result owner must be active and the
+  whole record must be initialized on every explored path. Field projection does
+  not weaken that requirement or publish partially initialized members.
+- The existing physical-storage solver retains the exact field path and checks
+  acquisition, source expiry and conflicting writes. A field loan allows writes
+  to disjoint fields, but overlapping field writes and whole-record replacement
+  remain E302 while the shared view is live. Writes after its final use retain
+  ordinary semantics.
+- Shared references and projected reborrows may survive inner restarts and the
+  alias's lexical scope while the result owner lives. Reborrows retain parent
+  authority; they do not invent new payload reads or independently revive storage.
+  Owner completion, Leave and owner reset expire the old source. Using a stale
+  source remains E303, even if native storage is later reused at the same address.
+- Replacing an expired handle before its next use is permitted under the existing
+  rules. Old reference copies retain their original sources, and reference-returning
+  calls retain their public input bounds. Exclusive whole-record and projected
+  borrows remain B001; nullable, union and reference-bearing carried shapes are
+  still outside this slice.
+- The [carried-record-borrows example](examples/carried-record-borrows.mwy) retains
+  a field reborrow across three iterations after its alias and parent view leave
+  scope. Source/proof tests cover early and inactive acquisition; debug/release
+  tests cover whole records, nested projections, address identity, old copies,
+  disjoint writes, final use, owner resets, Leave and rejected stale/conflicting use.
 
 ## Shared carried scalar borrows
 

@@ -81,7 +81,7 @@ pub(crate) fn carried_records_keep_wider_shapes_and_storage_borrows_gated() {
         "<Row>:<{n<int32>}>;<R>:<{row<Row><null>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};first=false;'loop.restart()}}}",
         "B001",
     );
-    for borrow in ["p:&row;v:p.n", "p:&row.n;v:*p", "p:&!row.n;v:*p"] {
+    for borrow in ["p:&!row.n;v:*p", "p:&!row;v:p.n"] {
         rejects(
             &format!(
                 "<Row>:<{{n<int32>:=}}>; <R>:<{{row<Row>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row:={{->n:=7}};{borrow};first=false;'loop.restart()}}}}}}"

@@ -69,6 +69,7 @@ compiler/target/debug/meowy run compiler/examples/changing-published.mwy
 compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/carried-records.mwy
+compiler/target/debug/meowy run compiler/examples/carried-record-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-headers.mwy
@@ -188,9 +189,14 @@ The [carried record example](examples/carried-records.mwy) initializes a record
 once and retains its fields across inner restarts. Nested records with scalar or
 unit members use the same whole-slot initialization proof, within bounded shape
 and work limits. Copies, mutable fields and whole-record replacement keep their
-ordinary semantics. Borrowing the original carried record storage remains gated;
-borrowing an ordinary copy or the completed result uses existing rules. See
-[carried record ownership](OWNERSHIP.md#carried-reference-free-records).
+ordinary semantics. Shared borrows of the original record or nested fields retain
+the result owner's storage across inner restarts, including after the alias leaves
+scope. Owner completion/reset still expires those references; exclusive borrows
+of carried record storage remain gated. The
+[carried record borrow example](examples/carried-record-borrows.mwy) keeps a field
+reborrow across three iterations. See
+[carried record ownership](OWNERSHIP.md#carried-reference-free-records) and
+[shared record borrowing](OWNERSHIP.md#shared-carried-record-borrows).
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)

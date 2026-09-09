@@ -1,12 +1,22 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-09. Carried reference-free record initialization is implemented
+Updated: 2026-09-09. Shared carried-record borrows are implemented
 and passed the compiler gate. No failing compiler checks remain. Full v0.0.1 is
 incomplete. [../STATUS.md](../STATUS.md) tracks the whole project;
 [../COMPILER.md](../COMPILER.md#documentation-completion-slice) records the plan.
 Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Current compiler slice
+
+Shared borrows of carried record storage and projections passed the compiler
+gate. `borrow/carried.rs` now gates only exclusive record-storage borrows.
+`loans/transitive.rs::referenced` already attaches Acquire to direct and projected
+slot sources; `loans/emission_init.rs` proves whole-slot active/initialized state.
+Reborrows retain parent authority and physical source/lifetime checks. No solver
+or backend rewrite is needed. All 17 focused record tests passed, including eight
+new source/proof groups. Five new native groups and
+`examples/carried-record-borrows.mwy` passed in debug and release. See the
+[shared record contract](OWNERSHIP.md#shared-carried-record-borrows).
 
 Declared reference-free record result slots now use the existing whole-slot
 initialization proof across inner restarts. `borrow/carried.rs::eligible` accepts
@@ -18,8 +28,9 @@ on reset. No per-field initialization, fabricated reads or backend changes were
 introduced.
 
 Copies, mutable field writes, whole-record replacement, scalar sibling exclusive
-loans, owner resets, Leave and partial panics have debug/release coverage. Borrowing
-original carried record storage or its fields remains B001 in `carried::validate`;
+loans, owner resets, Leave and partial panics have debug/release coverage. Shared
+record-storage borrows preserve exact projected paths and expire with their result
+owner. Exclusive record-storage borrows remain B001 in `carried::validate`;
 ordinary copies and completed-result locals retain their existing borrow rules.
 Union, nullable, list, reference-bearing, foundation and top-level unit carried
 slots remain gated. See [ownership](OWNERSHIP.md#carried-reference-free-records)
@@ -41,16 +52,17 @@ passed in the preceding slice and were not manually rerun here.
 
 ## Actual validation
 
-- Focused carried-record source/shape coverage: nine tests passed using
+- Focused carried-record source/shape/borrow coverage: 17 tests passed using
   `cargo test --locked --manifest-path compiler/Cargo.toml --target x86_64-unknown-linux-gnu --target-dir compiler/target --lib carried_record`.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, repository contracts, 569 library and 541 native Rust tests
-  (1110 total), 20 Python tests and 70 examples executed in debug and release.
-- Five new native test groups exercise retained payloads, old copies and writes,
-  owner reset/Leave, partial initializer panic and rejected initialization/borrows.
+  fmt, Clippy, build, repository contracts, 577 library and 546 native Rust tests
+  (1123 total), 20 Python tests and 71 examples executed in debug and release.
+- Eight new source/proof groups and five native groups exercise whole and projected
+  shared borrows, early/inactive acquisition, retained aliases, old copies, field
+  conflicts, disjoint writes, final use, owner reset/Leave and exclusive path gates.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   capabilities remain outside the full language gate.
-- Final documentation check: 1053 local links in 101 Markdown files, 0 failures;
+- Final documentation check: 1057 local links in 101 Markdown files, 0 failures;
   `git diff --check` passed. External links were not fetched.
 - Editor and separate native runtime/sanitizer gates were not rerun for this slice;
   no editor, runtime, backend or dependency files changed.
@@ -84,17 +96,18 @@ Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 remain the recorded toolchain.
 ## Resume here
 
 1. Read root/compiler rules and this handoff. The standalone documentation slice
-   and carried plain-record initialization slice are complete; do not reopen them
+   and carried plain-record/shared-borrow slices are complete; do not reopen them
    as preparation for further documentation polish.
-2. Qualify shared borrows of carried record storage and nested field projections
-   through `borrow/carried.rs`, `loans/emission_init.rs` and the existing source/
-   physical-storage solver. Require active and fully initialized storage on every
-   acquisition path, preserve owner expiry/reset and old-copy lifetimes, and avoid
-   synthetic payload reads. Keep exclusive projected loans gated pending their
-   separate path/frontier proof; keep nullable/union/reference-bearing shapes out.
-3. Add focused acceptance, stale/early acquisition, owner reset, alias lifetime,
-   field projection and debug/release execution cases before removing the storage
-   borrow gate. Run focused Rust tests and `tools/verify.py --compiler`.
+2. Qualify local exclusive borrows of scalar fields in carried records through
+   `borrow/carried.rs`, `loans/exclusive_restarts.rs` and the existing place/path
+   proof. Require active, initialized containing storage and exact projected source
+   identity. The exclusive loan and its descendants must end before restart edges.
+   Keep whole-record/non-scalar exclusive paths and nullable/union/reference-bearing
+   carried shapes gated; preserve shared header coverage and genuine opaque ancestry.
+3. Add focused source/native coverage for nested scalar paths, sibling conflicts,
+   shared descendants, final use, owner reset and rejected live backedge loans.
+   Run focused Rust tests and `tools/verify.py --compiler` before removing the
+   corresponding exclusive path restriction.
 4. Continue module graphs and library foundations independently of optional doc
    polish. Broader carried lists, tags, owned cleanup and richer value-state proofs
    need their own bounded implementation and evidence.

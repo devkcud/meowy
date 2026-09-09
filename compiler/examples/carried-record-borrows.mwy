@@ -1,0 +1,22 @@
+d:@"debug"
+<Row>:<{n<int32>;label<string>}>
+<R>:<{row<Row>}>
+x:1
+p:=&x
+first:=true
+i:=0
+r<R>:'out{
+    'loop{
+        |first|{
+            'out->row:{d.print("init");->n:7;->label:"ready"}
+            view:&row
+            p=&view.n
+            first=false
+        }
+        d.print(*p)
+        i=i+1
+        |i<3|'loop.restart()
+    }
+}
+p=&x
+d.print(r.row.label)

@@ -121,7 +121,7 @@ pub(crate) fn carried_records_reject_unproved_initialization_and_storage_borrows
             "E205",
         ),
         (
-            "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};p:&row.n;v:*p;first=false;'loop.restart()}}}",
+            "<Row>:<{n<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7};p:&!row.n;v:*p;first=false;'loop.restart()}}}",
             "B001",
         ),
         (

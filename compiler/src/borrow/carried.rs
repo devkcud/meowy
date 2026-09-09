@@ -68,7 +68,7 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
         return Err(State::budget(Span::default()));
     }
     for alias in proofs.aliases.values() {
-        let Some(span) = alias.borrowed.or(alias.exclusive) else {
+        let Some(span) = alias.exclusive else {
             continue;
         };
         if !guards.spend(alias.field.len() + proofs.carried.len() + 1) {
@@ -80,7 +80,7 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
             && matches!(slot.ty, Type::Record { .. })
         {
             return Err(Diagnostic::unsupported(
-                "borrowing carried record storage",
+                "exclusive borrowing of carried record storage",
                 span,
             ));
         }
