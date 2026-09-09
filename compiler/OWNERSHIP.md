@@ -569,7 +569,7 @@ implementation boundary; it does not change language rules.
   remain in force. Initializer restarts happen before binding/emission; RHS Leave
   preserves completed stores and skips unfinished ones.
 - Duplicate emissions remain E205, mutability checks remain unchanged and returned
-  references still obey E302/E303. Declared scalar slots can survive a backedge using
+  references still obey E302/E303. Declared scalar and plain record slots can survive a backedge using
   the separate stateful proof below. Reference-bearing lists, union-view
   addresses/fields, allocator-only aliases and owning cleanup remain separate work.
 - The [late-published example](examples/late-published.mwy) runs restart prefixes
@@ -580,7 +580,8 @@ implementation boundary; it does not change language rules.
 - A declared non-nullable boolean, integer, float or static-string result slot may
   retain its initialization across an inner restart. Named fields and primaries
   use the same proof. The explicit enclosing result type supplies the storage shape;
-  inferred, nullable, aggregate, allocator and reference-bearing carried slots stay gated.
+  inferred, nullable, allocator and reference-bearing carried slots stay gated.
+  Reference-free record slots use the bounded extension below; lists stay gated.
 - The frontend defers only eligible enclosing-emission and completion obligations.
   Current-iteration duplicate emissions and type/mutability rules are unchanged.
   Every deferred slot must pass a separate initialization proof before native lowering.
@@ -604,6 +605,33 @@ implementation boundary; it does not change language rules.
 - The [carried-scalars example](examples/carried-scalars.mwy) prints one initializer,
   three iteration values and the retained field. Stateful reference-bearing
   publications, broader Boolean/value analysis and owning cleanup remain separate work.
+
+## Carried reference-free records
+
+- A declared record result slot can retain its whole initialized value across an
+  inner restart. Nested records may contain non-nullable Boolean, integer, float,
+  static-string and unit members. Record primaries follow the same shape rules.
+  Top-level unit slots, unions, lists, references, allocator and owning types remain
+  outside this carried-initialization slice.
+- Eligibility visits at most 256 type parts and 32 levels, counting the slot root,
+  record primaries and fields. Traversal and field-name work charge the shared proof
+  budget. Exhaustion is B001, not permission to skip initialization checks.
+- The existing CFG proof tracks completion of the entire slot, not separately
+  published fields. An unfinished initializer cannot satisfy owner completion.
+  Effects execute once in source order; panic or Leave skips unfinished stores.
+  Inner restarts retain ancestor initialization, while owner resets clear it.
+- Mutable field writes and whole-record replacement retain existing type and
+  mutability checks. Old value copies are independent of later record writes.
+  The extension adds no backend storage, runtime flags, payload reads or cleanup.
+- Shared and exclusive borrows of original carried record storage, including field
+  projections, remain B001 until their acquisition and lifetime proofs are
+  separately qualified. Ordinary local copies and copied completed results retain
+  existing borrow rules. Supported scalar sibling loans remain available.
+- The [carried-records example](examples/carried-records.mwy) executes its
+  initializer once and retains both fields across three iterations. Native
+  regressions also cover nested unit/scalar members, copies, writes, owner resets,
+  Leave, partial panics and rejected incomplete or duplicate initialization in
+  debug and release.
 
 ## Shared carried scalar borrows
 

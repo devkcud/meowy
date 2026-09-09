@@ -8,6 +8,7 @@ mod allocators;
 mod boundaries;
 mod carried_borrows;
 mod carried_proof;
+mod carried_records;
 mod carried_scalars;
 mod changing_published;
 mod control;

@@ -3,6 +3,7 @@ pub(crate) mod alias_writes;
 pub(crate) mod allocator_bounds;
 pub(crate) mod allocator_carriers;
 pub(crate) mod carried_borrows;
+pub(crate) mod carried_records;
 pub(crate) mod carried_scalars;
 pub(crate) mod changing_published;
 pub(crate) mod cli;

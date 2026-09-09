@@ -310,7 +310,12 @@ impl Checker {
                                         )?;
                                         let (_, ty) = crate::borrow::slot(expected, name)
                                             .ok_or_else(unsupported)?;
-                                        if !crate::borrow::carried::scalar(ty) || *ty != slot.ty {
+                                        if !crate::borrow::carried::eligible(
+                                            ty,
+                                            &mut self.flow,
+                                            value.span,
+                                        )? || *ty != slot.ty
+                                        {
                                             return Err(unsupported());
                                         }
                                         let size = name.as_ref().map_or(0, String::len) + 1;

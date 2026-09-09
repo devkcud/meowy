@@ -68,6 +68,7 @@ compiler/target/debug/meowy run compiler/examples/fixed-published.mwy
 compiler/target/debug/meowy run compiler/examples/changing-published.mwy
 compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
+compiler/target/debug/meowy run compiler/examples/carried-records.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-headers.mwy
@@ -162,8 +163,9 @@ The [changing published result example](examples/changing-published.mwy) updates
 an alias initialized before the loop while an older copy keeps its original target.
 The [late published result example](examples/late-published.mwy) initializes and
 updates an alias on the completing iteration. Explicit frontier proofs keep such
-emissions off restart edges. Declared scalar slots can also retain initialization
-across an edge using the separate proof below; other carried initialization remains gated.
+emissions off restart edges. Declared scalar and reference-free record slots can
+also retain initialization across an edge using the separate proof below;
+other carried initialization remains gated.
 
 The [carried scalar example](examples/carried-scalars.mwy) initializes a declared
 result field on the first iteration and retains it across inner restarts. A bounded
@@ -181,6 +183,14 @@ cover its active paths before header-only opacity can be excluded from the front
 proof; unknown call/input ancestry and physical conflicts remain checked.
 Reference-bearing, nullable or inferred carried slots remain unavailable;
 effectful Boolean results may prevent proof.
+
+The [carried record example](examples/carried-records.mwy) initializes a record
+once and retains its fields across inner restarts. Nested records with scalar or
+unit members use the same whole-slot initialization proof, within bounded shape
+and work limits. Copies, mutable fields and whole-record replacement keep their
+ordinary semantics. Borrowing the original carried record storage remains gated;
+borrowing an ordinary copy or the completed result uses existing rules. See
+[carried record ownership](OWNERSHIP.md#carried-reference-free-records).
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)
