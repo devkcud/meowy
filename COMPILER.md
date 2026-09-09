@@ -323,7 +323,7 @@ and links are diagnosed, the doc commands produce useful checked output, and the
 regressions pass. No claim is made that unavailable language/library features work
 inside an example. Do not spend this slice on rendering polish or optional extras.
 
-Full LSP/rename integration waits for that infrastructure. HTTP/TLS implementation
+Full LSP/rename integration waits for that infrastructure. Networking/TLS implementation
 and release-compatible public documentation interchange formats remain separate
 tracks. Once this bounded feature works, stop documentation expansion and return
 to core compiler work, starting with the recorded reference-free record-slot slice.
@@ -337,12 +337,40 @@ Rendering/LSP never execute examples; explicit doc checks reuse test-process
 machinery. Assign diagnostics and register any public index schema before claiming
 compatible documentation tooling.
 
-[HTTP](docs/reference/stdlib/http.md) adds independent message/client/server/codec
-layers and closed route/response-policy construction, reusing JSON owners and
-existing I/O/task lifetimes. [TLS](docs/reference/stdlib/tls.md) needs a qualified
-provider and explicit trust/identity/resource policy. Parser, transport, cancellation,
-wire-version and generated-schema gates are separate from compiler/documentation
-checks. Neither library is implemented by specifying its API.
+[Networking](docs/reference/stdlib/net.md) is one `@"net"` package. `net.peer()`
+builds a capability-typed owner from a transport and optional sender/receiver roles;
+at least one role and a compatible transport are required before explicit startup.
+Direct address/DNS/TCP/UDP APIs retain their semantics and remain usable alone.
+[HTTP](docs/reference/stdlib/http.md) lives under `net.http`: messages, protocol
+adapters, codecs and optional closed route/response-policy composition. There is
+no separate HTTP import, client factory or serving lifecycle. Reuse JSON owners
+and existing I/O/task lifetimes. [TLS](docs/reference/stdlib/tls.md) remains an
+explicit stream-security contract requiring a qualified provider and trust policy.
+These contracts do not implement a networking library by themselves.
+
+Implement this merger in dependency order after module, type-specialization,
+ownership and I/O/task foundations are executable:
+
+1. Preserve direct numeric addresses, DNS, TCP streams and UDP datagrams. Qualify
+   progress, truncation, deadlines, cancellation and host-resource cleanup.
+2. Implement concrete peer configuration types, transport/role compatibility and
+   operation availability. Reject missing/duplicate roles, mismatched adapters and
+   operations unavailable on the configured type; do not erase capabilities into
+   runtime flags. Add assigned diagnostics rather than inventing bootstrap codes.
+3. Implement explicit start, bounded admission, failure ownership, stream/event
+   leases and shared stop/join/close. Prove partial startup cleanup, receiver-only
+   replies, combined-role budgets and no detached tasks or dangling captures.
+4. Qualify raw sender/receiver adapters without manufacturing message boundaries
+   for TCP or reliable delivery/request correlation for UDP. Keep unused HTTP and
+   security services outside the reachable native closure.
+5. Add net.http sender/receiver adapters, qualified TLS composition, incremental
+   framing, leases, partial failures, response commitment and HTTP version gates.
+6. Add typed endpoint calls, optional routers, response-policy/schema agreement,
+   controlled transports and generated documentation under the shared peer model.
+
+Parser, socket, cancellation, wire-version and schema gates remain separate from
+documentation checks. The current change is a specification migration, not a
+network runtime implementation or a newly qualified compiler capability.
 
 Build ordinary algorithms in Meowy: errors, inline collections, formatting,
 duration arithmetic, then allocated collections and I/O wrappers. Add tasks and

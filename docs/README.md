@@ -55,7 +55,8 @@ working version works.
 | Which C types and calling conventions are accepted?         | [Native ABI profile](reference/native-abi.md)                                                       |
 | Which machine and runtime can run the initial distribution? | [Target profile](reference/target-profile.md)                                                       |
 | What does the standard library provide?                     | [Standard library](reference/stdlib/README.md)                                                      |
-| How do I build typed HTTP clients, services and routers?     | [HTTP contracts](reference/stdlib/http.md)                                                            |
+| How do I compose TCP/UDP peers with sender/receiver capabilities? | [Networking and peers](reference/stdlib/net.md)                                                  |
+| How do I add typed HTTP requests, handlers and routers to a peer? | [HTTP protocol contracts](reference/stdlib/http.md)                                              |
 | How are encrypted connections and peer identities checked?  | [TLS transports](reference/stdlib/tls.md)                                                             |
 | How do durations, dates, and zones work?                    | [Time and date](reference/stdlib/time-and-date.md)                                                  |
 | How do I use Chinese or Hebrew leap months?                 | [Calendars](reference/stdlib/calendars.md)                                                          |

@@ -243,45 +243,13 @@ an explicitly fed stdin pipe belongs in a spawn-based workflow.
 
 ## Network services
 
-`net.parse_address(text)` returns an inline IPv4/IPv6 `net.Address` or
-`net.InvalidAddress`. It parses numeric addresses only, without DNS or a default
-port. `net.endpoint(address, port <uint16>)` combines values without opening a
-socket. `net.scoped_endpoint(address, port, scope <uint32>)` additionally selects
-an IPv6 interface index and returns Endpoint or InvalidAddress; zero means no
-scope and a nonzero scope on IPv4 is invalid. Interface indices belong to the host.
-
-| API                                                    | Result                                                       | Contract                                                           |
-| ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `net.resolve(name, port, allocator, deadline)`         | `net.Addresses` or `net.Error` or `memory.AllocationFailure` | Resolve a host with an explicit nullable monotonic deadline        |
-| `net.connect(endpoint, deadline)`                      | `net.Stream` or `net.Error`                                  | Connect a TCP stream, without implicit retries to another endpoint |
-| `net.listen(endpoint, backlog <uint32>)`               | `net.Listener` or `net.Error`                                | Bind and listen; zero port lets the host select one                |
-| `listener.local_endpoint()`                            | `net.Endpoint`                                               | Read the actual bound address and port                             |
-| `listener.accept(deadline)`                            | `net.Stream` or `net.Error`                                  | Wait for one accepted stream                                       |
-| `stream.read(buffer)`, `.write(bytes)`                 | `io.Read`, `io.Write`                                        | Byte-stream I/O; message boundaries are not preserved              |
-| `stream.deadline(instant <time.Instant><null>)`        | `null`                                                       | Set/clear the stream's read and write deadline                     |
-| `stream.shutdown_write()`                              | `null` or `net.Error`                                        | Send an orderly write-side shutdown while retaining reads          |
-| `net.datagram(endpoint)`                               | `net.Datagram` or `net.Error`                                | Bind a UDP endpoint                                                |
-| `socket.receive(buffer, deadline)`                     | Datagram result or `net.Error`                               | Return sender, count, and explicit truncation status               |
-| `socket.send(destination, bytes, deadline)`            | `null` or `net.Error`                                        | Submit one complete datagram or fail                               |
-| `stream.close()`, `listener.close()`, `socket.close()` | `null` or `net.Error`                                        | Consume the owner and release its host resource                    |
-
-Network owners are move-only. Blocking waits are task cancellation points;
-network runtime support suspends the waiting task rather than occupying a worker
-for the whole wait. Without an executor they block the calling host thread.
-Explicit network deadlines return TimedOut errors; cancellation inherited from a
-task follows the task's unwind contract. Successful stream data already read or
-written remains progress even if the deadline then expires.
-
-Addresses owns its resolver results and exposes a borrowed slice; DNS order is
-not promised stable across calls. A truncated datagram reports the bytes retained
-and `truncated : true`; the discarded suffix cannot be recovered by another read.
-A zero-length datagram is a message, not end-of-stream. None of these APIs infers
-TLS, an application protocol, or an encoding from a port number.
-
-[TLS](tls.md) supplies a separate authenticated stream contract with explicit trust
-and identity policy. [HTTP](http.md) layers messages, clients, streaming servers
-and typed route/response contracts over qualified transports. Those specified APIs
-do not imply that the bootstrap currently implements network protocols or TLS.
+The [net package](net.md) owns numeric addresses, DNS, TCP streams, UDP datagrams
+and capability-typed peer composition. Its [direct APIs](net.md#direct-network-services)
+retain the I/O progress, deadline, cancellation and ownership rules described here.
+[HTTP](http.md) is a protocol namespace inside net, with typed sender/receiver
+adapters and optional route/response contracts. [TLS](tls.md) remains an explicit
+stream-security contract. These specifications do not imply bootstrap networking
+or security-qualified protocol support.
 
 ## Recorded effects
 

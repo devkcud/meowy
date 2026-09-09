@@ -8,6 +8,12 @@ Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Current compiler slice
 
+The net/HTTP specification merge passed all four repository checks; no
+compiler code changed. The single net package retains TCP/UDP and adds concrete
+peer capabilities, explicit startup and one sender/receiver lifecycle. HTTP lives
+under `net.http`. Follow the dependency-ordered networking plan in COMPILER.md;
+this does not expand the bootstrap's supported imports or runtime protocols.
+
 Shared borrows of carried record storage and projections passed the compiler
 gate. `borrow/carried.rs` now gates only exclusive record-storage borrows.
 `loans/transitive.rs::referenced` already attaches Acquire to direct and projected
@@ -52,6 +58,11 @@ passed in the preceding slice and were not manually rerun here.
 
 ## Actual validation
 
+- Current documentation-only merge: `python3 -B tools/verify.py` passed all four
+  checks, covering 16 tooling tests, 1074 links in 102 Markdown files, 23 catalog
+  records and 7 schemas/6 examples. No Meowy source was compiled or executed.
+  Compiler/native results below are the preceding shared-record-borrow baseline;
+  those gates were not rerun for this specification change.
 - Focused carried-record source/shape/borrow coverage: 17 tests passed using
   `cargo test --locked --manifest-path compiler/Cargo.toml --target x86_64-unknown-linux-gnu --target-dir compiler/target --lib carried_record`.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
@@ -62,7 +73,7 @@ passed in the preceding slice and were not manually rerun here.
   conflicts, disjoint writes, final use, owner reset/Leave and exclusive path gates.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   capabilities remain outside the full language gate.
-- Final documentation check: 1057 local links in 101 Markdown files, 0 failures;
+- Final documentation check: 1074 local links in 102 Markdown files, 0 failures;
   `git diff --check` passed. External links were not fetched.
 - Editor and separate native runtime/sanitizer gates were not rerun for this slice;
   no editor, runtime, backend or dependency files changed.
@@ -88,7 +99,7 @@ source expiry and old-copy loans remain independent requirements.
 ## Still outside this compiler
 
 The complete module/package graph, generic specialization, captures, public FFI,
-wider ownership and cleanup, executable HTTP/TLS libraries, full LSP, public
+wider ownership and cleanup, executable net peers/HTTP adapters/TLS, full LSP, public
 artifact/replay formats and release qualification remain separate implementation
 work. Do not equate a green bootstrap gate with the documented v0.0.1 language.
 Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 remain the recorded toolchain.
@@ -109,7 +120,9 @@ Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 remain the recorded toolchain.
    Run focused Rust tests and `tools/verify.py --compiler` before removing the
    corresponding exclusive path restriction.
 4. Continue module graphs and library foundations independently of optional doc
-   polish. Broader carried lists, tags, owned cleanup and richer value-state proofs
+   polish. The merged net package needs concrete capability types, transport/role
+   checking and bounded startup/shutdown before its HTTP adapters are executable.
+   Broader carried lists, tags, owned cleanup and richer value-state proofs
    need their own bounded implementation and evidence.
 5. Keep root/compiler STATUS current after logical steps, commit cohesive validated
    work and do not push or recreate STEP logs.

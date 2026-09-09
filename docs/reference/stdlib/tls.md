@@ -1,11 +1,11 @@
 # TLS transports
 
-[Library index](README.md) - [Networking](io-and-system.md#network-services)
+[Library index](README.md) - [Networking and peers](net.md)
 
 `@"tls"` provides authenticated encrypted streams independently of HTTP. It is a
 specified library contract, not implemented or security-qualified bootstrap support.
 An implementation must qualify its provider, configuration and failure behavior
-before an application can rely on this contract. Importing HTTP alone must not
+before an application can rely on this contract. Importing net or using net.http must not
 silently choose a trust store, credentials or an unverified native provider.
 
 ## Versions, identity and trust
@@ -105,5 +105,8 @@ limits and secret redaction using controlled peers. Record tested host/provider
 combinations and unavailable capabilities honestly.
 
 DTLS, QUIC, custom insecure profiles, dynamic credential callbacks and TLS record
-replay are not implied by this stream contract. [HTTP](http.md) consumes a qualified
-TLS transport; defining that API does not prove HTTPS works.
+replay are not implied by this stream contract. [net.http](http.md) consumes a qualified
+TLS transport through the peer's configured transport pipeline. Sender and receiver
+roles require their respective client/server trust and identity policies explicitly;
+having both roles never reuses server credentials as client trust. Raw TCP/UDP and
+plaintext HTTP do not imply TLS. Defining these APIs does not prove HTTPS works.

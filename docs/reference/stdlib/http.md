@@ -1,11 +1,17 @@
-# Typed HTTP messages, clients and services
+# HTTP protocol for net peers
 
-[Library index](README.md) - [I/O and networking](io-and-system.md) - [TLS](tls.md)
+[Library index](README.md) - [Networking and peers](net.md) - [I/O](io-and-system.md) - [TLS](tls.md)
 
-`@"http"` is an HTTP toolkit, not a compulsory web framework. Message handling,
-clients, server transports, streaming codecs and contract-checked routers are
-separate usable layers. All named constructors are ordinary library values.
-Importing one layer retains only its reachable helpers and runtime services.
+`net.http` is the HTTP protocol namespace of `@"net"`, not a separate package or
+a compulsory web framework. Messages, sender/receiver adapters, streaming codecs
+and contract-checked routers are separately usable layers. All named constructors
+are ordinary library values. Importing one layer retains only reachable helpers
+and runtime services.
+
+[Capability-typed peers](net.md#capability-typed-configuration) own transport,
+roles and lifecycle. An HTTP sender initiates requests and receives responses;
+an HTTP receiver handles requests and sends replies. Either role or both can be
+configured on `net.peer()`. HTTP adds no alternate client factory or serving loop.
 
 This is a specified library contract, not implemented bootstrap functionality.
 Its baseline targets HTTP/1.1 and HTTP/2 over qualified transports; implementations
@@ -19,8 +25,8 @@ established merely by adding this chapter.
 | Layer | Responsibility |
 | --- | --- |
 | Messages | Methods, URLs, status values, ordered fields, body streams and trailers |
-| Client | Origin selection, authenticated connections, bounded pooling and explicit attempt policies |
-| Server | Connection/stream admission, exchanges, deadlines, cancellation and draining |
+| Sender adapter | Origin selection, authenticated connections, bounded pooling and explicit attempt policies |
+| Receiver adapter | Connection/stream admission, exchanges, deadlines, cancellation and draining |
 | Codecs | Bytes, text, typed JSON, forms, multipart and explicit streaming representations |
 | Contracts | Typed inputs, named response alternatives, middleware context and effective wire schemas |
 | Router | Deterministic matching and dispatch through those contracts |
@@ -33,7 +39,7 @@ reject ambiguous input more strictly; they must not reinterpret invalid framing
 as another valid request.
 
 Method names are case-sensitive ASCII tokens. Standard method values such as
-`http.Get` and `http.Post` are ordinary constants; extension methods remain possible
+`net.http.Get` and `net.http.Post` are ordinary constants; extension methods remain possible
 through checked construction. Status values are validated protocol values, not
 arbitrary integer casts. Informational messages and upgrades are separate from a
 handler's final response.
@@ -77,25 +83,28 @@ bounded drain succeeds. HTTP/2 may reset the affected stream while retaining a
 healthy connection. Destruction releases the lease without silently draining an
 unbounded body. Response views cannot outlive their response/lease owner.
 
-Client is an opaque move-only, synchronized owner whose shared request operations
-can be used concurrently under its documented Send/Sync contract. Outstanding
+A peer with an HTTP sender is an opaque move-only owner with synchronized request
+operations, usable concurrently under its concrete Send/Sync contract. Outstanding
 leases retain its lifetime; it cannot be destroyed while they borrow it. Pool
-state, queues and protocol drivers are charged to its allocator/resource budgets.
-No task or socket becomes detached merely because a request handle was dropped.
+state, queues and protocol drivers are charged to the peer's explicit allocator
+and resource budgets. A receiver's captures may further restrict sharing when both
+roles are configured. No task or socket becomes detached merely because a request
+handle was dropped.
 
-## Client surface and attempt policy
+## Sender surface and attempt policy
 
 | API | Contract |
 | --- | --- |
-| `http.url(text)` | Validate a borrowed URL view or return InvalidUrl |
-| `http.headers(allocator, limits)` | Create an explicitly owned bounded header collection |
-| `http.request(method, url, headers, body)` | Construct a typed message without sending it |
-| `http.client(config, allocator)` | Create a bounded client/pool owner without making a request |
-| `client.send(request, options)` | Consume an outbound message and return a leased response or a payload-retaining SendFailure |
-| `http.call(client, endpoint, input, allocator, options)` | Encode/decode through an effective endpoint contract |
-| `client.close()` | Consume an idle client after all response leases and request tasks end |
+| `net.http.url(text)` | Validate a borrowed URL view or return InvalidUrl |
+| `net.http.headers(allocator, limits)` | Create an explicitly owned bounded header collection |
+| `net.http.request(method, url, headers, body)` | Construct a typed message without sending it |
+| `net.http.sender(config)` | Describe the HTTP sender role without opening a connection or making a request |
+| `spec.sender(sender)` | Attach that role to a capability-typed net peer configuration |
+| `peer.send(request, options)` | Consume an outbound message and return a leased response or a payload-retaining SendFailure |
+| `peer.call(endpoint, input, allocator, options)` | Encode/decode through an effective endpoint contract; unavailable without an HTTP sender |
+| `peer.stop(deadline)`, `peer.close()` | Use the shared peer shutdown contract after response leases and request tasks end |
 
-Client configuration requires finite pool/admission limits and explicit proxy,
+HTTP sender configuration requires finite pool/admission limits and explicit proxy,
 trust and protocol policies. HTTPS uses the separate TLS contract. DNS and address
 selection have bounded attempts and deadlines. Environment proxy variables, cookie
 stores, credentials, response caches and cross-origin connection coalescing are
@@ -122,22 +131,28 @@ response. Typed calls return an UnexpectedResponse retaining the raw response fo
 bounded inspection or closure. Decoder failures remain distinct from transport
 failure and from a valid application error response.
 
-## Server exchanges and bounded shutdown
+## Receiver exchanges and bounded shutdown
 
-`http.serve(listener, service, config, allocator, stop)` consumes a listener and an
-explicit shutdown receiver, and drives a concrete service callable. The receiver
-uses `channel.Receiver<http.Stop>`; Stop is an ordinary record with an absolute
-monotonic `deadline` for draining. The caller creates the channel explicitly.
-Closing it without a Stop requests immediate cancellation and joining, not detachment.
-The first stop begins draining; later requests can shorten, not extend, its deadline.
+`net.http.receiver(service, config)` describes a concrete service and its HTTP
+exchange policy. Attaching it with `spec.receiver(receiver)` enables incoming
+exchanges when that peer starts. The selected transport owns binding and connection
+admission; the adapter does not create a separate listener owner or serving loop.
+A receiver-only peer can send handler replies without a sender role, but cannot
+initiate independent requests. The same service can run in an in-memory test adapter
+without starting a network peer.
+
+`peer.stop(deadline)` supplies the explicit absolute monotonic drain deadline.
+The first stop begins draining; later requests may shorten, not extend, its deadline.
+Both roles use the shared [peer lifecycle](net.md#startup-ownership-and-shutdown);
+there is no separate HTTP Stop channel or detached server lifetime.
 
 Service and captured state retain concrete types. Concurrent access requires the
 normal transfer/sharing capabilities; exclusive state cannot be smuggled into a
-shared string-keyed context. Server configuration accounts for connection, stream,
+shared string-keyed context. Receiver configuration accounts for connection, stream,
 queue, task-stack and handler-admission bounds, including its control/driver tasks.
 Construction/dispatch never creates an unbounded task per buffered request.
 
-The server owns each Exchange through request decoding, handler work, response
+The peer's receiver owns each Exchange through request decoding, handler work, response
 writing and cleanup. A handler can borrow its request data for serialization while
 that exchange remains alive. Returning a borrow does not detach it from the request
 or allocator. Handler-created owned streams transfer into the response writer;
@@ -157,7 +172,7 @@ Fatal termination and a lost connection do not promise any response at all.
 
 ## Limits and defensive parsing
 
-Client/server construction requires a complete Limits record and deadline policy;
+Sender/receiver configuration requires a complete Limits record and deadline policy;
 there is no omitted-field meaning of unlimited. Deployments may publish named
 profiles, but those profiles must specify their exact versioned values.
 
@@ -194,16 +209,16 @@ server/client feature of this API.
 
 | Descriptor | Decoded/encoded representation |
 | --- | --- |
-| `http.empty()` | No representation body |
-| `http.bytes()` | Explicit byte owner/view or bounded body stream, selected by the operation |
-| `http.text()` | Validated UTF-8 with an explicit owner when collected |
-| `http.json<T>()` | Existing typed JSON schema and a `json.Document<T>` on decode |
-| `http.form<T>()` | Bounded URL-encoded fields through declared scalar parsers |
-| `http.multipart(spec)` | Bounded streaming parts with explicit per-part descriptors |
-| `http.map_codec<T,U>(base, encode, decode)` | Checked mappings between domain T and the base codec's declared wire type U |
+| `net.http.empty()` | No representation body |
+| `net.http.bytes()` | Explicit byte owner/view or bounded body stream, selected by the operation |
+| `net.http.text()` | Validated UTF-8 with an explicit owner when collected |
+| `net.http.json<T>()` | Existing typed JSON schema and a `json.Document<T>` on decode |
+| `net.http.form<T>()` | Bounded URL-encoded fields through declared scalar parsers |
+| `net.http.multipart(spec)` | Bounded streaming parts with explicit per-part descriptors |
+| `net.http.map_codec<T,U>(base, encode, decode)` | Checked mappings between domain T and the base codec's declared wire type U |
 
 Only supported [JSON schemas](json.md#typed-schemas-and-numbers) are accepted by
-`http.json<T>()`. HTTP does not add arbitrary JSON union decoding, annotations or
+`net.http.json<T>()`. HTTP does not add arbitrary JSON union decoding, annotations or
 wire-name rewriting. A response's status/media alternative selects its own codec,
 so different statuses can decode different concrete JSON records without a second
 JSON type system. A mapped codec encodes T into the base codec's checked U value,
@@ -232,20 +247,20 @@ is inferred by constructing a router.
 The following is source using the specified API, not a bootstrap-executable example:
 
 ```meowy
-http:@"http"
+net:@"net"
 
 #| A public user representation. |#
 <User>:<{id<uint64>;name<string>}>
 <Missing>:<{code<string>;message<string>}>
 <UserPath>:<{id<uint64>}>
 
-find:http.route({
-    ->method:http.Get
+find:net.http.route({
+    ->method:net.http.Get
     ->path:"/users/{id}"
-    ->params:http.fields<UserPath>()
+    ->params:net.http.fields<UserPath>()
     ->responses:{
-        ->found:http.reply(200,http.json<User>())
-        ->missing:http.reply(404,http.json<Missing>())
+        ->found:net.http.reply(200,net.http.json<User>())
+        ->missing:net.http.reply(404,net.http.json<Missing>())
     }
 })
 
@@ -254,11 +269,11 @@ handle<find.Reply>:(request<&find.Request>){
     ->find.reply.found({->id:request.params.id;->name:"Mochi"})
 }
 
-app:http.router({->routes:{->get_user:find}})
+app:net.http.router({->routes:{->get_user:find}})
 service:app.bind({->get_user:handle})
 ```
 
-`http.route`, codec descriptors and `http.router` are pure compile-time constructors
+`net.http.route`, codec descriptors and `net.http.router` are pure compile-time constructors
 over closed data, like the CLI library's descriptors. Construction checks names,
 patterns, input/response types and composition without opening sockets or running
 handlers. `app.bind` checks concrete callable signatures/captures; it does not
@@ -268,7 +283,7 @@ codes added to the central catalog when this feature is implemented.
 
 Request has typed `params`, `query`, selected `headers` and `body` accessors. Omitted
 parameter/query/header descriptors describe empty records; omitted body means
-`http.empty()`. Path parameters are required and non-nullable. Query fields are
+`net.http.empty()`. Path parameters are required and non-nullable. Query fields are
 required unless nullable or given a typed default. An optional context descriptor
 declares an additional handler argument; without it the handler takes only Request.
 The fixture handler above demonstrates typing, not a database or a universal 200.
@@ -280,7 +295,7 @@ record. A typed handler receives no raw response-writer escape hatch.
 Undeclared statuses, wrong payloads and missing middleware context fail
 checking. Runtime validation is still required for all incoming network data.
 
-`http.fields<T>()` supports closed records of string, Boolean and integer fields,
+`net.http.fields<T>()` supports closed records of string, Boolean and integer fields,
 nullable query fields and explicitly bounded repeated query fields. Wire names
 match declared field names unless an explicit descriptor mapping is supplied.
 Default integers are ASCII decimal with an optional minus only for signed types;
@@ -356,7 +371,7 @@ an unowned T extracted from it. Typed clients validate status, media type, decla
 headers and body under the same limits/codecs. Unexpected wire values remain errors
 with inspectable raw data, never successful schema casts.
 
-`http.openapi(app, writer)` streams an [OpenAPI 3.2.0](https://spec.openapis.org/oas/v3.2.0.html)
+`net.http.openapi(app, writer)` streams an [OpenAPI 3.2.0](https://spec.openapis.org/oas/v3.2.0.html)
 description of effective exported routes, inputs, media/status alternatives,
 middleware outcomes and response policies. Unsupported codec schemas fail export;
 they do not produce invented descriptions. Router-level faults and raw service
@@ -378,11 +393,12 @@ TLS, HTTP/2, backpressure or shutdown behavior on the supported host.
 
 ## Implementation and qualification
 
-1. Pin message/URL/header rules, error ownership and finite configuration limits.
+1. Implement the shared net peer capability/startup contract before either HTTP
+   role. Pin message/URL/header rules, error ownership and finite configuration limits.
    Build incremental parser/serializer fixtures and malformed framing regressions.
-2. Qualify TLS separately, then client leases, partial failures, bounded pooling,
+2. Qualify TLS separately, then sender leases, partial failures, bounded pooling,
    redirects/retries, cancellation and deterministic fixture transports.
-3. Qualify server admission, response commitment, slow peers, body/trailer limits,
+3. Qualify receiver admission, response commitment, slow peers, body/trailer limits,
    handler state capabilities, streaming cleanup and join-before-release shutdown.
 4. Add compile-time route/context/response-policy checks and reuse JSON owners.
    Test malformed inputs and middleware/global faults, not only 200 responses.

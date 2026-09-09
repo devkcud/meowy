@@ -205,8 +205,10 @@ safe local API pages and checked/opt-in examples. Use the CLI or `meowy::compile
 for complete source/documentation checks; the low-level AST checker does not invent
 documentation metadata. E801-E805 identify documentation failures; E002 still marks
 unclosed fences. Full LSP/rename, assets, package documentation and public index
-formats remain separate. [HTTP](../docs/reference/stdlib/http.md) and
-[TLS](../docs/reference/stdlib/tls.md) remain specifications, not executable libraries.
+formats remain separate. [Networking peers](../docs/reference/stdlib/net.md),
+[net.http](../docs/reference/stdlib/http.md) and [TLS](../docs/reference/stdlib/tls.md)
+remain specifications, not executable libraries. HTTP belongs to the net package;
+peer capabilities and startup are not implemented by the bootstrap yet.
 
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
 LLVM development headers/libraries and the host C/C++ development environment

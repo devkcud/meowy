@@ -7,6 +7,12 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+The net/HTTP specification merge is complete and passed all four repository checks.
+`@"net"` now owns transport APIs and capability-typed `net.peer()` composition;
+`net.http` provides sender/receiver adapters rather than a separate package or
+lifecycle. TCP streams and UDP datagrams retain their native semantics. No compiler
+or runtime networking implementation is claimed by this documentation-only change.
+
 Shared carried-record borrows are implemented and passed the compiler gate. The existing
 Acquire event proves active, initialized whole-slot storage for direct and field
 borrows; the physical solver retains projection, conflict and owner-lifetime
@@ -24,10 +30,15 @@ changes were needed.
 The bounded [documentation slice](COMPILER.md#documentation-completion-slice) is
 complete for standalone bootstrap sources: structural attachment, derived
 signatures, checked links, diagnostics, local API pages and checked/opt-in examples.
-HTTP and TLS remain specified library work, not executable implementations.
+Networking, its HTTP adapters and TLS remain specified library work, not executable implementations.
 
 ## Actual validation
 
+- Current documentation-only merge: `python3 -B tools/verify.py` passed all four
+  checks: 16 tooling tests, 1074 links in 102 Markdown files, 23 conformance catalog
+  records and 7 schemas/6 examples with identities/rejection cases. No Meowy source
+  was compiled or executed. Compiler/native evidence below is the preceding slice's
+  baseline, not a gate rerun for this merge.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
   formatting, Clippy, build, repository contracts and compiler regression coverage.
 - 1123 Rust tests passed: 577 library and 546 native. The 71 compiler examples run
@@ -37,7 +48,7 @@ HTTP and TLS remain specified library work, not executable implementations.
   and their execution/diagnostic boundaries in both profiles.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug and release. Unsupported
   cases are not successful language rejections or full release qualification.
-- Final documentation check: 1057 local links in 101 Markdown files, 0 failures.
+- Final documentation check: 1074 local links in 102 Markdown files, 0 failures.
   `git diff --check` passed; external links were not fetched.
 - Vim/Neovim and standalone documentation CLI execution passed in the preceding
   documentation slice; they were not rerun for this compiler-only change.
@@ -50,7 +61,7 @@ HTTP and TLS remain specified library work, not executable implementations.
 | Compiler | Carried plain-record initialization and shared projections are supported; local exclusive scalar-field borrows are next. |
 | Documentation tooling | Standalone slice complete; package graphs, assets, public indexes and LSP remain separate. |
 | Editor integration | Documentation fences supported in Vim/Neovim; no changes in this slice. |
-| Standard library | HTTP/TLS contracts exist; module and library foundations precede implementation. |
+| Standard library | One net package now specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
 | Runtime and release | Bootstrap evidence is not minimum-platform, bundled-distribution or full v0.0.1 qualification. |
 
 ## Next steps
@@ -64,7 +75,9 @@ HTTP and TLS remain specified library work, not executable implementations.
 2. Preserve certified shared-header coverage, genuine call/input uncertainty,
    scalar exclusive backedge boundaries, old-copy loans and no synthetic reads.
    Nullable, union, list, reference-bearing and owning carried slots remain separate.
-3. Continue module graphs and library foundations before executable HTTP/TLS;
+3. Continue module graphs and library foundations before executable net peers/TLS;
+   implement capability-typed configuration, bounded lifecycle and raw adapters
+   before HTTP sender/receiver adapters, following the updated COMPILER plan.
    standalone documentation completion is not a prerequisite for more doc polish.
 4. Keep root/compiler STATUS concise with actual evidence and concrete next steps;
    commit cohesive validated changes, never recreate STEP logs and do not push.
