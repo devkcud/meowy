@@ -80,6 +80,9 @@ The highlighter handles:
   literals and exponents, and arithmetic and logical operators.
 - Delimited multiline comments, multiline strings, supported escapes, and
   interpolation containing nested expressions, blocks, or quoted strings.
+- Declaration/module documentation fences with exact matching bar counts, including
+  quoted shorter fences, hashes and braces inside the payload. Their lexical
+  highlighting does not claim declaration attachment or semantic-link checking.
 - Literal module imports and ordinary calls, including generic calls.
 
 Type regions nest, so `>>` inside a generic type closes two type arguments while
@@ -97,6 +100,13 @@ does not use a space to distinguish these roles. Computed annotations such as
 
 Blocks, record types, and multiline comments also expose syntax folds. Enable
 those explicitly with `:setlocal foldmethod=syntax` if desired.
+
+Documentation uses `#| ... |#` or `#!| ... |!#`, with longer matching bar runs when
+needed. Wrong-length or wrong-family closers remain documentation text; an unclosed
+fence highlights to EOF. Ordinary comment commands still produce `# %s #`, not
+documentation. The compiler recognizes these fences but currently rejects their
+unimplemented attachment/checking with B001; see the
+[documentation contract](../../docs/reference/documentation.md).
 
 ## Values are not keywords
 

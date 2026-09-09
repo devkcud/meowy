@@ -211,6 +211,28 @@ call s:At('smallest<int8>:-128', '-', 'meowyOperator')
 call s:At('smallest<int8>:-128', '128', 'meowyNumber')
 call s:At('after_contracts : 46', 'after_contracts', 'meowyBinding')
 
+call s:At('#| Short documentation |#', '#|', 'meowyDocDelimiter')
+call s:At('#| Short documentation |#', 'Short', 'meowyDocComment')
+call s:At('after_doc : 47', 'after_doc', 'meowyBinding')
+call s:At('# Heading and "quotes" { } stay documentation', 'Heading', 'meowyDocComment')
+call s:At('short |# remains documentation', 'remains', 'meowyDocComment')
+call s:At('long |||# remains documentation', 'remains', 'meowyDocComment')
+call s:At('||#', '||#', 'meowyDocDelimiter')
+call s:At('after_long_doc : 48', 'after_long_doc', 'meowyBinding')
+call s:At('module short |!# remains documentation', 'remains', 'meowyModuleDoc')
+call s:At('module long |||!# remains documentation', 'remains', 'meowyModuleDoc')
+call s:At('declaration closer ||# remains module documentation', 'remains', 'meowyModuleDoc')
+call s:At('||!#', '||!#', 'meowyDocDelimiter')
+call s:At('after_module_doc : 49', 'after_module_doc', 'meowyBinding')
+call s:At('doc_literal : "#| literal |#"', '#|', 'meowyString')
+call s:At('doc_interpolation : "value {{#|| } " |# inert ||# ->7}} tail"', 'inert', 'meowyDocComment')
+call s:At('doc_interpolation : "value {{#|| } " |# inert ||# ->7}} tail"', 'tail', 'meowyString')
+call s:At('<Docs> : <{#| type field |# number<int32>}>', 'field', 'meowyDocComment')
+call s:At('<Docs> : <{#| type field |# number<int32>}>', 'int32', 'meowyTypeName')
+call s:At('# | ordinary spaced opener | #', 'ordinary', 'meowyComment')
+call s:At('after_spaced_comment : 50', 'after_spaced_comment', 'meowyBinding')
+call s:At('||# still unclosed documentation', 'still', 'meowyDocComment')
+
 " Explicit opt-out for users who do not want lexical emphasis on prelude names.
 let g:meowy_highlight_builtin_values = 0
 syntax clear

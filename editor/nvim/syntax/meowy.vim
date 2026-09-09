@@ -9,8 +9,8 @@ syntax case match
 
 " Explicit clusters keep task/comparison operators out of type arguments while
 " allowing full expressions, including nested strings, inside interpolation.
-syntax cluster meowyCode contains=meowyIdentifier,meowyBuiltinValue,meowyBinding,meowyCall,meowyNumber,meowyFloat,meowyOperator,meowyEmit,meowyTaskOperator,meowyBorrow,meowyUnchecked,meowyDispatch,meowyScope,meowyTaskGroup,meowyPunctuation,meowyBlock,meowyParen,meowyList,meowyType,meowyString,meowyImport,meowyComment
-syntax cluster meowyTypeBody contains=meowyTypeName,meowyTypeArguments,meowyTypeRecord,meowyTypeParameters,meowyTypeExtent,meowyTypeOperator,meowyTypePunctuation,meowyNumber,meowyString,meowyComment
+syntax cluster meowyCode contains=meowyIdentifier,meowyBuiltinValue,meowyBinding,meowyCall,meowyNumber,meowyFloat,meowyOperator,meowyEmit,meowyTaskOperator,meowyBorrow,meowyUnchecked,meowyDispatch,meowyScope,meowyTaskGroup,meowyPunctuation,meowyBlock,meowyParen,meowyList,meowyType,meowyString,meowyImport,meowyComment,meowyDocComment,meowyModuleDoc
+syntax cluster meowyTypeBody contains=meowyTypeName,meowyTypeArguments,meowyTypeRecord,meowyTypeParameters,meowyTypeExtent,meowyTypeOperator,meowyTypePunctuation,meowyNumber,meowyString,meowyComment,meowyDocComment,meowyModuleDoc
 
 syntax match meowyIdentifier /\<[A-Za-z_][A-Za-z0-9_]*\>/
 " This is optional lexical emphasis, not a claim about name resolution.
@@ -61,7 +61,9 @@ syntax match meowyTypeName /\<[A-Za-z_][A-Za-z0-9_]*\>/ contained
 syntax match meowyTypeOperator /[&*!:]\|->/ contained
 syntax match meowyTypePunctuation /[,.;]/ contained
 
-syntax region meowyComment start=/#/ end=/#/ fold contains=meowyTodo,@Spell
+syntax region meowyComment start=/#\%(!\=[|]\)\@!/ end=/#/ fold contains=meowyTodo,@Spell
+syntax region meowyDocComment matchgroup=meowyDocDelimiter start=/#\z([|]\+\)/ end=/[|]\@<!\z1#/ fold contains=meowyTodo,@Spell
+syntax region meowyModuleDoc matchgroup=meowyDocDelimiter start=/#!\z([|]\+\)/ end=/[|]\@<!\z1!#/ fold contains=meowyTodo,@Spell
 syntax match meowyTodo /\<\%(TODO\|FIXME\|NOTE\|XXX\)\>/ contained
 syntax region meowyString start=/"/ skip=/\\./ end=/"/ contains=meowyInvalidEscape,meowyEscape,meowyInterpolation,@Spell
 syntax match meowyInvalidEscape /\\./ contained
@@ -94,6 +96,9 @@ highlight default link meowyTypeName Type
 highlight default link meowyTypeOperator Operator
 highlight default link meowyTypePunctuation Delimiter
 highlight default link meowyComment Comment
+highlight default link meowyDocComment SpecialComment
+highlight default link meowyModuleDoc SpecialComment
+highlight default link meowyDocDelimiter SpecialComment
 highlight default link meowyTodo Todo
 highlight default link meowyString String
 highlight default link meowyEscape SpecialChar

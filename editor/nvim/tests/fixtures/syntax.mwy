@@ -142,3 +142,25 @@ apply<:F:core.Call<(int32)->int32>&core.Pure><int32>:(f<&F>,x<int32>){->f(x)}
 type_factory<core.Type>:(element<core.Type>,capacity<usize>){-><(element)[capacity]>}
 smallest<int8>:-128
 after_contracts : 46
+
+#| Short documentation |#
+after_doc : 47
+#||
+# Heading and "quotes" { } stay documentation
+short |# remains documentation
+long |||# remains documentation
+||#
+after_long_doc : 48
+#!||
+module short |!# remains documentation
+module long |||!# remains documentation
+declaration closer ||# remains module documentation
+||!#
+after_module_doc : 49
+doc_literal : "#| literal |#"
+doc_interpolation : "value {{#|| } " |# inert ||# ->7}} tail"
+<Docs> : <{#| type field |# number<int32>}>
+# | ordinary spaced opener | #
+after_spaced_comment : 50
+#||| unclosed documentation
+||# still unclosed documentation
