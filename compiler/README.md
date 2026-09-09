@@ -70,6 +70,7 @@ compiler/target/debug/meowy run compiler/examples/late-published.mwy
 compiler/target/debug/meowy run compiler/examples/carried-scalars.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
+compiler/target/debug/meowy run compiler/examples/mixed-headers.mwy
 compiler/target/debug/meowy run compiler/examples/guarded-references.mwy
 compiler/target/debug/meowy run compiler/examples/leave-references.mwy
 compiler/target/debug/meowy run compiler/examples/restart-references.mwy
@@ -172,6 +173,10 @@ remain unchanged. The [exclusive carried example](examples/exclusive-carried.mwy
 mutates a carried scalar through a local exclusive handle whose loan ends before
 Restart. The [frontier proof](EXCLUSIVE_RESTARTS.md) also checks shared descendants;
 exclusive or opaque ancestry crossing a backedge remains unsupported.
+The [mixed header example](examples/mixed-headers.mwy) retains shared-reference
+versions alongside those local exclusive loans. Every header predecessor must
+cover its active paths before header-only opacity can be excluded from the frontier
+proof; unknown call/input ancestry and physical conflicts remain checked.
 Reference-bearing, nullable or inferred carried slots remain unavailable;
 effectful Boolean results may prevent proof.
 

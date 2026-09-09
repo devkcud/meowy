@@ -4,7 +4,7 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Local exclusive carried-scalar borrowing verified.
+Updated: 2026-09-08. Mixed shared-header precision verified.
 Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -40,6 +40,14 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
+`loans/restart_headers.rs` records and audits required active-path coverage for
+every header definition. Entry/backedge key sets must agree, required transfers
+must cover their guards, and no definition may hide outside certified predecessors.
+Only opacity attached to a certified header definition is excluded from frontier
+marks. Precise authority retains opacity; call/input/expired ancestry and live
+exclusive descendants remain gated. Six source groups, four graph groups, five
+native groups and mixed-headers.mwy pass. The example prints 1, 2, 8 in both profiles.
+
 The [exclusive restart authority slice](EXCLUSIVE_RESTARTS.md) now follows copies,
 demand-only header transfers and parent edges with conservative ancestry marks.
 Unrooted values and explicit/input/expired opacity propagate independently. Every
@@ -48,8 +56,9 @@ All exclusive acquisitions in a reset graph must address carried Bool/Int/Float
 slots. Only a successful frontier proof bypasses blanket opacity; precise permission
 checks, explicit opacity, acquisition, lifetime and move checks remain unchanged.
 Seven source groups, three graph groups, five native groups and the example pass.
-All ten compiler checks pass. Exclusive headers and mixed opaque frontier demand
-stay unsupported. The exclusive-carried example prints 8 in debug and release.
+All ten compiler checks pass. Exclusive headers and genuinely opaque frontier demand
+stay unsupported; certified shared headers use the coverage proof above.
+The exclusive-carried example prints 8 in debug and release.
 
 [Shared carried scalar borrows](OWNERSHIP.md#shared-carried-scalar-borrows) now record
 Acquire events at actual address construction. Each event requires an active owner
@@ -74,7 +83,7 @@ reference proofs remain intact. Reference-bearing, nullable, aggregate or inferr
 carried slots remain B001 pending separate proofs. Exclusive scalar borrowing uses
 the local-loan frontier proof; wider exclusive restart borrowing remains gated.
 
-All ten compiler checks pass: 531 library, 520 native, 20 Python and 67 examples in
+All ten compiler checks pass: 541 library, 525 native, 20 Python and 68 examples in
 both profiles, formatting, Clippy, build and repository contracts. The carried-borrows
 example prints 7, 7, 7, 7, 1. Runtime/backend, dependencies and reference fixtures
 are unchanged; wider ownership, library and release work remain open.
@@ -144,10 +153,10 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Workspace and interfaces | `Cargo.toml`, `rust-toolchain.toml`, `src/ast.rs`, `src/hir.rs`, `src/lib.rs` | Offline bootstrap with explicit frontend/backend boundaries |
 | Lexer and parser | `src/lexer.rs`, `src/parser.rs`, `src/parser/` | Bootstrap grammar, malformed-input checks and bounded tree depth |
 | Names, types, flow | `src/check.rs`, `src/check/`, `src/list.rs`, `src/list_context/`, `src/flow.rs` | Record/list contexts, checked extents and bounded candidate probes; 40 checker, 18 list/context and 5 guard groups |
-| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 120 origin/initialization, 133 loan, 15 contract and 2 value-budget groups |
+| Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 126 origin/initialization, 137 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 520 native groups, 4 harness tests and 65 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 525 native groups, 4 harness tests and 65 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -640,8 +649,8 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  531 library + 520 native (1051 total). Python: 16 tooling + 4 compiler (20).
-  All 67 examples execute in debug/release. Formatting, Clippy, build, local links,
+  541 library + 525 native (1066 total). Python: 16 tooling + 4 compiler (20).
+  All 68 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
 - Eleven new source/proof groups cover exactly-once initialization, Boolean copies
   and refinement, owner resets, missing/duplicate results, Leave/panic, effectful RHS
@@ -662,12 +671,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Refine mixed shared-header precision in `loans/exclusive_restarts.rs` and
-   `loans/restarts.rs` only with complete predecessor ancestry/coverage proof.
-   Explicit header opacity currently rejects even unrelated live shared headers
-   in exclusive bodies. Distinguish that conservative marker from genuinely unknown
-   call/input ancestry; one rooted predecessor is not proof of all predecessors.
-   Keep live exclusive ancestry and exclusive headers unsupported. Preserve acquisition/lifecycle, indirect-write
+1. Prove declared reference-free record-slot initialization in `borrow/carried.rs`,
+   `check/statements.rs` and `loans/emission_init.rs` before widening scalar-only
+   eligibility. Require bounded shapes and full-slot availability; keep nullable,
+   union and reference-bearing carried slots gated. Qualify record storage borrowing
+   and exclusive projections separately. Preserve `loans/restart_headers.rs` coverage,
+   call/input uncertainty and the exclusive backedge boundary. Preserve acquisition/lifecycle, indirect-write
    Boolean invalidation, moves, last-use conflicts and expiry; run source/native
    regressions and the compiler gate. Keep nullable/reference-bearing initialization
    and wider Boolean/value summaries gated until their own proofs are available.

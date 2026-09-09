@@ -6,6 +6,48 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Mixed shared-header validation complete
+
+- All ten compiler checks pass: 541 library + 525 native (1066 Rust), 20 Python,
+  68 debug/release examples, formatting, Clippy, build, links, schemas and catalog.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Six source, four graph and five native groups cover known shared versions,
+  nullable inactivity, nested targets, owner resets, Leave, missing entry/backedge
+  transfers, removed definitions/metadata, explicit opacity and E302 conflicts.
+  The mixed-headers example prints 1, 2, 8. No test failures remain.
+- Only certified header-definition opacity is excluded from frontier ancestry;
+  precise authority, unknown call/input sources and exclusive descendants remain
+  conservative. Initial patch-context failure was corrected before compilation.
+- Next: bounded declared reference-free record initialization; keep nullable/union/
+  reference-bearing slots gated and qualify storage borrowing/projections separately.
+  No runtime/backend, syntax, reference fixture or dependency changes; prior
+  runtime/editor evidence is preserved rather than rerun.
+
+### 2026-09-08 - Mixed shared-header focused checks pass
+
+- Formatting and all six source/four graph groups pass. Each predecessor must
+  supply its active transfers; deleting initial or backedge coverage, entire
+  definitions or metadata fails. Inactive nullable paths remain valid.
+- Certified header markers remain opaque in precise authority; separate explicit
+  opacity and exclusive descendants still reject frontier carriage. Physical
+  conflicts, repair-before-reset, nested owners and Leave retain their checks.
+- No focused failures remain. Next: compiler/native gate, final contracts/evidence
+  and task-only commit. Runtime/backend and dependencies are unchanged.
+
+### 2026-09-08 - Mixed shared-header coverage implementation
+
+- Added per-definition header obligations using existing predecessor activity.
+  A separate charged audit checks entry/backedge keys, all required transfer guards,
+  missing certificates and definitions outside the certified predecessor set.
+- Frontier ancestry excludes only certified header-definition opacity. Precise
+  authority still receives the original marker; call/input/expired uncertainty
+  and shared descendants of exclusive loans remain conservative.
+- Six source groups, four graph groups, five native groups and mixed-headers.mwy
+  await validation. The initial patch failed atomically on compact example-list
+  formatting; corrected context applied without unrelated changes.
+- Next: focused checks and compiler/native gate, then contracts, actual handoff
+  evidence and task-only commit. No runtime/backend or dependency changes.
+
 ### 2026-09-08 - Local exclusive carried-scalar validation complete
 
 - All ten compiler checks pass: 531 library + 520 native (1051 Rust), 20 Python,

@@ -16,6 +16,7 @@ mod guarded_references;
 mod indexed_fields;
 mod init;
 mod leaving_references;
+mod mixed_headers;
 mod mutable_references;
 mod nested_elements;
 mod places;

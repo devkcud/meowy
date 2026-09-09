@@ -17,6 +17,7 @@ pub(crate) struct Node {
     pub(crate) transfers: Vec<(usize, usize, Guard)>,
     pub(crate) copies: Vec<(usize, usize, Guard)>,
     pub(crate) opaque: Vec<usize>,
+    pub(crate) header: Option<super::restart_headers::Header>,
     pub(crate) events: Vec<super::storage::Event>,
     pub(crate) barrier: Option<Span>,
     pub(crate) access: Option<super::access::Access>,

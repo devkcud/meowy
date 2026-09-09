@@ -61,7 +61,7 @@ losing its value before the backedge can still produce B001.
   cancelling an ancestor. Existing guarded liveness determines frontier demand;
   any non-false demand for exclusive or opaque ancestry rejects the reset edge.
 - Only a successful certificate bypasses `solve_authority`'s blanket reset opacity.
-  Explicit header/call opacity and all precise authority coverage and permission
+  Header/call opacity in precise authority and all authority coverage and permission
   checks remain unchanged. Shared-only reset bodies retain their previous behavior.
   An iteration's static loan site cannot authorize a retained earlier-iteration view.
 - Graph construction, header coverage, acquisition initialization, source expiry,
@@ -70,6 +70,29 @@ losing its value before the backedge can still produce B001.
 - Scratch marks, dependency edges, propagation and liveness consume existing graph
   work/state budgets. Invalid IDs, unrooted demand or exhausted work fail closed
   with B001. No flags, allocations or analysis steps are added to generated programs.
+
+## Certified shared headers
+
+- `loans/restarts.rs::header_transfer` retains each definition's required active
+  guards from the existing predecessor/activity proof. Metadata is generated only
+  when carried obligations exist; it does not invent initial or backedge values.
+- `loans/restart_headers.rs` checks every reachable reset predecessor. Definitions
+  must match the metadata keys, and all predecessors of one reset target must agree
+  on those keys. Each required guard must be covered by actual transfers. Missing
+  certificates, hidden definitions and incomplete entry or backedge transfers fail
+  with B001; one rooted predecessor cannot substitute for the others.
+- An inactive nullable path can require FALSE and therefore no transfer on that
+  predecessor. Its active predecessors still need coverage and rooted ancestry.
+  Nested targets keep separate header identities and predecessor sets.
+- The frontier proof excludes only the opacity marker attached to a certified
+  header definition. Explicit opacity elsewhere, input/expired origins and exclusive
+  ancestry still propagate through every dependency. Precise authority retains its
+  original header opacity; certificates grant no new exclusive permission.
+- The [mixed-headers example](examples/mixed-headers.mwy) prints 1, 2, 8 while a
+  mutable shared reference changes independently of an iteration-local exclusive
+  loan. Existing copies, physical conflicts, owner reset and Leave keep their rules.
+  Shared-only restart authority is unchanged, and metadata/audit work is bounded
+  by the existing graph budgets.
 
 ## Lifetimes and limitations
 
@@ -84,11 +107,11 @@ completed effects and skips unfinished captured stores. Reinitializing a static
 storage site does not revive expired references. Public call bounds and existing
 call/result restrictions continue to apply.
 
-Live opaque shared headers conservatively reject mixed bodies containing exclusive
-loans, even when those headers may be unrelated. The next extension must distinguish
-that header marker from genuinely unknown call/input ancestry and prove complete
-predecessor coverage. A rooted path alone is not proof of every incoming path.
-Do not enable exclusive header carriage or weaken explicit opacity as a shortcut.
+Known shared roots may now pass through certified headers in mixed bodies. Genuinely
+unknown call/input ancestry, unrooted demand and exclusive descendants remain gated
+at reset frontiers. Replacing a shared descendant before the edge can end its loan;
+merely dropping the original exclusive holder does not end a retained descendant.
+Exclusive header carriage and weaker explicit opacity are not enabled.
 Nullable/reference-bearing carried initialization and wider value analysis remain
 separate work.
 
@@ -100,8 +123,12 @@ Leave, Boolean invalidation, unrelated-root gates, opaque/unrooted demand and wo
 or malformed-transfer failures. Five native groups exercise accepted output and
 primary rejections in debug/release. The example prints 8 in both profiles.
 
-All ten compiler checks pass: 531 library and 520 native tests, 20 Python tests and
-67 debug/release examples, formatting, Clippy, build and repository contracts.
+Six further source groups, four graph groups and five native groups cover mixed
+headers, inactive nullable paths, nested targets, owner resets, Leave, missing
+entry/backedge coverage, metadata/definition removal, explicit opacity and conflicts.
+
+All ten compiler checks pass: 541 library and 525 native tests, 20 Python tests and
+68 debug/release examples, formatting, Clippy, build and repository contracts.
 Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/backend, reference
 fixtures and dependencies are unchanged; runtime/editor checks were not rerun.
 The full v0.0.1 release remains incomplete.

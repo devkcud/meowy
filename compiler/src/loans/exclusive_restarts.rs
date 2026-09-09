@@ -81,6 +81,7 @@ impl Graph<'_> {
         if reach.len() != self.nodes.len() {
             return Err(Self::budget());
         }
+        let headers = self.shared_restart_headers(reach)?;
         let count = self.values.len();
         self.reserve_authority(count.saturating_mul(5) + self.loans.len().saturating_mul(3))?;
         let mut edges = vec![Vec::new(); count];
@@ -111,7 +112,14 @@ impl Graph<'_> {
             }
             if *entered != FALSE {
                 for value in &node.opaque {
-                    marks[*value] |= OPAQUE;
+                    if !headers.contains(&id)
+                        || node
+                            .header
+                            .as_ref()
+                            .is_none_or(|header| !header.required.contains_key(value))
+                    {
+                        marks[*value] |= OPAQUE;
+                    }
                 }
             }
         }

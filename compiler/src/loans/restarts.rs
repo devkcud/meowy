@@ -52,14 +52,30 @@ impl Graph<'_> {
     ) -> Result<(Node, Guard)> {
         self.charge(source.len() + target.len() + 1)?;
         let mut node = Node::default();
+        if !self.proofs.carried.is_empty() {
+            self.reserve_authority(2)?;
+            node.header = Some(super::restart_headers::Header {
+                required: super::BTreeMap::new(),
+                missing: TRUE,
+            });
+        }
         for value in target.values() {
             self.charge(value.len())?;
             node.defs.extend(value.values().copied());
+            if let Some(header) = &mut node.header {
+                self.reserve_authority(value.len().saturating_mul(2) + 1)?;
+                for id in value.values() {
+                    header.required.insert(*id, FALSE);
+                }
+            }
         }
         let Some(proof) = proof else {
             return Ok((node, TRUE));
         };
         if proof.entered == FALSE {
+            if let Some(header) = &mut node.header {
+                header.missing = FALSE;
+            }
             return Ok((node, FALSE));
         }
         self.charge(proof.values.len() + 1)?;
@@ -92,6 +108,13 @@ impl Graph<'_> {
                 if active == FALSE {
                     continue;
                 }
+                if let Some(header) = &mut node.header
+                    && let Some(target) = value.get(&path)
+                {
+                    self.charge(header.required.len().checked_ilog2().unwrap_or(0) as usize + 1)?;
+                    let required = header.required.get_mut(target).ok_or_else(Self::budget)?;
+                    *required = self.guards.or(*required, active);
+                }
                 match (value.get(&path), current.and_then(|value| value.get(&path))) {
                     (Some(target), Some(source)) => {
                         node.transfers.push((*target, *source, active));
@@ -99,6 +122,9 @@ impl Graph<'_> {
                     _ => missing = self.guards.or(missing, active),
                 }
             }
+        }
+        if let Some(header) = &mut node.header {
+            header.missing = missing;
         }
         Ok((node, missing))
     }

@@ -11,6 +11,7 @@ pub(crate) mod exclusive_restarts;
 pub(crate) mod graph;
 pub(crate) mod init;
 pub(crate) mod permissions;
+pub(crate) mod restart_headers;
 pub(crate) mod restarts;
 pub(crate) mod returns;
 pub(crate) mod solve;

@@ -6,6 +6,34 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Mixed shared-header validation complete
+
+- All ten compiler checks pass: 1066 Rust (541 library, 525 native), 20 Python,
+  68 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Certified headers now coexist with local exclusive carried-scalar loans. Every
+  entry/backedge must cover its active paths; genuine unknown/exclusive ancestry
+  and physical conflicts remain checked. The example prints 1, 2, 8.
+- Next: bounded reference-free record initialization, with separate borrowing/path
+  proofs. Runtime/backend, dependencies, libraries and editor integration unchanged.
+
+### 2026-09-08 - Mixed shared-header focused checks pass
+
+- Formatting and all ten new source/graph groups pass. Coverage includes nullable
+  inactivity, nested targets, owner resets, Leave, missing entry/backedge transfers,
+  explicit opacity, exclusive descendants and physical conflicts.
+- Next: full compiler/native gate, final contracts/evidence and task-only commit.
+
+### 2026-09-08 - Mixed shared-header coverage implementation
+
+- Header lowering now records active-path obligations for every definition.
+  Entry and backedge coverage must agree before header opacity can be refined.
+- Added source/graph/native regressions and an example; validation is pending.
+  Call/input uncertainty, exclusive ancestry and physical conflicts remain checked.
+- The initial patch failed on a rustfmt-compacted example-list context without
+  changing files; the corrected patch applied. Next: focused checks, compiler/native
+  gate, final contracts/evidence and commit. Runtime/backend and dependencies unchanged.
+
 ### 2026-09-08 - Local exclusive carried-scalar validation complete
 
 - All ten compiler checks pass: 1051 Rust (531 library, 520 native), 20 Python,
