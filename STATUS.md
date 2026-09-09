@@ -11,6 +11,15 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- [HTTP](docs/reference/stdlib/http.md), [TLS](docs/reference/stdlib/tls.md) and
+  [checked documentation comments](docs/reference/documentation.md) are now specified.
+  HTTP separates messages, clients, streaming services and typed route policies;
+  docs attach to syntax and reuse compiler types/links/examples. Implementation,
+  protocol qualification and documentation tooling remain unavailable.
+- This is a documentation-only checkpoint. All 1068 local links in 103 Markdown
+  files and Git whitespace checks pass; external links were not fetched by the
+  local checker. Previous compiler/runtime/editor evidence below was not rerun.
+
 - [Mixed shared-header precision](compiler/EXCLUSIVE_RESTARTS.md#certified-shared-headers)
   passes source/graph and native checks. Header metadata
   retains per-definition active-path obligations; every predecessor must cover
@@ -52,7 +61,7 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Current compiler gate: 1066 Rust (541 library, 525 native), 20 Python, 68 examples
+- Last compiler gate, not rerun for these docs: 1066 Rust (541 library, 525 native), 20 Python, 68 examples
   in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
   evidence is preserved: runtime 100 groups/profile with sanitizers and required
   probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
@@ -67,15 +76,23 @@ The full documented v0.0.1 release remains incomplete.
 | --- | --- | --- |
 | Compiler | Whole union-alias assignment, carried scalars and certified mixed shared headers | Reference-free record initialization, list bounds and drop schedules |
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
-| Standard library | Static heap values, failure transport and private string payloads | Error APIs, owning source construction and module loading |
+| Standard library | Existing storage/error work; HTTP/TLS contracts now specified, not implemented | Module/ownership prerequisites, protocol fixtures and TLS provider qualification |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
-| Editor | Vim/Neovim files and regression checks exist | Shared analysis service, then LSP integration |
-| Developer tools | Combined repository/editor/compiler/runtime verification works | CI/bootstrap environment and complete library/tool coverage |
+| Editor | Vim/Neovim files and regression checks exist; doc fences are newly specified | Doc-fence highlighting, shared documentation model and LSP integration |
+| Developer tools | Combined verification exists; doc commands are specified, not implemented | Checked doc attachment/links/examples and safe local publication |
 | Distribution | Host-only native bootstrap | Bundled sysroot, reproducibility and minimum-host qualification |
 
 ## Next steps
 
-1. Prove declared reference-free record-slot initialization across inner restarts,
+1. Bring lexer/editor handling into agreement with the new documentation fences,
+   then add structural attachment, semantic links and checked example units. Do not
+   count ordinary-comment tokenization as documentation support. Assign diagnostics
+   and any public artifact schemas before advertising the tooling.
+2. Plan HTTP/TLS implementation against source ownership, module and runtime support:
+   parser/serializer fixtures first, explicit memory/transport limits, qualified TLS,
+   then clients/services and closed route policies. Protocol execution needs its own
+   evidence; the new chapters are contracts, not completed libraries.
+3. Resume the compiler's declared reference-free record-slot initialization across inner restarts,
    using bounded shapes and full-slot availability before widening scalar-only
    eligibility. Keep nullable/union/reference-bearing carried initialization gated;
    qualify storage borrowing and exclusive projections separately. Preserve certified
@@ -91,12 +108,12 @@ The full documented v0.0.1 release remains incomplete.
    and allocator-only bounds need separate proofs. Preserve both tag domains, old
    copies, transient cell lifetime and RHS effects. Lists need bounded summaries;
    dynamic origins and [owning cleanup](compiler/OWNING_HIR.md) follow.
-2. Add richer source identities and diagnostic evidence/artifacts; current bounded
+4. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
-3. Extend aggregate/emitted-name/cross-element constraints in the list-context
+5. Extend aggregate/emitted-name/cross-element constraints in the list-context
    modules without replay or stale facts. Build the manifest/module graph for Meowy
    libraries and documented projects; keep runtime/editor/library progress visible.
-4. Preserve current compiler evidence; do not rerun green checks without a new change
+6. Preserve current compiler evidence; do not rerun green checks without a new change
    or concern. Run `python3 -B tools/verify.py --all` after wider integrations. LSan
    needs process inspection. Strict conformance still has 13 unsupported cases;
    this bootstrap gate and host do not qualify a complete v0.0.1 release.

@@ -6,6 +6,21 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - HTTP/TLS and documentation reference checkpoint
+
+- User paused compiler feature work to fill HTTP and documentation-contract gaps.
+  Specified independent HTTP layers and typed response policies, a TLS prerequisite,
+  and documentation fences/attachments/links/examples without duplicated types.
+- Added CLI/LSP and implementation-plan integration. No compiler code, reference
+  fixtures, dependencies, numeric diagnostic assignments or artifact schemas changed.
+- Documentation validation passes: 1068 local links in 103 Markdown files and Git
+  whitespace checks. External links were not fetched by the local checker. The prior
+  compiler gate remains 1066 Rust and 68 native examples; no compiler/runtime/editor
+  gates or executable doc examples were rerun.
+- Next: lexer/editor doc-fence support, semantic metadata and example checking;
+  HTTP/TLS require separate source/runtime/provider qualification. Preserve the
+  bounded record-slot initialization handoff after this documentation-first work.
+
 ### 2026-09-08 - Mixed shared-header validation complete
 
 - All ten compiler checks pass: 541 library + 525 native (1066 Rust), 20 Python,

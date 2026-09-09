@@ -290,6 +290,20 @@ tests is not enough to qualify their interaction.
 
 ## Standard library, tools, and failures share the compiler
 
+[Documentation comments](docs/reference/documentation.md) retain source trivia,
+declaration attachment, resolved links and example source maps in this shared
+pipeline. Signatures and ownership facts come from analysis, not prose tags.
+Rendering/LSP never execute examples; explicit doc checks reuse test-process
+machinery. Assign diagnostics and register any public index schema before claiming
+compatible documentation tooling.
+
+[HTTP](docs/reference/stdlib/http.md) adds independent message/client/server/codec
+layers and closed route/response-policy construction, reusing JSON owners and
+existing I/O/task lifetimes. [TLS](docs/reference/stdlib/tls.md) needs a qualified
+provider and explicit trust/identity/resource policy. Parser, transport, cancellation,
+wire-version and generated-schema gates are separate from compiler/documentation
+checks. Neither library is implemented by specifying its API.
+
 Build ordinary algorithms in Meowy: errors, inline collections, formatting,
 duration arithmetic, then allocated collections and I/O wrappers. Add tasks and
 channels once the runtime passes its gates. Layer testing, JSON, CLI composition,

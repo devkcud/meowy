@@ -6,6 +6,20 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - HTTP, TLS and checked documentation contracts
+
+- Added a broad HTTP contract for messages, clients, streaming services, codecs,
+  typed routes, middleware and total response policies. TLS has a separate trust,
+  identity, ownership, resource and provider-qualification contract.
+- Added structurally attached documentation fences, checked links, compiler-derived
+  signatures and explicitly executed examples; connected syntax, CLI, LSP and indexes.
+- Documentation only. All 1068 local links in 103 Markdown files and Git whitespace
+  checks pass; external links were not fetched by that checker. No compiler/native/
+  runtime/editor execution or HTTP/TLS qualification ran. Previous 1066 Rust/68 examples remains
+  the last compiler gate, with 13 conformance cases unsupported.
+- Next: doc lexer/editor agreement and semantic tooling, then independent HTTP/TLS
+  implementation planning. The record-initialization compiler handoff is preserved.
+
 ### 2026-09-08 - Mixed shared-header validation complete
 
 - All ten compiler checks pass: 1066 Rust (541 library, 525 native), 20 Python,

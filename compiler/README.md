@@ -181,6 +181,13 @@ Reference-bearing, nullable or inferred carried slots remain unavailable;
 effectful Boolean results may prevent proof.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
+The newer [HTTP](../docs/reference/stdlib/http.md), [TLS](../docs/reference/stdlib/tls.md)
+and [documentation comment](../docs/reference/documentation.md) contracts are not
+bootstrap features. The lexer may treat a simple documentation-looking block as
+an ordinary comment; that is not correct doc-fence recognition, attachment, link
+checking or example execution. `meowy doc` and these network libraries remain
+unimplemented. Their reference examples are not included in the native-example count.
+
 The native tools are resolved at the explicit `/usr/bin/` paths in `build.rs`;
 LLVM development headers/libraries and the host C/C++ development environment
 must be installed. The Rust workspace has no external crate dependencies.

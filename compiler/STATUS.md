@@ -5,6 +5,8 @@ coherent feature, fix, refactor or other concern, ordered by dependency, unless 
 user requests otherwise. Unrelated changes stay outside those commits.
 
 Updated: 2026-09-08. Mixed shared-header precision verified.
+Documentation-first checkpoint: HTTP/TLS and checked documentation comments are
+specified but unimplemented. No compiler code changed or compiler gate reran.
 Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
@@ -39,6 +41,16 @@ This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider pro
 Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
+
+The new [documentation contract](../docs/reference/documentation.md) defines
+matching fences, structural attachment, semantic links and checked examples.
+[HTTP](../docs/reference/stdlib/http.md) and [TLS](../docs/reference/stdlib/tls.md)
+specify separate protocol/library work, including typed response policies and
+explicit owners/limits. These are not supported compiler or runtime features.
+Simple doc-looking text accepted as an ordinary comment proves no doc semantics.
+Local documentation validation passes: 1068 links in 103 Markdown files and Git
+whitespace checks. Compiler/native/runtime/editor evidence below is preserved,
+not rerun; no executable documentation-example or HTTP/TLS qualification is claimed.
 
 `loans/restart_headers.rs` records and audits required active-path coverage for
 every header definition. Entry/backedge key sets must agree, required transfers
@@ -671,7 +683,14 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Prove declared reference-free record-slot initialization in `borrow/carried.rs`,
+1. Implement doc-fence recognition and source-map preservation before attachment
+   and semantic-link checking. Follow the new reference; update editor coverage and
+   assigned diagnostics. Do not silently treat extended fences as ordinary comments
+   or report unchecked examples as validated.
+2. Keep HTTP/TLS execution gated until module, ownership and runtime prerequisites
+   and independent protocol/provider tests exist. Route schemas, error policies,
+   JSON owners and generated clients must share one checked contract.
+3. Resume declared reference-free record-slot initialization in `borrow/carried.rs`,
    `check/statements.rs` and `loans/emission_init.rs` before widening scalar-only
    eligibility. Require bounded shapes and full-slot availability; keep nullable,
    union and reference-bearing carried slots gated. Qualify record storage borrowing
@@ -689,13 +708,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
    Preserve lexical/backing tag domains, shared retagging, old copies, transient
    lifetime and RHS effects. Lists need bounded summaries; dynamic origins and
    [OWNING_HIR.md](OWNING_HIR.md) cleanup schedules follow those proofs.
-2. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
+4. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.
-3. Build the manifest/module graph and initial Meowy library layer; implement
+5. Build the manifest/module graph and initial Meowy library layer; implement
    required evaluation and specialization before enabling their reference fixtures.
    Continue root runtime/editor/library tracking alongside compiler work.
-4. Extend diagnostic source identities and evidence without treating bootstrap
+6. Extend diagnostic source identities and evidence without treating bootstrap
    byte-span text as a complete replay artifact. Run the combined repository gate
    after wider integrations; preserve current compiler evidence until code changes.
    Strict conformance still requires zero unsupported cases; this host does not
