@@ -8,6 +8,15 @@ Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Current compiler slice
 
+The [borrow syntax migration](BORROW_SYNTAX.md) now takes priority over wider
+carried slots. Approved rules distinguish receiver borrowing (`&object.field`)
+from selected-field borrowing (`object.&field`), with grouping for complete indexed
+places. Prefix chains inherit the borrow's postfix boundary; groups reset it.
+The old parser is preserved under `/tmp/meowy-borrow-migration` for migration
+inspection. Root owns source-string migration and STATUS; delegated work owns
+grammar, documentation/standalone sources and native/editor acceptance tests.
+No migration tests have run yet; the recorded gate below is the preceding baseline.
+
 `loans/exclusive_restarts.rs::exclusive_restart_source` now follows exact mutable
 record fields from the containing carried slot to a Boolean/integer/float leaf.
 Canonical owner/root/view and empty origin-component checks remain mandatory;
@@ -93,6 +102,11 @@ public artifact/replay formats and release qualification remain separate work.
 Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
+
+1. Follow [BORROW_SYNTAX.md](BORROW_SYNTAX.md): implement/test the parser, migrate
+   old intent with exact grouping or selected-field forms, qualify new native and
+   editor distinctions, then run `tools/verify.py --compiler`. No legacy mode is
+   needed. Keep prior carried-slot work below deferred until the migration passes.
 
 1. Investigate fixed-capacity reference-free carried list slots in
    `borrow/carried.rs`, `check/statements.rs` and `loans/emission_init.rs`.

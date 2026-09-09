@@ -290,6 +290,10 @@ tests is not enough to qualify their interaction.
 
 ## Documentation completion slice
 
+The active [borrow syntax migration](compiler/BORROW_SYNTAX.md) specifies tighter
+prefix borrowing, selected-field `.&`/`.&!` and the repository migration/test plan.
+Complete that grammar transition before resuming wider carried-slot capabilities.
+
 Completed for the standalone bootstrap profile on 2026-09-09: attachment, checked
 links/signatures, doc check/build, basic safe API pages and checked/opt-in examples.
 Compiler/native and editor gates passed. The broader package/LSP/assets/index-format

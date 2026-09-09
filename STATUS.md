@@ -7,6 +7,13 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+The approved [borrow syntax migration](compiler/BORROW_SYNTAX.md) is active.
+Prefix borrows bind before following selection/indexing; `object.&field` and
+`object.&!field` borrow selected storage. Existing source intent must be preserved
+through grouping or dotted borrowing. The old parser has been copied for migration
+inspection; grammar, native and editor tests are being added. The validation below
+is the preceding carried-record baseline, not evidence for this migration yet.
+
 Local exclusive borrows of Boolean, integer and float fields in carried records
 are implemented and passed the compiler gate. Exact mutable field paths use the
 existing containing-slot initialization and storage-lifetime proofs. Exclusive
@@ -56,6 +63,11 @@ not executable implementations.
 | Runtime and release | Bootstrap evidence is not minimum-platform, bundled-distribution or full v0.0.1 qualification. |
 
 ## Next steps
+
+1. Complete the grammar, source migration and focused/native/editor tests in
+   [the migration plan](compiler/BORROW_SYNTAX.md), then run the compiler gate.
+   Root is the sole STATUS writer. The wider carried-slot work below is deferred
+   until this transition passes.
 
 1. Investigate declared fixed-capacity, reference-free carried list slots through
    `compiler/src/borrow/carried.rs`, `compiler/src/check/statements.rs` and
