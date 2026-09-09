@@ -6,10 +6,10 @@ use crate::flow::{FALSE, Flow, TRUE};
 #[test]
 pub(crate) fn fixed_published_results_allow_writes_before_and_after_inner_restarts() {
     for source in [
-        "x:=1;y:2;n:=0;r:{->p:=&x;p=&y;'loop{x=3;n=n+1;|n<2|'loop.restart()}};v:*r.p",
-        "x:=1;y:2;n:=0;r:{->p:=&x;'loop{x=3;n=n+1;|n<2|'loop.restart()};p=&y};v:*r.p",
-        "x:1;y:2;n:=0;r:'out{{'out->p:=&x;p=&y};'loop{n=n+1;|n<2|'loop.restart()}};v:*r.p",
-        "x:1;y:2;n:=0;r:{'loop{n=n+1;|n<2|'loop.restart()};->p:=&x;p=&y};v:*r.p",
+        "x:=1;y:2;n:=0;r:{->p:=&x;p=&y;'loop{x=3;n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
+        "x:=1;y:2;n:=0;r:{->p:=&x;'loop{x=3;n=n+1;|n<2|'loop.restart()};p=&y};v:*(r.p)",
+        "x:1;y:2;n:=0;r:'out{{'out->p:=&x;p=&y};'loop{n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
+        "x:1;y:2;n:=0;r:{'loop{n=n+1;|n<2|'loop.restart()};->p:=&x;p=&y};v:*(r.p)",
     ] {
         accepts(source);
     }
@@ -21,7 +21,7 @@ pub(crate) fn fixed_published_headers_keep_nested_fields_and_both_union_domains(
         "x:1;y:2;n:=0;r:{->c:={->p:=&x;->q:=&y};c.p=&y;'loop{n=n+1;|n<2|'loop.restart()};c.q=&x};copy:r",
         "<R>:<{p<&int32><null><string>:=}>;x:1;y:2;n:=0;r<R>:{->p<&int32><null>:=&x;p=&y;'loop{n=n+1;|n<2|'loop.restart()};p=null};copy:r",
         "x:1;y:2;flag:=true;n:=0;r:'out{|flag|{'out->p:=&x;p=&y};'loop{n=n+1;|n<2|'loop.restart()}};copy:r",
-        "x:1;y:2;n:=0;m:=0;r:{->p:=&x;p=&y;'outer{m=0;'inner{m=m+1;|m<2|'inner.restart()};n=n+1;|n<2|'outer.restart()}};v:*r.p",
+        "x:1;y:2;n:=0;m:=0;r:{->p:=&x;p=&y;'outer{m=0;'inner{m=m+1;|m<2|'inner.restart()};n=n+1;|n<2|'outer.restart()}};v:*(r.p)",
     ] {
         accepts(source);
     }
@@ -29,9 +29,9 @@ pub(crate) fn fixed_published_headers_keep_nested_fields_and_both_union_domains(
 
 #[test]
 pub(crate) fn fixed_published_headers_preserve_rhs_restarts_and_leave_effects() {
-    accepts("x:1;y:2;n:=0;r:{->p:=&x;p={'loop{v:*p;n=n+1;|n<2|'loop.restart()};->&y}};v:*r.p");
+    accepts("x:1;y:2;n:=0;r:{->p:=&x;p={'loop{v:*p;n=n+1;|n<2|'loop.restart()};->&y}};v:*(r.p)");
     accepts(
-        "x:1;y:2;n:=0;r:'out{->p:=&x;p={p=&y;'loop{v:*p;n=n+1;|n<2|'loop.restart()};'out.leave();->&x}};v:*r.p",
+        "x:1;y:2;n:=0;r:'out{->p:=&x;p={p=&y;'loop{v:*p;n=n+1;|n<2|'loop.restart()};'out.leave();->&x}};v:*(r.p)",
     );
     accepts("x:1;y:2;n:=0;r:{->p:=&x;p={'loop{p=&y;n=n+1;|n<2|'loop.restart()};->&x}}");
 }
@@ -39,15 +39,15 @@ pub(crate) fn fixed_published_headers_preserve_rhs_restarts_and_leave_effects() 
 #[test]
 pub(crate) fn fixed_published_headers_preserve_owner_cell_and_old_copy_loans() {
     for source in [
-        "x:1;y:=2;n:=0;r:{->p:=&x;p=&y;'loop{y=3;n=n+1;|n<2|'loop.restart()}};v:*r.p",
+        "x:1;y:=2;n:=0;r:{->p:=&x;p=&y;'loop{y=3;n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
         "x:=1;y:2;n:=0;r:{->p:=&x;old:p;p=&y;'loop{x=3;n=n+1;|n<2|'loop.restart()};v:*old}",
         "x:1;y:2;n:=0;r:{->p:=&x;cell:&p;'loop{n=n+1;|n<2|'loop.restart()};p=&y;v:**cell}",
-        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=0;r:{->p:=&x;p=first(&x,&s);'loop{s=\"b\";n=n+1;|n<2|'loop.restart()}};v:*r.p",
+        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=0;r:{->p:=&x;p=first(&x,&s);'loop{s=\"b\";n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
     ] {
         rejects(source, "E302");
     }
     rejects(
-        "x:1;n:=0;r:{->p:=&x;local:2;p=&local;'loop{n=n+1;|n<2|'loop.restart()}};v:*r.p",
+        "x:1;n:=0;r:{->p:=&x;local:2;p=&local;'loop{n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
         "E303",
     );
 }
@@ -89,7 +89,7 @@ pub(crate) fn fixed_published_planning_uses_the_write_scope_and_validated_ancest
 #[test]
 pub(crate) fn fixed_published_snapshots_detect_changed_sources_roles_and_missing_slots() {
     let (facts, mut flow) = super::published::analyze(
-        "x:1;y:2;n:=0;r:{->p:=&x;p=&y;'loop{n=n+1;|n<2|'loop.restart()}};v:*r.p",
+        "x:1;y:2;n:=0;r:{->p:=&x;p=&y;'loop{n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
     );
     let (id, targets) = facts.fixed_published.iter().next().unwrap();
     let initial = &facts.published_inputs[id];

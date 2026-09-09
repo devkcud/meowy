@@ -11,7 +11,7 @@ debug.print(&first == &second)
 
 handles := [first, second]
 index := 1
-view : &handles[index]
+view : &(handles[index])
 selected : *view
 handles[index] = memory.heap
 

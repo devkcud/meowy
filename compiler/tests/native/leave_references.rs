@@ -154,7 +154,7 @@ record<null>:(flag<boolean>){
         |flag|{p=&b;'out->view:p;'out->count:2;'out.leave()}
         ->view:p;->count:1
     }
-    d.print(*result.view);d.print(result.count)
+    d.print(*(result.view));d.print(result.count)
 }
 record(false);record(true)
 "#,

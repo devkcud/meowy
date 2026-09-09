@@ -186,7 +186,7 @@ answer : !{ -> add(2, 3) }
 debug.print(answer)  # 5 #
 
 buffer := bytes.filled<4>(0)
-!{ fill(memory.address_mut(&!buffer[1]), buffer.size()) }
+!{ fill(memory.address_mut(&!(buffer[1])), buffer.size()) }
 debug.print(buffer[4])  # 3 #
 -> 0
 ```

@@ -33,7 +33,7 @@ impl Parser {
         if multiline {
             self.newlines();
         }
-        let mut left = self.prefix(condition, multiline, pipe)?;
+        let mut left = self.prefix(min, condition, multiline, pipe)?;
         loop {
             if !bounded_tree(&left) {
                 return Err(Diagnostic::unsupported(
@@ -97,6 +97,21 @@ impl Parser {
                         ExprKind::DispatchBlock {
                             value: Box::new(left),
                             block,
+                        }
+                    } else if self.at("&") || self.at("&!") || self.at("*") {
+                        let op = self.bump().text;
+                        self.newlines();
+                        let name = self.name()?.text;
+                        let field = Expr {
+                            kind: ExprKind::Field {
+                                value: Box::new(left),
+                                name,
+                            },
+                            span: Span::new(start, self.end()),
+                        };
+                        ExprKind::Unary {
+                            op,
+                            value: Box::new(field),
                         }
                     } else {
                         ExprKind::Field {
@@ -191,6 +206,7 @@ impl Parser {
 
     pub(crate) fn prefix(
         &mut self,
+        min: u8,
         condition: bool,
         multiline: bool,
         pipe: bool,
@@ -270,7 +286,12 @@ impl Parser {
                 }
                 "!" | "-" | "~" | "*" | "&" | "&!" | ">>" | "<<" => {
                     self.newlines();
-                    let value = self.expr(90, condition, multiline, pipe)?;
+                    let level = if matches!(token.text.as_str(), "&" | "&!" | "*") {
+                        101
+                    } else {
+                        min.max(90)
+                    };
+                    let value = self.expr(level, condition, multiline, pipe)?;
                     ExprKind::Unary {
                         op: token.text,
                         value: Box::new(value),

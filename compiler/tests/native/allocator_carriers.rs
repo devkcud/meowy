@@ -12,17 +12,17 @@ y:=2
 r:={->h:=m.heap;->p:&x;->n:=0}
 old:r
 r.n={r={->h:=m.heap;->p:&y;->n:=7};->8}
-d.print(*old.p)
+d.print(*(old.p))
 x=3
 r.h=f(&x)
 x=4
 copy:r.h
-d.print(*r.p)
+d.print(*(r.p))
 d.print(r.n)
 'out{
     r.n={r={->h:=m.heap;->p:&x;->n:=9};'out.leave();->10}
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(r.n)
 "#,
     )
@@ -61,7 +61,7 @@ r:={->h:m.heap;->p<&int32><null>:null}
 n:=0
 'loop{
     |r.p<null>|{copy:r.p;d.print("empty")}
-    |r.p<&int32>|d.print(*r.p)
+    |r.p<&int32>|d.print(*(r.p))
     n=n+1
     |n==1|r={->h:m.heap;->p<&int32><null>:&x}
     |n==2|r={->h:m.heap;->p<&int32><null>:null}

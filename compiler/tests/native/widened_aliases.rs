@@ -12,7 +12,7 @@ x:7
 y:9
 a:make(&x,&y,true)
 b:make(&x,&y,false)
-|a.p<&int32>|d.print(*a.p)
+|a.p<&int32>|d.print(*(a.p))
 |b.p<null>|{copy:b.p;d.print("empty")}
 "#,
     )
@@ -34,8 +34,8 @@ a:"before"
 b:"after"
 one:make(&x,&y,&a,&b,true)
 two:make(&x,&y,&a,&b,false)
-|one.p<&int32>|d.print(*one.p)
-|two.p<&string>|d.print(*two.p)
+|one.p<&int32>|d.print(*(one.p))
+|two.p<&string>|d.print(*(two.p))
 "#,
     )
     .runs(b"2\nafter\n");
@@ -58,7 +58,7 @@ r:'out{
         c.p={c.q=&y;'out.leave();->&x}
     }
 }
-|r.c<C>|{d.print(*r.c.p);d.print(*r.c.q);d.print(r.c.n)}
+|r.c<C>|{d.print(*(r.c.p));d.print(*(r.c.q));d.print(r.c.n)}
 <H>:<{p<&int32><null>:=}>
 s:'out{|flag|{'out->c:={->p<&int32><null>:=&x};c.p=null;|c.p<null>|d.print("local null")}}
 |s.c<H>|{|s.c.p<null>|d.print("result null")}
@@ -87,7 +87,7 @@ r:'loop{
     |n<2|'loop.restart()
 }
 x=3
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 d.print(x)
 "#,
     )
@@ -102,7 +102,7 @@ pub fn widened_alias_loans_lifetimes_and_union_view_gates_are_checked() {
             "E302",
         ),
         (
-            "x:1;y:=2;flag:=true;r:'out{|flag|{'out->p:=&x;p=&y}};y=3;|r.p<&int32>|{v:*r.p}",
+            "x:1;y:=2;flag:=true;r:'out{|flag|{'out->p:=&x;p=&y}};y=3;|r.p<&int32>|{v:*(r.p)}",
             "E302",
         ),
         (

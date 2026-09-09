@@ -171,7 +171,7 @@ pub(crate) fn short_circuits_and_leaves_preserve_only_actual_parent_predecessors
 #[test]
 pub(crate) fn field_accesses_resolve_to_the_same_region_through_distinct_views() {
     inspect(
-        "a:={->n:=1};p:&a;q:&p.n;v:a.n;w:p.n;z:*q",
+        "a:={->n:=1};p:&a;q:&(p.n);v:a.n;w:p.n;z:*q",
         |graph, reach| {
             let regions = graph.nodes.iter().zip(reach).filter_map(|(node, guard)| {
             let access = node.access.as_ref()?;
@@ -262,7 +262,7 @@ pub(crate) fn restart_bodies_keep_static_sites_opaque_and_retain_expired_sources
 #[test]
 pub(crate) fn restart_region_gaps_are_explicit_without_promoting_bounds_to_origins() {
     inspect(
-        "<H>:<{view<&int32><null>}>;make<H>:(p<&int32>,text<&string>){->view:p};a:1;text:=\"old\";full:make(&a,&text);empty<H>:{};p:=&full;copy:*p;i:=0;'loop{p=&empty;i=i+1;|i<2|'loop.restart()};|copy.view<&int32>|v:*copy.view<&int32>",
+        "<H>:<{view<&int32><null>}>;make<H>:(p<&int32>,text<&string>){->view:p};a:1;text:=\"old\";full:make(&a,&text);empty<H>:{};p:=&full;copy:*p;i:=0;'loop{p=&empty;i=i+1;|i<2|'loop.restart()};|copy.view<&int32>|v:*(copy.view<&int32>)",
         |graph, _| {
             let access = graph
                 .nodes
@@ -301,7 +301,7 @@ pub(crate) fn restart_region_gaps_are_explicit_without_promoting_bounds_to_origi
 #[test]
 pub(crate) fn contained_references_keep_their_loan_when_the_carrier_is_copied() {
     inspect(
-        "a:1;copy:{holder:{->view:&a};outer:&holder;->*outer};v:*copy.view",
+        "a:1;copy:{holder:{->view:&a};outer:&holder;->*outer};v:*(copy.view)",
         |graph, reach| {
             let values = reads(graph, reach);
             assert_eq!(values.len(), 2);

@@ -13,4 +13,4 @@ r:'out{
         d.print(*old)
     }
 }
-d.print(*r.p)
+d.print(r.*p)

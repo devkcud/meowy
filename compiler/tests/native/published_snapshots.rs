@@ -12,7 +12,7 @@ r:'out{
     {'out->p:=&x;p={n=n+1;->&y}}
     probe:{}
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(n)
 "#,
     )
@@ -33,7 +33,7 @@ r:'out{
     'loop{q=&y;n=n+1;|n<2|'loop.restart()}
     d.print(*q)
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 "#,
     )
     .runs(b"9\n7\n");

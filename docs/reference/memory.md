@@ -76,10 +76,34 @@ exclusive references exclude all other access to the same storage until their
 last use. Field access through a reference projects a reference or copies a
 copyable field. It never moves a resource out of borrowed storage.
 
+`object.&field` borrows the selected field; `object.&!field` borrows it
+exclusively. These mean `&(object.field)` and `&!(object.field)`, respectively.
+For an element, write `&(items[index])` or `&!(items[index])`. The complete
+selected place retains the collection's existing evaluation, bounds and loan
+rules. A selected-field borrow evaluates its receiver once.
+
+Prefix borrowing happens before following field selection or indexing:
+`&object.field` selects a field through `&object`, and `&items[index]` indexes
+through `&items`. Selecting a copyable value this way may copy it; an explicit
+borrow of the selected storage produces a reference. `object.&inner.field`
+borrows `inner` before selecting `field`; `object.inner.&field` borrows the final
+field. These groupings do not relax storage, mutability or lifetime requirements,
+or enable an otherwise unsupported compiler capability. See
+[operator precedence](syntax.md#operators-and-evaluation-order).
+
 `*reference` accesses a safe reference's referent. In a copyable value context it
 copies the value; in a predicate, field access, borrow, or formatting context it
 inspects the borrowed place. It cannot move a non-copyable owner out of a reference.
 Raw pointers use the explicitly unsafe memory operations instead.
+
+Dereferencing follows the same prefix boundary as borrowing: `*object.field`
+means `(*object).field`, while `object.*field` means `*(object.field)`.
+`*items[index]` indexes a dereferenced list; `*(items[index])` dereferences the
+selected element. To dereference a returned reference, write `*(get())`.
+An ascription of the reference belongs inside that grouping, as in
+`*(value<&int32>)`; `*value<&int32>` ascribes the dereferenced result instead.
+The field modifier evaluates its receiver once and preserves ordinary reference
+permissions, storage lifetimes and compiler capability checks.
 
 Borrowing a field can be disjoint from borrowing another field when the checker
 can prove their storage does not overlap. A dynamic index is conservatively
@@ -143,6 +167,8 @@ A borrow of a temporary can be used during that statement. Storing the borrow
 does not extend the temporary's lifetime into later statements. There is no
 initializer-specific lifetime extension or automatic promotion to static storage;
 constant folding cannot turn an otherwise invalid borrow into valid source.
+`&(make())` explicitly borrows a call result; `&make()` instead calls through a
+borrow of `make`. Borrowing the result does not extend its temporary lifetime.
 
 ```meowy
 bytes : @"bytes"

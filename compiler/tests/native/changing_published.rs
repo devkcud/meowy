@@ -15,7 +15,7 @@ r:{
     d.print(*old)
     x=3
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(x)
 "#,
     )
@@ -38,7 +38,7 @@ r<R>:{
         |p<&int32>|d.print(*p)
     }
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 n=0
 s<R>:{->p<&int32><null>:=&x;'loop{p=null;n=n+1;|n<2|'loop.restart()}}
 x=8
@@ -59,15 +59,15 @@ n:=0
 r:{
     ->c:={->p:=&x;->q:=&y;->n:=0}
     'loop{
-        d.print(*c.p)
+        d.print(*(c.p))
         c.p={d.print("rhs");c.q=&x;->&y}
         c.n=c.n+1
         n=n+1
         |n<2|'loop.restart()
     }
 }
-d.print(*r.c.p)
-d.print(*r.c.q)
+d.print(*(r.c.p))
+d.print(*(r.c.q))
 d.print(r.c.n)
 "#,
     )
@@ -86,13 +86,13 @@ r:'out{
     ->p:=&x
     'loop{p={d.print("rhs");p=&y;n=n+1;|n<2|'loop.restart();'out.leave();->&x}}
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(n)
 n=0
 s:{->p:=&x;'middle{'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'middle.leave()}}}
-d.print(*s.p)
+d.print(*(s.p))
 t:'out{{'out->p:=&x;'loop{p=&y;n=n+1;|n<4|'loop.restart()}}}
-d.print(*t.p)
+d.print(*(t.p))
 "#,
     )
     .runs(b"rhs\nrhs\n2\n2\n2\n2\n");
@@ -119,11 +119,11 @@ r:{
         |n<2|'outer.restart()
     }
 }
-d.print(*r.p)
+d.print(*(r.p))
 a:&x
 b:&y
 s:{->p:=&a;'loop{p=&b;n=n+1;|n<4|'loop.restart()}}
-d.print(**s.p)
+d.print(*(*(s.p)))
 "#,
     )
     .runs(b"1\n3\n3\n2\n");
@@ -146,7 +146,7 @@ x:7
 y:9
 a:make(true,&x,&y)
 b:make(false,&x,&y)
-|a.p<&int32>|d.print(*a.p)
+|a.p<&int32>|d.print(*(a.p))
 |b.p<string>|d.print(b.p)
 "#,
     )
@@ -157,7 +157,7 @@ b:make(false,&x,&y)
 pub fn changing_published_loans_expiry_and_initialization_gates_remain_checked() {
     for (source, code) in [
         (
-            "x:1;y:=2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};y=3;v:*r.p",
+            "x:1;y:=2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};y=3;v:*(r.p)",
             "E302",
         ),
         (
@@ -165,11 +165,11 @@ pub fn changing_published_loans_expiry_and_initialization_gates_remain_checked()
             "E302",
         ),
         (
-            "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*r.p",
+            "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*(r.p)",
             "E303",
         ),
         (
-            "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&2;'loop.restart()}}};v:*r.p",
+            "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&2;'loop.restart()}}};v:*(r.p)",
             "E303",
         ),
         (

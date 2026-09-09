@@ -211,7 +211,7 @@ values=[20,30]
 d.print(values.size())
 <Row>:<{values<int32[3]>}>
 row<Row>:={->values:[4]}
-field:&row.values
+field:&(row.values)
 d.print((*field)[1])
 row={->values:[5,6]}
 d.print(row.values[2])

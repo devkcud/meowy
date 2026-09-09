@@ -16,10 +16,10 @@ r:{
     d.print(*old)
     x=3
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(x)
 s:{->p:=&x;'loop{n=n+1;|n<4|'loop.restart()};p=&y}
-d.print(*s.p)
+d.print(*(s.p))
 "#,
     )
     .runs(b"2\n2\n1\n2\n3\n2\n");
@@ -34,12 +34,12 @@ x:1
 y:2
 n:=0
 r:{->p:=&x;p={'loop{d.print(*p);n=n+1;|n<2|'loop.restart()};->&y}}
-d.print(*r.p)
+d.print(*(r.p))
 s:'out{
     ->p:=&x
     p={p=&y;'loop{d.print(*p);n=n+1;|n<4|'loop.restart()};'out.leave();->&x}
 }
-d.print(*s.p)
+d.print(*(s.p))
 d.print(n)
 "#,
     )
@@ -67,7 +67,7 @@ y:9
 a:make(true,&x,&y)
 b:make(false,&x,&y)
 c:optional(false,&x,&y)
-|a.p<&int32>|d.print(*a.p)
+|a.p<&int32>|d.print(*(a.p))
 |b.p<string>|d.print(b.p)
 |c.p<null>|d.print("absent")
 "#,
@@ -79,7 +79,7 @@ c:optional(false,&x,&y)
 pub fn fixed_published_source_lifetimes_and_initialization_remain_checked() {
     for (source, code) in [
         (
-            "x:1;y:=2;n:=0;r:{->p:=&x;p=&y;'loop{y=3;n=n+1;|n<2|'loop.restart()}};v:*r.p",
+            "x:1;y:=2;n:=0;r:{->p:=&x;p=&y;'loop{y=3;n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
             "E302",
         ),
         (
@@ -87,11 +87,11 @@ pub fn fixed_published_source_lifetimes_and_initialization_remain_checked() {
             "E302",
         ),
         (
-            "x:1;n:=0;r:{->p:=&x;local:2;p=&local;'loop{n=n+1;|n<2|'loop.restart()}};v:*r.p",
+            "x:1;n:=0;r:{->p:=&x;local:2;p=&local;'loop{n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
             "E303",
         ),
         (
-            "x:1;y:2;n:=0;r:'out{'loop{'out->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()}};v:*r.p",
+            "x:1;y:2;n:=0;r:'out{'loop{'out->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()}};v:*(r.p)",
             "B001",
         ),
         (

@@ -9,4 +9,4 @@ r<R>:{
     |view<null>|d.print("clear")
     view=&x
 }
-|r.view<&int32>|d.print(*r.view)
+|r.view<&int32>|d.print(r.*view)

@@ -10,5 +10,5 @@ r:'loop{
     |n<2|'loop.restart()
 }
 x=8
-d.print(*r.view)
+d.print(r.*view)
 d.print(x)

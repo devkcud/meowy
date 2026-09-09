@@ -47,7 +47,7 @@ pub(crate) fn guarded_alias_views_share_target_storage_and_keep_distinct_loans()
 #[test]
 pub(crate) fn projected_alias_views_keep_canonical_fields_and_target_scope() {
     inspect_body(
-        "f<null>:(flag<boolean>){r:'out{|flag|{'out->row:={->inner:={->n:=1}};p:&!row.inner.n;v:*p};|!flag|{'out->row:={->inner:={->n:=2}};p:&!row.inner.n;v:*p}}}",
+        "f<null>:(flag<boolean>){r:'out{|flag|{'out->row:={->inner:={->n:=1}};p:&!(row.inner.n);v:*p};|!flag|{'out->row:={->inner:={->n:=2}};p:&!(row.inner.n);v:*p}}}",
         Some(0),
         |graph, reach| {
             graph.solve_authority(reach).unwrap();

@@ -141,7 +141,7 @@ describe <null> : (failure <input.InvalidText><ports.InvalidPort>) 'result {
     | failure <input.InvalidText> | {
         details : failure.payload()
         debug.print("Unparsed input: {details.text}")
-        cause : &details.cause
+        cause : details.&cause
         | *cause <strings.ParseError> | {
             debug.print("Cause: strings.ParseError")
         }

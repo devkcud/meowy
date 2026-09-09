@@ -4,7 +4,7 @@ result:'target{
     view:{'target->count:7;->&count}
     debug.print(*view)
     ->items<int32[3]>:[1,2]
-    item:&items[2]
+    item:&(items[2])
     debug.print(*item)
     ->enabled:true
     |enabled|debug.print("ready")

@@ -23,7 +23,7 @@ pub(crate) fn allocator_carriers_replace_physical_and_lifetime_sources() {
 #[test]
 pub(crate) fn allocator_carriers_select_live_fields_and_repair_bounds() {
     accepts(&format!(
-        "{RECORD}{{z:3;r.h=f(&z)}};v:*r.p;r.n=4;r.h=m.heap;copy:r"
+        "{RECORD}{{z:3;r.h=f(&z)}};v:*(r.p);r.n=4;r.h=m.heap;copy:r"
     ));
     rejects(&format!("{RECORD}{{z:3;r.h=f(&z)}};r.n=4;copy:r"), "E303");
     accepts(&format!(
@@ -100,7 +100,7 @@ pub(crate) fn allocator_carriers_keep_transitive_bounds_and_cell_loans() {
         "E302",
     );
     rejects(
-        "a:m.heap;r:={->h:=m.heap;->p:&a};{z:2;b:f(&z);r={->h:=m.heap;->p:&b}};copy:*r.p",
+        "a:m.heap;r:={->h:=m.heap;->p:&a};{z:2;b:f(&z);r={->h:=m.heap;->p:&b}};copy:*(r.p)",
         "E303",
     );
     accepts("x:1;r:={->h:m.heap;->p:=&x}");
@@ -112,12 +112,12 @@ pub(crate) fn allocator_carriers_keep_transitive_bounds_and_cell_loans() {
 #[test]
 pub(crate) fn allocator_carriers_validate_transitive_call_inputs_after_all_arguments() {
     let prefix = "g<null>:(p<&m.Allocator>,n<int32>){};a:m.heap;r:={->h:=m.heap;->p:&a};";
-    rejects(&format!("{prefix}r.h=f(&1);g(&r.h,0)"), "E303");
+    rejects(&format!("{prefix}r.h=f(&1);g(&(r.h),0)"), "E303");
     accepts(&format!(
-        "{prefix}r.h=f(&1);'out{{g(&r.h,{{'out.leave();->0}})}}"
+        "{prefix}r.h=f(&1);'out{{g(&(r.h),{{'out.leave();->0}})}}"
     ));
-    rejects("x:=1;p:&x;r:={->h:m.heap;->p:&p};x=2;v:**r.p", "E302");
-    accepts("x:=1;y:=2;p:&x;q:&y;r:={->h:m.heap;->p:&p};r={->h:m.heap;->p:&q};x=3;v:**r.p");
+    rejects("x:=1;p:&x;r:={->h:m.heap;->p:&p};x=2;v:*(*(r.p))", "E302");
+    accepts("x:=1;y:=2;p:&x;q:&y;r:={->h:m.heap;->p:&p};r={->h:m.heap;->p:&q};x=3;v:*(*(r.p))");
 }
 
 #[test]
@@ -127,7 +127,9 @@ pub(crate) fn allocator_carriers_merge_reference_variants_across_branches_and_re
         "{prefix}|flag|r={{->h:m.heap;->p<&int32><null>:&x}};|r.p<null>|{{x=3}};r={{->h:m.heap;->p<&int32><null>:&y}};x=4;v:r"
     ));
     rejects(
-        &format!("{prefix}|flag|r={{->h:m.heap;->p<&int32><null>:&x}};x=3;|r.p<&int32>|{{v:*r.p}}"),
+        &format!(
+            "{prefix}|flag|r={{->h:m.heap;->p<&int32><null>:&x}};x=3;|r.p<&int32>|{{v:*(r.p)}}"
+        ),
         "E302",
     );
     accepts(&format!(
@@ -135,7 +137,7 @@ pub(crate) fn allocator_carriers_merge_reference_variants_across_branches_and_re
     ));
     rejects(
         &format!(
-            "{prefix}'loop{{|r.p<&int32>|{{v:*r.p}};z:3;r={{->h:m.heap;->p<&int32><null>:&z}};'loop.restart()}}"
+            "{prefix}'loop{{|r.p<&int32>|{{v:*(r.p)}};z:3;r={{->h:m.heap;->p<&int32><null>:&z}};'loop.restart()}}"
         ),
         "E303",
     );

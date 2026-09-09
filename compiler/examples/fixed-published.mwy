@@ -7,5 +7,5 @@ r:'out{
     'wait{n=n+1;|n<2|'wait.restart()}
 }
 x=11
-d.print(*r.p)
+d.print(r.*p)
 d.print(x)

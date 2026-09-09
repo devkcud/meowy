@@ -9,5 +9,5 @@ r:{
     x=8
     d.print(*view)
 }
-d.print(*r.view)
+d.print(r.*view)
 d.print(x)

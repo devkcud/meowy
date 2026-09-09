@@ -1,6 +1,6 @@
 # Exclusive scalar borrows through indexed storage
 
-`&!items[index]` and `&!rows[index].value` borrow initialized scalar storage
+`&!(items[index])` and `rows[index].&!value` borrow initialized scalar storage
 through mutable bounded lists: ordinary locals, named record fields, nested indexed owners and exact-backed
 emitted aliases. Elements may be boolean, integer or float. This implements a
 bounded slice of the existing [collection](../docs/reference/collections.md) and

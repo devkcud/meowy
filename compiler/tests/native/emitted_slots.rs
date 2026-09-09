@@ -119,7 +119,7 @@ pub fn emitted_slot_mutation_cannot_publish_stale_variant_or_origin_facts() {
     for source in [
         "owner:=1;view:&owner;value:{->tag<int32><null>:=null;tag=1};|value.tag<int32>|{owner=2;copy:*view}",
         "owner:=1;view:&owner;value:{->child:={->tag<int32><null>:=null};child.tag=1};|value.child.tag<int32>|{owner=2;copy:*view}",
-        "owner:=1;value:{->view:&owner;->tag<int32><null>:=null;tag=1};owner=2;copy:*value.view",
+        "owner:=1;value:{->view:&owner;->tag<int32><null>:=null;tag=1};owner=2;copy:*(value.view)",
         "value:{->items<int32[2]>:=[1];items[{items=[];->1}]=2}",
         "value:{->items<int32[2]>:=[1];items[1]={items=[];->2}}",
     ] {

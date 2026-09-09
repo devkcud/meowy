@@ -12,11 +12,11 @@ old:r.p
 r.p=&y
 d.print(*old)
 x=3
-d.print(*r.p)
-d.print(*r.q)
+d.print(*(r.p))
+d.print(*(r.q))
 d.print(x)
-s:{->c:={->p:=&x};copy:=c;copy.p=&y;d.print(*copy.p)}
-d.print(*s.c.p)
+s:{->c:={->p:=&x};copy:=c;copy.p=&y;d.print(*(copy.p))}
+d.print(*(s.c.p))
 "#,
     )
     .runs(b"1\n1\n2\n2\n3\n2\n3\n");
@@ -31,13 +31,13 @@ x:1
 y:2
 r:={->c:={->p:=&x;->n:=0};->q:=&y}
 r.c.p={r.q=&x;->&y}
-d.print(*r.c.p)
-d.print(*r.q)
+d.print(*(r.c.p))
+d.print(*(r.q))
 r.c.p={r={->c:={->p:=&x;->n:=3};->q:=&y};->&y}
 d.print(r.c.n)
 'out{r.c.p={r.q=&x;'out.leave();->&x}}
-d.print(*r.c.p)
-d.print(*r.q)
+d.print(*(r.c.p))
+d.print(*(r.q))
 "#,
     )
     .runs(b"2\n1\n3\n2\n1\n");
@@ -61,7 +61,7 @@ x:9
 r<R>:={->p:=null;|p<null>|{copy:p;d.print("initial")};->n:=0}
 'loop{
     |r.p<null>|d.print("null")
-    |r.p<&int32>|d.print(*r.p)
+    |r.p<&int32>|d.print(*(r.p))
     r.n=r.n+1
     |r.n==1|r.p=&x
     |r.n==2|r.p=null
@@ -88,7 +88,7 @@ r.p=&q
 r.h=f(&x)
 x=3
 copy:r
-d.print(**r.p)
+d.print(*(*(r.p)))
 d.print(x)
 "#,
     )
@@ -98,11 +98,11 @@ d.print(x)
 #[test]
 pub fn reference_field_lifetimes_alias_writes_and_mutability_are_checked() {
     for (source, code) in [
-        ("x:1;r:={->p:=&x};{y:2;r.p=&y};v:*r.p", "E303"),
+        ("x:1;r:={->p:=&x};{y:2;r.p=&y};v:*(r.p)", "E303"),
         ("x:=1;y:2;r:={->p:=&x};old:r.p;r.p=&y;x=3;v:*old", "E302"),
-        ("x:1;y:2;r:={->p:=&x};cell:&r.p;r.p=&y;v:**cell", "E302"),
+        ("x:1;y:2;r:={->p:=&x};cell:&(r.p);r.p=&y;v:**cell", "E302"),
         (
-            "r:={->p<&int32><null>:=null};'loop{|r.p<&int32>|{v:*r.p};x:1;r.p=&x;'loop.restart()}",
+            "r:={->p<&int32><null>:=null};'loop{|r.p<&int32>|{v:*(r.p)};x:1;r.p=&x;'loop.restart()}",
             "E303",
         ),
         (

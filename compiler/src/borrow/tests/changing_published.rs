@@ -2,27 +2,29 @@ use super::{accepts, rejects};
 
 #[test]
 pub(crate) fn changing_published_assignments_keep_current_sources_and_old_copies() {
-    accepts("x:=1;y:2;n:=0;r:{->p:=&x;'loop{p=&y;n=n+1;|n<2|'loop.restart()}};x=3;v:*r.p");
-    accepts("x:1;y:2;n:=0;r:{->p:=&x;old:p;'loop{p=&y;n=n+1;|n<2|'loop.restart()};v:*old};v:*r.p");
+    accepts("x:=1;y:2;n:=0;r:{->p:=&x;'loop{p=&y;n=n+1;|n<2|'loop.restart()}};x=3;v:*(r.p)");
+    accepts(
+        "x:1;y:2;n:=0;r:{->p:=&x;old:p;'loop{p=&y;n=n+1;|n<2|'loop.restart()};v:*old};v:*(r.p)",
+    );
     rejects(
         "x:=1;y:2;n:=0;r:{->p:=&x;old:p;'loop{p=&y;n=n+1;|n<2|'loop.restart()};x=3;v:*old}",
         "E302",
     );
     rejects(
-        "x:1;y:=2;n:=0;r:{->p:=&x;'loop{p=&y;n=n+1;|n<2|'loop.restart()}};y=3;v:*r.p",
+        "x:1;y:=2;n:=0;r:{->p:=&x;'loop{p=&y;n=n+1;|n<2|'loop.restart()}};y=3;v:*(r.p)",
         "E302",
     );
 }
 
 #[test]
 pub(crate) fn changing_published_unwritten_final_iterations_retain_backedge_sources() {
-    accepts("x:1;y:2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};v:*r.p");
+    accepts("x:1;y:2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};v:*(r.p)");
     rejects(
-        "x:1;y:=2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};y=3;v:*r.p",
+        "x:1;y:=2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()}}};y=3;v:*(r.p)",
         "E302",
     );
     accepts(
-        "x:1;y:2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'loop.leave()}};v:*r.p",
+        "x:1;y:2;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'loop.leave()}};v:*(r.p)",
     );
 }
 
@@ -70,17 +72,17 @@ pub(crate) fn changing_published_restarts_keep_the_original_binding_guard() {
 #[test]
 pub(crate) fn changing_published_leave_refreshes_precede_environment_restoration() {
     accepts(
-        "x:1;y:2;n:=0;r:'out{->p:=&x;'loop{p={p=&y;n=n+1;|n<2|'loop.restart();'out.leave();->&x}}};v:*r.p",
+        "x:1;y:2;n:=0;r:'out{->p:=&x;'loop{p={p=&y;n=n+1;|n<2|'loop.restart();'out.leave();->&x}}};v:*(r.p)",
     );
     rejects(
-        "x:1;y:=2;n:=0;r:'out{->p:=&x;'loop{p={p=&y;n=n+1;|n<2|'loop.restart();'out.leave();->&x}}};y=3;v:*r.p",
+        "x:1;y:=2;n:=0;r:'out{->p:=&x;'loop{p={p=&y;n=n+1;|n<2|'loop.restart();'out.leave();->&x}}};y=3;v:*(r.p)",
         "E302",
     );
     accepts(
-        "x:1;y:2;n:=0;r:{->p:=&x;'middle{'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'middle.leave()}}};v:*r.p",
+        "x:1;y:2;n:=0;r:{->p:=&x;'middle{'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'middle.leave()}}};v:*(r.p)",
     );
     rejects(
-        "x:1;y:=2;n:=0;r:{->p:=&x;'middle{'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'middle.leave()}}};y=3;v:*r.p",
+        "x:1;y:=2;n:=0;r:{->p:=&x;'middle{'loop{n=n+1;|n<2|{p=&y;'loop.restart()};'middle.leave()}}};y=3;v:*(r.p)",
         "E302",
     );
 }
@@ -88,13 +90,13 @@ pub(crate) fn changing_published_leave_refreshes_precede_environment_restoration
 #[test]
 pub(crate) fn changing_published_nested_loops_and_transitive_bounds_preserve_versions() {
     accepts(
-        "x:=1;y:=2;z:3;n:=0;m:=0;r:{->p:=&x;'outer{m=0;'inner{p=&y;m=m+1;|m<2|'inner.restart()};p=&z;n=n+1;|n<2|'outer.restart()}};x=4;y=5;v:*r.p",
+        "x:=1;y:=2;z:3;n:=0;m:=0;r:{->p:=&x;'outer{m=0;'inner{p=&y;m=m+1;|m<2|'inner.restart()};p=&z;n=n+1;|n<2|'outer.restart()}};x=4;y=5;v:*(r.p)",
     );
     accepts(
-        "x:=1;y:2;a:&x;b:&y;n:=0;r:{->p:=&a;'loop{p=&b;n=n+1;|n<2|'loop.restart()}};x=3;v:**r.p",
+        "x:=1;y:2;a:&x;b:&y;n:=0;r:{->p:=&a;'loop{p=&b;n=n+1;|n<2|'loop.restart()}};x=3;v:*(*(r.p))",
     );
     rejects(
-        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=0;r:{->p:=&x;'loop{p=first(&x,&s);n=n+1;|n<2|'loop.restart()}};s=\"b\";v:*r.p",
+        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=0;r:{->p:=&x;'loop{p=first(&x,&s);n=n+1;|n<2|'loop.restart()}};s=\"b\";v:*(r.p)",
         "E302",
     );
 }
@@ -102,18 +104,18 @@ pub(crate) fn changing_published_nested_loops_and_transitive_bounds_preserve_ver
 #[test]
 pub(crate) fn changing_published_expired_headers_require_repair_before_retention() {
     rejects(
-        "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*r.p",
+        "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*(r.p)",
         "E303",
     );
     accepts(
-        "x:1;n:=0;r:{->p:=&x;'loop{p=&x;n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*r.p",
+        "x:1;n:=0;r:{->p:=&x;'loop{p=&x;n=n+1;|n<2|{local:2;p=&local;'loop.restart()}}};v:*(r.p)",
     );
     rejects(
-        "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&2;'loop.restart()}}};v:*r.p",
+        "x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=&2;'loop.restart()}}};v:*(r.p)",
         "E303",
     );
     rejects(
-        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=first(&x,&\"short\");'loop.restart()}}};v:*r.p",
+        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;n:=0;r:{->p:=&x;'loop{n=n+1;|n<2|{p=first(&x,&\"short\");'loop.restart()}}};v:*(r.p)",
         "E303",
     );
 }

@@ -17,7 +17,7 @@ copy:pass(handle)
 |copy<m.Allocator>|d.print(owner)
 holder:{->handle:copy;->n:9}
 view:&holder
-selected:*(&view.handle)
+selected:*(&(view.handle))
 |selected<m.Allocator>|d.print("heap")
 missing:maybe(&owner,false)
 |missing<null>|d.print("empty")

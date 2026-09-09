@@ -8,10 +8,10 @@ current:=&left
 original:*current
 count:=0
 'loop{
-    debug.print(*current.view)
+    debug.print(current.*view)
     debug.print(current.count)
     current=&right
     count=count+1
     |count<2|'loop.restart()
 }
-debug.print(*original.view)
+debug.print(original.*view)

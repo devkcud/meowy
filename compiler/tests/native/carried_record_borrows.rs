@@ -11,15 +11,15 @@ d:@"debug"
 x<Row>:{->inner:{->n:1};->name:"old"}
 p:=&x
 old:p
-q:=&x.inner.n
+q:=&(x.inner.n)
 first:=true;i:=0
 r<R>:'out{
     'loop{
         |first|{
             'out->row:{d.print("init");->inner:{->n:7};->name:"ready"}
             p=&row
-            q=&p.inner.n
-            d.print(q==&row.inner.n)
+            q=&(p.inner.n)
+            d.print(q==&(row.inner.n))
             first=false
         }
         d.print(old.inner.n)
@@ -30,7 +30,7 @@ r<R>:'out{
     }
     d.print(p.inner.n)
 }
-p=&x;q=&x.inner.n
+p=&x;q=&(x.inner.n)
 d.print(r.row.inner.n)
 d.print(*q)
 "#,
@@ -50,7 +50,7 @@ r<R>:'out{
     p=&x
     first:=true
     'loop{
-        |first|{'out->row:{->n:i};p=&row.n;first=false;'loop.restart()}
+        |first|{'out->row:{->n:i};p=&(row.n);first=false;'loop.restart()}
         d.print(*p)
     }
     i=i+1
@@ -75,7 +75,7 @@ first:=true
 r<R>:'out{'loop{|first|{
     'out->row:={->n:=7;->other:=1}
     old:row
-    p:&row.n
+    p:&(row.n)
     row.other=9
     d.print(*p)
     row.n=8
@@ -104,7 +104,7 @@ d:@"debug"
 keep<&int32>:(value<&int32>){->value}
 x:1;p:=&x;first:=true
 r<R>:'out{'loop{
-    |first|{'out->row:{->inner:{->n:7}};p=keep(&row.inner.n);first=false;'loop.restart()}
+    |first|{'out->row:{->inner:{->n:7}};p=keep(&(row.inner.n));first=false;'loop.restart()}
     d.print(*p)
     'out.leave()
 }}
@@ -123,11 +123,11 @@ pub(crate) fn carried_record_borrows_reject_expiry_conflicts_and_exclusive_paths
             "E303",
         ),
         (
-            "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{v:*p;first:=true;'loop{|first|{'out->row:{->n:i};p=&row.n;first=false;'loop.restart()}};i=i+1;|i<2|'out.restart()}",
+            "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{v:*p;first:=true;'loop{|first|{'out->row:{->n:i};p=&(row.n);first=false;'loop.restart()}};i=i+1;|i<2|'out.restart()}",
             "E303",
         ),
         (
-            "<Row>:<{n<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7};p:&row.n;row.n=8;v:*p;first=false;'loop.restart()}}}",
+            "<Row>:<{n<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7};p:&(row.n);row.n=8;v:*p;first=false;'loop.restart()}}}",
             "E302",
         ),
         (

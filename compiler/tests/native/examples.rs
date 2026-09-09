@@ -4,6 +4,10 @@ use super::Case;
 pub fn examples_execute_in_both_profiles() {
     for (source, stdout) in [
         (
+            include_str!("../../examples/pointer-syntax.mwy"),
+            "7\n7\n8\n20\n20\ntrue\n20\n",
+        ),
+        (
             include_str!("../../examples/exclusive-carried-records.mwy"),
             "7\n8\nready\n",
         ),

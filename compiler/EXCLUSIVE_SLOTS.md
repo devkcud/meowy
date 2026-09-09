@@ -2,7 +2,7 @@
 
 After `->name:=value` initializes a boolean, integer or float slot, `&!name` may
 borrow its actual storage exclusively. Mutable emitted reference-free Copy records
-also permit scalar-field paths such as `&!row.inner.n`, with every crossed field
+also permit scalar-field paths such as `row.inner.&!n`, with every crossed field
 mutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)
 and follows the existing [emission](../docs/reference/values-and-blocks.md) and
 [memory rules](../docs/reference/memory.md). No new HIR operation, backend addressing,

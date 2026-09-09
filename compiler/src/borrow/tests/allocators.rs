@@ -90,13 +90,13 @@ pub(crate) fn allocator_expiry_is_checked_at_real_call_entry() {
 
 #[test]
 pub(crate) fn allocator_bounds_survive_shared_carriers_and_reborrows() {
-    accepts("owner:1;h:{->a:f(&owner);->n:7};p:&h;copy:*(&p.a)");
+    accepts("owner:1;h:{->a:f(&owner);->n:7};p:&h;copy:*(&(p.a))");
     rejects(
         "owner:1;h:{short:1;->a:f(&short);->n:7};p:&h;copy:p.a",
         "E303",
     );
     rejects("a:f(&1);p:&a;copy:*p", "E303");
-    rejects("a:f(&1);holder:{->p:&a};copy:*holder.p", "E303");
+    rejects("a:f(&1);holder:{->p:&a};copy:*(holder.p)", "E303");
     accepts(
         "first:1;second:2;g<m.Allocator>:(a<&int32>,b<&int32>){->m.heap};value:g(&first,&second);copy:value",
     );

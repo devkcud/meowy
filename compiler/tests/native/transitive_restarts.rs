@@ -37,12 +37,12 @@ left:{->first:&a;->second:&b;->count:10}
 right:{->first:&b;->second:&c;->count:20}
 p:=&left;saved:*p;count:=0
 'loop{
-    d.print(*p.first);d.print(*p.second);d.print(p.count)
+    d.print(*(p.first));d.print(*(p.second));d.print(p.count)
     p=&right
     count=count+1
     |count<2|'loop.restart()
 }
-d.print(*saved.first);d.print(*saved.second)
+d.print(*(saved.first));d.print(*(saved.second))
 "#,
     )
     .runs(b"1\n2\n10\n2\n3\n20\n1\n2\n");
@@ -67,9 +67,9 @@ p:=&left;count:=0
     )
     .runs(b"true\n7\nfalse\n8\n");
     for source in [
-        "a:=1;b:2;left:{->view:&a};right:{->view:&b};p:=&left;i:=0;'loop{a=3;v:*p.view;p=&right;i=i+1;|i<2|'loop.restart()}",
-        "a:1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;i:=0;'loop{b=3;v:*p.view;p=&right;i=i+1;|i<2|'loop.restart()}",
-        "a:=1;b:2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;i:=0;'loop{p=&right;i=i+1;|i<2|'loop.restart()};a=3;v:*old.view",
+        "a:=1;b:2;left:{->view:&a};right:{->view:&b};p:=&left;i:=0;'loop{a=3;v:*(p.view);p=&right;i=i+1;|i<2|'loop.restart()}",
+        "a:1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;i:=0;'loop{b=3;v:*(p.view);p=&right;i=i+1;|i<2|'loop.restart()}",
+        "a:=1;b:2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;i:=0;'loop{p=&right;i=i+1;|i<2|'loop.restart()};a=3;v:*(old.view)",
     ] {
         rejects(source, "E302");
     }
@@ -84,14 +84,14 @@ d:@"debug"
 first<&H>:(p<&H>,text<&string>){->p}
 a:1;b:2;left<H>:{->view:&a};right<H>:{->view:&b}
 text:="old";p:=first(&left,&text);count:=0
-'loop{copy:*p;d.print(*copy.view);p=&right;count=count+1;|count<2|'loop.restart()}
+'loop{copy:*p;d.print(*(copy.view));p=&right;count=count+1;|count<2|'loop.restart()}
 text="new"
 d.print(text)
 "#,
     )
     .runs(b"1\n2\nnew\n");
     for source in [
-        "<H>:<{view<&int32>}>;first<&H>:(p<&H>,text<&string>){->p};a:1;b:2;left<H>:{->view:&a};right<H>:{->view:&b};text:=\"old\";p:=first(&left,&text);copy:*p;i:=0;'loop{p=&right;i=i+1;|i<2|'loop.restart()};text=\"new\";v:*copy.view",
+        "<H>:<{view<&int32>}>;first<&H>:(p<&H>,text<&string>){->p};a:1;b:2;left<H>:{->view:&a};right<H>:{->view:&b};text:=\"old\";p:=first(&left,&text);copy:*p;i:=0;'loop{p=&right;i=i+1;|i<2|'loop.restart()};text=\"new\";v:*(copy.view)",
         "<R>:<&int32>;inner<R>:(p<R>,s<&string>){->p};outer<&R>:(p<&R>,s<&string>){->p};a:1;text:=\"old\";q:=inner(&a,&text);p:=&q;i:=0;'loop{same:p==&q;q=&a;p=outer(&q,&text);text=\"new\";i=i+1;|i<2|'loop.restart()}",
     ] {
         rejects(source, "E302");
@@ -144,7 +144,7 @@ p:=box.left;q:=box.right;count:=0
 'outer{
     inner:=0
     'inner{
-        d.print(*p.first);d.print(*p.second)
+        d.print(*(p.first));d.print(*(p.second))
         old:p;p=q;q=old
         inner=inner+1
         |inner<2|'inner.restart()

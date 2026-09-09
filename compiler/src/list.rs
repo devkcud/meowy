@@ -696,30 +696,30 @@ mod tests {
     #[test]
     pub(crate) fn element_places_and_temporaries_share_position_checks() {
         for source in [
-            "a:[1,2];r:&a[1];value:*r",
-            "a:[[1,2],[3,4]];r:&a[2][1];value:*r",
-            "a:[{->value:1},{->value:2}];r:&a[1].value;value:*r",
-            "a:[[1,2],[3,4]];r:&({->&a})[2][1];value:*r",
-            "a:[1,2];p:&a;r:&(*p)[1];value:*r",
-            "a:[1,2];holder:{->view:&a};r:&holder.view[1];value:*r",
-            "get<&int32>:(a<&int32[0]>,i<int32>){->&a[i]}",
-            "value:*(&[1,2][1])",
-            "make<int32[2]>:(){->[1,2]};value:*(&make()[1])",
-            "a:[1,2];value:*(&a<int32[2]>[1])",
+            "a:[1,2];r:&(a[1]);value:*r",
+            "a:[[1,2],[3,4]];r:&(a[2][1]);value:*r",
+            "a:[{->value:1},{->value:2}];r:&(a[1].value);value:*r",
+            "a:[[1,2],[3,4]];r:&(({->&a})[2][1]);value:*r",
+            "a:[1,2];p:&a;r:&((*p)[1]);value:*r",
+            "a:[1,2];holder:{->view:&a};r:&(holder.view[1]);value:*r",
+            "get<&int32>:(a<&int32[0]>,i<int32>){->&(a[i])}",
+            "value:*(&([1,2][1]))",
+            "make<int32[2]>:(){->[1,2]};value:*(&(make()[1]))",
+            "a:[1,2];value:*(&(a<int32[2]>[1]))",
         ] {
             let result = crate::compile(source);
             assert!(result.is_ok(), "{source}: {result:?}");
         }
         for source in [
-            "a:[1,2];r:&a[0]",
-            "a:[1,2];r:&a[-1]",
-            "a<int32[3]>:[1];r:&a[2]",
-            "a<int32[0]>:[];r:&a[1]",
+            "a:[1,2];r:&(a[0])",
+            "a:[1,2];r:&(a[-1])",
+            "a<int32[3]>:[1];r:&(a[2])",
+            "a<int32[0]>:[];r:&(a[1])",
         ] {
             rejects(source, "E101");
         }
-        rejects("a:[1,2];r:&!a[1]", "E305");
-        rejects("a:[1,2];r:&a[true]", "E222");
+        rejects("a:[1,2];r:&!(a[1])", "E305");
+        rejects("a:[1,2];r:&(a[true])", "E222");
     }
 
     pub(crate) fn rejects(source: &str, code: &str) {
@@ -756,6 +756,6 @@ mod tests {
         rejects("a:1;values:[&a]", "B001");
         rejects("values:[\"name\":1]", "B001");
         rejects("d:@\"debug\";values:[1];d.print(values)", "B001");
-        rejects("values:[1];view:&!values[1]", "E305");
+        rejects("values:[1];view:&!(values[1])", "E305");
     }
 }

@@ -56,7 +56,7 @@ r<R>:'out{
 d.print(r.row.n)
 d.print(r.row.name)
 d.print(r.count)
-p:&r.row.n
+p:&(r.row.n)
 d.print(*p)
 "#,
     )
@@ -78,7 +78,7 @@ r<R>:'out{
 }
 d.print(r.row.n)
 first:=true
-s<R>:'out{'loop{|first|{'out->row:{->n:7};copy:row;p:&copy.n;d.print(*p);first=false;'loop.restart()};'out.leave()}}
+s<R>:'out{'loop{|first|{'out->row:{->n:7};copy:row;p:&(copy.n);d.print(*p);first=false;'loop.restart()};'out.leave()}}
 d.print(s.row.n)
 "#).runs(b"init\ninit\n1\n7\n7\n");
 }

@@ -18,7 +18,7 @@ index <usize> := 1
 'loop {
     | index > results.size() | 'loop.leave()
 
-    result : &results[index]
+    result : &(results[index])
     | *result <error> | {
         status = 1
         debug.print("Result {index}: {*result}")

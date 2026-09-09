@@ -2,11 +2,11 @@ use super::{accepts, rejects};
 
 #[test]
 pub(crate) fn restarted_alias_slots_publish_only_the_completing_iteration() {
-    accepts("x:1;n:=0;r:'loop{->p:=&x;n=n+1;|n<2|{local:2;p=&local;'loop.restart()}};v:*r.p");
-    accepts("x:=1;y:2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};x=3;v:*r.p");
-    accepts("x:1;y:2;n:=0;r:'loop{->p:=&x;n=n+1;|n<2|{p=&y;'loop.restart()}};v:*r.p");
+    accepts("x:1;n:=0;r:'loop{->p:=&x;n=n+1;|n<2|{local:2;p=&local;'loop.restart()}};v:*(r.p)");
+    accepts("x:=1;y:2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};x=3;v:*(r.p)");
+    accepts("x:1;y:2;n:=0;r:'loop{->p:=&x;n=n+1;|n<2|{p=&y;'loop.restart()}};v:*(r.p)");
     rejects(
-        "x:1;y:=2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};y=3;v:*r.p",
+        "x:1;y:=2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};y=3;v:*(r.p)",
         "E302",
     );
     accepts(
@@ -16,20 +16,22 @@ pub(crate) fn restarted_alias_slots_publish_only_the_completing_iteration() {
 
 #[test]
 pub(crate) fn alias_restart_ownership_uses_emission_targets() {
-    accepts("x:1;y:2;n:=0;r:'loop{{'loop->p:=&x;p=&y};n=n+1;|n<2|'loop.restart()};v:*r.p");
-    accepts("x:1;y:2;n:=0;r:'loop{inner:{->p:=&x;p=&y};n=n+1;|n<2|'loop.restart();->inner};v:*r.p");
+    accepts("x:1;y:2;n:=0;r:'loop{{'loop->p:=&x;p=&y};n=n+1;|n<2|'loop.restart()};v:*(r.p)");
+    accepts(
+        "x:1;y:2;n:=0;r:'loop{inner:{->p:=&x;p=&y};n=n+1;|n<2|'loop.restart();->inner};v:*(r.p)",
+    );
     rejects(
         "x:1;y:2;r:'outer{'inner{'outer->p:=&x;p=&y;'inner.restart()}}",
         "B001",
     );
-    accepts("x:1;y:2;n:=2;r:{->p:=&x;'inner{p=&y;n=n-1;|n>0|'inner.restart()}};v:*r.p");
-    accepts("x:1;y:2;n:=2;r:{->p:=&x;p=&y;'inner{n=n-1;|n>0|'inner.restart()}};v:*r.p");
+    accepts("x:1;y:2;n:=2;r:{->p:=&x;'inner{p=&y;n=n-1;|n>0|'inner.restart()}};v:*(r.p)");
+    accepts("x:1;y:2;n:=2;r:{->p:=&x;p=&y;'inner{n=n-1;|n>0|'inner.restart()}};v:*(r.p)");
 }
 
 #[test]
 pub(crate) fn independent_restarts_do_not_block_borrowed_alias_writes() {
-    accepts("x:1;y:2;r:{->p:=&x;p=&y};n:=2;'loop{n=n-1;|n>0|'loop.restart()};v:*r.p");
-    accepts("n:=2;'loop{n=n-1;|n>0|'loop.restart()};x:1;y:2;r:{->p:=&x;p=&y};v:*r.p");
+    accepts("x:1;y:2;r:{->p:=&x;p=&y};n:=2;'loop{n=n-1;|n>0|'loop.restart()};v:*(r.p)");
+    accepts("n:=2;'loop{n=n-1;|n>0|'loop.restart()};x:1;y:2;r:{->p:=&x;p=&y};v:*(r.p)");
     accepts("x:1;y:2;{r:{->p:=&x;p=&y}};n:=2;'loop{n=n-1;|n>0|'loop.restart()}");
 }
 
@@ -39,7 +41,7 @@ pub(crate) fn restarted_alias_fields_preserve_rhs_leave_and_old_copies() {
         "x:=1;y:2;n:=0;r:'loop{->c:={->p:=&x;->q:=&y;->n:=0};c.p={c.q=&x;->&y};c.q=&y;n=n+1;|n<2|'loop.restart()};x=3;copy:r.c",
     );
     accepts(
-        "x:1;y:2;n:=0;r:'loop{->p:=&x;n=n+1;p={p=&y;|n<2|'loop.restart();'loop.leave();->&x}};v:*r.p",
+        "x:1;y:2;n:=0;r:'loop{->p:=&x;n=n+1;p={p=&y;|n<2|'loop.restart();'loop.leave();->&x}};v:*(r.p)",
     );
     rejects(
         "x:=1;y:2;n:=0;r:'loop{->p:=&x;old:p;p=&y;x=3;v:*old;n=n+1;|n<2|'loop.restart()}",
@@ -69,14 +71,14 @@ pub(crate) fn restarted_alias_cells_expire_without_reviving_next_iteration() {
 #[test]
 pub(crate) fn restarting_nullable_aliases_keep_fresh_current_tags() {
     accepts(
-        "x:1;y:2;n:=0;r:'loop{->p<&int32><null>:=null;|p<null>|{copy:p;p=&x};|p<&int32>|{v:*p;p=&y};n=n+1;|n<2|'loop.restart()};|r.p<&int32>|{v:*r.p}",
+        "x:1;y:2;n:=0;r:'loop{->p<&int32><null>:=null;|p<null>|{copy:p;p=&x};|p<&int32>|{v:*p;p=&y};n=n+1;|n<2|'loop.restart()};|r.p<&int32>|{v:*(r.p)}",
     );
     rejects(
         "x:=1;y:2;n:=0;r:'loop{->p<&int32><null>:=null;|p<null>|{p=&x;x=3;|p<&int32>|{v:*p}};n=n+1;|n<2|'loop.restart()}",
         "E302",
     );
     accepts(
-        "x:1;y:2;n:=0;r:'loop{->c:={->p<&int32><null>:=null;->n:=0};c.p=&x;c.n={c.p=&y;->1};n=n+1;|n<2|'loop.restart()};|r.c.p<&int32>|{v:*r.c.p}",
+        "x:1;y:2;n:=0;r:'loop{->c:={->p<&int32><null>:=null;->n:=0};c.p=&x;c.n={c.p=&y;->1};n=n+1;|n<2|'loop.restart()};|r.c.p<&int32>|{v:*(r.c.p)}",
     );
 }
 

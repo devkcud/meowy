@@ -15,6 +15,10 @@ storage and constructors remain gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
+The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
+`&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
+[grammar](../docs/reference/syntax.md#operators-and-evaluation-order) for the binding rules.
+
 ## Build and run
 
 From the repository root:
@@ -32,6 +36,7 @@ compiler/target/debug/meowy run compiler/examples/allocator-carriers.mwy
 compiler/target/debug/meowy run compiler/examples/factorial.mwy --profile release
 compiler/target/debug/meowy run compiler/examples/nullable.mwy
 compiler/target/debug/meowy run compiler/examples/references.mwy
+compiler/target/debug/meowy run compiler/examples/pointer-syntax.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-results.mwy
 compiler/target/debug/meowy run compiler/examples/borrow-liveness.mwy
 compiler/target/debug/meowy run compiler/examples/borrowed-records.mwy
@@ -331,7 +336,7 @@ implementation work.
   shared values carrying exclusive ancestry.
 - Exclusive scalar borrows through bounded-list locals, record fields, nested
   indexed owners and exact-backed emitted storage. Both scalar elements and field
-  leaves such as `&!rows[i].value` retain their complete owned path.
+  leaves such as `rows[i].&!value` retain their complete owned path.
   Owner/length capture precedes one index evaluation; a no-authority reservation
   protects returning acquisition, then mutable-owner proof grants the element loan.
   Bounds use initialized length and existing E101/P001 behavior. Same-list element
@@ -371,9 +376,9 @@ implementation work.
   fields carry no loan; type predicates inspect the discriminant without copying
   reference payloads. Copies and equality consume active references directly
   contained in the value.
-- Shared reborrows: `&*view`, `&view.field` and nested
+- Shared reborrows: `&*view`, `view.&field` and nested
   parenthesized paths, including reference-valued prefixes such as
-  `&holder.view.field`. Reference-valued calls/blocks evaluate once. Derived
+  `holder.view.&field`. Reference-valued calls/blocks evaluate once. Derived
   function results retain all active input lifetime bounds. Union payload addresses
   remain unavailable; scalar exclusive reborrows follow the rules above.
 - Whole-carrier and reference-cell shared borrows, including nested dereference
@@ -430,7 +435,7 @@ implementation work.
 - Expired restart-carried sources and public bounds. A reference can be overwritten
   before its next read; using an expired value reports E303 even after its original
   storage site runs again. Live ancestor statement temporaries survive inner restarts.
-- Shared borrows of initialized bounded-list elements, such as `&values[index]`,
+- Shared borrows of initialized bounded-list elements, such as `&(values[index])`,
   including nested list/record paths and direct-function results. The parent
   reference stays live through returning index evaluation, so conflicting owner
   writes report E302. E101/P001 check one-based initialized bounds before producing

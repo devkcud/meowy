@@ -25,18 +25,18 @@ pub fn immutable_emitted_fields_and_elements_keep_original_storage() {
     Case::new(
         r#"
 d:@"debug"
-first<&int32>:(items<&int32[3]>){->&items[1]}
+first<&int32>:(items<&int32[3]>){->&(items[1])}
 value:{
     ->child:{->n:=1;->name:"row"}
-    view:&child.n
+    view:&(child.n)
     copy:=child
     copy.n=2
     d.print(*view);d.print(copy.n)
     parent:&child
-    d.print(view==&parent.n)
+    d.print(view==&(parent.n))
     ->items<int32[3]>:[3,4]
     item:first(&items)
-    d.print(item==&items[1]);d.print(*item)
+    d.print(item==&(items[1]));d.print(*item)
     other:=items
     other[1]=5
     d.print(*item);d.print(other[1])
@@ -92,7 +92,7 @@ one:choose(true).n
 two:choose(false).n
 |one<int32>|d.print(one<int32>)
 |two<string>|d.print(two<string>)
-maybe:(flag<boolean>)'out{|flag|{'out->row:{->n:2};view:&row.n;d.print(*view)}}
+maybe:(flag<boolean>)'out{|flag|{'out->row:{->n:2};view:&(row.n);d.print(*view)}}
 present:maybe(true).row
 absent:maybe(false).row
 |present<{n<int32>}>|d.print(present.n)
@@ -122,7 +122,7 @@ owner=2
 |value.view<null>|d.print("empty")
 d.print(owner)
 kept:{->view:&owner;copy:view;d.print(*copy);->n:3;r:&n;d.print(*r)}
-d.print(*kept.view)
+d.print(*(kept.view))
 owner=4
 d.print(owner)
 "#,
@@ -139,10 +139,10 @@ pub fn immutable_emitted_aliases_reject_writes_and_escaping_borrows() {
         ("value:{->items:[{->n:=1}];items[1].n=2}", "E305"),
         ("value:{->n:1;->view:&n}", "E303"),
         ("value:'out{view:{'out->n:1;->&n};->saved:view}", "E303"),
-        ("value:{->items:[1];->view:&items[1]}", "E303"),
+        ("value:{->items:[1];->view:&(items[1])}", "E303"),
         ("bad<{n<int32>;view<&int32>}>:(){->n:1;->view:&n}", "E303"),
         (
-            "owner:=1;value:{->view:&owner};owner=2;copy:*value.view",
+            "owner:=1;value:{->view:&owner};owner=2;copy:*(value.view)",
             "E302",
         ),
         ("value:{->n:1;->n:=2}", "E205"),
@@ -165,15 +165,15 @@ pub fn immutable_emitted_aliases_reject_writes_and_escaping_borrows() {
 #[test]
 pub fn immutable_emitted_lists_keep_static_and_dynamic_bounds() {
     for source in [
-        "value:{->items<int32[3]>:[1];view:&items[2]}",
+        "value:{->items<int32[3]>:[1];view:&(items[2])}",
         "value:{->items<int32[3]>:[1];copy:items[2]}",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");
         assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E101\""));
     }
-    let source = "d:@\"debug\";value:{->items<int32[3]>:[1];index:=2;view:&items[{d.print(\"index\");->index}]}";
-    let access = "&items[{d.print(\"index\");->index}]";
+    let source = "d:@\"debug\";value:{->items<int32[3]>:[1];index:=2;view:&(items[{d.print(\"index\");->index}])}";
+    let access = "&(items[{d.print(\"index\");->index}])";
     let start = source.find(access).unwrap();
     let end = start + access.len();
     let case = Case::new(source);
@@ -194,7 +194,7 @@ pub fn immutable_emitted_lists_keep_static_and_dynamic_bounds() {
 #[test]
 pub fn immutable_emitted_borrows_keep_unrepresented_storage_explicit() {
     super::exclusive_references::rejects("value:{->n:1;view:&!n}", "E305");
-    super::exclusive_references::rejects("value:{->row:{->n:=1};view:&!row.n}", "E305");
+    super::exclusive_references::rejects("value:{->row:{->n:=1};view:&!(row.n)}", "E305");
     for source in [
         "value:{->row:{->n:=1};view:&!row}",
         "choose:(flag<boolean>)'out{|flag|{'out->n<int32><null>:null;view:&n};|!flag|{'out->n:\"text\"}}",

@@ -31,12 +31,12 @@ d:@"debug"
 <R>:<{small<uint8>;value<int64>;nested<{count<int32>}>}>
 owner<R>:={->small:7;->value:41;->nested:{->count:9}}
 parent:&owner
-small:&parent.small
-wide:&(*parent).value
-leaf:&(parent.nested).count
-d.print(small==&owner.small)
-d.print(wide==&owner.value)
-d.print(leaf==&owner.nested.count)
+small:&(parent.small)
+wide:&((*parent).value)
+leaf:&((parent.nested).count)
+d.print(small==&(owner.small))
+d.print(wide==&(owner.value))
+d.print(leaf==&(owner.nested.count))
 d.print(*small)
 d.print(*wide)
 d.print(*leaf)
@@ -54,16 +54,16 @@ pub fn reborrowed_function_fields_preserve_call_bounds_and_evaluate_once() {
 d:@"debug"
 <R>:<{value<int32>;nested<{other<int32>}>}>
 get<&R>:(value<&R>){d.print("get");->value}
-field<&int32>:(value<&R>){->&value.nested.other}
-relay<&int32>:(value<&R>){->&*field(value)}
+field<&int32>:(value<&R>){->&(value.nested.other)}
+relay<&int32>:(value<&R>){->&(*(field(value)))}
 owner<R>:={->value:11;->nested:{->other:22}}
-view:&get(&owner).value
+view:&(get(&owner).value)
 d.print(*view)
-leaf:&(*get(&owner)).nested.other
+leaf:&((*(get(&owner))).nested.other)
 d.print(*leaf)
-d.print(*relay(&owner))
-d.print((&get(&owner).value)==&owner.value)
-d.print((&*get(&owner))==&owner)
+d.print(*(relay(&owner)))
+d.print((&(get(&owner).value))==&(owner.value))
+d.print((&(*(get(&owner))))==&owner)
 owner={->value:33;->nested:{->other:44}}
 d.print(owner.value)
 "#,
@@ -89,7 +89,7 @@ inspect(true)
 inspect(false)
 owner:=7
 optional<&int32><null>:&owner
-|optional<&int32>|{view:&*optional<&int32>;d.print(*view)}
+|optional<&int32>|{view:&(*(optional<&int32>));d.print(*view)}
 owner=8
 count:=0
 'loop {
@@ -110,9 +110,9 @@ d.print(owner)
 pub fn shared_reborrow_uses_and_inherited_bounds_reject_live_writes() {
     for source in [
         "owner:=1;parent:&owner;view:&*parent;owner=2;value:*view",
-        "owner:={->value:1};parent:&owner;view:&parent.value;owner={->value:2};value:*view",
-        "<R>:<{value<int32>}>;field<&int32>:(value<&R>){->&value.value};owner<R>:={->value:1};view:field(&owner);owner={->value:2};value:*view",
-        "first<&int32>:(a<&int32>,b<&string>){->a};owner:=1;other:=\"old\";view:&*first(&owner,&other);other=\"new\";value:*view",
+        "owner:={->value:1};parent:&owner;view:&(parent.value);owner={->value:2};value:*view",
+        "<R>:<{value<int32>}>;field<&int32>:(value<&R>){->&(value.value)};owner<R>:={->value:1};view:field(&owner);owner={->value:2};value:*view",
+        "first<&int32>:(a<&int32>,b<&string>){->a};owner:=1;other:=\"old\";view:&(*(first(&owner,&other)));other=\"new\";value:*view",
         "owner:=1;parent:&owner;same:(&*parent)=={owner=2;->&owner}",
         "owner:=1;parent:&owner;result:{->&*parent;owner=2};value:*result",
         "owner:=1;parent:&owner;view:&*parent;i:=0;'loop{value:*view;owner=2;i=i+1;|i<2|'loop.restart()}",
@@ -133,23 +133,23 @@ pub fn shared_reborrow_escapes_and_remaining_storage_boundaries_are_explicit() {
     for (source, code) in [
         ("view:{owner:1;parent:&owner;->&*parent}", "E303"),
         (
-            "view:{owner:{->value:1};parent:&owner;->&parent.value}",
+            "view:{owner:{->value:1};parent:&owner;->&(parent.value)}",
             "E303",
         ),
         (
-            "<R>:<{value<int32>}>;field<&int32>:(value<&R>){->&value.value};bad<&int32>:(){owner<R>:{->value:1};->field(&owner)}",
+            "<R>:<{value<int32>}>;field<&int32>:(value<&R>){->&(value.value)};bad<&int32>:(){owner<R>:{->value:1};->field(&owner)}",
             "E303",
         ),
         (
-            "first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:\"local\";->&*first(&owner,&short)}",
+            "first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:\"local\";->&(*(first(&owner,&short)))}",
             "E303",
         ),
         ("owner:=1;parent:&owner;view:&!*parent", "E305"),
         (
-            "make<{value<int32>}>:(){->value:1};view:&make().value;copy:*view",
+            "make<{value<int32>}>:(){->value:1};view:&(make().value);copy:*view",
             "E303",
         ),
-        ("view:&({->value:1}).value;copy:*view", "E303"),
+        ("view:&(({->value:1}).value);copy:*view", "E303"),
     ] {
         let result = Case::new(source).command("check", &["--json"]);
         assert_eq!(result.status.code(), Some(1), "{source}");
@@ -170,7 +170,7 @@ d:@"debug"
 get<&R>:(p<&R>){d.print("get");->p}
 inspect<int32>:(flag<boolean>) 'out {
     owner<R>:{->n:1}
-    same:(&get({|flag|{'out->7;'out.leave()};->&owner}).n)==&owner.n
+    same:(&(get({|flag|{'out->7;'out.leave()};->&owner}).n))==&(owner.n)
     ->8
 }
 d.print(inspect(true))

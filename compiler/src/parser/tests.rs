@@ -1,6 +1,7 @@
 use super::*;
 use crate::ast::*;
 
+mod borrows;
 mod doc_fences;
 
 pub(crate) fn value(source: &str) -> Expr {

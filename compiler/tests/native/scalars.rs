@@ -117,7 +117,7 @@ items:=[a,b]
 i:=1
 items[i]=m.heap
 d.print(items.size())
-view:&items[i]
+view:&(items[i])
 copy:pass(*view)
 record:{->handle:copy}
 |record.handle<m.Allocator>|d.print(true)

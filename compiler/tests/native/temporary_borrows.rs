@@ -9,7 +9,7 @@ make<int32>:(n<int32>){d.print(n);->n}
 sum<int32>:(a<&int32>,b<&int32>){d.print("call");->*a+*b}
 same<boolean>:(a<&int32>,b<&int32>){->a==b}
 text<boolean>:(a<&string>,b<&string>){->a==b}
-d.print(sum(&make(2),&make(3)))
+d.print(sum(&(make(2)),&(make(3))))
 d.print(same(&7,&7));d.print(text(&"x",&"x"))
 copy:*(&7)
 d.print(copy);d.print(*(&"value"))
@@ -25,13 +25,13 @@ pub fn temporary_record_and_list_projections_use_the_materialized_owner() {
 d:@"debug"
 <R>:<{value<int32>;items<int32[3]>}>
 make<R>:(){d.print("owner");->value:4;->items:[5,6]}
-d.print(*(&make().value))
-d.print(*(&make().items[2]))
-d.print(*(&[7,8][2]))
-d.print((&make()).{->*(&self.value)})
+d.print(*(&(make().value)))
+d.print(*(&(make().items[2])))
+d.print(*(&([7,8][2])))
+d.print((&(make())).{->*(&(self.value))})
 id<&int32>:(p<&int32>){->p}
 owner:=9
-view:&*id(&owner)
+view:&(*(id(&owner)))
 d.print(*view)
 owner=10
 d.print(owner)
@@ -47,8 +47,8 @@ pub fn temporary_references_survive_same_statement_calls_dispatch_and_matchers()
 d:@"debug"
 id<&int32>:(p<&int32>){->p}
 positive<boolean>:(p<&int32>){d.print("condition");->*p>0}
-d.print(*id(&(1+2)))
-d.print(*((&{->n:4}).{->&self.n}))
+d.print(*(id(&(1+2))))
+d.print(*((&{->n:4}).{->&(self.n)}))
 |positive(&5)|d.print("body")
 |*(&true)|d.print("true")
 copy:(&6).{->*self}
@@ -63,14 +63,14 @@ pub fn temporary_owners_end_at_their_actual_complete_statement() {
     for source in [
         "p:&1;v:*p",
         "id<&int32>:(p<&int32>){->p};view:id(&(1+2));v:*view",
-        "p:&{->n:1}.n;v:*p",
-        "p:&[1,2][1];v:*p",
+        "p:&({->n:1}.n);v:*p",
+        "p:&([1,2][1]);v:*p",
         "value:{->&1}",
         "value:*({->&{->1}})",
         "value:*({p:&1;->p})",
         "f<&int32>:(){->&1}",
-        "p:(&{->n:1}).{->&self.n};v:*p",
-        "v:({->n:1}).{->&self.n}",
+        "p:(&{->n:1}).{->&(self.n)};v:*p",
+        "v:({->n:1}).{->&(self.n)}",
         "read<int32>:(p<& &int32>){->**p};cell:&1;value:read(&cell)",
     ] {
         let case = Case::new(source);
@@ -95,7 +95,7 @@ first<&int32>:(p<&int32>,other<&string>){->p}
 owner:=1
 d.print(read(&owner,&"short"))
 owner=2
-d.print(*first(&owner,&"short"))
+d.print(*(first(&owner,&"short")))
 owner=3
 d.print(owner)
 "#,
@@ -129,7 +129,7 @@ i:=0
     d.print(*(&{i=i+1;->i}))
     |i<2|'loop.restart()
 }
-'skip{unused:&[1][{d.print("index");'skip.leave();->1}];d.print("unreachable")}
+'skip{unused:&([1][{d.print("index");'skip.leave();->1}]);d.print("unreachable")}
 "#,
     )
     .runs(b"leave\n7\n1\n2\nindex\n");
@@ -151,13 +151,13 @@ i:=0
 
 #[test]
 pub fn temporary_list_bounds_keep_static_checks_and_dynamic_effect_order() {
-    for source in ["p:&[1][0]", "p:&[1][2]"] {
+    for source in ["p:&([1][0])", "p:&([1][2])"] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1));
         assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E101\""));
     }
-    let source = "d:@\"debug\";make<int32[3]>:(){d.print(\"owner\");->[1]};index:=2;value:*(&make()[{d.print(\"index\");->index}])";
-    let access = "&make()[{d.print(\"index\");->index}]";
+    let source = "d:@\"debug\";make<int32[3]>:(){d.print(\"owner\");->[1]};index:=2;value:*(&(make()[{d.print(\"index\");->index}]))";
+    let access = "&(make()[{d.print(\"index\");->index}])";
     let start = source.find(access).unwrap();
     let end = start + access.len();
     let case = Case::new(source);
@@ -181,9 +181,9 @@ pub fn temporary_borrow_operand_types_and_unsupported_owners_stay_explicit() {
         .runs(b"1\n");
     for (source, code) in [
         ("take<uint8>:(p<&uint8>){->*p};v:take(&1)", "E212"),
-        ("owner:1;p:&{->view:&owner};v:*p.view", "E303"),
+        ("owner:1;p:&{->view:&owner};v:*(p.view)", "E303"),
         (
-            "owner:1;id<&int32>:(p<&int32>){->p};cell:&id(&owner);v:**cell",
+            "owner:1;id<&int32>:(p<&int32>){->p};cell:&(id(&owner));v:**cell",
             "E303",
         ),
         ("p:&!1", "B001"),

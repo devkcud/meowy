@@ -31,11 +31,13 @@ pub(crate) fn analyze(source: &str) -> (Facts, Proofs) {
 
 #[test]
 pub(crate) fn late_published_aliases_initialize_only_on_completing_iterations() {
-    accepts("x:=1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};x=3;v:*r.p");
     accepts(
-        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*r.p",
+        "x:=1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};x=3;v:*(r.p)",
     );
-    accepts("x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();{'out->p:=&x;p=&y}}};v:*r.p");
+    accepts(
+        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*(r.p)",
+    );
+    accepts("x:1;y:2;n:=0;r:'out{'loop{n=n+1;|n<2|'loop.restart();{'out->p:=&x;p=&y}}};v:*(r.p)");
 }
 
 #[test]
@@ -54,13 +56,13 @@ pub(crate) fn late_published_aliases_keep_nullable_widened_and_record_backing() 
 #[test]
 pub(crate) fn late_published_rhs_leave_and_cell_lifetimes_keep_their_owner() {
     accepts(
-        "x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p={p=&y;'out.leave();->&x}}};v:*r.p",
+        "x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p={p=&y;'out.leave();->&x}}};v:*(r.p)",
     );
     accepts(
-        "x:1;y:2;n:=2;r:'out{cell:'cell{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y;'cell->&p}};v:**cell};v:*r.p",
+        "x:1;y:2;n:=2;r:'out{cell:'cell{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y;'cell->&p}};v:**cell};v:*(r.p)",
     );
-    accepts("x:1;y:2;n:=2;r:'out{'loop{'out->p:={n=n-1;|n>0|'loop.restart();->&x};p=&y}};v:*r.p");
-    accepts("x:1;y:2;n:=2;r:'out{'loop{'out->p:={->&x;n=n-1;|n>0|'loop.restart()};p=&y}};v:*r.p");
+    accepts("x:1;y:2;n:=2;r:'out{'loop{'out->p:={n=n-1;|n>0|'loop.restart();->&x};p=&y}};v:*(r.p)");
+    accepts("x:1;y:2;n:=2;r:'out{'loop{'out->p:={->&x;n=n-1;|n>0|'loop.restart()};p=&y}};v:*(r.p)");
     rejects(
         "x:1;y:2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y;'out->cell:&p}}",
         "E303",
@@ -74,15 +76,15 @@ pub(crate) fn late_published_aliases_preserve_old_copies_loans_and_bounds() {
         "E302",
     );
     rejects(
-        "x:1;y:=2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};y=3;v:*r.p",
+        "x:1;y:=2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};y=3;v:*(r.p)",
         "E302",
     );
     rejects(
-        "x:1;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;local:2;p=&local}};v:*r.p",
+        "x:1;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;local:2;p=&local}};v:*(r.p)",
         "E303",
     );
     rejects(
-        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=first(&x,&s)}};s=\"b\";v:*r.p",
+        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:=\"a\";n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=first(&x,&s)}};s=\"b\";v:*(r.p)",
         "E302",
     );
 }
@@ -106,7 +108,7 @@ pub(crate) fn late_published_frontiers_keep_duplicate_and_cross_edge_initializat
 #[test]
 pub(crate) fn late_published_aliases_stay_out_of_initial_and_backedge_headers() {
     let (facts, proofs) = analyze(
-        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*r.p",
+        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*(r.p)",
     );
     assert_eq!(facts.late_published.len(), 1);
     let (target, ids) = facts.late_published.iter().next().unwrap();
@@ -124,7 +126,7 @@ pub(crate) fn late_published_aliases_stay_out_of_initial_and_backedge_headers() 
 #[test]
 pub(crate) fn late_published_aliases_can_be_preinitialized_for_nested_restarts() {
     let (facts, _) = analyze(
-        "x:1;y:2;n:=2;m:=0;r:'out{'outer{n=n-1;|n>0|'outer.restart();'out->p:=&x;'inner{p=&y;m=m+1;|m<2|'inner.restart()}}};v:*r.p",
+        "x:1;y:2;n:=2;m:=0;r:'out{'outer{n=n-1;|n>0|'outer.restart();'out->p:=&x;'inner{p=&y;m=m+1;|m<2|'inner.restart()}}};v:*(r.p)",
     );
     assert_eq!(facts.changing_published.len(), 2);
     assert_eq!(facts.late_published.len(), 1);
@@ -141,18 +143,18 @@ pub(crate) fn late_published_aliases_can_be_preinitialized_for_nested_restarts()
 #[test]
 pub(crate) fn late_published_markers_count_dead_emissions_separately_from_live_writes() {
     let (facts, _) = analyze(
-        "x:1;n:=2;r:{|false|->skip:0;->p:=&x;'loop{p=&x;n=n-1;|n>0|'loop.restart()}};v:*r.p",
+        "x:1;n:=2;r:{|false|->skip:0;->p:=&x;'loop{p=&x;n=n-1;|n>0|'loop.restart()}};v:*(r.p)",
     );
     assert!(facts.late_published.is_empty());
     accepts(
-        "x:1;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();|false|'out->skip:0;'out->p:=&x;p=&x}};v:*r.p",
+        "x:1;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();|false|'out->skip:0;'out->p:=&x;p=&x}};v:*(r.p)",
     );
 }
 
 #[test]
 pub(crate) fn late_published_planning_requires_every_actual_restart_certificate() {
     let (program, mut proofs, mut flow) = lower(
-        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*r.p",
+        "x:1;y:2;n:=3;r:'out{'loop{n=n-1;|n>1|'loop.restart();|n>0|'loop.restart();'out->p:=&x;p=&y}};v:*(r.p)",
     );
     assert_eq!(proofs.frontiers.len(), 2);
     let site = *proofs.frontiers.keys().next().unwrap();

@@ -8,7 +8,7 @@ d:@"debug"
 forward<&int32>:(input<&int32>){holder:{->view:input};->holder.view}
 owner:=7
 copy:{->view:&owner;->view}
-d.print(copy.view==&owner);d.print(*copy.view)
+d.print(copy.view==&owner);d.print(*(copy.view))
 returned:forward(&owner)
 d.print(returned==&owner);d.print(*returned)
 projected:{holder:{->view:&owner;->count:3};->holder.count}
@@ -27,19 +27,19 @@ d:@"debug"
 owner:={->n:7}
 value:{
     ->holder:{->view:&owner;->count:4;->items<int32[3]>:[5,6]}
-    count:&holder.count
-    d.print(count==&holder.count);d.print(*count)
+    count:&(holder.count)
+    d.print(count==&(holder.count));d.print(*count)
     copy:holder
-    d.print(count==&copy.count)
-    nested:&holder.view.n
-    d.print(nested==&owner.n);d.print(*nested)
-    item:&holder.items[2]
+    d.print(count==&(copy.count))
+    nested:&(holder.view.n)
+    d.print(nested==&(owner.n));d.print(*nested)
+    item:&(holder.items[2])
     d.print(*item)
 }
 d.print(value.holder.count)
-value.holder.{p:&self.count;d.print(*p)}
+value.holder.{p:&(self.count);d.print(*p)}
 <Carrier>:<{view<&{n<int32>}>;count<int32>;items<int32[3]>}>
-show<null>:(input<Carrier>){p:&input.count;d.print(*p)}
+show<null>:(input<Carrier>){p:&(input.count);d.print(*p)}
 show(value.holder)
 owner={->n:8}
 d.print(value.holder.count)
@@ -55,17 +55,17 @@ pub fn carrier_field_borrows_follow_cell_owners_without_unrelated_pointee_loans(
 d:@"debug"
 owner:=1
 holder:{->view:&owner;->count:2}
-count:&holder.count
+count:&(holder.count)
 owner=3
 d.print(*count)
 value:'out{
-    field:{'out->holder:{->view:&owner;->count:4};->&holder.count}
+    field:{'out->holder:{->view:&owner;->count:4};->&(holder.count)}
     d.print(*field)
 }
 d.print(value.holder.count)
 'escape{
     value:'target{
-        field:{local:5;'target->holder:{->view:&local;->count:6};->&holder.count}
+        field:{local:5;'target->holder:{->view:&local;->count:6};->&(holder.count)}
         d.print(*field)
         'escape.leave()
     }
@@ -87,14 +87,14 @@ choose:(flag<boolean>,input<&int32>)'out{
 owner:=7
 one:choose(true,&owner).view
 two:choose(false,&owner).view
-|one<&int32>|d.print(*one<&int32>)
+|one<&int32>|d.print(*(one<&int32>))
 |two<string>|d.print(two<string>)
 maybe:(flag<boolean>,input<&int32>)'out{
-    |flag|{'out->holder:{->view:input;->count:8};p:&holder.count;d.print(*p)}
+    |flag|{'out->holder:{->view:input;->count:8};p:&(holder.count);d.print(*p)}
 }
 present:maybe(true,&owner).holder
 absent:maybe(false,&owner).holder
-|present<{view<&int32>;count<int32>}>|d.print(*present.view)
+|present<{view<&int32>;count<int32>}>|d.print(*(present.view))
 |absent<null>|d.print("null")
 owner=9
 d.print(owner)
@@ -112,14 +112,14 @@ owner:=1
 count:=0
 value:'again{
     ->holder:{->view:&owner;->count:count}
-    p:&holder.count
+    p:&(holder.count)
     d.print(*p)
     count=count+1
     |count<2|'again.restart()
 }
-d.print(*value.holder.view)
-outer:{->holder:{->view:&owner;->count:3};p:&holder.count;i:=0;'loop{d.print(*p);i=i+1;|i<2|'loop.restart()}}
-empty:{->holder:{->view<&int32><null>:null;->count:4};p:&holder.count;d.print(*p)}
+d.print(*(value.holder.view))
+outer:{->holder:{->view:&owner;->count:3};p:&(holder.count);i:=0;'loop{d.print(*p);i=i+1;|i<2|'loop.restart()}}
+empty:{->holder:{->view<&int32><null>:null;->count:4};p:&(holder.count);d.print(*p)}
 owner=2
 |empty.holder.view<null>|d.print("empty")
 d.print(owner)
@@ -132,37 +132,37 @@ d.print(owner)
 pub fn reference_slot_views_preserve_write_and_publication_rejections() {
     for (source, code) in [
         (
-            "owner:=1;value:{->view:&owner};owner=2;copy:*value.view",
+            "owner:=1;value:{->view:&owner};owner=2;copy:*(value.view)",
             "E302",
         ),
         (
-            "owner:=1;value:{->holder:{->view:&owner;->count:3}};owner=2;copy:*value.holder.view",
+            "owner:=1;value:{->holder:{->view:&owner;->count:3}};owner=2;copy:*(value.holder.view)",
             "E302",
         ),
         (
-            "owner:=1;value:{->holder:{->view:&owner;->count:3};p:&holder.count;owner=2;copy:*p}",
+            "owner:=1;value:{->holder:{->view:&owner;->count:3};p:&(holder.count);owner=2;copy:*p}",
             "E302",
         ),
         (
-            "owner:1;value:{->holder:{->view:&owner;->count:3};->field:&holder.count}",
+            "owner:1;value:{->holder:{->view:&owner;->count:3};->field:&(holder.count)}",
             "E303",
         ),
         (
-            "owner:1;value:'out{field:{'out->holder:{->view:&owner;->count:3};->&holder.count};->saved:field}",
+            "owner:1;value:'out{field:{'out->holder:{->view:&owner;->count:3};->&(holder.count)};->saved:field}",
             "E303",
         ),
         ("value:{local:1;->view:&local}", "E303"),
         ("value:{local:1;->holder:{->view:&local;->count:3}}", "E303"),
         (
-            "value:{owner:1;holder:{->view:&owner;->count:3};->&holder.count}",
+            "value:{owner:1;holder:{->view:&owner;->count:3};->&(holder.count)}",
             "E303",
         ),
         (
-            "bad<&int32>:(input<{view<&int32>;count<int32>}>){->&input.count}",
+            "bad<&int32>:(input<{view<&int32>;count<int32>}>){->&(input.count)}",
             "E303",
         ),
         (
-            "owner:1;holder:{->view:&owner;->count:3};p:holder.{->&self.count}",
+            "owner:1;holder:{->view:&owner;->count:3};p:holder.{->&(self.count)}",
             "E303",
         ),
     ] {
@@ -216,7 +216,7 @@ pub fn reference_slot_storage_keeps_whole_carrier_and_mutation_boundaries() {
     for source in [
         "owner:1;n:=2;value:'out{'loop{'out->view:=&owner;view=&owner;n=n-1;|n>0|'loop.restart()}}",
         "owner:1;n:=2;value:'out{'loop{'out->holder:={->view:&owner;->count:3};holder={->view:&owner;->count:4};n=n-1;|n>0|'loop.restart()}}",
-        "owner:1;value:{->holder:{->view:&owner;->count:3};address:&!holder.count}",
+        "owner:1;value:{->holder:{->view:&owner;->count:3};address:&!(holder.count)}",
     ] {
         let output = Case::new(source).command("build", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");
@@ -227,8 +227,8 @@ pub fn reference_slot_storage_keeps_whole_carrier_and_mutation_boundaries() {
 
 #[test]
 pub fn reference_carrier_list_fields_keep_checked_bounds_and_index_effects() {
-    let source = "d:@\"debug\";owner:1;value:{->holder:{->view:&owner;->items<int32[3]>:[1]};index:=2;p:&holder.items[{d.print(\"index\");->index}]}";
-    let access = "&holder.items[{d.print(\"index\");->index}]";
+    let source = "d:@\"debug\";owner:1;value:{->holder:{->view:&owner;->items<int32[3]>:[1]};index:=2;p:&(holder.items[{d.print(\"index\");->index}])}";
+    let access = "&(holder.items[{d.print(\"index\");->index}])";
     let start = source.find(access).unwrap();
     let end = start + access.len();
     let case = Case::new(source);

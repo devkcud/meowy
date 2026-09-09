@@ -9,7 +9,7 @@ read<int32>:(value<int32>){view:{->&value};->*view}
 same<boolean>:(value<int32>,original<&int32>){->&value==original}
 first<int32>:(value<int32>,ignored<int32>){view:&value;->*view}
 <R>:<{n<int32>;nested<{other<int64>}>}>
-field<int64>:(value<R>){view:&value.nested.other;->*view}
+field<int64>:(value<R>){view:&(value.nested.other);->*view}
 owner:=7
 d.print(same(owner,&owner))
 d.print(read(owner))
@@ -32,10 +32,10 @@ d.print(copy)
 d.print(owner)
 <R>:<{n<int32>;nested<{other<int32>}>}>
 record<R>:={->n:6;->nested:{->other:7}}
-count:record.{view:&self.n;->*view}
+count:record.{view:&(self.n);->*view}
 d.print(count)
-view:(&record).{->&self.nested.other}
-d.print(view==&record.nested.other)
+view:(&record).{->&(self.nested.other)}
+d.print(view==&(record.nested.other))
 d.print(*view)
 record={->n:8;->nested:{->other:9}}
 d.print(record.n)
@@ -61,7 +61,7 @@ inspect<null>:(flag<boolean>){
     value<&int32><null>:{|flag|->&owner}
     result:value.{|self<&int32>|->self<&int32>}
     |result<null>|{owner=8;d.print("none")}
-    |result<&int32>|d.print(*result<&int32>)
+    |result<&int32>|d.print(*(result<&int32>))
     owner=9
     d.print(owner)
 }
@@ -98,9 +98,9 @@ pub fn parameter_and_receiver_copy_addresses_cannot_escape() {
     for source in [
         "bad<&int32>:(value<int32>){->&value}",
         "bad:(value<int32>){view:{->&value};->view}",
-        "<R>:<{n<int32>}>;bad<&int32>:(value<R>){->&value.n}",
+        "<R>:<{n<int32>}>;bad<&int32>:(value<R>){->&(value.n)}",
         "owner:1;view:owner.{->&self}",
-        "owner:{->n:1};view:owner.{->&self.n}",
+        "owner:{->n:1};view:owner.{->&(self.n)}",
         "bad<&int32>:(value<int32>){->(&value).{->&*self}}",
         "first<&int32>:(a<&int32>,b<&string>){->a};owner:1;view:{short:\"x\";->first(&owner,&short).{->self}}",
     ] {
@@ -140,13 +140,13 @@ d:@"debug"
 make<H>:(p<&R>){d.print("make");->view:p;->count:3}
 owner<R>:={->n:7}
 holder<H>:{->view:&owner;->count:4}
-view:holder.{->&self.view.n}
-d.print(view==&owner.n)
+view:holder.{->&(self.view.n)}
+d.print(view==&(owner.n))
 d.print(*view)
-other:&make(&owner).view.n
+other:&(make(&owner).view.n)
 d.print(*other)
 maybe<{view<&R><null>}>:{->view:&owner}
-|maybe.view<&R>|{field:&maybe.view.n;d.print(*field)}
+|maybe.view<&R>|{field:&(maybe.view.n);d.print(*field)}
 owner={->n:8}
 d.print(holder.count)
 d.print(owner.n)
@@ -155,11 +155,11 @@ d.print(owner.n)
     .runs(b"true\n7\nmake\n7\n7\n4\n8\n");
     for (source, code) in [
         (
-            "view:{owner:{->n:1};holder:{->view:&owner};->&holder.view.n}",
+            "view:{owner:{->n:1};holder:{->view:&owner};->&(holder.view.n)}",
             "E303",
         ),
         (
-            "owner:={->n:1};holder:{->view:&owner};view:&holder.view.n;owner={->n:2};read:*view",
+            "owner:={->n:1};holder:{->view:&owner};view:&(holder.view.n);owner={->n:2};read:*view",
             "E302",
         ),
     ] {

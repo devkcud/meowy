@@ -244,13 +244,13 @@ choose<null>:(flag<boolean>){
     p:=&empty
     |flag|p=&full
     copy:*p
-    |copy.view<&int32>|d.print(*copy.view<&int32>)
+    |copy.view<&int32>|d.print(*(copy.view<&int32>))
     d.print(copy.count)
 }
 choose(false);choose(true)
 pick<&int32>:(a<&int32>,b<&int32>,flag<boolean>){p:=a;|flag|p=b;->p}
 a:8;b:9
-d.print(*pick(&a,&b,false));d.print(*pick(&a,&b,true))
+d.print(*(pick(&a,&b,false)));d.print(*(pick(&a,&b,true)))
 "#,
     )
     .runs(b"3\n7\n4\n8\n9\n");

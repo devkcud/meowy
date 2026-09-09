@@ -2,10 +2,10 @@ debug : @"debug"
 
 owner : { -> value : 42; -> name : "meowy" }
 view : &owner
-field : &owner.value
-same : &owner.value
+field : owner.&value
+same : owner.&value
 copy : *view
-other : &copy.value
+other : copy.&value
 
 debug.print(field == same)
 debug.print(field == other)

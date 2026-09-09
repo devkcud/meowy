@@ -29,10 +29,10 @@ pub fn mixed_write_regions_allow_holder_siblings_and_final_shared_reads() {
 d:@"debug"
 <Item>:<{n<int32>:=}>
 h:={->items<Item[2]>:=[{->n:=1},{->n:=2}];->other:=10}
-outside:&h.other
+outside:&(h.other)
 h.items[1].n=3
 d.print(*outside)
-inside:&h.items[1].n
+inside:&(h.items[1].n)
 h.items[2].n=*inside+1
 h.items[{h.other=20;d.print("index");->1}].n={h.other=21;d.print("rhs");->h.other}
 d.print(h.items[1].n);d.print(h.items[2].n);d.print(h.other)
@@ -160,8 +160,8 @@ d.print(pure.a);d.print(pure.b)
 #[test]
 pub fn mixed_write_paths_protect_the_first_collection_and_owning_fields() {
     for source in [
-        "h:={->items:=[{->n:=1}];->other:=2};r:&h.items[1].n;h.items[1].n=2;x:*r",
-        "h:={->items:=[{->n:=1;->other:=2}]};r:&h.items[1].other;h.items[1].n=3;x:*r",
+        "h:={->items:=[{->n:=1}];->other:=2};r:&(h.items[1].n);h.items[1].n=2;x:*r",
+        "h:={->items:=[{->n:=1;->other:=2}]};r:&(h.items[1].other);h.items[1].n=3;x:*r",
         "h:={->items:=[{->n:=1}];->other:=2};r:&h;h.items[1].n=2;x:r.other",
         "h:={->items:=[{->n:=1}]};h.items[{h.items=[];->1}].n=2",
         "h:={->items:=[{->n:=1}]};h.items[1].n={h.items=[];->2}",

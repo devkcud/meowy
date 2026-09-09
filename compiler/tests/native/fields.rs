@@ -71,7 +71,7 @@ pub fn mutable_field_writes_allow_disjoint_and_final_shared_reads() {
         r#"
 d:@"debug"
 value:={->left:=1;->right:=2}
-left:&value.left
+left:&(value.left)
 value.right=3
 d.print(*left)
 value.left=*left+1
@@ -79,7 +79,7 @@ whole:&value
 value.right=whole.left+2
 d.print(value.left);d.print(value.right)
 nested:={->inner:={->left:=10;->right:=20};->other:=30}
-view:&nested.inner.left
+view:&(nested.inner.left)
 nested.inner.right=21
 nested.other=31
 d.print(*view)
@@ -143,12 +143,12 @@ value:={->left<int32><string>:=1;->right<int32><string>:=2}
 #[test]
 pub fn mutable_field_writes_reject_live_overlapping_loans() {
     for source in [
-        "v:={->n:=1};r:&v.n;v.n=2;x:*r",
+        "v:={->n:=1};r:&(v.n);v.n=2;x:*r",
         "v:={->a:=1;->b:=2};r:&v;v.b=3;x:r.a",
-        "v:={->inner:={->n:=1}};r:&v.inner;v.inner.n=2;x:r.n",
-        "v:={->inner:={->n:=1}};r:&v.inner.n;v.inner={->n:=2};x:*r",
-        "v:={->a:=1;->b:=2};r:&v.a;v.b={v={->a:=3;->b:=4};->5};x:*r",
-        "v:={->n:=1};r:&v.n;i:=0;'loop{x:*r;v.n=2;i=i+1;|i<2|'loop.restart()}",
+        "v:={->inner:={->n:=1}};r:&(v.inner);v.inner.n=2;x:r.n",
+        "v:={->inner:={->n:=1}};r:&(v.inner.n);v.inner={->n:=2};x:*r",
+        "v:={->a:=1;->b:=2};r:&(v.a);v.b={v={->a:=3;->b:=4};->5};x:*r",
+        "v:={->n:=1};r:&(v.n);i:=0;'loop{x:*r;v.n=2;i=i+1;|i<2|'loop.restart()}",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");
@@ -181,7 +181,7 @@ pub fn mutable_fields_check_shapes_mutability_and_storage_boundaries() {
         ("v:={->n:=1};r:&v;r.n=2", "B001"),
         ("v:={->n:=1};r:&v;(*r).n=2", "B001"),
         ("{->n:=1}.n=2", "B001"),
-        ("v:={->n:=1};r:&!v.n;v.n=2;w:*r", "E302"),
+        ("v:={->n:=1};r:&!(v.n);v.n=2;w:*r", "E302"),
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {

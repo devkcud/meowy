@@ -1,6 +1,6 @@
 # Exclusive borrows of scalar record fields
 
-`&!owner.field` now borrows a boolean, integer or float field from an ordinary
+`owner.&!field` now borrows a boolean, integer or float field from an ordinary
 mutable reference-free Copy record. Nested named fields and grouping are supported.
 This follows the [memory contract](../docs/reference/memory.md) and extends existing
 [scalar exclusive references](EXCLUSIVE_REFERENCES.md). No new reference type,
@@ -75,6 +75,6 @@ Reference fixtures and existing checks are preserved. Full conformance still has
 [Mutable emitted storage](EXCLUSIVE_SLOTS.md) also supports scalar-field paths with
 exact whole-record backing, mutable fields, target lifetime and canonical Slot
 projections. [Indexed storage](EXCLUSIVE_ELEMENTS.md) now supports scalar elements
-and mutable field leaves such as `&!rows[i].value`, including nested and emitted
+and mutable field leaves such as `rows[i].&!value`, including nested and emitted
 owners. It uses complete owned paths and enclosing collection reservations. Owned
 carriers and generated destruction remain separate contracts.

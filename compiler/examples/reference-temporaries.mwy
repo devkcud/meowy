@@ -7,6 +7,6 @@ debug.print(*copied)
 
 <Holder>:<{view<&int32>;count<int32>}>
 make<Holder>:(value<&int32>){debug.print("owner");->view:value;->count:3}
-holder:*(&make(&owner))
-debug.print(*holder.view)
+holder:*(&(make(&owner)))
+debug.print(holder.*view)
 debug.print(holder.count)

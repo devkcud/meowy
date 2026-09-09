@@ -8,7 +8,7 @@ r<R>:'out{
         |first|{
             'out->row:={->inner:={->n:=7};->label:"ready"}
             old:row
-            p:&!row.inner.n
+            p:row.inner.&!n
             *p=8
             d.print(old.inner.n)
             first=false

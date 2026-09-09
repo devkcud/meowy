@@ -70,9 +70,9 @@ d:@"debug"
 small<&!int8>:(p<&!int8>){->&!*p}
 flag<&!boolean>:(p<&!boolean>){->p}
 float<&!float32>:(p<&!float32>){->p}
-i<int8>:=126;*small(&!i)=127;d.print(i)
-b:=true;*flag(&!b)=false;d.print(b)
-f<float32>:=1.5;*float(&!f)=2.5;d.print(f)
+i<int8>:=126;*(small(&!i))=127;d.print(i)
+b:=true;*(flag(&!b))=false;d.print(b)
+f<float32>:=1.5;*(float(&!f))=2.5;d.print(f)
 "#,
     )
     .runs(b"127\nfalse\n2.5\n");
@@ -211,9 +211,9 @@ pub fn wider_shapes_and_named_results_remain_gated() {
 
 #[test]
 pub fn returned_targets_are_captured_through_only_returning_stores() {
-    Case::new(r#"d:@"debug";id<&!int32>:(p<&!int32>){d.print(1);->p};x:=2;p:&!x;*id(&!*p)={d.print(3);->4};d.print(*p);'out{*id(p)={x=5;'out.leave()}};d.print(x)"#).runs(b"1\n3\n4\n1\n5\n");
+    Case::new(r#"d:@"debug";id<&!int32>:(p<&!int32>){d.print(1);->p};x:=2;p:&!x;*(id(&!*p))={d.print(3);->4};d.print(*p);'out{*(id(p))={x=5;'out.leave()}};d.print(x)"#).runs(b"1\n3\n4\n1\n5\n");
     rejects(
-        "id<&!int32>:(p<&!int32>){->p};x:=1;p:&!x;*id(&!*p)={*p=2;->3}",
+        "id<&!int32>:(p<&!int32>){->p};x:=1;p:&!x;*(id(&!*p))={*p=2;->3}",
         "E302",
     );
 }

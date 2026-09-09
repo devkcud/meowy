@@ -20,7 +20,7 @@ x:7
 y:9
 a:make(&x,&y,true)
 b:make(&x,&y,false)
-|a.p<&int32>|d.print(*a.p)
+|a.p<&int32>|d.print(*(a.p))
 |b.p<string>|d.print(b.p)
 "#,
     )
@@ -40,7 +40,7 @@ r:'out{
     |flag|{
         'out->c<A><B>:={->n:1}
         c={->p:&x}
-        |c<A>|{|c.p<&int32>|d.print(*c.p)}
+        |c<A>|{|c.p<&int32>|d.print(*(c.p))}
         c={c={->n:9};'out.leave();->{->p:&x}}
     }
     |!flag|{'out->c:=false}
@@ -66,7 +66,7 @@ r<R>:{
     |old<&int32>|d.print(*old)
     x=3
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 d.print(x)
 "#,
     )
@@ -88,7 +88,7 @@ r<R>:'loop{
     n=n+1
     |n<2|'loop.restart()
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 "#,
     )
     .runs(b"empty\nempty\n9\n");

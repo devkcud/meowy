@@ -3,7 +3,7 @@ use super::{accepts, rejects};
 #[test]
 pub(crate) fn union_alias_writes_remap_reference_members_and_clear_old_sources() {
     accepts(
-        "x:=1;y:2;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=&x;p=&y};|!flag|{'out->p:=\"x\"}};x=3;|r.p<&int32>|{v:*r.p}",
+        "x:=1;y:2;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=&x;p=&y};|!flag|{'out->p:=\"x\"}};x=3;|r.p<&int32>|{v:*(r.p)}",
     );
     accepts(
         "x:=1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=&x;p=null};|!flag|{'out->p:=\"x\"}};x=3;copy:r",
@@ -24,7 +24,7 @@ pub(crate) fn union_alias_branches_and_leave_publish_the_last_member() {
         "x:1;flag:=true;again:=true;r:'out{|flag|{'out->p<&int32><null>:=null;|again|p=&x};|!flag|{'out->p:=false}};copy:r",
     );
     accepts(
-        "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p={p=&x;'out.leave();->null}};|!flag|{'out->p:=\"x\"}};|r.p<&int32>|{v:*r.p}",
+        "x:1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p={p=&x;'out.leave();->null}};|!flag|{'out->p:=\"x\"}};|r.p<&int32>|{v:*(r.p)}",
     );
     rejects(
         "x:=1;flag:=true;r:'out{|flag|{'out->p<&int32><null>:=null;p={p=&x;'out.leave();->null}};|!flag|{'out->p:=\"x\"}};x=2;copy:r",
@@ -36,11 +36,11 @@ pub(crate) fn union_alias_branches_and_leave_publish_the_last_member() {
 pub(crate) fn union_alias_current_predicates_keep_nested_reference_activity() {
     let types = "<A>:<{p<&int32><null>}>;<B>:<{n<int32>}>;";
     accepts(&format!(
-        "{types}x:1;flag:=true;r:'out{{|flag|{{'out->c<A><B>:={{->n:0}};c={{->p:&x}};|c<A>|{{|c.p<&int32>|{{v:*c.p}}}};c={{->n:2}}}};|!flag|{{'out->c:=null}}}};copy:r"
+        "{types}x:1;flag:=true;r:'out{{|flag|{{'out->c<A><B>:={{->n:0}};c={{->p:&x}};|c<A>|{{|c.p<&int32>|{{v:*(c.p)}}}};c={{->n:2}}}};|!flag|{{'out->c:=null}}}};copy:r"
     ));
     rejects(
         &format!(
-            "{types}x:=1;flag:=true;r:'out{{|flag|{{'out->c<A><B>:={{->n:0}};c={{->p:&x}};x=2;|c<A>|{{|c.p<&int32>|{{v:*c.p}}}}}};|!flag|{{'out->c:=null}}}}"
+            "{types}x:=1;flag:=true;r:'out{{|flag|{{'out->c<A><B>:={{->n:0}};c={{->p:&x}};x=2;|c<A>|{{|c.p<&int32>|{{v:*(c.p)}}}}}};|!flag|{{'out->c:=null}}}}"
         ),
         "E302",
     );

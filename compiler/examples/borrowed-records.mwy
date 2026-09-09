@@ -23,7 +23,7 @@ debug.print(primary.tag)
 count := 0
 'loop {
     record : { -> view : &count; -> step : count }
-    debug.print(*record.view)
+    debug.print(record.*view)
     count = count + 1
     | count < 3 | 'loop.restart()
 }

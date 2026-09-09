@@ -259,7 +259,7 @@ testing : @"testing"
         }
 
         expected <usize> : 3
-        testing.equal(&result.count, &expected, "committed byte count")
+        testing.equal(result.&count, &expected, "committed byte count")
         | result.error <null> | testing.fail("a full buffer must report failure")
         testing.bytes_equal(buffer.slice(), "hel".bytes(), "retained prefix")
     })

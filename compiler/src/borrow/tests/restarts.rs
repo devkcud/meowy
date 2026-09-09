@@ -41,7 +41,7 @@ pub(crate) fn expired_header_sources_do_not_revive_after_same_site_initializatio
         "a:1;p:=&a;'loop{->n:2;value:*p;p=&n;'loop.restart()}",
         "a:1;p:=&a;'loop{value:(&2).{->*p};p=&3;'loop.restart()}",
         "first<&int32>:(p<&int32>,other<&string>){->p};a:1;p:=&a;'loop{local:\"short\";value:*p;p=first(&a,&local);'loop.restart()}",
-        "a:1;holder:{->n:2};p:=&holder;'loop{local:{->n:3};field:&p.n;p=&local;'loop.restart()}",
+        "a:1;holder:{->n:2};p:=&holder;'loop{local:{->n:3};field:&(p.n);p=&local;'loop.restart()}",
         "a:1;p:=&a;'loop{local:2;old:p;p=&local;value:*old;'loop.restart()}",
     ] {
         rejects(source, "E303");

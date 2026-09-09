@@ -6,7 +6,7 @@ use crate::loans::{Graph, Projection};
 
 #[test]
 pub(crate) fn reservations_have_no_authority_and_end_at_acquisition() {
-    inspect_body("xs:=[1,2];p:&!xs[xs[1]];v:*p", None, |graph, reach| {
+    inspect_body("xs:=[1,2];p:&!(xs[xs[1]]);v:*p", None, |graph, reach| {
         graph.solve_authority(reach).unwrap();
         assert_eq!(graph.loans.len(), 1);
         let node = graph.loans[0].node;
@@ -32,7 +32,7 @@ pub(crate) fn reservations_have_no_authority_and_end_at_acquisition() {
 #[test]
 pub(crate) fn nonreturning_index_has_no_exclusive_acquisition_or_future_reservation() {
     inspect_body(
-        "xs:=[1];'out{p:&!xs[{'out.leave()}]}",
+        "xs:=[1];'out{p:&!(xs[{'out.leave()}])}",
         None,
         |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -45,7 +45,7 @@ pub(crate) fn nonreturning_index_has_no_exclusive_acquisition_or_future_reservat
 
 #[test]
 pub(crate) fn mutable_owner_proof_is_required_independently_of_storage_shape() {
-    let tree = crate::parser::parse("xs:=[1];p:&!xs[1];v:*p").unwrap();
+    let tree = crate::parser::parse("xs:=[1];p:&!(xs[1]);v:*p").unwrap();
     let mut checker = crate::check::Checker::new();
     let body = checker.block(&tree, None, None).unwrap();
     let program = Program {
@@ -70,8 +70,11 @@ pub(crate) fn mutable_owner_proof_is_required_independently_of_storage_shape() {
 #[test]
 pub(crate) fn projected_reservations_retain_the_selected_local_or_slot_path() {
     for (source, slot) in [
-        ("r:={->xs:=[1];->ys:=[2]};p:&!r.xs[1];v:*p", false),
-        ("r:{->row:={->xs:=[1];->ys:=[2]};p:&!row.xs[1];v:*p}", true),
+        ("r:={->xs:=[1];->ys:=[2]};p:&!(r.xs[1]);v:*p", false),
+        (
+            "r:{->row:={->xs:=[1];->ys:=[2]};p:&!(row.xs[1]);v:*p}",
+            true,
+        ),
     ] {
         inspect_body(source, None, |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -144,7 +147,7 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
         span,
     })];
     for change in 0..4 {
-        let tree = crate::parser::parse("r:{->row:={->xs:=[1]};p:&!row.xs[1];v:*p}").unwrap();
+        let tree = crate::parser::parse("r:{->row:={->xs:=[1]};p:&!(row.xs[1]);v:*p}").unwrap();
         let mut checker = crate::check::Checker::new();
         let body = checker.block(&tree, None, None).unwrap();
         let mut program = Program {
@@ -217,8 +220,8 @@ pub(crate) fn projected_owner_proof_rejects_missing_alias_and_field_evidence() {
 #[test]
 pub(crate) fn cancelled_projected_indices_have_no_acquisition_demand() {
     for source in [
-        "r:={->xs:=[1]};'out{p:&!r.xs[{r.xs=[2];'out.leave()}]}",
-        "r:'out{->row:={->xs:=[1]};p:&!row.xs[{row.xs=[2];'out.leave()}]}",
+        "r:={->xs:=[1]};'out{p:&!(r.xs[{r.xs=[2];'out.leave()}])}",
+        "r:'out{->row:={->xs:=[1]};p:&!(row.xs[{row.xs=[2];'out.leave()}])}",
     ] {
         inspect_body(source, None, |graph, reach| {
             graph.solve_authority(reach).unwrap();

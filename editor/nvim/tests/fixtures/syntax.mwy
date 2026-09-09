@@ -33,6 +33,16 @@ read_word <uint32> : (address <*uint32>) !{
 pointer <*!uint32> : address
 shared <&uint32> : &count
 exclusive <&!uint32> : &!count
+dotted_shared <&uint32> : object.&field
+dotted_exclusive <&!uint32> : object.inner.&!field
+grouped_shared <&uint32> : &(items[index])
+borrowed_first <uint32> : &items[index]
+logical_borrow : ready && *object.&field
+nested_shared <& &uint32> : &reference
+dotted_deref <uint32> : object.*field
+prefix_deref <&uint32> : *pointer.field
+grouped_deref <uint32> : *(items[index])
+chained_deref <uint32> : object.*inner.*field
 inverted : !({ -> true })
 
 <Pair<:T : memory.Copy & tasks.Send>> : <{

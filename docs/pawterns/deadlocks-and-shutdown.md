@@ -219,7 +219,7 @@ status <int32> := 0
 &service >> wait_for_work()
 
 outcomes : << &service
-outcome : &outcomes[1]
+outcome : &(outcomes[1])
 
 'report {
     | *outcome <tasks.Timeout> | {

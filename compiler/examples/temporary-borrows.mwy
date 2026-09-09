@@ -4,8 +4,8 @@ make<int32>:(value<int32>){debug.print("owner");->value}
 read<int32>:(value<&int32>){->*value}
 same<boolean>:(left<&int32>,right<&int32>){->left==right}
 
-debug.print(read(&make(7)))
+debug.print(read(&(make(7))))
 debug.print(same(&1,&1))
-debug.print(*(&[3,4][2]))
+debug.print(*(&([3,4][2])))
 copy:*(&{->9})
 debug.print(copy)

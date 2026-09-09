@@ -9,7 +9,7 @@ a:=1
 b:=2
 pair:{->left:&a;->right:&b;->count:3}
 b=20
-d.print(*pair.left)
+d.print(*(pair.left))
 a=10
 d.print(pair.count)
 a=11
@@ -47,7 +47,7 @@ choose<int32>:(flag<boolean>){
     |flag|right=33
     |!flag|left=44
     other=8
-    ->*pair.value
+    ->*(pair.value)
 }
 d.print(choose(true))
 d.print(choose(false))
@@ -63,7 +63,7 @@ result:'result {
     'result->nested:{->view:&owner}
     'result.leave()
 }
-d.print(*result.nested.view)
+d.print(*(result.nested.view))
 owner=43
 d.print(owner)
 "#,
@@ -74,13 +74,13 @@ d.print(owner)
 #[test]
 pub fn reference_record_copies_and_pending_results_protect_all_live_components() {
     for source in [
-        "a:=1;b:=2;pair:{->left:&a;->right:&b};b=3;copy:pair;value:*copy.left",
-        "a:=1;pair:{->view:&a};a=2;value:*pair.view",
-        "a:=1;pair:{->view:&a;a=2};value:*pair.view",
+        "a:=1;b:=2;pair:{->left:&a;->right:&b};b=3;copy:pair;value:*(copy.left)",
+        "a:=1;pair:{->view:&a};a=2;value:*(pair.view)",
+        "a:=1;pair:{->view:&a;a=2};value:*(pair.view)",
         "a:=1;b:2;pair:{->view:&a};same:pair=={a=2;->view:&b}",
         "a:=1;b:2;left:{->view:&a};right:{->view:&b};same:left=={a=3;->right}",
-        "a:=1;b:=2;pair:{->nested:{->left:&a;->right:&b}};b=3;copy:pair.nested;value:*copy.left",
-        "d:@\"debug\";a:=1;pair:{->view:&a};i:=0;'loop{d.print(*pair.view);a=2;i=i+1;|i<2|'loop.restart()}",
+        "a:=1;b:=2;pair:{->nested:{->left:&a;->right:&b}};b=3;copy:pair.nested;value:*(copy.left)",
+        "d:@\"debug\";a:=1;pair:{->view:&a};i:=0;'loop{d.print(*(pair.view));a=2;i=i+1;|i<2|'loop.restart()}",
     ] {
         let case = Case::new(source);
         for profile in ["debug", "release"] {
@@ -104,7 +104,7 @@ pub fn reference_record_local_escapes_and_unsupported_contracts_stay_explicit() 
             "E303",
         ),
         (
-            "outer:9;pair:{local:5;record:{->safe:&outer;->local:&local};->record};value:*pair.safe",
+            "outer:9;pair:{local:5;record:{->safe:&outer;->local:&local};->record};value:*(pair.safe)",
             "E303",
         ),
         ("bad:(){owner:1;pair:{->view:&owner};->pair}", "E303"),

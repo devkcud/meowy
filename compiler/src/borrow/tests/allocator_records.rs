@@ -91,11 +91,11 @@ pub(crate) fn allocator_record_branches_and_restart_expiry_keep_current_versions
 #[test]
 pub(crate) fn fixed_record_mutation_keeps_cell_access_rules_and_remaining_gates() {
     accepts(&format!(
-        "{RECORD}{{x:1;r.h=f(&x)}};p:&!r.n;r.h=m.heap;*p=7;number:*p"
+        "{RECORD}{{x:1;r.h=f(&x)}};p:&!(r.n);r.h=m.heap;*p=7;number:*p"
     ));
-    rejects(&format!("{RECORD}p:&r.h;r.h=m.heap;copy:*p"), "E302");
+    rejects(&format!("{RECORD}p:&(r.h);r.h=m.heap;copy:*p"), "E302");
     rejects(
-        &format!("{RECORD}p:&r.n;r={{->h:=m.heap;->other:=m.heap;->n:=0}};number:*p"),
+        &format!("{RECORD}p:&(r.n);r={{->h:=m.heap;->other:=m.heap;->n:=0}};number:*p"),
         "E302",
     );
     rejects("x:1;r:={->h:f(&x);->items:[1]}", "B001");

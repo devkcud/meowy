@@ -7,7 +7,7 @@ use crate::loans::Projection;
 #[test]
 pub(crate) fn every_enclosing_list_reservation_reaches_acquisition_without_authority() {
     inspect_body(
-        "r:{->rows:=[{->xs:=[1]}];p:&!rows[1].xs[1];v:*p}",
+        "r:{->rows:=[{->xs:=[1]}];p:&!(rows[1].xs[1]);v:*p}",
         None,
         |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -42,8 +42,8 @@ pub(crate) fn every_enclosing_list_reservation_reaches_acquisition_without_autho
 #[test]
 pub(crate) fn later_cancellation_retains_only_completed_index_demand() {
     for (source, completed) in [
-        ("xs:=[[1]];'out{p:&!xs[{'out.leave()}][1]}", false),
-        ("xs:=[[1]];'out{p:&!xs[1][{'out.leave()}]}", true),
+        ("xs:=[[1]];'out{p:&!(xs[{'out.leave()}][1])}", false),
+        ("xs:=[[1]];'out{p:&!(xs[1][{'out.leave()}])}", true),
     ] {
         inspect_body(source, None, |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -67,7 +67,7 @@ pub(crate) fn later_cancellation_retains_only_completed_index_demand() {
 
 #[test]
 pub(crate) fn nested_owner_proof_checks_intermediate_types_mutability_and_budget() {
-    let tree = crate::parser::parse("rows:=[{->xs:=[1]}];p:&!rows[1].xs[1];v:*p").unwrap();
+    let tree = crate::parser::parse("rows:=[{->xs:=[1]}];p:&!(rows[1].xs[1]);v:*p").unwrap();
     let mut checker = crate::check::Checker::new();
     let body = checker.block(&tree, None, None).unwrap();
     let mut program = Program {

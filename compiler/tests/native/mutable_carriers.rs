@@ -10,12 +10,12 @@ y:=2
 r:={->p:&x;->n:=0}
 old:r
 r.n={r={->p:&y;->n:=3};->4}
-d.print(*old.p)
+d.print(*(old.p))
 x=5
-d.print(*r.p)
+d.print(*(r.p))
 d.print(r.n)
 'out{r.n={r={->p:&x;->n:=6};'out.leave();->7}}
-d.print(*r.p)
+d.print(*(r.p))
 d.print(r.n)
 "#,
     )
@@ -54,7 +54,7 @@ n:=0
 'loop{
     |r<B>|d.print(r.n)
     |r<A>|{
-        |r.p<&int32>|d.print(*r.p)
+        |r.p<&int32>|d.print(*(r.p))
         |r.p<null>|{copy:r.p;d.print("empty")}
     }
     n=n+1
@@ -81,7 +81,7 @@ d.print(same(p,{p=&y;->p}))
 |p<&int32>|d.print(*p)
 r:=make(&x)
 r=make(&y)
-d.print(*r.view)
+d.print(*(r.view))
 d.print(r.n)
 "#,
     )
@@ -105,7 +105,7 @@ pub fn mutable_reference_carriers_keep_expiry_loans_and_storage_gates() {
         ),
         ("x:=1;y:2;r:={->p:&x};old:r;r={->p:&y};x=3;copy:old", "E302"),
         (
-            "x:1;y:2;r:={->p:&x;->n:=0};cell:&r.n;r.n=2;copy:*cell",
+            "x:1;y:2;r:={->p:&x;->n:=0};cell:&(r.n);r.n=2;copy:*cell",
             "E302",
         ),
         (

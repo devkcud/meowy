@@ -4,7 +4,7 @@ use super::{accepts, rejects};
 pub(crate) fn transitive_headers_preserve_nested_cells_and_selected_field_sources() {
     for source in [
         "a:1;b:2;left:&a;right:&b;p:=&left;count:=0;'loop{p=&right;count=count+1;|count<2|'loop.restart()};copy:*p;value:*copy",
-        "a:=1;b:=2;c:=3;left:{->first:&a;->second:&b};right:{->first:&a;->second:&c};p:=&left;count:=0;'loop{p=&right;count=count+1;|count<2|'loop.restart()};b=4;c=4;value:*p.first",
+        "a:=1;b:=2;c:=3;left:{->first:&a;->second:&b};right:{->first:&a;->second:&c};p:=&left;count:=0;'loop{p=&right;count=count+1;|count<2|'loop.restart()};b=4;c=4;value:*(p.first)",
         "a:=1;cell:&a;p:=&cell;count:=0;'loop{p=&cell;count=count+1;|count<2|'loop.restart()};a=2;same:p==&cell",
     ] {
         accepts(source);
@@ -14,7 +14,7 @@ pub(crate) fn transitive_headers_preserve_nested_cells_and_selected_field_source
         "E302",
     );
     rejects(
-        "a:=1;b:=2;left:{->first:&a;->second:&b};p:=&left;count:=0;'loop{p=&left;count=count+1;|count<2|'loop.restart()};b=3;value:*p.second",
+        "a:=1;b:=2;left:{->first:&a;->second:&b};p:=&left;count:=0;'loop{p=&left;count=count+1;|count<2|'loop.restart()};b=3;value:*(p.second)",
         "E302",
     );
 }
@@ -24,7 +24,7 @@ pub(crate) fn header_shapes_keep_reference_free_union_paths_and_lazy_expiry() {
     for source in [
         "value<int32><null>:null;p:=&value;count:=0;'loop{p=&value;count=count+1;|count<2|'loop.restart()};copy:*p",
         "value<int32><null>:null;cell:&value;p:=&cell;count:=0;'loop{p=&cell;count=count+1;|count<2|'loop.restart()};copy:**p",
-        "value<int32><null>:null;holder:{->view:&value;->n:1};p:=&holder;count:=0;'loop{p=&holder;count=count+1;|count<2|'loop.restart()};copy:*p.view",
+        "value<int32><null>:null;holder:{->view:&value;->n:1};p:=&holder;count:=0;'loop{p=&holder;count=count+1;|count<2|'loop.restart()};copy:*(p.view)",
         "a:1;holder:{->view<&int32><null>:&a};p:=&holder;'loop{p=&holder;'loop.restart()}",
         "a:1;holder:{->view:&a;->tag<int32><null>:null};p:=&holder;'loop{p=&holder;'loop.restart()}",
     ] {

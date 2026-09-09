@@ -54,7 +54,7 @@ index <usize> := 1
 'show {
     | index > results.size() | 'show.leave()
 
-    result : &results[index]
+    result : &(results[index])
     | *result <error> | {
         status = 1
         debug.print("Result {index}: {*result}")

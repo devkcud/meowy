@@ -4,7 +4,7 @@ use super::{accepts, rejects};
 pub(crate) fn aliases_preserve_origins_through_nested_block_results() {
     accepts("a:1;view:&a;{copy:view;value:*copy};value:*view");
     accepts("a:1;view:{alias:{->&a};->alias};same:view==&a;value:*view");
-    accepts("a:{->x:1;->nested:{->y:2}};view:{->{->&a.nested.y}};value:*view");
+    accepts("a:{->x:1;->nested:{->y:2}};view:{->{->&(a.nested.y)}};value:*view");
     accepts("f<int32>:(){a:9;view:{->&a};->*view};value:f()");
 }
 

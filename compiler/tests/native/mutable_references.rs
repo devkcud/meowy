@@ -137,7 +137,7 @@ second:{->view:&b;->count:4}
 p:=&first
 old:p
 p=&second
-d.print(*old.view);d.print(*p.view)
+d.print(*(old.view));d.print(*(p.view))
 d.print(p.count)
 x:&a
 y:&b

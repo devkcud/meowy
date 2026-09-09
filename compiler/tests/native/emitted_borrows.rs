@@ -34,7 +34,7 @@ value:'result{
 }
 d.print(value.n);d.print(value.seen)
 other:'result{
-    view:{'result->child:={->n:=8};->&child.n}
+    view:{'result->child:={->n:=8};->&(child.n)}
     d.print(*view)
 }
 d.print(other.child.n)
@@ -48,17 +48,17 @@ pub fn emitted_borrows_preserve_field_and_collection_conflict_regions() {
     Case::new(
         r#"
 d:@"debug"
-first<&int32>:(items<&int32[3]>){->&items[1]}
+first<&int32>:(items<&int32[3]>){->&(items[1])}
 value:{
     ->child:={->left:=1;->right:=2}
-    view:&child.left
+    view:&(child.left)
     child.right=3
     d.print(*view);d.print(child.right)
     child.left=4
     ->items<int32[3]>:=[5,6]
     parent:&items
     item:first(parent)
-    same:&items[1]
+    same:&(items[1])
     d.print(item==same);d.print(*item)
     items[1]=7
     items=items.add(8)
@@ -87,7 +87,7 @@ two:choose(false).n
 |one<int32>|d.print(one<int32>)
 |two<string>|d.print(two<string>)
 maybe:(flag<boolean>)'result{
-    |flag|{'result->child:={->n:=3};view:&child.n;d.print(*view);child.n=4}
+    |flag|{'result->child:={->n:=3};view:&(child.n);d.print(*view);child.n=4}
 }
 present:maybe(true).child
 absent:maybe(false).child
@@ -147,25 +147,25 @@ pub fn emitted_borrows_reject_live_writes_and_result_publication_escapes() {
     for (source, code) in [
         ("value:{->n:=1;view:&n;n=2;copy:*view}", "E302"),
         (
-            "value:{->child:={->n:=1};view:&child.n;child.n=2;copy:*view}",
+            "value:{->child:={->n:=1};view:&(child.n);child.n=2;copy:*view}",
             "E302",
         ),
         (
-            "value:{->child:={->n:=1};view:&child.n;child={->n:=2};copy:*view}",
+            "value:{->child:={->n:=1};view:&(child.n);child={->n:=2};copy:*view}",
             "E302",
         ),
         (
-            "value:{->items<int32[2]>:=[1,2];view:&items[1];items[2]=3;copy:*view}",
+            "value:{->items<int32[2]>:=[1,2];view:&(items[1]);items[2]=3;copy:*view}",
             "E302",
         ),
         (
-            "value:{->items<int32[2]>:=[1];view:&items[{items=[];->1}]}",
+            "value:{->items<int32[2]>:=[1];view:&(items[{items=[];->1}])}",
             "E302",
         ),
         ("value:{->n:=1;view:{->&n};n=2;copy:*view}", "E302"),
         ("value:{->n:=1;same:&n=={n=2;->&n}}", "E302"),
         (
-            "value:{->items:=[{->a:=1;->b:=2}];view:&items[1].a;items[1].b=3;copy:*view}",
+            "value:{->items:=[{->a:=1;->b:=2}];view:&(items[1].a);items[1].b=3;copy:*view}",
             "E302",
         ),
         (
@@ -174,8 +174,8 @@ pub fn emitted_borrows_reject_live_writes_and_result_publication_escapes() {
         ),
         ("value:{->n:=1;->view:&n}", "E303"),
         ("view:{->n:=1;->&n}", "E303"),
-        ("value:{->child:={->n:=1};->view:&child.n}", "E303"),
-        ("value:{->items<int32[2]>:=[1];->view:&items[1]}", "E303"),
+        ("value:{->child:={->n:=1};->view:&(child.n)}", "E303"),
+        ("value:{->items<int32[2]>:=[1];->view:&(items[1])}", "E303"),
         ("value:'out{view:{'out->n:=1;->&n};->saved:view}", "E303"),
         (
             "bad<{n<int32>:=;view<&int32>}>:(){->n:=1;->view:&n}",
@@ -198,8 +198,8 @@ pub fn emitted_borrows_reject_live_writes_and_result_publication_escapes() {
 
 #[test]
 pub fn emitted_element_borrows_keep_checked_bounds_and_prior_effects() {
-    let source = "d:@\"debug\";value:{->items<int32[2]>:=[1];index:=2;view:&items[{d.print(\"index\");->index}]}";
-    let access = "&items[{d.print(\"index\");->index}]";
+    let source = "d:@\"debug\";value:{->items<int32[2]>:=[1];index:=2;view:&(items[{d.print(\"index\");->index}])}";
+    let access = "&(items[{d.print(\"index\");->index}])";
     let start = source.find(access).unwrap();
     let end = start + access.len();
     let case = Case::new(source);

@@ -18,9 +18,9 @@ debug.print(copy==&b)
 debug.print(*copy+1)
 record:{->small<uint8>:7;->nested:{->value<int64>:99;->active:true}}
 view:&record
-field:&record.nested.value
-same:&record.nested.value
-other:&record.nested.active
+field:&(record.nested.value)
+same:&(record.nested.value)
+other:&(record.nested.active)
 debug.print(field==same)
 debug.print(*field)
 debug.print(*other)
@@ -74,7 +74,7 @@ choose<int32>:(flag<boolean>){
 debug.print(choose(true))
 debug.print(choose(false))
 owner:{->value:37}
-view:'result{{'result->&owner.value;'result.leave()}}
+view:'result{{'result->&(owner.value);'result.leave()}}
 debug.print(*view)
 copy:{->view}
 debug.print(copy==view)
@@ -245,7 +245,7 @@ pub fn live_shared_borrows_reject_overlapping_writes_before_lowering() {
         "owner:=1;view:&owner;owner=2;value:*view",
         "owner:=1;view:&owner;alias:view;owner=2;value:*alias",
         "owner:=1;view:&owner;owner=*view+1;value:*view",
-        "owner:={->value:1;->other:2};view:&owner.value;owner={->value:3;->other:4};value:*view",
+        "owner:={->value:1;->other:2};view:&(owner.value);owner={->value:3;->other:4};value:*view",
         "owner:=1;view:{->&owner;owner=2};value:*view",
         "owner:=1;view:&owner;other:3;same:view=={owner=2;->&other}",
         "owner:=1;other:3;same:&owner=={owner=2;->&other}",

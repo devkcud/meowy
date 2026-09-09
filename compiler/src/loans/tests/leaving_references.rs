@@ -74,19 +74,19 @@ pub(crate) fn leave_snapshots_add_no_reads_and_preserve_existing_copy_and_cell_l
 #[test]
 pub(crate) fn leave_result_slots_and_projected_summaries_keep_their_own_versions() {
     rejects(
-        "a:=1;b:=2;p:=&a;row:'out{->old:p;p=&b;'out.leave()};a=3;v:*row.old",
+        "a:=1;b:=2;p:=&a;row:'out{->old:p;p=&b;'out.leave()};a=3;v:*(row.old)",
         "E302",
     );
-    accepts("a:=1;b:=2;p:=&a;row:'out{{'out->old:p;p=&b;'out.leave()}};v:*row.old;a=3;w:*p");
+    accepts("a:=1;b:=2;p:=&a;row:'out{{'out->old:p;p=&b;'out.leave()}};v:*(row.old);a=3;w:*p");
     accepts(&program(
-        "a:=1;b:=2;p:=&a;row:'out{p=&b;|flag|{'out->view:p;'out.leave()};p=&a;->view:p};|flag|a=3;|!flag|b=4;v:*row.view;w:*p",
+        "a:=1;b:=2;p:=&a;row:'out{p=&b;|flag|{'out->view:p;'out.leave()};p=&a;->view:p};|flag|a=3;|!flag|b=4;v:*(row.view);w:*p",
     ));
     accepts(&program(
-        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;'out{|flag|{p=pair.second;'out.leave()}};|flag|a=3;|!flag|b=4;v:*p.view",
+        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;'out{|flag|{p=pair.second;'out.leave()}};|flag|a=3;|!flag|b=4;v:*(p.view)",
     ));
     rejects(
         &program(
-            "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;'out{|flag|{p=pair.second;'out.leave()}};|flag|b=3;v:*p.view",
+            "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;'out{|flag|{p=pair.second;'out.leave()}};|flag|b=3;v:*(p.view)",
         ),
         "E302",
     );

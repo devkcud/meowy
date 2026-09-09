@@ -17,9 +17,9 @@ d.print(read(view))
 owner=42
 owner=read(&owner)+1
 d.print(owner)
-d.print(*inferred(&owner))
+d.print(*(inferred(&owner)))
 record:{->value:7}
-field:identity(&record.value)
+field:identity(&(record.value))
 d.print(*field)
 "#,
     )
@@ -37,8 +37,8 @@ head<&int32>:(value<{view<&int32>}>){->value.view}
 owner:=17
 text:="word"
 record:copy({->view:&owner;->nested:{->other:&text};->count:3})
-d.print(*record.view)
-d.print(*record.nested.other)
+d.print(*(record.view))
+d.print(*(record.nested.other))
 owner=18
 text="changed"
 d.print(record.count)
@@ -104,7 +104,7 @@ second<&int32>:(value<&int32>,depth<int32>) 'done {
     |depth<=0|{'done->value;'done.leave()}
     ->first(value,depth-1)
 }
-d.print(*first(&owner,3))
+d.print(*(first(&owner,3)))
 owner=11
 d.print(owner)
 "#,
@@ -119,7 +119,7 @@ pub fn returned_views_retain_every_active_input_loan() {
         "first<&int32>:(a<&int32>,b<&string>){->a};a:=1;b:=\"old\";r:first(&a,&b);b=\"new\";value:*r",
         "identity<&int32>:(a<&int32>){->a};first<&int32>:(a<&int32>,b<&string>){->a};a:=1;b:=\"old\";r:identity(first(&a,&b));b=\"new\";value:*r",
         "head<&int32>:(p<{left<&int32>;right<&int32>}>){->p.left};a:=1;b:=2;r:head({->left:&a;->right:&b});b=3;value:*r",
-        "pair<{left<&int32>;right<&int32>}>:(a<&int32>,b<&int32>){->left:a;->right:b};a:=1;b:=2;r:pair(&a,&b);b=3;value:*r.left",
+        "pair<{left<&int32>;right<&int32>}>:(a<&int32>,b<&int32>){->left:a;->right:b};a:=1;b:=2;r:pair(&a,&b);b=3;value:*(r.left)",
         "identity<&int32>:(a<&int32>){->a};a:=1;r:identity(&a);a=2;value:*r",
         "read<int32>:(a<&int32>,b<int32>){->*a+b};a:=1;x:read(&a,{a=2;->3})",
         "identity<&int32>:(a<&int32>){->a};a:=1;r:{->identity(&a);a=2};value:*r",
@@ -166,7 +166,7 @@ inspect<null>:(flag<boolean>){
     owner:=11
     view:copy(optional(flag,&owner))
     |view<null>|{owner=12;d.print("absent")}
-    |view<&int32>|d.print(*view<&int32>)
+    |view<&int32>|d.print(*(view<&int32>))
     owner=13
     d.print(owner)
 }
@@ -180,8 +180,8 @@ text:"text"
 keep<AnyRef>:(value<AnyRef>){->value}
 a:keep(&number)
 b:keep(&text)
-|a<&int32>|d.print(*a<&int32>)
-|b<&string>|d.print(*b<&string>)
+|a<&int32>|d.print(*(a<&int32>))
+|b<&string>|d.print(*(b<&string>))
 "#,
     )
     .runs(b"11\n13\nabsent\n13\nempty\n7\ntext\n");
@@ -194,12 +194,12 @@ pub fn separate_calls_keep_independent_bounds_and_local_scalar_use() {
 d:@"debug"
 identity<&int32>:(value<&int32>){->value}
 first<&int32>:(a<&int32>,b<&string>){->a}
-read<int32>:(a<&int32>){local:"short";->*first(a,&local)}
+read<int32>:(a<&int32>){local:"short";->*(first(a,&local))}
 left:=5
 right:=6
 pair:{->left:identity(&left);->right:identity(&right)}
 right=7
-d.print(*pair.left)
+d.print(*(pair.left))
 left=8
 d.print(read(&left))
 "#,

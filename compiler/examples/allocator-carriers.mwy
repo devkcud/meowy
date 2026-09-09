@@ -4,10 +4,10 @@ f<m.Allocator>:(p<&int32>){->m.heap}
 x:=7
 y:9
 r:={->h:=m.heap;->p:&x}
-d.print(*r.p)
+d.print(r.*p)
 r={->h:=m.heap;->p:&y}
 r.h=f(&x)
 x=8
 copy:r
-d.print(*r.p)
+d.print(r.*p)
 d.print(x)

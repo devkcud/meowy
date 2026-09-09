@@ -35,11 +35,11 @@ pub fn nested_write_paths_capture_indices_and_allow_final_shared_reads() {
     Case::new(
         r#"
 d:@"debug"
-head<&int32>:(items<&int32[3][2]>){->&items[1][2]}
+head<&int32>:(items<&int32[3][2]>){->&(items[1][2])}
 a<int32[3][2]>:=[[1,2],[3]]
-view:&a[1][1]
+view:&(a[1][1])
 a[1][2]=*view+5
-row:&a[1]
+row:&(a[1])
 a[2][1]=row[2]+1
 returned:head(&a)
 a[2][1]=*returned+2
@@ -178,8 +178,8 @@ pub fn nested_write_bounds_use_each_parent_length_and_prefix_span() {
 #[test]
 pub fn nested_writes_protect_every_parent_phase_and_retained_alias() {
     for source in [
-        "a:=[[1,2],[3,4]];r:&a[1][1];a[2][2]=5;x:*r",
-        "a:=[[1,2],[3,4]];r:&a[1];a[2][2]=5;x:r[1]",
+        "a:=[[1,2],[3,4]];r:&(a[1][1]);a[2][2]=5;x:*r",
+        "a:=[[1,2],[3,4]];r:&(a[1]);a[2][2]=5;x:r[1]",
         "a:=[[1,2],[3,4]];r:&a;a[2][2]=5;x:r[1][1]",
         "a:=[[1,2],[3,4]];a[{a=[[5,6],[7,8]];->1}][1]=9",
         "a:=[[1,2],[3,4]];a[1][{a=[[5,6],[7,8]];->1}]=9",
@@ -188,9 +188,9 @@ pub fn nested_writes_protect_every_parent_phase_and_retained_alias() {
         "a:=[[1,2],[3,4]];a[1][1]={a[2][1]=5;->9}",
         "d:@\"debug\";a:=[[1]];a[{a=[[2]];->1}][{d.panic(\"stop\")}]=3",
         "d:@\"debug\";a:=[[1]];a[1][{a=[[2]];->1}]=d.panic(\"stop\")",
-        "head<&int32>:(a<&int32[2][2]>,other<&int32[2][2]>){->&a[1][1]};a:=[[1,2],[3,4]];b:=[[1,2],[3,4]];r:head(&a,&b);b[2][2]=5;x:*r",
-        "a:=[[1,2],[3,4]];r:&a[1][1];i:=1;'loop{x:*r;a[2][2]=5;|i>1|'loop.leave();i=i+1;'loop.restart()}",
-        "a:=[[1]];r:'out{a[1][1]={'out->&a[1][1];->2}};x:*r",
+        "head<&int32>:(a<&int32[2][2]>,other<&int32[2][2]>){->&(a[1][1])};a:=[[1,2],[3,4]];b:=[[1,2],[3,4]];r:head(&a,&b);b[2][2]=5;x:*r",
+        "a:=[[1,2],[3,4]];r:&(a[1][1]);i:=1;'loop{x:*r;a[2][2]=5;|i>1|'loop.leave();i=i+1;'loop.restart()}",
+        "a:=[[1]];r:'out{a[1][1]={'out->&(a[1][1]);->2}};x:*r",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");

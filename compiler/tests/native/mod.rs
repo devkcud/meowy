@@ -2,6 +2,7 @@ pub(crate) mod alias_restarts;
 pub(crate) mod alias_writes;
 pub(crate) mod allocator_bounds;
 pub(crate) mod allocator_carriers;
+pub(crate) mod borrow_syntax;
 pub(crate) mod carried_borrows;
 pub(crate) mod carried_record_borrows;
 pub(crate) mod carried_records;

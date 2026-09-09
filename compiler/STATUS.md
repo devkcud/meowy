@@ -1,92 +1,86 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-09. Local exclusive carried-record scalar-field borrows are
-implemented and passed the compiler gate. No failing compiler checks remain.
-Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the whole project;
-[../COMPILER.md](../COMPILER.md) records the implementation plan.
-Keep this handoff current; Git holds history. Do not recreate STEP logs.
+Updated: 2026-09-09. The borrow/dereference syntax migration is complete and passed
+compiler/native/editor checks. No failing checks remain. Full v0.0.1 is incomplete.
+[../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
+records the implementation plan. Keep this handoff current; Git holds history.
+Do not recreate STEP logs.
 
 ## Current compiler slice
 
-The [borrow syntax migration](BORROW_SYNTAX.md) now takes priority over wider
-carried slots. Approved rules distinguish receiver borrowing (`&object.field`)
-from selected-field borrowing (`object.&field`), with grouping for complete indexed
-places. Prefix chains inherit the borrow's postfix boundary; groups reset it.
-The old parser is preserved under `/tmp/meowy-borrow-migration` for migration
-inspection. Root owns source-string migration and STATUS; delegated work owns
-grammar, documentation/standalone sources and native/editor acceptance tests.
-No migration tests have run yet; the recorded gate below is the preceding baseline.
+The approved [migration plan](BORROW_SYNTAX.md) is implemented. Prefix `&`, `&!`
+and `*` bind before subsequent postfix operations. The boundary propagates through
+prefix chains; parentheses reset it. `&items[i]` is `(&items)[i]`, while `&(items[i])`
+borrows the element. `*record.field` is `(*record).field`, while `record.*field`
+dereferences the selected field. `.&`, `.&!` and `.*` consume one field name and
+then resume the postfix chain. Calls and type suffixes follow the same boundary.
 
-`loans/exclusive_restarts.rs::exclusive_restart_source` now follows exact mutable
-record fields from the containing carried slot to a Boolean/integer/float leaf.
-Canonical owner/root/view and empty origin-component checks remain mandatory;
-invalid indexes, element paths, intermediate scalars and non-scalar leaves fail
-closed. Path traversal consumes the existing graph budget.
-`borrow/carried.rs::validate` no longer applies a blanket exclusive-record gate;
-it still validates bounded scalar/reference-free record carried shapes.
+`parser/expressions.rs` lowers dotted operations into existing `Unary(Field)` ASTs.
+The enclosing minimum binding strength now reaches prefix parsing, which prevents
+nested prefixes from consuming the following postfix chain. Groups use normal
+expression parsing. Names, comments/newline rules, depth/tree budgets, type syntax,
+logical/bitwise operators and non-pointer unary behavior retain their contracts.
+AST/HIR representations, ownership passes, backend, runtime and dependencies are
+unchanged. No legacy parser mode or public migration command was added.
 
-Existing Borrow HIR emits whole-slot Acquire for both shared and exclusive
-acquisitions. The containing owner must be active and its entire slot initialized.
-No per-field initialization, fabricated reads or backend changes were introduced.
-The reset-frontier proof still rejects every live exclusive loan or descendant,
-including shared children and call-returned views. Certified shared sibling headers
-retain their independent ancestry; genuine call/input opacity remains conservative.
-
-Nested paths, widths, disjoint siblings, old copies, moves, parent/child authority,
-final use, calls, owner reset and Leave have source and native coverage. E301/E302/
-E303 retain move, conflict and expiry semantics. Indirect stores and exclusive calls
-still invalidate Boolean initialization knowledge. Whole-record, string/unit and
-other non-scalar exclusive paths remain B001. Ordinary local exclusive roots in
-reset graphs remain outside this slice.
-See [the contract](EXCLUSIVE_RESTARTS.md#carried-record-fields) and
-[the example](examples/exclusive-carried-records.mwy).
-
-Declared reference-free records retain whole-slot initialization across inner
-restarts within 256 type parts and 32 levels. Shared references and projected
-reborrows survive inner restarts/alias scope exit while their result owner lives.
-Owner completion/reset expires old sources. Nullable, union, list, reference-bearing,
-foundation and top-level unit carried slots remain gated. Ordinary copies and
-completed-result locals retain their existing borrowing rules.
+Repository source strings and dynamic fragments preserve their previous meanings
+through explicit grouping. Standalone examples and documentation also use the new
+dotted forms. Type references/task-group syntax remain distinct. Source-byte
+expectations were updated from actual new source text. The new
+[pointer-syntax example](examples/pointer-syntax.mwy) demonstrates reference/value
+selection, exclusive field mutation, indexed borrowing and field dereferencing.
 
 ## Actual validation
 
-- The new nested-field test first reproduced B001 from the old blanket record gate.
-- Focused `cargo test --locked --manifest-path compiler/Cargo.toml --target
-  x86_64-unknown-linux-gnu --target-dir compiler/target exclusive_carried_record`
-  passed 7 source groups, 3 graph groups and 6 native groups. Native cases execute
-  in both debug and release. Obsolete scalar-field B001 fixtures were changed to
-  whole-record rejection only after the accepted native cases passed.
-- Graph evidence checks exact paths, target-owned storage, precise local authority,
-  Acquire without synthetic reads, active/initialized acquisition, malformed
-  root/view/target/component identities and non-scalar/indexed paths.
-- `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, 587 library and 552 native Rust tests (1139 total), 16 tooling
-  plus 4 compiler harness Python tests, and 72 examples in debug and release.
+- `python3 -B tools/verify.py --compiler`: all 10 selected checks passed: fmt,
+  Clippy, build, 594 library and 558 native Rust tests (1152 total), 16 tooling and
+  4 compiler-harness Python tests, and 73 examples executed in debug and release.
+- All 21 parser tests pass, including 7 new groups for pointer/postfix binding,
+  mixed prefix chains, groups, calls/type suffixes, malformed dotted syntax,
+  interpolation/Unicode spans, newline continuation and bounded nesting/chains.
+- Six new native groups pass in both profiles: copy/reference distinctions,
+  selected-field operations, nested/sibling loans, mutability/conflicts, once-only
+  call/index effects, reference expiry and retained capability gates.
+- Vim and Neovim suites pass with dotted/grouped forms, logical `&&` and nested
+  reference-type fixtures. No syntax-engine rewrite was needed.
+- Old/new AST comparison, ignoring Group nodes and spans, matched 962 migrated
+  Rust snippets and 37 changed standalone sources. Nineteen generated Rust
+  fragments needed lexical/manual review. Five missed dynamic path substitutions
+  and one fixed byte-span length were repaired; existing expected behavior and
+  primary diagnostic codes remain unchanged. A residual operand scan found none.
+- Documentation audit: 33 aligned Markdown fences matched; 20 were unparseable
+  before and after. Two changed standalone sources likewise retain their prior
+  unsupported parse boundaries. All seven isolated migrated expressions from
+  those unsupported examples matched. This is preservation evidence, not execution.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   capabilities remain outside the full language gate.
-- Final documentation check passed 1077 local links in 102 Markdown files;
-  `git diff --check` passed. Repository contracts also cover 23 catalog records
-  and 7 schemas/6 examples. External links were not fetched.
-- Editor and separate runtime/sanitizer gates were not rerun. No runtime, backend,
-  editor, reference fixture or dependency files changed.
+- Final local-link and whitespace checks passed: 1083 links in 103 Markdown files
+  and `git diff --check`. Repository contracts also cover 23 catalog records and
+  7 schemas/6 examples. External links were not fetched. The separate runtime/sanitizer gate
+  was not rerun; no runtime/backend or reference conformance fixture files changed.
 
-## Other area handoff
+## Prior capabilities and other areas
 
-Standalone documentation supports structural attachment, checked symbol links,
-compiler-derived signatures, E801-E805 diagnostics, `doc check`, `doc build`, local
-API pages and checked/opt-in examples. CLI and `meowy::compile` check complete
-source/documentation input; the low-level AST checker does not invent metadata.
-Package documentation, assets, public indexes and LSP/rename remain separate.
+Carried reference-free records retain whole-slot initialization across inner
+restarts within 256 type parts and 32 levels. Shared projections/reborrows survive
+while their result owner lives. Local exclusive Boolean/integer/float fields use
+exact mutable paths and containing-slot Acquire; every exclusive loan/descendant
+must end before restart. Shared-header certificates, conservative call/input
+ancestry, old copies, mutability, source expiry and E301/E302/E303 remain intact.
+Nullable, union, list, reference-bearing, foundation and top-level unit carried
+slots remain gated. Whole-record/non-scalar exclusive values remain unsupported.
 
-The net/HTTP specification merge is complete. `@"net"` owns TCP/UDP, concrete peer
-capabilities and explicit startup/sender/receiver lifecycle; HTTP lives under
-`net.http`. Follow the dependency-ordered networking plan in COMPILER.md. This
-specification does not expand supported imports or runtime protocols.
+Standalone documentation supports attachment, checked links/signatures, E801-E805,
+`doc check`/`doc build`, local API pages and checked/opt-in examples. Package graphs,
+assets, public indexes and LSP/rename remain separate. Net/HTTP/TLS are specified
+library work; capability types, module/type/I/O/task foundations and lifecycle
+implementation must precede executable adapters.
 
 ## Architecture and proof boundaries
 
 | Responsibility | Existing owner |
 | --- | --- |
+| Pointer syntax and precedence | `src/parser/expressions.rs` |
 | Carried slot shape | `src/borrow/carried.rs`, `src/check/statements.rs` |
 | Whole-slot initialized/active state | `src/loans/emission_init.rs` |
 | Value/source lifetime and alias backing | `src/borrow/`, `src/borrow_value/` |
@@ -97,30 +91,26 @@ specification does not expand supported imports or runtime protocols.
 ## Still outside this compiler
 
 The complete module/package graph, generic specialization, captures, public FFI,
-wider ownership and cleanup, executable net peers/HTTP adapters/TLS, full LSP,
-public artifact/replay formats and release qualification remain separate work.
-Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
+wider ownership/cleanup, executable net peers/HTTP/TLS, public artifacts/replay and
+LSP remain separate. Host execution does not qualify minimum platforms or bundled
+distributions. Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Follow [BORROW_SYNTAX.md](BORROW_SYNTAX.md): implement/test the parser, migrate
-   old intent with exact grouping or selected-field forms, qualify new native and
-   editor distinctions, then run `tools/verify.py --compiler`. No legacy mode is
-   needed. Keep prior carried-slot work below deferred until the migration passes.
-
-1. Investigate fixed-capacity reference-free carried list slots in
+1. Write all new fixtures with the migrated pointer syntax. Group a full indexed,
+   call-result or narrowed-reference target when it must be selected/evaluated before
+   borrowing/dereferencing. Keep diagnostic spans tied to actual source text.
+2. Resume fixed-capacity reference-free carried list investigation in
    `borrow/carried.rs`, `check/statements.rs` and `loans/emission_init.rs`.
    Establish whole-slot initialization, copies, replacement, owner resets and
-   incomplete/duplicate rejection before expanding the eligibility gate.
-   Keep indexed acquisition/reservation support separate until `loans/elements.rs`
-   and existing path proofs qualify it with focused source/native coverage.
-2. Preserve exact scalar field sources, active initialization, shared-header
-   certificates, genuine call/input opacity, exclusive backedge rejection,
-   owner expiry and old-copy loans. Run focused tests and `tools/verify.py --compiler`
-   for the next capability. Nullable/union/reference-bearing/owning carried slots,
-   whole-record exclusive values and exclusive header carriage remain separate.
-3. Continue module graphs and library foundations independently of optional doc
-   polish. Net needs capability types, transport/role checking and bounded
-   startup/shutdown before peers, TLS or HTTP adapters become executable.
+   incomplete/duplicate rejection before expanding eligibility. Keep indexed
+   acquisition/reservations separate until `loans/elements.rs` and existing proofs
+   qualify them with focused source/native coverage and the compiler gate.
+3. Preserve exact sources, active initialization, shared-header certificates,
+   genuine call/input opacity, exclusive backedge rejection, owner expiry and old
+   copies. Broader carried shapes, exclusive header carriage and owning cleanup
+   need separate bounded work. Continue module graphs/library foundations in parallel
+   with optional documentation polish; the standalone doc slice is complete.
 4. Keep root/compiler STATUS current after logical steps, commit cohesive validated
-   work and do not push or recreate STEP logs.
+   work and do not push or recreate STEP logs. Full public artifacts/replay, LSP,
+   minimum-platform/distribution qualification and the full release remain open.

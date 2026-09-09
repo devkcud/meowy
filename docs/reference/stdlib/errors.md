@@ -227,7 +227,7 @@ result_with_context : read_age("twenty")
 | result_with_context <InvalidAge> | {
     details : result_with_context.payload()
     debug.print("Input: {details.text}")
-    debug.print(errors.message(&details.cause))
+    debug.print(errors.message(details.&cause))
 }
 ```
 

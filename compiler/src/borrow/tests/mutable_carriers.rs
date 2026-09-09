@@ -11,7 +11,7 @@ pub(crate) fn mutable_carriers_replace_sources_without_repairing_old_copies() {
         "E302",
     );
     accepts(&format!(
-        "{RECORD}{{z:3;r={{->p:&z;->q:&y;->n:=3}}}};safe:*r.q;r={{->p:&x;->q:&y;->n:=4}};copy:r"
+        "{RECORD}{{z:3;r={{->p:&z;->q:&y;->n:=3}}}};safe:*(r.q);r={{->p:&x;->q:&y;->n:=4}};copy:r"
     ));
     rejects(
         &format!("{RECORD}{{z:3;r={{->p:&z;->q:&y;->n:=3}}}};copy:r"),
@@ -33,9 +33,9 @@ pub(crate) fn mutable_carriers_keep_field_loans_and_post_rhs_state() {
         "E302",
     );
     accepts(&format!(
-        "{RECORD}cell:&r.n;r={{->p:&x;->q:&y;->n:=*cell}};copy:r"
+        "{RECORD}cell:&(r.n);r={{->p:&x;->q:&y;->n:=*cell}};copy:r"
     ));
-    rejects(&format!("{RECORD}cell:&r.n;r.n=3;copy:*cell"), "E302");
+    rejects(&format!("{RECORD}cell:&(r.n);r.n=3;copy:*cell"), "E302");
     rejects(
         &format!("{RECORD}cell:&r;r={{->p:&y;->q:&y;->n:=3}};copy:*cell"),
         "E302",
@@ -117,8 +117,8 @@ pub(crate) fn nullable_reference_headers_require_active_origins_only() {
 
 #[test]
 pub(crate) fn mutable_carriers_keep_transitive_and_public_call_bounds() {
-    accepts("x:=1;y:=2;p:&x;q:&y;r:={->p:&p};r={->p:&q};x=3;copy:**r.p");
-    rejects("x:=1;p:&x;r:={->p:&p};x=3;copy:**r.p", "E302");
+    accepts("x:=1;y:=2;p:&x;q:&y;r:={->p:&p};r={->p:&q};x=3;copy:*(*(r.p))");
+    rejects("x:=1;p:&x;r:={->p:&p};x=3;copy:*(*(r.p))", "E302");
     let prefix = "first<&int32>:(p<&int32>,q<&int32>){->p};x:1;p<&int32><null>:=null;";
     rejects(
         &format!("{prefix}{{y:2;p=first(&x,&y)}};|p<&int32>|{{copy:*p}}"),

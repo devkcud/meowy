@@ -28,7 +28,7 @@ pub(crate) fn last(facts: &Facts) -> &Snapshot {
 
 #[test]
 pub(crate) fn published_snapshots_outlive_the_alias_lexical_scope() {
-    let (facts, _) = analyze("x:1;y:2;r:'out{{'out->p:=&x;p=&y};probe:{}};v:*r.p");
+    let (facts, _) = analyze("x:1;y:2;r:'out{{'out->p:=&x;p=&y};probe:{}};v:*(r.p)");
     let input = last(&facts);
     assert_ne!(input.entered, FALSE);
     assert_eq!(input.slots.len(), 1);
@@ -120,7 +120,7 @@ pub(crate) fn published_snapshot_capture_preserves_conditional_initialization() 
 #[test]
 pub(crate) fn published_restart_inputs_preserve_public_bounds_and_owner_identity() {
     let (facts, _) = analyze(
-        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:\"s\";q:=&x;n:=0;r:{->p:=first(&x,&s);'inner{q=&x;n=n+1;|n<2|'inner.restart()}};v:*r.p",
+        "first<&int32>:(p<&int32>,s<&string>){->p};x:1;s:\"s\";q:=&x;n:=0;r:{->p:=first(&x,&s);'inner{q=&x;n=n+1;|n<2|'inner.restart()}};v:*(r.p)",
     );
     let input = facts.published_restarts.values().next().unwrap();
     assert_eq!(facts.published_restarts.len(), 1);
@@ -146,7 +146,7 @@ pub(crate) fn published_restart_inputs_preserve_public_bounds_and_owner_identity
 #[test]
 pub(crate) fn published_restart_inputs_exclude_reset_targets_and_nested_results() {
     let (facts, _) = analyze(
-        "x:1;q:=&x;n:=0;r:'outer{->p:=&x;'inner{->p:=&x;q=&x;n=n+1;|n<2|'inner.restart()}};v:*r.p",
+        "x:1;q:=&x;n:=0;r:'outer{->p:=&x;'inner{->p:=&x;q=&x;n=n+1;|n<2|'inner.restart()}};v:*(r.p)",
     );
     assert_eq!(facts.published_restarts.len(), 1);
     assert_eq!(
@@ -160,14 +160,14 @@ pub(crate) fn published_restart_inputs_exclude_reset_targets_and_nested_results(
         1
     );
     let (facts, _) = analyze(
-        "x:1;q:=&x;n:=0;r:'outer{->p:=&x;'inner{->p:=&x;q=&x;n=n+1;|n<2|'outer.restart()}};v:*r.p",
+        "x:1;q:=&x;n:=0;r:'outer{->p:=&x;'inner{->p:=&x;q=&x;n=n+1;|n<2|'outer.restart()}};v:*(r.p)",
     );
     assert!(facts.published_restarts.is_empty());
 }
 
 #[test]
 pub(crate) fn published_snapshot_capture_is_bounded_and_validates_reference_coverage() {
-    let (facts, _) = analyze("x:1;y:2;r:{->p:=&x;p=&y;probe:{}};v:*r.p");
+    let (facts, _) = analyze("x:1;y:2;r:{->p:=&x;p=&y;probe:{}};v:*(r.p)");
     let mut input = facts.published_inputs.into_values().next_back().unwrap();
     let owner = input.slots.keys().next().unwrap().0;
     let mut flow = Flow::default();

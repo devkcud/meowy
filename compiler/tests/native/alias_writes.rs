@@ -15,10 +15,10 @@ r:{
     x=3
     d.print(*p)
 }
-d.print(*r.p)
+d.print(*(r.p))
 d.print(x)
 safe:{local:4;s:{->p:=&local;p=&y};->s}
-d.print(*safe.p)
+d.print(*(safe.p))
 "#,
     )
     .runs(b"1\n2\n2\n3\n2\n");
@@ -34,12 +34,12 @@ y:2
 r:'out{
     ->c:={->p:=&x;->q:=&y;->n:=0}
     c.p={c.q=&x;->&y}
-    d.print(*c.q)
+    d.print(*(c.q))
     c.n={c={->p:=&x;->q:=&y;->n:=3};->4}
     c.p={c.q=&x;'out.leave();->&y}
 }
-d.print(*r.c.p)
-d.print(*r.c.q)
+d.print(*(r.c.p))
+d.print(*(r.c.q))
 d.print(r.c.n)
 "#,
     )
@@ -60,16 +60,16 @@ x:1
 y:2
 a:make(&x,&y,true)
 b:make(&x,&y,false)
-d.print(*a.p)
-d.print(*b.p)
+d.print(*(a.p))
+d.print(*(b.p))
 choose:(flag<boolean>,x<&int32>,y<&int32>)'out{
     |flag|{'out->p:=x;p=y}
     |!flag|{'out->p:=y;p=x}
 }
 c:choose(true,&x,&y)
 e:choose(false,&x,&y)
-d.print(*c.p)
-d.print(*e.p)
+d.print(*(c.p))
+d.print(*(e.p))
 "#,
     )
     .runs(b"2\n1\n2\n1\n");
@@ -92,10 +92,10 @@ r:{
     p=&y
     |p<&int32>|d.print(*p)
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 s:{->c:={->p:=&x;->h:=m.heap};c.p=&y;c.h=f(&x);x=4}
 copy:s
-d.print(*s.c.p)
+d.print(*(s.c.p))
 d.print(x)
 "#,
     )
@@ -106,7 +106,7 @@ d.print(x)
 pub fn borrowed_alias_result_loans_and_remaining_backing_gates_are_checked() {
     for (source, code) in [
         ("x:=1;y:2;r:{->p:=&x;old:p;p=&y;x=3;v:*old}", "E302"),
-        ("x:1;y:=2;r:{->p:=&x;p=&y;y=3};v:*r.p", "E302"),
+        ("x:1;y:=2;r:{->p:=&x;p=&y;y=3};v:*(r.p)", "E302"),
         ("x:1;y:2;r:{->p:=&x;cell:&p;p=&y;v:**cell}", "E302"),
         ("x:1;r:{->p:=&x;y:2;p=&y}", "E303"),
         ("x:1;r:{->c:{->p:=&x};c.p=&x}", "E305"),

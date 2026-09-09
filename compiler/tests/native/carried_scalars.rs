@@ -76,7 +76,7 @@ d.print(r.n)
 d.print(r.ok)
 d.print(r.name)
 d.print(r.ratio)
-p:&r.n
+p:&(r.n)
 d.print(*p)
 "#,
     )

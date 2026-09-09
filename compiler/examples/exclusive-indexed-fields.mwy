@@ -4,10 +4,10 @@ bump<null>:(view<&!int32>){*view=*view+1}
 result:'out{
     view:{
         'out->rows:=[{->value:=1;->other:=3}]
-        ->&!rows[{
+        ->rows[{
             debug.print("index")
             ->1
-        }].value
+        }].&!value
     }
     bump(&!*view)
     debug.print(*view)

@@ -130,7 +130,7 @@ pub(crate) fn unsupported_features_have_capability_diagnostics() {
 #[test]
 pub(crate) fn shared_references_keep_storage_types_and_copy_values() {
     accepts("a:1;r<&int32>:&a;s:r;v:*s;same:r==s");
-    accepts("a:{->x:1;->nested:{->y:true}};r:&a;v:r.x;s:&a.nested.y;t:*s");
+    accepts("a:{->x:1;->nested:{->y:true}};r:&a;v:r.x;s:&(a.nested.y);t:*s");
     accepts("f<int32>:(){a:9;r:&a;->*r};v:f()");
     accepts("x<int32><null>:1;r:&x;v:*r");
     rejects("x:1;v:*x", "E222");
@@ -156,7 +156,7 @@ pub(crate) fn record_equality_preserves_aggregate_and_scalar_contexts() {
 #[test]
 pub(crate) fn union_record_constructors_keep_member_context_and_defaults() {
     accepts(
-        "<R>:<{view<&int32><null>}>;a:1;u<R><null>:{->view:&a};|u<R>|{|u.view<&int32>|x:*u.view<&int32>}",
+        "<R>:<{view<&int32><null>}>;a:1;u<R><null>:{->view:&a};|u<R>|{|u.view<&int32>|x:*(u.view<&int32>)}",
     );
     accepts("<R>:<{view<&int32><null>;count<int64>}>;u<R><null>:{->count:7};|u<R>|x:u.count");
     accepts("<R>:<{-><int64>;tag<string>}>;u<R><null>:{->7;->tag:\"ok\"};|u<R>|x<int64>:u");
@@ -203,7 +203,7 @@ pub(crate) fn reference_capability_boundaries_are_explicit() {
     }
     for source in [
         "x:1;r:&x;debug:@\"debug\";debug.print(r)",
-        "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&x.x}",
+        "<R>:<{x<int32>}>;record<R>:{->x:1};x<R><null>:record;|x<R>|{r:&(x.x)}",
     ] {
         rejects(source, "B001");
     }
@@ -306,13 +306,13 @@ pub(crate) fn parameter_and_receiver_addresses_are_scope_local() {
     rejects("bad<&int32>:(value<int32>){->&value}", "E303");
     rejects("bad:(value<int32>){->(&value).{->&*self}}", "E303");
     rejects("value:7;view:value.{->&self}", "E303");
-    rejects("value:{->n:7};view:value.{->&self.n}", "E303");
+    rejects("value:{->n:7};view:value.{->&(self.n)}", "E303");
 }
 
 #[test]
 pub(crate) fn shared_dispatch_keeps_original_origins_and_bounds() {
     accepts(
-        "<R>:<{n<int32>}>;<H>:<{view<&R>}>;field<&int32>:(holder<H>){->&holder.view.n};owner<R>:{->n:7};view:field({->view:&owner});read:*view",
+        "<R>:<{n<int32>}>;<H>:<{view<&R>}>;field<&int32>:(holder<H>){->&(holder.view.n)};owner<R>:{->n:7};view:field({->view:&owner});read:*view",
     );
     accepts("owner:=1;view:(&owner).{->&*self};value:*view;owner=2");
     accepts("a:=1;b:=2;pair:{->a:&a;->b:&b};view:pair.{->self.a};b=3;value:*view");

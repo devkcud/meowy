@@ -107,6 +107,6 @@ pub(crate) fn carried_scalar_live_exclusive_borrows_and_wider_types_remain_gated
         "B001",
     );
     accepts(
-        "<R>:<{n<int32>}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:7;first=false};i=i+1;|i<2|'loop.restart()}};p:&r.n;v:*p",
+        "<R>:<{n<int32>}>;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->n:7;first=false};i=i+1;|i<2|'loop.restart()}};p:&(r.n);v:*p",
     );
 }

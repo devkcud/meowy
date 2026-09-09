@@ -3,16 +3,16 @@ use super::{accepts, rejects};
 #[test]
 pub(crate) fn missing_reborrow_snapshots_require_proven_unreachability() {
     for source in [
-        "a:[1,2];|false|{r:&a[1]}",
-        "a:[1,2];x:true||{r:&a[1];->true}",
-        "a:[1,2];x:false&&{r:&a[1];->true}",
-        "a:=[1,2];|false|{r:&a[{a=[3,4];->99}]}",
-        "a:{->value:1};p:&a;|false|{r:&p.value}",
+        "a:[1,2];|false|{r:&(a[1])}",
+        "a:[1,2];x:true||{r:&(a[1]);->true}",
+        "a:[1,2];x:false&&{r:&(a[1]);->true}",
+        "a:=[1,2];|false|{r:&(a[{a=[3,4];->99}])}",
+        "a:{->value:1};p:&a;|false|{r:&(p.value)}",
     ] {
         accepts(source);
     }
-    rejects("a:=[1,2];|true|{r:&a[1];a=[3,4];value:*r}", "E302");
-    let program = crate::compile("a:[1,2];r:&a[1]").unwrap();
+    rejects("a:=[1,2];|true|{r:&(a[1]);a=[3,4];value:*r}", "E302");
+    let program = crate::compile("a:[1,2];r:&(a[1])").unwrap();
     let error = super::Graph::new(
         &program,
         &super::Facts::default(),
@@ -73,15 +73,15 @@ pub(crate) fn scoped_exits_end_unreachable_loan_uses() {
 #[test]
 pub(crate) fn component_origins_keep_branch_and_iteration_liveness() {
     accepts(
-        "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|b=3;|!flag|a=4;->*r.view}",
+        "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|b=3;|!flag|a=4;->*(r.view)}",
     );
     rejects(
-        "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|a=3;->*r.view}",
+        "f<int32>:(flag<boolean>){a:=1;b:=2;r:{|flag|->view:&a;|!flag|->view:&b};|flag|a=3;->*(r.view)}",
         "E302",
     );
-    accepts("a:=0;i:=0;'loop {r:{->view:&a};x:*r.view;a=a+1;i=i+1;|i<2|'loop.restart()}");
+    accepts("a:=0;i:=0;'loop {r:{->view:&a};x:*(r.view);a=a+1;i=i+1;|i<2|'loop.restart()}");
     rejects(
-        "a:=1;r:{->view:&a};i:=0;'loop {x:*r.view;a=2;i=i+1;|i<2|'loop.restart()}",
+        "a:=1;r:{->view:&a};i:=0;'loop {x:*(r.view);a=2;i=i+1;|i<2|'loop.restart()}",
         "E302",
     );
 }
@@ -89,10 +89,10 @@ pub(crate) fn component_origins_keep_branch_and_iteration_liveness() {
 #[test]
 pub(crate) fn union_activity_assumptions_are_reestablished_after_restart() {
     accepts(
-        "a:=0;i:=0;'loop {r<&int32><null>:{|i<2|->&a};|r<&int32>|{x:*r<&int32>};a=a+1;i=i+1;|i<3|'loop.restart()}",
+        "a:=0;i:=0;'loop {r<&int32><null>:{|i<2|->&a};|r<&int32>|{x:*(r<&int32>)};a=a+1;i=i+1;|i<3|'loop.restart()}",
     );
     rejects(
-        "a:=1;r<&int32><null>:&a;first:=true;i:=0;'loop {|!first&&r<&int32>|{x:*r<&int32>};|first|a=2;first=false;i=i+1;|i<2|'loop.restart()}",
+        "a:=1;r<&int32><null>:&a;first:=true;i:=0;'loop {|!first&&r<&int32>|{x:*(r<&int32>)};|first|a=2;first=false;i=i+1;|i<2|'loop.restart()}",
         "E302",
     );
 }

@@ -10,7 +10,7 @@ r<R>:'out{
         |first|{
             'out->row:{d.print("init");->n:7;->label:"ready"}
             view:&row
-            p=&view.n
+            p=view.&n
             first=false
         }
         d.print(*p)

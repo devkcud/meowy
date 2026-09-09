@@ -2,7 +2,7 @@ debug:@"debug"
 
 matrix<int32[3][2]>:=[[10],[20,30]]
 original:matrix
-view:&matrix[1][1]
+view:&(matrix[1][1])
 matrix[2][1]=*view+1
 debug.print(original[2][1])
 debug.print(matrix[2][1])

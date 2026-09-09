@@ -58,18 +58,18 @@ app : cli.command({
             testing.fail("The custom parser must accept two")
         }
         expected <uint8> : 2
-        testing.equal(&accepted.options.count, &expected, "Typed parsed value")
+        testing.equal(accepted.options.&count, &expected, "Typed parsed value")
     })
 
     -> custom_writer_failure : testing.case(() {
         result : io.write_all(refuse_write, "hello".bytes())
         expected <usize> : 0
-        testing.equal(&result.count, &expected, "No bytes were committed")
+        testing.equal(result.&count, &expected, "No bytes were committed")
         | result.error <null> | testing.fail("The custom writer must fail")
         testing.assert(result.error.kind() == io.Permission, "Portable error kind")
         native_code : result.error.native_code()
         | native_code <int64> | testing.fail("No OS call was made")
-        testing.text_equal(errors.message(&result.error),
+        testing.text_equal(errors.message(result.&error),
             "This fixture refuses output", "Static writer explanation")
     })
 

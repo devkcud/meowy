@@ -8,7 +8,7 @@ number = *alias + 1
 debug.print(number)
 
 record := { -> value : 7 }
-field : &record.value
+field : record.&value
 debug.print(*field)
 record = { -> value : 9 }
 debug.print(record.value)

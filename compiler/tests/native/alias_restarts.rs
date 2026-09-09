@@ -16,14 +16,14 @@ r:'loop{
     |n<3|'loop.restart()
 }
 x=3
-d.print(*r.p)
+d.print(*(r.p))
 d.print(x)
 s:'loop{
     ->p:=&x
     n=n+1
     |n<5|{p=&y;d.print(*p);'loop.restart()}
 }
-d.print(*s.p)
+d.print(*(s.p))
 "#,
     )
     .runs(b"1\n1\n1\n2\n3\n2\n3\n");
@@ -46,15 +46,15 @@ r:'outer{
     }
     ->inner
 }
-d.print(*r.c.p)
-d.print(*r.c.q)
+d.print(*(r.c.p))
+d.print(*(r.c.q))
 d.print(r.c.n)
 s:'loop{
     ->p:=&x
     n=n+1
     p={p=&y;|n<4|'loop.restart();'loop.leave();->&x}
 }
-d.print(*s.p)
+d.print(*(s.p))
 "#,
     )
     .runs(b"2\n1\n4\n2\n");
@@ -78,7 +78,7 @@ r:'loop{
     n=n+1
     |n<2|'loop.restart()
 }
-|r.p<&int32>|d.print(*r.p)
+|r.p<&int32>|d.print(*(r.p))
 "#,
     )
     .runs(b"empty\n7\nempty\n9\n9\n");
@@ -96,7 +96,7 @@ y:4
 r:{->p:=&x;p=&y}
 n=2
 'second{n=n-1;|n>0|'second.restart()}
-d.print(*r.p)
+d.print(*(r.p))
 "#,
     )
     .runs(b"4\n");
@@ -106,7 +106,7 @@ d.print(*r.p)
 pub fn alias_restart_lifetimes_loans_and_surviving_result_gates_are_checked() {
     for (source, code) in [
         (
-            "x:1;y:2;n:=2;r:'out{'inner{'out->p:=&x;p=&y;n=n-1;|n>0|'inner.restart()}};v:*r.p",
+            "x:1;y:2;n:=2;r:'out{'inner{'out->p:=&x;p=&y;n=n-1;|n>0|'inner.restart()}};v:*(r.p)",
             "B001",
         ),
         (
@@ -114,7 +114,7 @@ pub fn alias_restart_lifetimes_loans_and_surviving_result_gates_are_checked() {
             "B001",
         ),
         (
-            "x:1;y:=2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};y=3;v:*r.p",
+            "x:1;y:=2;n:=0;r:'loop{->p:=&x;p=&y;n=n+1;|n<2|'loop.restart()};y=3;v:*(r.p)",
             "E302",
         ),
         (

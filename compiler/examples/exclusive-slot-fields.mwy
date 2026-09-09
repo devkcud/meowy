@@ -4,7 +4,7 @@ bump<null>:(view<&!int32>){*view=*view+1}
 result:'out{
     view:{
         'out->row:={->7;->inner:={->n:=1};->other:=2}
-        pointer:&!row.inner.n
+        pointer:row.inner.&!n
         row.other=3
         primary<int32>:row
         debug.print(primary)

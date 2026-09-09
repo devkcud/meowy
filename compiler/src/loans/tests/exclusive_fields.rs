@@ -5,7 +5,7 @@ use crate::loans::{Graph, Step};
 #[test]
 pub(crate) fn primary_access_excludes_named_descendants_but_retains_ancestors() {
     inspect(
-        "v:={->1;->inner:={->2;->n:=3}};p:&!v.inner.n;a<int32>:v;b<int32>:v.inner;w:*p",
+        "v:={->1;->inner:={->2;->n:=3}};p:&!(v.inner.n);a<int32>:v;b<int32>:v.inner;w:*p",
         |graph, _| {
             let borrowed = &graph.values[graph.loans[0].value].origins[0].source;
             let Source::Local { id, fields } = borrowed else {

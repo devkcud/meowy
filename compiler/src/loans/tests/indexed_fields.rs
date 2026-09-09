@@ -7,7 +7,7 @@ use crate::loans::{Graph, Projection};
 #[test]
 pub(crate) fn indexed_field_acquisition_keeps_the_leaf_region_and_owner_reservation() {
     inspect_body(
-        "r:{->rows:=[{->n:=1;->b:=2}];p:&!rows[1].n;v:*p}",
+        "r:{->rows:=[{->n:=1;->b:=2}];p:&!(rows[1].n);v:*p}",
         None,
         |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -40,10 +40,10 @@ pub(crate) fn indexed_field_acquisition_keeps_the_leaf_region_and_owner_reservat
 pub(crate) fn cancelled_field_acquisition_retains_only_completed_index_demand() {
     for (source, completed) in [
         (
-            "r:=[{->n:=1}];'out{p:&!r[{r=[{->n:=2}];'out.leave()}].n}",
+            "r:=[{->n:=1}];'out{p:&!(r[{r=[{->n:=2}];'out.leave()}].n)}",
             false,
         ),
-        ("r:=[[{->n:=1}]];'out{p:&!r[1][{'out.leave()}].n}", true),
+        ("r:=[[{->n:=1}]];'out{p:&!(r[1][{'out.leave()}].n)}", true),
     ] {
         inspect_body(source, None, |graph, reach| {
             graph.solve_authority(reach).unwrap();
@@ -68,7 +68,7 @@ pub(crate) fn cancelled_field_acquisition_retains_only_completed_index_demand() 
 
 #[test]
 pub(crate) fn mutable_scalar_field_leaf_is_required_in_both_analysis_passes() {
-    let tree = crate::parser::parse("rows:=[{->n:=1}];p:&!rows[1].n;v:*p").unwrap();
+    let tree = crate::parser::parse("rows:=[{->n:=1}];p:&!(rows[1].n);v:*p").unwrap();
     let mut checker = crate::check::Checker::new();
     let body = checker.block(&tree, None, None).unwrap();
     let mut program = Program {

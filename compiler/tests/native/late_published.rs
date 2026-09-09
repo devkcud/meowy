@@ -14,7 +14,7 @@ r:'out{
         p={p=&y;'out.leave();->&x}
     }
 }
-d.print(*r.p)
+d.print(*(r.p))
 "#,
     )
     .runs(b"3\n2\n1\n9\n");
@@ -43,7 +43,7 @@ y:9
 a:make(true,&x,&y)
 b:make(false,&x,&y)
 c:optional(false,&x)
-|a.p<&int32>|d.print(*a.p)
+|a.p<&int32>|d.print(*(a.p))
 |b.p<string>|d.print(b.p)
 |c.p<null>|d.print("absent")
 "#,
@@ -67,13 +67,13 @@ r:'out{
             'out->c:={->p:=&x;->q:=&y;->n:=0}
             c.p={c.q=&x;->&y}
             c.n=3
-            'cell->&c.p
+            'cell->&(c.p)
         }
     }
     d.print(**cell)
 }
-d.print(*r.c.p)
-d.print(*r.c.q)
+d.print(*(r.c.p))
+d.print(*(r.c.q))
 d.print(r.c.n)
 "#,
     )
@@ -97,7 +97,7 @@ r:'out{
         'inner{d.print(*p);p=&y;m=m+1;|m<2|'inner.restart()}
     }
 }
-d.print(*r.p)
+d.print(*(r.p))
 "#,
     )
     .runs(b"7\n9\n9\n");
@@ -115,7 +115,7 @@ pub fn late_published_initialization_and_lifetimes_remain_checked() {
             "E205",
         ),
         (
-            "x:1;y:=2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};y=3;v:*r.p",
+            "x:1;y:=2;n:=2;r:'out{'loop{n=n-1;|n>0|'loop.restart();'out->p:=&x;p=&y}};y=3;v:*(r.p)",
             "E302",
         ),
         (

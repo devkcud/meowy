@@ -20,11 +20,11 @@ pub(crate) fn discarded_alias_fields_keep_rhs_siblings_and_leave_effects() {
         "x:=1;y:2;'out{r:{->c:={->p:=&x;->q:=&y;->n:=0};c.p={c.q=&x;->&y};c.q=&y;x=3;copy:c;'out.leave()}}",
     );
     rejects(
-        "x:=1;y:2;'out{r:{->c:={->p:=&x;->q:=&y};c.p={c.q=&x;->&y};x=3;v:*c.q;'out.leave()}}",
+        "x:=1;y:2;'out{r:{->c:={->p:=&x;->q:=&y};c.p={c.q=&x;->&y};x=3;v:*(c.q);'out.leave()}}",
         "E302",
     );
     accepts(
-        "x:1;y:2;'out{r:{->c:={->p:=&x;->n:=0};'inner{c.p={c={->p:=&y;->n:=3};'inner.leave();->&x}};v:*c.p;'out.leave()}}",
+        "x:1;y:2;'out{r:{->c:={->p:=&x;->n:=0};'inner{c.p={c={->p:=&y;->n:=3};'inner.leave();->&x}};v:*(c.p);'out.leave()}}",
     );
 }
 
@@ -76,11 +76,11 @@ pub(crate) fn discarded_alias_versions_survive_inner_restarts() {
 pub(crate) fn discarded_aliases_preserve_nested_bounds_and_real_call_entry() {
     let prefix = "m:@\"memory\";f<m.Allocator>:(p<&int32>){->m.heap};g<null>:(p<&m.Allocator>,n<int32>){};x:1;";
     accepts(&format!(
-        "{prefix}'out{{r:{{->c:={{->p:=&x;->h:=m.heap}};c.h=f(&1);g(&c.h,{{'out.leave();->0}})}}}}"
+        "{prefix}'out{{r:{{->c:={{->p:=&x;->h:=m.heap}};c.h=f(&1);g(&(c.h),{{'out.leave();->0}})}}}}"
     ));
     rejects(
         &format!(
-            "{prefix}'out{{r:{{->c:={{->p:=&x;->h:=m.heap}};c.h=f(&1);g(&c.h,0);'out.leave()}}}}"
+            "{prefix}'out{{r:{{->c:={{->p:=&x;->h:=m.heap}};c.h=f(&1);g(&(c.h),0);'out.leave()}}}}"
         ),
         "E303",
     );
@@ -89,8 +89,8 @@ pub(crate) fn discarded_aliases_preserve_nested_bounds_and_real_call_entry() {
 
 #[test]
 pub(crate) fn published_result_and_backing_boundaries_remain_explicit() {
-    accepts("x:1;y:2;n:=2;r:{->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}};v:*r.p");
-    rejects("x:1;r:{->p:=&x;y:2;p=&y};v:*r.p", "E303");
+    accepts("x:1;y:2;n:=2;r:{->p:=&x;'loop{p=&y;n=n-1;|n>0|'loop.restart()}};v:*(r.p)");
+    rejects("x:1;r:{->p:=&x;y:2;p=&y};v:*(r.p)", "E303");
     accepts("x:1;flag:=true;r:'target{|flag|{'target->p:=&x;p=&x}}");
     rejects("x:=1;'out{r:{->p:=&!x;'out.leave()}}", "B001");
     rejects(

@@ -12,10 +12,10 @@ third:&outer
 d.print(*outer==&owner);d.print(**third==cell);d.print(***third)
 holder:{->view:&owner;->n:3}
 view:&holder
-slot:&view.view
-d.print(slot==&holder.view);d.print(**slot)
+slot:&(view.view)
+d.print(slot==&(holder.view));d.print(**slot)
 copy:*view
-d.print(*copy.view);d.print(view.n)
+d.print(*(copy.view));d.print(view.n)
 owner=8
 d.print(owner)
 "#,
@@ -30,14 +30,14 @@ pub fn direct_dereference_copies_outlive_cells_but_keep_contained_owners() {
 d:@"debug"
 owner:7
 copy:{holder:{->view:&owner;->n:3};outer:&holder;->*outer}
-d.print(*copy.view);d.print(copy.n)
+d.print(*(copy.view));d.print(copy.n)
 inner:{cell:&owner;outer:&cell;->*outer}
 d.print(inner==&owner)
 result:{->cell:&owner;outer:&cell;->*outer}
-d.print(*result.cell)
+d.print(*(result.cell))
 row:{->n:9}
-field:{holder:{->view:&row};outer:&holder;->&outer.view.n}
-d.print(field==&row.n);d.print(*field)
+field:{holder:{->view:&row};outer:&holder;->&(outer.view.n)}
+d.print(field==&(row.n));d.print(*field)
 "#,
     )
     .runs(b"7\n3\ntrue\n7\ntrue\n9\n");
@@ -76,17 +76,17 @@ d:@"debug"
 <R>:<&int32>
 load<R>:(cell<&R>){->*cell}
 copy<H>:(holder<&H>){->*holder}
-field<&int32>:(holder<&H>){->&holder.n}
+field<&int32>:(holder<&H>){->&(holder.n)}
 value<&int32>:(holder<&H>){->holder.view}
 by_value<H>:(holder<H>){borrowed:&holder;->*borrowed}
 owner:7
 cell:&owner
-d.print(*load(&cell))
+d.print(*(load(&cell)))
 holder<H>:{->view:&owner;->n:3}
 cloned:copy(&holder)
-d.print(*cloned.view);d.print(*field(&holder));d.print(*value(&holder))
+d.print(*(cloned.view));d.print(*(field(&holder)));d.print(*(value(&holder)))
 escaped:{local<H>:{->view:&owner;->n:9};->by_value(local)}
-d.print(*escaped.view);d.print(escaped.n)
+d.print(*(escaped.view));d.print(escaped.n)
 "#,
     )
     .runs(b"7\n7\n3\n7\n7\n9\n");
@@ -107,9 +107,9 @@ second:pick(false,&empty,&full)
 one:*first
 two:*second
 |one.view<null>|d.print("empty")
-|two.view<&int32>|d.print(*two.view<&int32>)
+|two.view<&int32>|d.print(*(two.view<&int32>))
 d.print(first.n);d.print(second.n)
-cell:&empty.view
+cell:&(empty.view)
 copied:*cell
 |copied<null>|d.print("null")
 "#,
@@ -121,7 +121,7 @@ copied:*cell
 pub fn transitive_loans_reject_stale_nested_reads_and_invalid_escapes() {
     for (source, code) in [
         (
-            "owner:=1;holder:{->view:&owner};owner=2;outer:&holder;v:*outer.view",
+            "owner:=1;holder:{->view:&owner};owner=2;outer:&holder;v:*(outer.view)",
             "E302",
         ),
         ("owner:=1;cell:&owner;outer:&cell;owner=2;v:**outer", "E302"),
@@ -147,11 +147,11 @@ pub fn transitive_loans_reject_stale_nested_reads_and_invalid_escapes() {
             "E302",
         ),
         (
-            "<H>:<{view<&int32>;n<int32>}>;bad<&int32>:(p<H>){->&p.n}",
+            "<H>:<{view<&int32>;n<int32>}>;bad<&int32>:(p<H>){->&(p.n)}",
             "E303",
         ),
         (
-            "owner:=1;tag<int32><null>:=null;tag=1;view:&tag;copy:*view;result<&int32><null>:{|copy<int32>|->&owner};owner=2;|result<&int32>|v:*result<&int32>",
+            "owner:=1;tag<int32><null>:=null;tag=1;view:&tag;copy:*view;result<&int32><null>:{|copy<int32>|->&owner};owner=2;|result<&int32>|v:*(result<&int32>)",
             "E302",
         ),
     ] {
@@ -179,7 +179,7 @@ i:=0
 'again{
     holder:{->view:&owner}
     outer:&holder
-    d.print(*outer.view)
+    d.print(*(outer.view))
     owner=owner+1
     i=i+1
     |i<2|'again.restart()
@@ -195,7 +195,7 @@ result:'target{
     count=count+1
     |count<2|'target.restart()
 }
-d.print(*result.cell)
+d.print(*(result.cell))
 "#,
     )
     .runs(b"1\n2\n7\n9\n9\n");

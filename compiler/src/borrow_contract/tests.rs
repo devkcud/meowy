@@ -19,9 +19,9 @@ pub(crate) fn direct_functions_return_symbolic_inputs_and_carrier_components() {
         "pick<&int32>:(p<{left<&int32>;right<&string>}>){->p.left};a:1;b:\"s\";r:pick({->left:&a;->right:&b});v:*r",
     );
     accepts(
-        "copy<{view<&int32>;count<int32>}>:(p<&int32>){->view:p;->count:7};a:1;r:copy(&a);v:*r.view",
+        "copy<{view<&int32>;count<int32>}>:(p<&int32>){->view:p;->count:7};a:1;r:copy(&a);v:*(r.view)",
     );
-    accepts("id<&int32><null>:(p<&int32><null>){->p};u:id(null);|u<&int32>|x:*u<&int32>");
+    accepts("id<&int32><null>:(p<&int32><null>){->p};u:id(null);|u<&int32>|x:*(u<&int32>)");
 }
 
 #[test]
@@ -39,7 +39,7 @@ pub(crate) fn ignored_and_transitive_inputs_still_bound_returned_views() {
         "E303",
     );
     accepts(
-        "first<&int32>:(p<&int32>,q<&string>){->p};wrap<int32>:(p<&int32>){local:\"s\";->*first(p,&local)}",
+        "first<&int32>:(p<&int32>,q<&string>){->p};wrap<int32>:(p<&int32>){local:\"s\";->*(first(p,&local))}",
     );
     accepts("first<&int32>:(p<&int32>,q<&string><null>){->p};a:1;r:first(&a,null);x:*r");
 }
@@ -61,7 +61,7 @@ pub(crate) fn every_body_rejects_local_return_origins_even_when_uncalled() {
 #[test]
 pub(crate) fn normal_return_proofs_preserve_earlier_leaves_and_separate_definitions() {
     accepts(
-        "d:@\"debug\";stop<&int32>:(n<int32>){d.panic(\"stop\")};wrap<int32>:(flag<boolean>) 'out {->*stop({|flag|{'out->7;'out.leave()};->0})}",
+        "d:@\"debug\";stop<&int32>:(n<int32>){d.panic(\"stop\")};wrap<int32>:(flag<boolean>) 'out {->*(stop({|flag|{'out->7;'out.leave()};->0}))}",
     );
     accepts("d:@\"debug\";stop<&int32>:(){d.panic(\"stop\")};wrap<&int32>:(){->stop()}");
     accepts("dead<&int32>:(){->dead()}");
@@ -116,14 +116,14 @@ pub(crate) fn wide_reference_targets_do_not_expand_an_unbounded_frontier() {
 #[test]
 pub(crate) fn projected_inputs_keep_referent_paths_and_all_input_bounds() {
     accepts(
-        r#"<I>:<{n<int32>}>;<R>:<{nested<I>;tag<string>}>;part<&I>:(p<&R>){->&p.nested};leaf<&int32>:(p<&R>){->&part(p).n};owner<R>:{->nested:{->n:7};->tag:"x"};view:leaf(&owner);x:*view"#,
+        r#"<I>:<{n<int32>}>;<R>:<{nested<I>;tag<string>}>;part<&I>:(p<&R>){->&(p.nested)};leaf<&int32>:(p<&R>){->&(part(p).n)};owner<R>:{->nested:{->n:7};->tag:"x"};view:leaf(&owner);x:*view"#,
     );
     rejects(
-        r#"<R>:<{n<int32>}>;leaf<&int32>:(p<&R>,other<&string>){->&p.n};owner<R>:{->n:7};view:{short:"x";->leaf(&owner,&short)}"#,
+        r#"<R>:<{n<int32>}>;leaf<&int32>:(p<&R>,other<&string>){->&(p.n)};owner<R>:{->n:7};view:{short:"x";->leaf(&owner,&short)}"#,
         "E303",
     );
     rejects(
-        "<R>:<{n<int32>}>;leaf<&int32>:(p<&R>){->&p.n};owner<R>:={->n:7};view:leaf(&owner);owner={->n:8};x:*view",
+        "<R>:<{n<int32>}>;leaf<&int32>:(p<&R>){->&(p.n)};owner<R>:={->n:7};view:leaf(&owner);owner={->n:8};x:*view",
         "E302",
     );
 }
@@ -131,20 +131,20 @@ pub(crate) fn projected_inputs_keep_referent_paths_and_all_input_bounds() {
 #[test]
 pub(crate) fn list_element_contracts_visit_types_without_enumerating_capacity() {
     for source in [
-        "first<&int32>:(p<&int32[2]>){->&p[1]};a:[1,2];r:first(&a);v:*r",
-        "first<&int32>:(p<&int32[65536]>){->&p[1]};a<int32[65536]>:[1];r:first(&a);v:*r",
-        "first<&int32>:(p<&int32[2][2]>){->&p[1][1]};a:[[1,2],[3,4]];r:first(&a);v:*r",
-        "first<&int32>:(p<&{items<{value<int32>}[2]>}>){->&p.items[1].value};a:{->items:[{->value:1},{->value:2}]};r:first(&a);v:*r",
+        "first<&int32>:(p<&int32[2]>){->&(p[1])};a:[1,2];r:first(&a);v:*r",
+        "first<&int32>:(p<&int32[65536]>){->&(p[1])};a<int32[65536]>:[1];r:first(&a);v:*r",
+        "first<&int32>:(p<&int32[2][2]>){->&(p[1][1])};a:[[1,2],[3,4]];r:first(&a);v:*r",
+        "first<&int32>:(p<&{items<{value<int32>}[2]>}>){->&(p.items[1].value)};a:{->items:[{->value:1},{->value:2}]};r:first(&a);v:*r",
     ] {
         accepts(source);
     }
-    rejects("first<&int32>:(p<int32[2]>){->&p[1]}", "E303");
+    rejects("first<&int32>:(p<int32[2]>){->&(p[1])}", "E303");
     rejects(
-        "first<&int32>:(p<&int32[2]>,other<&string>){->&p[1]};wrap<&int32>:(p<&int32[2]>){local:\"x\";->first(p,&local)}",
+        "first<&int32>:(p<&int32[2]>,other<&string>){->&(p[1])};wrap<&int32>:(p<&int32[2]>){local:\"x\";->first(p,&local)}",
         "E303",
     );
-    rejects("r:{a:[1,2];->&a[1]}", "E303");
-    rejects("a:[1,2];r:a.{->&self[1]}", "E303");
+    rejects("r:{a:[1,2];->&(a[1])}", "E303");
+    rejects("a:[1,2];r:a.{->&(self[1])}", "E303");
 }
 
 #[test]
@@ -159,7 +159,7 @@ pub(crate) fn projected_candidates_stop_at_the_contract_budget() {
         .map(|id| format!("->n{id}:{id};"))
         .collect::<String>();
     let returns = (0..64)
-        .map(|id| format!("->r{id}:&p.n0;"))
+        .map(|id| format!("->r{id}:&(p.n0);"))
         .collect::<String>();
     let source = format!(
         "<R>:<{{{fields}}}>;get<{{{output}}}>:(p<&R>){{{returns}}};owner<R>:{{{values}}};view:get(&owner)"
@@ -168,7 +168,7 @@ pub(crate) fn projected_candidates_stop_at_the_contract_budget() {
     assert_eq!(errors[0].code, "B001", "{errors:?}");
     assert!(errors[0].message.contains("budget"));
     let returns = (0..64)
-        .map(|id| format!("->r{id}:&p[1].n0;"))
+        .map(|id| format!("->r{id}:&(p[1].n0);"))
         .collect::<String>();
     let source = format!(
         "<R>:<{{{fields}}}>;get<{{{output}}}>:(p<&R[1]>){{{returns}}};owner<R[1]>:[{{{values}}}];view:get(&owner)"
@@ -209,9 +209,9 @@ pub(crate) fn input_reference_chains_keep_symbolic_dereference_components() {
 pub(crate) fn transitive_function_inputs_preserve_reference_cells_and_carrier_members() {
     for source in [
         "<P>:<&int32>;load<P>:(p<&P>){->*p};owner:7;cell:&owner;result:load(&cell);value:*result",
-        "<C>:<{view<&int32>}>;copy<C>:(p<&C>){->*p};owner:7;holder<C>:{->view:&owner};result:copy(&holder);value:*result.view",
-        "<P>:<&int32>;<C>:<{view<P>}>;cell<&P>:(p<&C>){->&p.view};owner:7;holder<C>:{->view:&owner};result:cell(&holder);value:*(*result)",
-        "<I>:<{view<&int32>}>;<C>:<{inner<I>;number<int32>}>;part<&I>:(p<&C>){->&p.inner};owner:7;holder<C>:{->inner:{->view:&owner};->number:8};result:part(&holder);value:*result.view",
+        "<C>:<{view<&int32>}>;copy<C>:(p<&C>){->*p};owner:7;holder<C>:{->view:&owner};result:copy(&holder);value:*(result.view)",
+        "<P>:<&int32>;<C>:<{view<P>}>;cell<&P>:(p<&C>){->&(p.view)};owner:7;holder<C>:{->view:&owner};result:cell(&holder);value:*(*result)",
+        "<I>:<{view<&int32>}>;<C>:<{inner<I>;number<int32>}>;part<&I>:(p<&C>){->&(p.inner)};owner:7;holder<C>:{->inner:{->view:&owner};->number:8};result:part(&holder);value:*(result.view)",
     ] {
         accepts(source);
     }
@@ -219,10 +219,10 @@ pub(crate) fn transitive_function_inputs_preserve_reference_cells_and_carrier_me
 
 #[test]
 pub(crate) fn call_bounds_survive_dereferencing_returned_reference_summaries() {
-    accepts("owner:1;copy:{holder:{->view:&owner};pointer:&holder;->*pointer};value:*copy.view");
+    accepts("owner:1;copy:{holder:{->view:&owner};pointer:&holder;->*pointer};value:*(copy.view)");
     accepts("owner:1;result:{cell:&owner;pointer:&cell;->*pointer};value:*result");
     rejects(
-        "<C>:<{view<&int32>}>;copy<C>:(p<&C>){->*p};owner:1;result:{holder<C>:{->view:&owner};->copy(&holder)};value:*result.view",
+        "<C>:<{view<&int32>}>;copy<C>:(p<&C>){->*p};owner:1;result:{holder<C>:{->view:&owner};->copy(&holder)};value:*(result.view)",
         "E303",
     );
     rejects(
@@ -230,11 +230,11 @@ pub(crate) fn call_bounds_survive_dereferencing_returned_reference_summaries() {
         "E303",
     );
     rejects(
-        "<P>:<&int32>;id<&P>:(p<&P>,other<&string>){->p};owner:1;cell:&owner;result:{short:\"s\";->*id(&cell,&short)};value:*result",
+        "<P>:<&int32>;id<&P>:(p<&P>,other<&string>){->p};owner:1;cell:&owner;result:{short:\"s\";->*(id(&cell,&short))};value:*result",
         "E303",
     );
     rejects(
-        "<P>:<&int32>;id<&P>:(p<&P>,other<&string>){->p};owner:=1;cell:&owner;other:=\"s\";result:*id(&cell,&other);other=\"changed\";value:*result",
+        "<P>:<&int32>;id<&P>:(p<&P>,other<&string>){->p};owner:=1;cell:&owner;other:=\"s\";result:*(id(&cell,&other));other=\"changed\";value:*result",
         "E302",
     );
     accepts(
@@ -474,10 +474,10 @@ pub(crate) fn candidate_choices_preserve_pointee_variants_and_exclude_unrelated_
 #[test]
 pub(crate) fn nullable_pointees_do_not_gain_references_from_ignored_inputs() {
     accepts(
-        "<C>:<{view<&int32><null>}>;id<&C>:(p<&C>,other<&int32>){->p};holder<C>:{};result:{short:1;->*id(&holder,&short)};|result.view<null>|ok:true",
+        "<C>:<{view<&int32><null>}>;id<&C>:(p<&C>,other<&int32>){->p};holder<C>:{};result:{short:1;->*(id(&holder,&short))};|result.view<null>|ok:true",
     );
     rejects(
-        "<C>:<{view<&int32><null>}>;id<&C>:(p<&C>,other<&int32>){->p};owner:1;holder<C>:{->view:&owner};result:{short:2;->*id(&holder,&short)}",
+        "<C>:<{view<&int32><null>}>;id<&C>:(p<&C>,other<&int32>){->p};owner:1;holder<C>:{->view:&owner};result:{short:2;->*(id(&holder,&short))}",
         "E303",
     );
 }

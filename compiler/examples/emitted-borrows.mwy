@@ -6,7 +6,7 @@ result:{
     debug.print(*view)
     count=2
     ->items<int32[2]>:=[3]
-    item:&items[1]
+    item:&(items[1])
     debug.print(*item)
     items[1]=9
 }

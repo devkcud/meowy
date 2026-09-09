@@ -16,7 +16,7 @@ pub(crate) fn reference_operands_keep_their_version_through_rhs_assignment() {
     rejects("a:=1;b:=2;p:=&a;same:p=={p=&b;a=3;->&b}", "E302");
     rejects("a:=1;b:=2;p:=&a;pair:{->old:p;p=&b;a=3;->new:p}", "E302");
     rejects(
-        "a:=1;b:=2;p:=&a;pair:{->old:p;p=&b;->new:p};a=3;v:*pair.old",
+        "a:=1;b:=2;p:=&a;pair:{->old:p;p=&b;->new:p};a=3;v:*(pair.old)",
         "E302",
     );
 }
@@ -41,17 +41,17 @@ pub(crate) fn reference_cell_borrows_block_stores_until_their_final_use() {
 
 #[test]
 pub(crate) fn reference_versions_preserve_transitive_contents_and_all_input_bounds() {
-    accepts("a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;p=&right;a=3;v:*p.view");
+    accepts("a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;p=&right;a=3;v:*(p.view)");
     rejects(
-        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;p=&right;a=3;v:*old.view",
+        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;p=&right;a=3;v:*(old.view)",
         "E302",
     );
     rejects(
-        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;p=&right;b=3;v:*p.view",
+        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;p=&right;b=3;v:*(p.view)",
         "E302",
     );
     accepts(
-        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;p=&right;a=3;same:old==&left;v:*p.view",
+        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};p:=&left;old:p;p=&right;a=3;same:old==&left;v:*(p.view)",
     );
     rejects(
         "first<&int32>:(p<&int32>,other<&string>){->p};a:1;b:2;s:=\"old\";p:=first(&a,&s);old:p;p=&b;s=\"new\";v:*old",

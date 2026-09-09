@@ -3,7 +3,7 @@ use super::{accepts, rejects};
 #[test]
 pub(crate) fn carried_record_borrows_acquire_whole_and_nested_storage() {
     accepts(
-        r#"<Inner>:<{n<uint8>;unit<null>}>;<Row>:<{inner<Inner>;name<string>;ok<boolean>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:255;->unit:null};->name:"ready";->ok:true};p:&row;q:&row.inner.n;s:&row.name;b:&row.ok;v:p.inner.n;w:*q;t:*s;ok:*b;same:q==&p.inner.n;first=false;'loop.restart()}}}"#,
+        r#"<Inner>:<{n<uint8>;unit<null>}>;<Row>:<{inner<Inner>;name<string>;ok<boolean>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:255;->unit:null};->name:"ready";->ok:true};p:&row;q:&(row.inner.n);s:&(row.name);b:&(row.ok);v:p.inner.n;w:*q;t:*s;ok:*b;same:q==&(p.inner.n);first=false;'loop.restart()}}}"#,
     );
 }
 
@@ -17,7 +17,7 @@ pub(crate) fn carried_record_borrows_retain_alias_storage_and_old_reference_copi
 #[test]
 pub(crate) fn carried_record_borrows_retain_projected_reborrows() {
     accepts(
-        "<Inner>:<{n<int32>}>;<Row>:<{inner<Inner>}>;<R>:<{row<Row>}>;x:1;p:=&x;q:=&x;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:7}};whole:&row;p=&row.inner.n;q=&whole.inner.n;first=false};v:*p;w:*q;same:p==q;i=i+1;|i<3|'loop.restart()};v:*q};p=&x;q=&x;v:*p;w:*q",
+        "<Inner>:<{n<int32>}>;<Row>:<{inner<Inner>}>;<R>:<{row<Row>}>;x:1;p:=&x;q:=&x;first:=true;i:=0;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:7}};whole:&row;p=&(row.inner.n);q=&(whole.inner.n);first=false};v:*p;w:*q;same:p==q;i=i+1;|i<3|'loop.restart()};v:*q};p=&x;q=&x;v:*p;w:*q",
     );
 }
 
@@ -28,15 +28,15 @@ pub(crate) fn carried_record_borrows_expire_on_owner_completion_and_reset() {
         "E303",
     );
     rejects(
-        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};p=&row.n;first=false;'loop.restart()}}};v:*p",
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};p=&(row.n);first=false;'loop.restart()}}};v:*p",
         "E303",
     );
     rejects(
-        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{v:*p;first:=true;'loop{|first|{'out->row:{->n:i};p=&row.n;first=false;'loop.restart()}};i=i+1;|i<2|'out.restart()}",
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{v:*p;first:=true;'loop{|first|{'out->row:{->n:i};p=&(row.n);first=false;'loop.restart()}};i=i+1;|i<2|'out.restart()}",
         "E303",
     );
     accepts(
-        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{p=&x;first:=true;'loop{|first|{'out->row:{->n:i};p=&row.n;first=false;'loop.restart()};v:*p};i=i+1;|i<2|'out.restart()};p=&x;v:*p",
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;x:1;p:=&x;i:=0;r<R>:'out{p=&x;first:=true;'loop{|first|{'out->row:{->n:i};p=&(row.n);first=false;'loop.restart()};v:*p};i=i+1;|i<2|'out.restart()};p=&x;v:*p",
     );
 }
 
@@ -45,10 +45,10 @@ pub(crate) fn carried_record_borrows_preserve_field_conflicts_and_final_use() {
     let prefix = "<Row>:<{n<int32>:=;other<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7;->other:=1};";
     let suffix = "first=false;'loop.restart()}}}";
     accepts(&format!(
-        "{prefix}p:&row.n;row.other=9;v:*p;row.n=8;q:&row;w:q.n;row={{->n:=10;->other:=2}};{suffix}"
+        "{prefix}p:&(row.n);row.other=9;v:*p;row.n=8;q:&row;w:q.n;row={{->n:=10;->other:=2}};{suffix}"
     ));
-    accepts(&format!("{prefix}old:row;p:&old.n;row.n=8;v:*p;{suffix}"));
-    rejects(&format!("{prefix}p:&row.n;row.n=8;v:*p;{suffix}"), "E302");
+    accepts(&format!("{prefix}old:row;p:&(old.n);row.n=8;v:*p;{suffix}"));
+    rejects(&format!("{prefix}p:&(row.n);row.n=8;v:*p;{suffix}"), "E302");
     rejects(
         &format!("{prefix}p:&row;row={{->n:=8;->other:=2}};v:p.n;{suffix}"),
         "E302",
@@ -57,7 +57,7 @@ pub(crate) fn carried_record_borrows_preserve_field_conflicts_and_final_use() {
 
 #[test]
 pub(crate) fn carried_record_borrows_keep_call_bounds_and_leave_expiry() {
-    let source = "<Inner>:<{n<int32>}>;<Row>:<{inner<Inner>}>;<R>:<{row<Row>}>;keep<&int32>:(value<&int32>){->value};x:1;p:=&x;first:=true;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:7}};p=keep(&row.inner.n);first=false;'loop.restart()};v:*p;'out.leave()}};";
+    let source = "<Inner>:<{n<int32>}>;<Row>:<{inner<Inner>}>;<R>:<{row<Row>}>;keep<&int32>:(value<&int32>){->value};x:1;p:=&x;first:=true;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:7}};p=keep(&(row.inner.n));first=false;'loop.restart()};v:*p;'out.leave()}};";
     accepts(&format!("{source}p=&x;v:*p"));
     rejects(&format!("{source}v:*p"), "E303");
 }
@@ -65,7 +65,7 @@ pub(crate) fn carried_record_borrows_keep_call_bounds_and_leave_expiry() {
 #[test]
 pub(crate) fn carried_record_borrows_keep_unproved_and_exclusive_storage_gated() {
     rejects(
-        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;first:=false;i:=0;r<R>:'out{'loop{|first|{'out->row:{->n:7};p:&row.n;v:*p;first=false};i=i+1;|i<2|'loop.restart()}}",
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;first:=false;i:=0;r<R>:'out{'loop{|first|{'out->row:{->n:7};p:&(row.n);v:*p;first=false};i=i+1;|i<2|'loop.restart()}}",
         "B001",
     );
     rejects(

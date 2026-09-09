@@ -170,8 +170,8 @@ of a record's shape. Borrowing a mutable owner as `&value` permits reads only.
 
 `value.(f)` means `f(value)`. `value.(f, other)` means `f(value, other)`; arguments
 are evaluated once, left-to-right. The ordinary parameter types determine whether
-the receiver is copied, moved, or borrowed. Use `(&value).(f)` for an explicit
-borrow when `f` takes a reference.
+the receiver is copied, moved, or borrowed. Use `&value.(f)`, equivalently
+`(&value).(f)`, for an explicit borrow when `f` takes a reference.
 
 `value.{ ... }` evaluates the receiver once and binds it as `self` in the block.
 It follows ordinary ownership rules: a move-only receiver moves into that binding.
@@ -186,8 +186,17 @@ answer : 20
     .(double)
 ```
 
-`value.name` selects a field. These forms share a left-to-right surface syntax,
-but member lookup never implies arbitrary execution.
+`value.name` selects a field. `value.&name` and `value.&!name` borrow that
+selected field, shared or exclusively, and mean `&(value.name)` and
+`&!(value.name)`. The modifier applies to the immediately named field:
+`value.&inner.name` borrows `inner` before selecting `name`, while
+`value.inner.&name` borrows `name` itself. Prefix `&value.name` instead means
+`(&value).name`. Likewise, `value.*name` means `*(value.name)` and dereferences
+the selected field, while `*value.name` means `(*value).name`. In
+`value.*inner.name`, dereferencing applies to `inner` before selecting `name`.
+These forms share a left-to-right surface syntax, but member lookup never implies
+arbitrary execution. Ordinary mutability, ownership, lifetime and compiler
+capability checks still apply.
 
 ## Matchers and flow analysis
 

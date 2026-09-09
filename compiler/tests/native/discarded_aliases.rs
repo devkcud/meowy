@@ -35,9 +35,9 @@ y:2
     r:{
         ->c:={->p:=&x;->q:=&y;->n:=0}
         c.p={c.q=&x;->&y}
-        d.print(*c.q)
+        d.print(*(c.q))
         'inner{c.p={c={->p:=&y;->q:=&x;->n:=3};'inner.leave();->&x}}
-        d.print(*c.p)
+        d.print(*(c.p))
         d.print(c.n)
         'out.leave()
     }
@@ -115,7 +115,7 @@ pub fn discarded_alias_expiry_loans_and_published_results_stay_checked() {
             "E303",
         ),
         (
-            "x:1;y:2;n:=2;r:'out{'loop{'out->p:=&x;p=&y;n=n-1;|n>0|'loop.restart()}};v:*r.p",
+            "x:1;y:2;n:=2;r:'out{'loop{'out->p:=&x;p=&y;n=n-1;|n>0|'loop.restart()}};v:*(r.p)",
             "B001",
         ),
         ("x:1;'out{r:{->p:&x;p=&x;'out.leave()}}", "E305"),

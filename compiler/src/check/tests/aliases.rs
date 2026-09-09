@@ -5,15 +5,15 @@ pub(crate) fn immutable_emitted_aliases_keep_constants_lengths_and_write_protect
     for source in [
         "r:{->n:1;p:&n;v:*p}",
         "r:{->flag:false;v:flag&&(1/0==0)}",
-        "r:{->items<int32[3]>:[1];n:items.size();v<int32[n]>:[];p:&items[1]}",
-        "r:{->row:{->n:=1};p:&row.n;v:*p}",
+        "r:{->items<int32[3]>:[1];n:items.size();v<int32[n]>:[];p:&(items[1])}",
+        "r:{->row:{->n:=1};p:&(row.n);v:*p}",
         "a:1;r:{->view:&a;p:&view}",
     ] {
         accepts(source);
     }
     for (source, code) in [
         ("r:{->byte<uint8>:255;v:byte+1}", "E107"),
-        ("r:{->items<int32[3]>:[1];p:&items[2]}", "E101"),
+        ("r:{->items<int32[3]>:[1];p:&(items[2])}", "E101"),
         ("r:{->n:1;n=2}", "E305"),
         ("r:{->row:{->n:=1};row.n=2}", "E305"),
         ("r:{->items:[1,2];items[1]=3}", "E305"),
@@ -80,11 +80,14 @@ pub(crate) fn exclusive_alias_backing_rejects_widening_without_restricting_share
 #[test]
 pub(crate) fn exclusive_projection_requires_exact_backing_beyond_the_selected_field() {
     accepts(
-        "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&row.n;v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}",
+        "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&(row.n);v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}",
     );
-    let source = "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&!row.n;v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}";
+    let source = "f:(flag<boolean>)'out{|flag|{'out->row:={->n:=1;->tag:=true};p:&!(row.n);v:*p};|!flag|'out->row:={->n:=2;->tag:=3}}";
     let errors = crate::compile(source).unwrap_err();
     assert_eq!(errors[0].code, "B001");
     assert!(errors[0].message.contains("identical backing type"));
-    assert_eq!(&source[errors[0].span.start..errors[0].span.end], "&!row.n");
+    assert_eq!(
+        &source[errors[0].span.start..errors[0].span.end],
+        "&!(row.n)"
+    );
 }

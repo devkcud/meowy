@@ -30,9 +30,9 @@ pub fn element_writes_allow_final_borrow_uses_and_independent_owners() {
     Case::new(
         r#"
 d:@"debug"
-head<&int32>:(items<&int32[3]>){->&items[1]}
+head<&int32>:(items<&int32[3]>){->&(items[1])}
 a<int32[3]>:=[10,20]
-view:&a[1]
+view:&(a[1])
 a[2]=*view+1
 whole:&a
 a[1]=whole[2]+1
@@ -91,17 +91,17 @@ d.print(a[1])
 #[test]
 pub fn element_writes_reject_live_aliases_and_intervening_owner_writes() {
     for source in [
-        "a:=[1,2];r:&a[1];a[2]=3;x:*r",
+        "a:=[1,2];r:&(a[1]);a[2]=3;x:*r",
         "a:=[1,2];r:&a;a[1]=3;x:r[2]",
-        "a:=[1,2];r:{->view:&a[1]};a[2]=3;x:*r.view",
-        "head<&int32>:(a<&int32[2]>){->&a[1]};a:=[1,2];r:head(&a);a[2]=3;x:*r",
-        "a:=[1,2];r:&a[1];a[2]=*r+1;x:*r",
+        "a:=[1,2];r:{->view:&(a[1])};a[2]=3;x:*(r.view)",
+        "head<&int32>:(a<&int32[2]>){->&(a[1])};a:=[1,2];r:head(&a);a[2]=3;x:*r",
+        "a:=[1,2];r:&(a[1]);a[2]=*r+1;x:*r",
         "a<int32[2]>:=[1];a[{a=[];->1}]=3",
         "a<int32[2]>:=[1];a[1]={a=[];->3}",
         "a:=[1,2];a[{a[2]=3;->1}]=4",
         "a:=[1,2];a[1]={a[2]=3;->4}",
-        "a:=[1,2];r:&a[1];i:=1;'loop{x:*r;a[2]=3;|i>1|'loop.leave();i=i+1;'loop.restart()}",
-        "a:=[1,2];|true|{r:&a[1];a[2]=3;x:*r}",
+        "a:=[1,2];r:&(a[1]);i:=1;'loop{x:*r;a[2]=3;|i>1|'loop.leave();i=i+1;'loop.restart()}",
+        "a:=[1,2];|true|{r:&(a[1]);a[2]=3;x:*r}",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1), "{source}");

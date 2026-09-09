@@ -3,7 +3,7 @@ x:7
 r:={->view<&int32><null>:null;->count:=0}
 'loop{
     |r.view<null>|{copy:r.view;d.print("empty")}
-    |r.view<&int32>|d.print(*r.view)
+    |r.view<&int32>|d.print(r.*view)
     r.count=r.count+1
     |r.count==1|r={->view<&int32><null>:&x;->count:=1}
     |r.count==2|r={->view<&int32><null>:null;->count:=2}

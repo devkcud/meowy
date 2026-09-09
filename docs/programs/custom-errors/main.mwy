@@ -15,7 +15,7 @@ describe <null> : (failure <validation.TooYoung><validation.InvalidAge>) 'result
     # Move the payload out of the remaining InvalidAge variant. #
     details : failure.take_payload()
     debug.print("Could not parse: {details.text}")
-    cause : &details.cause
+    cause : details.&cause
     | *cause <strings.ParseError> | {
         debug.print("Cause: strings.ParseError (the decimal parser rejected the input)")
     }

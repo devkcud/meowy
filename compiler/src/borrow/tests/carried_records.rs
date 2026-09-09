@@ -90,7 +90,7 @@ pub(crate) fn carried_records_keep_wider_shapes_and_storage_borrows_gated() {
 #[test]
 pub(crate) fn carried_record_copies_and_scalar_siblings_keep_existing_borrow_rules() {
     accepts(
-        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};copy:row;p:&copy.n;v:*p;first=false;'loop.restart()}}};p:&r.row.n;v:*p",
+        "<Row>:<{n<int32>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};copy:row;p:&(copy.n);v:*p;first=false;'loop.restart()}}};p:&(r.row.n);v:*p",
     );
     accepts(
         "<Row>:<{n<int32>}>;<R>:<{row<Row>;count<int32>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->n:7};'out->count:=1;p:&!count;*p=9;first=false;'loop.restart()}}};v:r.row.n",

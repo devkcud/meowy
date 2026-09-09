@@ -288,11 +288,14 @@ Exercise the combination of suspended stacks and active cleanup, including
 cleanup that must wait for children. Passing independent scheduler and unwinder
 tests is not enough to qualify their interaction.
 
-## Documentation completion slice
+## Borrow and dereference syntax migration
 
-The active [borrow syntax migration](compiler/BORROW_SYNTAX.md) specifies tighter
-prefix borrowing, selected-field `.&`/`.&!` and the repository migration/test plan.
-Complete that grammar transition before resuming wider carried-slot capabilities.
+The [pointer syntax migration](compiler/BORROW_SYNTAX.md) completed on 2026-09-09:
+tight prefix `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*`, migrated sources and
+compiler/native/editor checks. Existing ownership and backend representations remain
+unchanged. Resume wider carried-slot capabilities using the new grammar.
+
+## Documentation completion slice
 
 Completed for the standalone bootstrap profile on 2026-09-09: attachment, checked
 links/signatures, doc check/build, basic safe API pages and checked/opt-in examples.

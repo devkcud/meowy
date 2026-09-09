@@ -14,15 +14,15 @@ r<R>:'out{
         |first|{
             'out->row:={->inner:={->n:=7;->other:=1};->flag:=true;->amount:=1.5;->label:"ready"}
             old:row
-            s:&old.inner.n
-            p:&!row.inner.n
-            q:&!row.inner.other
+            s:&(old.inner.n)
+            p:&!(row.inner.n)
+            q:&!(row.inner.other)
             *p=255
             *q=9
             d.print(*s)
-            b:&!row.flag
+            b:&!(row.flag)
             *b=false
-            f:&!row.amount
+            f:&!(row.amount)
             *f=2.5
             first=false
             'loop.restart()
@@ -53,7 +53,7 @@ r<R>:'out{
     'loop{
         |first|{
             'out->row:={->inner:={->n:=7;->other:=1}}
-            p:&!row.inner.n
+            p:&!(row.inner.n)
             s:&*p
             d.print(*s)
             q:&!*p
@@ -88,7 +88,7 @@ r<R>:'out{
     'loop{
         |first|{
             'out->row:={->n:=i}
-            p:&!row.n
+            p:&!(row.n)
             *p=*p+10
             d.print(*p)
             first=false
@@ -117,7 +117,7 @@ run<null>:(stop<boolean>){
         'loop{
             |first|{
                 'out->row:={->n:=3}
-                p:&!row.n
+                p:&!(row.n)
                 *p={d.print("rhs");|stop|'out.leave();->9}
                 first=false
                 'loop.restart()
@@ -148,8 +148,8 @@ r<R>:'out{
     'loop{
         |first|{
             'out->row:={->n:=7;->other:=2}
-            s=&row.other
-            p:&!row.n
+            s=&(row.other)
+            p:&!(row.n)
             *p=8
             first=false
             'loop.restart()
@@ -169,25 +169,25 @@ d.print(*s)
 #[test]
 pub(crate) fn exclusive_carried_record_fields_preserve_rejection_boundaries() {
     for (body, tail, code) in [
-        ("p:&!row.n;q:p;v:*p;w:*q", "", "E301"),
-        ("p:&!row.n;row.n=8;v:*p", "", "E302"),
-        ("p:&!row.n;row={->n:=8};v:*p", "", "E302"),
-        ("p:&!row.n;s:&*p;*p=8;v:*s", "", "E302"),
-        ("p:&!row.n;q:&!row.n;v:*p;w:*q", "", "E302"),
+        ("p:&!(row.n);q:p;v:*p;w:*q", "", "E301"),
+        ("p:&!(row.n);row.n=8;v:*p", "", "E302"),
+        ("p:&!(row.n);row={->n:=8};v:*p", "", "E302"),
+        ("p:&!(row.n);s:&*p;*p=8;v:*s", "", "E302"),
+        ("p:&!(row.n);q:&!(row.n);v:*p;w:*q", "", "E302"),
         ("p:&!row", "", "B001"),
-        ("p:&!row.n;s=&*p", ";v:*s", "E303"),
+        ("p:&!(row.n);s=&*p", ";v:*s", "E303"),
         (
-            "p:&!row.n;i:=0;'again{v:*p;i=i+1;|i<2|'again.restart()}",
+            "p:&!(row.n);i:=0;'again{v:*p;i=i+1;|i<2|'again.restart()}",
             "",
             "B001",
         ),
         (
-            "p:&!row.n;q:&*p;i:=0;'again{v:*q;i=i+1;|i<2|'again.restart()}",
+            "p:&!(row.n);q:&*p;i:=0;'again{v:*q;i=i+1;|i<2|'again.restart()}",
             "",
             "B001",
         ),
         (
-            "p:&!row.n;q:keep(p);i:=0;'again{v:*q;i=i+1;|i<2|'again.restart()}",
+            "p:&!(row.n);q:keep(p);i:=0;'again{v:*q;i=i+1;|i<2|'again.restart()}",
             "",
             "B001",
         ),

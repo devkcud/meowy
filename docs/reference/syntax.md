@@ -150,6 +150,8 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `f <(T)->R>;`                           | Forward signature, completed by the following definition group   |
 | `f(value)`                              | Function call                                                    |
 | `value.name`                            | Field selection                                                  |
+| `value.&name`, `value.&!name`            | Shared or exclusive borrow of the selected field                 |
+| `value.*name`                           | Dereference the selected field                                  |
 | `value.(f)`                             | Call `f` with `value` as its first argument                      |
 | `value.{ ... }`                         | Evaluate block with `self` bound to `value`                      |
 | `\| condition \| statement`             | Conditional matcher arm                                          |
@@ -163,6 +165,7 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `name<(expression)> : value`            | Binding annotated by a computed type                             |
 | `@"name"`                               | Module import                                                    |
 | `&value`, `&!value`                     | Shared or exclusive borrow                                       |
+| `&(value[index])`, `&!(value[index])`   | Shared or exclusive borrow of the selected element               |
 | `*reference`                            | Access a safe reference's referent                               |
 | `>> expression`, `<< task`              | Start or join a task                                             |
 | `&group<T[N]>`                          | Declare a bounded task group                                     |
@@ -264,21 +267,60 @@ From highest to lowest precedence:
 
 | Level | Operators/forms                                                                    |
 | ----- | ---------------------------------------------------------------------------------- |
-| 1     | Calls, field selection, indexing, dispatch, type query/ascription                  |
-| 2     | Unary `!`, `-`, `~`, dereference `*`, borrow `&`, `&!`, task start `>>`, join `<<` |
-| 3     | `*`, `/`, `%`                                                                      |
-| 4     | `+`, `-`                                                                           |
-| 5     | Integer bitwise `&`, then `^`, then `\|`                                           |
-| 6     | `<`, `<=`, `>`, `>=`, type predicates                                              |
-| 7     | `==`, `!=`                                                                         |
-| 8     | `&&`                                                                               |
-| 9     | `\|\|`                                                                             |
+| 1     | Prefix borrow `&`, `&!` and dereference `*`                                         |
+| 2     | Calls, field selection/borrow/dereference, indexing, dispatch, type query/ascription |
+| 3     | Unary `!`, `-`, `~`, task start `>>`, join `<<`                                      |
+| 4     | `*`, `/`, `%`                                                                      |
+| 5     | `+`, `-`                                                                           |
+| 6     | Integer bitwise `&`, then `^`, then `\|`                                           |
+| 7     | `<`, `<=`, `>`, `>=`, type predicates                                              |
+| 8     | `==`, `!=`                                                                         |
+| 9     | `&&`                                                                               |
+| 10    | `\|\|`                                                                             |
 
 Binary arithmetic operators associate left-to-right; comparisons cannot be
 chained. Assignment, emissions, and matchers are statement forms. Parentheses
 override precedence. `>>` and `<<` are never bit shifts; use `bits.shl` and
 `bits.shr`. Put a bitwise `|` expression in parentheses inside a matcher so it
 cannot be confused with an arm delimiter.
+
+Prefix borrowing and dereferencing consume the following prefix operators and
+one primary expression, before any unparenthesized postfix forms. A parenthesized
+expression is one primary and may contain a complete selection, call or other
+expression. Prefix operators nest right-to-left. Consequently, `&*p.field`
+means `(&(*p)).field`, and `*p.field` means `(*p).field`. Other unary operators
+retain their usual precedence: `-value.field` means `-(value.field)`.
+
+| Expression | Grouping and meaning |
+| --- | --- |
+| `&object.field` | `(&object).field`: borrow the object, then select its field |
+| `object.&field` | `&(object.field)`: borrow the selected field |
+| `object.&!field` | `&!(object.field)`: exclusively borrow the selected field |
+| `object.inner.&field` | `&(object.inner.field)`: borrow the final field |
+| `object.&inner.field` | `(&(object.inner)).field`: borrow `inner`, then select `field` |
+| `&items[i]` | `(&items)[i]`: borrow the list, then index it |
+| `&(items[i])` | Select and borrow the element |
+| `object.&items[i]` | `(&(object.items))[i]`: borrow `items`, then index it |
+| `&f()` | `(&f)()`: borrow the callable, then call through that reference |
+| `&(f())` | Call `f`, then borrow its result |
+| `&*p` | `&(*p)`: reborrow the referent |
+| `*object.field` | `(*object).field`: dereference the object, then select its field |
+| `object.*field` | `*(object.field)`: dereference the selected field |
+| `object.*inner.field` | `(*(object.inner)).field`: dereference `inner`, then select `field` |
+| `*items[i]` | `(*items)[i]`: dereference the list reference, then index it |
+| `*(items[i])` | Select the element, then dereference it |
+| `*f()` | `(*f)()`: dereference the callable reference, then call it |
+| `*(f())` | Call `f`, then dereference its result |
+
+The exclusive prefix `&!` follows the same grouping rules. A dotted `&`, `&!` or
+`*` must be followed by a field name and applies only to that immediately selected
+field. Later postfix forms operate on the result. Use grouping for an indexed
+place or a call result; `object.&[i]`, `object.*[i]`, `object.&(f)` and
+`object.*(f)` are not forms.
+Grouping establishes the operation, not its availability: callable references,
+reference nesting, mutability, lifetimes and compiler capability limits still
+apply. Field access or indexing through a reference may copy a copyable value;
+it does not itself request another borrow.
 
 `&!` is the exclusive-borrow operator; `&(!value)` instead borrows a negated
 boolean. In type expressions, `<&!T>` is an exclusive reference and `<*!T>` is a

@@ -87,13 +87,13 @@ implementation boundary; it does not change language rules.
   every returned transitive reference leaf, so dereferencing a call result cannot
   remove an ignored input's lifetime constraint.
 - Field reads and reborrows project the relevant summary before checking loaded
-  origins. Reading `outer.count` or borrowing `&outer.count` does not read an unrelated
+  origins. Reading `outer.count` or borrowing `outer.&count` does not read an unrelated
   `outer.view` pointee. A whole dereference-copy reads every directly contained
   reference component. Address equality reads only the pointer components.
 - A reborrow projects the physical pointer source and keeps its outer bounds.
   Its summary is the selected referent subtree. Crossing an intermediate stored
-  reference, as in `&outer.view.field`, loads that pointer once and continues from
-  its original pointee source; taking `&outer.view` instead addresses the reference cell.
+  reference, as in `outer.view.&field`, loads that pointer once and continues from
+  its original pointee source; taking `outer.&view` instead addresses the reference cell.
 - Reference-free dereferences still produce fresh unknown activity. They cannot
   replay a mutable referent's borrow-time union tag. Fixed mutable carriers use
   current stored versions. A shared reference-cell view prevents
@@ -230,13 +230,13 @@ implementation boundary; it does not change language rules.
 
 ## Shared reborrows
 
-- `&*view`, `&view.field` and parenthesized concrete field paths address the
+- `&*view`, `view.&field` and parenthesized concrete field paths address the
   original shared referent. The HIR reborrow node evaluates its parent exactly
   once; lowering applies typed field-address operations without copying records.
   Temporary reference values from calls/blocks are allowed because their referents
   retain the original lifetime. Leading carrier fields may produce that reference,
-  as in `&holder.view.field`; the prefix evaluates once. Reaching a reference only
-  at the final field instead requests its reference-cell storage (`&holder.view`).
+  as in `holder.view.&field`; the prefix evaluates once. Reaching a reference only
+  at the final field instead requests its reference-cell storage (`holder.&view`).
   A holder's own reference-free field uses its physical storage origin instead;
   it does not inherit unrelated contained references. Copy temporary
   owners use the statement lifetime model below.
@@ -955,7 +955,7 @@ implementation boundary; it does not change language rules.
   Their copied value components preserve the initializer's pointee origins and
   all-input bounds; copying a reference adds no dependency on its containing slot.
   Borrowing a selected reference-free field instead creates only its physical Slot
-  origin. A contained reference crossed by `&carrier.view.field` keeps the existing
+  origin. A contained reference crossed by `carrier.view.&field` keeps the existing
   pointee reborrow path. Whole-carrier/reference-cell borrows add transitive summaries
   without replacing the stored value's sources. Exclusive references and writes
   through reference-bearing emitted aliases require the compatible-member write proof.
@@ -1260,7 +1260,7 @@ implementation boundary; it does not change language rules.
   places, reborrows and E302/E303 checks. A copied list has no continuing reference
   origin; dereference copies finish their loan before later operand effects unless
   another reference use keeps it live.
-- `&values[index]` forms a checked shared reference into original list storage.
+- `&(values[index])` forms a checked shared reference into original list storage.
   Nested lists and concrete record fields compose element and field reborrows.
   A temporary reference-valued parent is allowed. Computed or ascribed Copy lists
   materialize for their complete statement. Borrowed copied parameters and

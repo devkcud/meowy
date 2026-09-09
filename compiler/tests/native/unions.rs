@@ -268,7 +268,7 @@ d:@"debug"
 <R>:<{view<&int32><null>;count<int64>}>
 owner:=42
 present<R><null>:{->view:&owner;->count:7}
-|present<R>|{|present.view<&int32>|d.print(*present.view<&int32>);d.print(present.count)}
+|present<R>|{|present.view<&int32>|d.print(*(present.view<&int32>));d.print(present.count)}
 owner=43
 absent<R><null>:{->count:9}
 empty_view<&int32><null>:null
@@ -278,7 +278,7 @@ primary<P><null>:{->7;->tag:"ok"}
 |primary<P>|{number<int64>:primary;d.print(number);d.print(primary.tag)}
 <B>:<{value<uint8>;view<&int32>}>
 small<B><null>:{->value:255;->view:&owner}
-|small<B>|{d.print(small.value);d.print(*small.view)}
+|small<B>|{d.print(small.value);d.print(*(small.view))}
 <View>:<{view<&int32>}>
 again:=true
 empty<View><null>:'drop {

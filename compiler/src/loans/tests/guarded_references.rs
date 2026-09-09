@@ -88,11 +88,11 @@ pub(crate) fn short_circuit_joins_keep_skipped_and_returning_versions_separate()
 #[test]
 pub(crate) fn guarded_projected_versions_preserve_summary_paths_and_public_bounds() {
     accepts(&program(
-        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;|flag|p=pair.second;|flag|a=3;|!flag|b=4;v:*p.view",
+        "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;|flag|p=pair.second;|flag|a=3;|!flag|b=4;v:*(p.view)",
     ));
     rejects(
         &program(
-            "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;|flag|p=pair.second;|flag|b=3;v:*p.view",
+            "a:=1;b:=2;left:{->view:&a};right:{->view:&b};pair:{->first:&left;->second:&right};p:=pair.first;|flag|p=pair.second;|flag|b=3;v:*(p.view)",
         ),
         "E302",
     );
