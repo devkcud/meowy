@@ -39,9 +39,18 @@ Organization: native `c83f1f1`, parser `d599149`, borrow `f550947`, loans `717f5
 Earlier organization: backend `8c8e90a`, checker `360c8db`, list contexts `e3a0803`.
 Prior runtime snapshots: `d92f94c`; generated panic evidence: `eb65cbd`.
 This file tracks the compiler; [../STATUS.md](../STATUS.md) tracks the wider project.
-Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
+This file keeps the current handoff; prior work is available in Git history.
 
 ## Current milestone
+
+The next implementation run completes the bounded
+[documentation slice](../COMPILER.md#documentation-completion-slice) end to end:
+attachment, checked links, doc check/build, basic API pages and checked examples,
+followed by validation and commits. Full LSP/rename integration and HTTP/TLS remain
+separate. No further preparatory documentation milestones; return to core compiler
+work after this usable slice. STEP logs are retired in favor of concise STATUS and
+Git history. This planning/cleanup change does not rerun the evidence below.
+Local validation passes: 1070 links in 101 Markdown files and Git whitespace checks.
 
 The lexer now shares comment scanning with interpolation and recognizes exact
 declaration/module documentation fences. Tokens retain raw bytes, bar counts and
@@ -157,8 +166,8 @@ existing rules. Independent field/owner and temporal correlations may still wide
 4. Direct conformance uses `python3 -B compiler/tests/conformance.py --compiler
    compiler/target/x86_64-unknown-linux-gnu/debug/meowy`; 13 unsupported cases remain.
 5. Consult the validation evidence below before claiming any gate passed.
-6. After each logical step, update `Next steps` and add a newest-first checkpoint
-   to `STATUS_STEP_LOG.md`. Record findings, actual checks, blockers and continuation.
+6. After each logical step, update the current findings, actual checks, blockers
+   and `Next steps` here. Replace superseded notes; Git preserves prior history.
 
 The Rust compiler has no external Rust dependencies. Builds use installed Rust
 1.98.1 and LLVM/Clang/LLD 22.1.8. Native context sources are vendored under
@@ -691,16 +700,13 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Implement structural attachment in `parser/` using `Token::documentation()`
-   spans and the declaration/module token role. Cover named declarations, parameters,
-   record fields, module placement, orphans and interpolation offsets. Assign the
-   attachment diagnostics before lifting the blanket B001 parser gate. Keep semantic
-   links, example validation and documentation commands separately gated until their
-   actual implementations exist; reuse the same source snapshot and symbol graph.
-2. Keep HTTP/TLS execution gated until module, ownership and runtime prerequisites
-   and independent protocol/provider tests exist. Route schemas, error policies,
-   JSON owners and generated clients must share one checked contract.
-3. Resume declared reference-free record-slot initialization in `borrow/carried.rs`,
+1. Complete the [bounded documentation run](../COMPILER.md#documentation-completion-slice).
+   Use `Token::documentation()` spans for attachment, add assigned diagnostics and
+   compiler-bound symbol links, implement doc check/build and basic API output,
+   and check/run examples through existing machinery. Finish validation and commits
+   in that run. Defer full LSP/rename, optional polish and public index-format work;
+   do not treat unsupported examples as passes or keep expanding the docs scope.
+2. Resume declared reference-free record-slot initialization in `borrow/carried.rs`,
    `check/statements.rs` and `loans/emission_init.rs` before widening scalar-only
    eligibility. Require bounded shapes and full-slot availability; keep nullable,
    union and reference-bearing carried slots gated. Qualify record storage borrowing
@@ -718,6 +724,9 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
    Preserve lexical/backing tag domains, shared retagging, old copies, transient
    lifetime and RHS effects. Lists need bounded summaries; dynamic origins and
    [OWNING_HIR.md](OWNING_HIR.md) cleanup schedules follow those proofs.
+3. Keep HTTP/TLS execution gated until module, ownership and runtime prerequisites
+   and independent protocol/provider tests exist. Route schemas, error policies,
+   JSON owners and generated clients must share one checked contract.
 4. Extend aggregate/emitted-name/cross-element constraints in `list_context/` with
    explicit scope/dependency models and unchanged effect order. Add static/intrinsic
    sources only with lifetime contracts and no-return assumptions.

@@ -6,10 +6,19 @@ user requests otherwise. Unrelated changes stay outside those commits.
 
 Updated: 2026-09-08. This is the restart point for work across the repository.
 The compiler has its detailed handoff in [compiler/STATUS.md](compiler/STATUS.md).
-Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
+This file keeps the current handoff; prior work is available in Git history.
 The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
+
+- The agreed next run is the complete, bounded
+  [documentation completion slice](COMPILER.md#documentation-completion-slice):
+  attachment, checked links, doc check/build, basic API pages and checked examples,
+  including validation and commits. No further preparatory milestones or polishing
+  detours; full LSP/rename and HTTP/TLS implementation stay separate.
+- STEP logs are retired. Plans live in COMPILER.md and current handoffs in STATUS;
+  this planning/cleanup change does not rerun the compiler or editor gates below.
+  Local validation passes: 1070 links in 101 Markdown files and Git whitespace checks.
 
 - Documentation-fence lexing passes all eleven focused tests; Vim/Neovim suites
   also pass after the approved fixture correction. Tokens retain declaration/module
@@ -91,16 +100,12 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Next steps
 
-1. Implement structural documentation attachment using the recognized tokens and
-   exact spans: declaration/module placement, parameters, fields, orphans and
-   interpolation rebasing. Assign attachment diagnostics before replacing the
-   blanket parser B001 gate with validated support. Semantic links, checked examples
-   and public documentation artifacts need their own subsequent proof/tooling.
-2. Plan HTTP/TLS implementation against source ownership, module and runtime support:
-   parser/serializer fixtures first, explicit memory/transport limits, qualified TLS,
-   then clients/services and closed route policies. Protocol execution needs its own
-   evidence; the new chapters are contracts, not completed libraries.
-3. Resume the compiler's declared reference-free record-slot initialization across inner restarts,
+1. Complete the [one-run documentation slice](COMPILER.md#documentation-completion-slice)
+   end to end, including attachment diagnostics, compiler-bound links, doc commands,
+   basic API pages, checked/explicitly run examples, validation and cohesive commits.
+   Defer full LSP/rename integration and optional rendering work, then return to
+   core compiler features rather than adding another documentation milestone.
+2. Resume the compiler's declared reference-free record-slot initialization across inner restarts,
    using bounded shapes and full-slot availability before widening scalar-only
    eligibility. Keep nullable/union/reference-bearing carried initialization gated;
    qualify storage borrowing and exclusive projections separately. Preserve certified
@@ -116,6 +121,10 @@ The full documented v0.0.1 release remains incomplete.
    and allocator-only bounds need separate proofs. Preserve both tag domains, old
    copies, transient cell lifetime and RHS effects. Lists need bounded summaries;
    dynamic origins and [owning cleanup](compiler/OWNING_HIR.md) follow.
+3. Plan HTTP/TLS implementation against source ownership, module and runtime support:
+   parser/serializer fixtures first, explicit memory/transport limits, qualified TLS,
+   then clients/services and closed route policies. Protocol execution needs its own
+   evidence; the new chapters are contracts, not completed libraries.
 4. Add richer source identities and diagnostic evidence/artifacts; current bounded
    snapshots and byte-span text do not implement complete release replay.
 5. Extend aggregate/emitted-name/cross-element constraints in the list-context

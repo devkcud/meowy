@@ -288,6 +288,40 @@ Exercise the combination of suspended stacks and active cleanup, including
 cleanup that must wait for children. Passing independent scheduler and unwinder
 tests is not enough to qualify their interaction.
 
+## Documentation completion slice
+
+Finish a usable documentation feature in one bounded implementation run, rather
+than stopping after each internal piece for another continuation. Reuse the compiler
+and test infrastructure; do not build a new general-purpose framework for this work.
+The [documentation contract](docs/reference/documentation.md) supplies the semantics;
+unsupported compiler capabilities must remain explicit rather than being presented
+as completed documentation support.
+
+1. Attach recognized doc blocks to supported modules, declarations, parameters and
+   fields. Preserve exact spans, diagnose orphaned/duplicate/misplaced blocks, assign
+   the necessary diagnostics and replace the blanket B001 gate only with checked support.
+2. Resolve structured value/type links against compiler-checked bindings. Keep
+   declaration identities and one documentation model; do not infer another type
+   system from prose or rewrite ordinary text by spelling.
+3. Implement `meowy doc check` and `meowy doc build` with basic deterministic local
+   API pages, safe output replacement and the documented offline/project policies.
+4. Check complete examples and expected language rejections through the compiler.
+   Run explicitly runnable examples only on request through existing test machinery.
+   Missing tools, unsupported features and crashes are not successful examples.
+5. Run the relevant compiler/native/editor/documentation checks, resolve the bounded
+   feature's failures, update concise STATUS handoffs and commit cohesive changes
+   together. Stop for a genuine blocker requiring user input, not for routine milestones.
+
+Done means supported doc-commented programs compile correctly, malformed attachment
+and links are diagnosed, the doc commands produce useful checked output, and their
+regressions pass. No claim is made that unavailable language/library features work
+inside an example. Do not spend this slice on rendering polish or optional extras.
+
+Full LSP/rename integration waits for that infrastructure. HTTP/TLS implementation
+and release-compatible public documentation interchange formats remain separate
+tracks. Once this bounded feature works, stop documentation expansion and return
+to core compiler work, starting with the recorded reference-free record-slot slice.
+
 ## Standard library, tools, and failures share the compiler
 
 [Documentation comments](docs/reference/documentation.md) retain source trivia,

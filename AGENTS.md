@@ -12,10 +12,9 @@
   implementation plan. Preserve reference fixtures and existing user changes.
 - After each logical work step, update the relevant STATUS with findings, actual
   validation, blockers and concrete next steps. Keep STATUS focused on the current
-  handoff; record dated checkpoints in its adjacent `STATUS_STEP_LOG.md`, newest
-  first, with findings, validation, blockers and next steps. Preserve prior history
-  there instead of accumulating it in STATUS. Keep a single writer for both files
-  when delegating. Leave enough context to resume without the conversation.
+  handoff, replacing superseded notes rather than accumulating a chronology.
+  Git history preserves prior work; do not create STEP logs. Keep a single STATUS
+  writer when delegating. Leave enough context to resume without the conversation.
 - Keep tools, editor integration, library and runtime progress visible in the root
   tracker. Distinguish static checks, compiler execution and release qualification.
 - Reuse existing checks and architecture. Add dependencies only when necessary.
