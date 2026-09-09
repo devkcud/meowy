@@ -11,14 +11,21 @@ The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
 
+- Documentation-fence lexing passes all eleven focused tests; Vim/Neovim suites
+  also pass after the approved fixture correction. Tokens retain declaration/module
+  kind, bar count and exact spans;
+  unclosed fences use E002. Compilation keeps attachment/checking explicitly B001.
+  All ten compiler checks pass, including three new native regression groups.
+
 - [HTTP](docs/reference/stdlib/http.md), [TLS](docs/reference/stdlib/tls.md) and
   [checked documentation comments](docs/reference/documentation.md) are now specified.
   HTTP separates messages, clients, streaming services and typed route policies;
-  docs attach to syntax and reuse compiler types/links/examples. Implementation,
-  protocol qualification and documentation tooling remain unavailable.
-- This is a documentation-only checkpoint. All 1068 local links in 103 Markdown
-  files and Git whitespace checks pass; external links were not fetched by the
-  local checker. Previous compiler/runtime/editor evidence below was not rerun.
+  docs are specified to attach to syntax and reuse compiler types/links/examples.
+  HTTP/TLS implementation, protocol qualification and semantic documentation tooling
+  remain unavailable. This slice implements lexical recognition and editor regions.
+- Compiler/native and editor checks ran for this slice. Native runtime/sanitizer
+  evidence was not rerun; no HTTP/TLS or executable documentation-example support
+  is implied by those checks.
 
 - [Mixed shared-header precision](compiler/EXCLUSIVE_RESTARTS.md#certified-shared-headers)
   passes source/graph and native checks. Header metadata
@@ -61,11 +68,11 @@ The full documented v0.0.1 release remains incomplete.
 - [Whole union-alias assignment](compiler/OWNERSHIP.md#whole-union-alias-assignment)
   maps lexical tags and reference paths into larger result unions. Old copies,
   branches/Leave, nested members and reset-iteration behavior remain intact.
-- Last compiler gate, not rerun for these docs: 1066 Rust (541 library, 525 native), 20 Python, 68 examples
-  in both profiles, formatting, Clippy, build and contracts. Prior editor/runtime
-  evidence is preserved: runtime 100 groups/profile with sanitizers and required
-  probes. Conformance: 10 passed, 13 unsupported, 0 failed. Runtime/backend and
-  dependencies are unchanged; runtime/editor checks were not rerun for this slice.
+- Current compiler gate: 1080 Rust (552 library, 528 native), 20 Python, 68 examples
+  in both profiles, formatting, Clippy, build and contracts. Both editor suites pass.
+  Prior runtime evidence remains 100 groups/profile with sanitizers and required
+  probes, not rerun here. Conformance: 10 passed, 13 unsupported, 0 failed.
+  Runtime/backend and dependencies are unchanged.
 - The [union-aliases example](compiler/examples/union-aliases.mwy) changes a nullable
   pointer whose backing admits an extra string member. Wider carried initialization,
   union-view addresses/fields, lists, dynamic origins, owning cleanup and release remain open.
@@ -78,16 +85,17 @@ The full documented v0.0.1 release remains incomplete.
 | Runtime | Private owned strings, generated cleanup and bounded task prototypes | Source ownership integration, task close and cancellation |
 | Standard library | Existing storage/error work; HTTP/TLS contracts now specified, not implemented | Module/ownership prerequisites, protocol fixtures and TLS provider qualification |
 | Packages | Manifests detected but unsupported by bootstrap | Typed manifest model and module graph |
-| Editor | Vim/Neovim files and regression checks exist; doc fences are newly specified | Doc-fence highlighting, shared documentation model and LSP integration |
+| Editor | Vim/Neovim doc-fence highlighting and existing regressions pass | Shared documentation model, structural attachment and LSP integration |
 | Developer tools | Combined verification exists; doc commands are specified, not implemented | Checked doc attachment/links/examples and safe local publication |
 | Distribution | Host-only native bootstrap | Bundled sysroot, reproducibility and minimum-host qualification |
 
 ## Next steps
 
-1. Bring lexer/editor handling into agreement with the new documentation fences,
-   then add structural attachment, semantic links and checked example units. Do not
-   count ordinary-comment tokenization as documentation support. Assign diagnostics
-   and any public artifact schemas before advertising the tooling.
+1. Implement structural documentation attachment using the recognized tokens and
+   exact spans: declaration/module placement, parameters, fields, orphans and
+   interpolation rebasing. Assign attachment diagnostics before replacing the
+   blanket parser B001 gate with validated support. Semantic links, checked examples
+   and public documentation artifacts need their own subsequent proof/tooling.
 2. Plan HTTP/TLS implementation against source ownership, module and runtime support:
    parser/serializer fixtures first, explicit memory/transport limits, qualified TLS,
    then clients/services and closed route policies. Protocol execution needs its own

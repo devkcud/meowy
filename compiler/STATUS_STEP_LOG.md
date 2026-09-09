@@ -6,6 +6,58 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Documentation-fence compiler and editor validation complete
+
+- All ten compiler checks pass: 552 library + 528 native (1080 Rust), 20 Python,
+  68 debug/release examples, formatting, Clippy, build and repository contracts.
+  Conformance remains 10 passed, 13 unsupported, 0 failed; full release incomplete.
+- Eight lexer, three parser and three native groups pass. The approved separator
+  fixes the generated stress fixture without changing maximal-bar scanning.
+  Native cases preserve ordinary-comment/string execution, B001 attachment gating
+  and exact E002 opener spans. No test failures remain.
+- Vim and Neovim suites pass. Their runtime-bundle tests are not the native Meowy
+  runtime/sanitizer gate, which was not rerun. No runtime/backend/dependency changes.
+- Next: structural documentation attachment and assigned diagnostics using the
+  retained spans; keep semantic links, example execution and doc commands gated.
+
+### 2026-09-08 - Documentation-fence focused/editor validation passes
+
+- All eight lexer and three parser groups pass. Exact maximal closers, raw payload
+  spans, interpolation rebasing, E002 openers and the B001 attachment gate are covered.
+- Vim and Neovim suites pass with declaration/module fences, wrong-length/family
+  closers, embedded hashes/quotes/braces, interpolation, types and unclosed input.
+- Next: full compiler/native gate, final evidence and commits. Runtime unchanged.
+
+### 2026-09-08 - Approved long-fence fixture correction
+
+- Corrected only the generated fixture's missing separator after its opener.
+  Maximal-bar scanning remains unchanged. Revalidation is pending.
+- Next: rerun focused lexer/parser tests, both editors and the compiler gate,
+  then replace the failure handoff with actual results and commit.
+
+### 2026-09-08 - Documentation-fence focused failure
+
+- Cargo formatting and compilation succeeded. Ten of eleven focused tests passed.
+  `lexer::comments::tests::doc_fences_scan_long_near_matches_without_expanding_diagnostics`
+  failed with E002 expecting 127 bars because its generated 64-bar opener directly
+  touches the first 63-bar near-match. The intended fixture needs a separator.
+- No correction was applied pending approval. The scanner's maximal-run behavior
+  must not be weakened to accommodate this malformed fixture. All changes remain
+  uncommitted; native/full compiler and Vim/Neovim checks have not run.
+- Next: repair that generated source, rerun the focused filter and both editor
+  commands, then the compiler gate. Preserve the B001 attachment/checking boundary.
+
+### 2026-09-08 - Documentation-fence recognition implementation
+
+- One comment scanner now handles ordinary and matching-bar documentation fences
+  in source and interpolation. Public token metadata preserves role/count and
+  exact opening, payload and closing spans without payload normalization.
+- E002 identifies an unclosed opener and expected closer family/count. Parser
+  entry points retain a B001 attachment/checking gate, including rebased interpolation.
+- Added eight lexer, three parser, three native groups and Vim/Neovim syntax cases.
+  Validation is pending. Next: focused checks, compiler gate, both editors, handoff
+  and commit. No runtime/backend, dependency or reference-fixture changes.
+
 ### 2026-09-08 - HTTP/TLS and documentation reference checkpoint
 
 - User paused compiler feature work to fill HTTP and documentation-contract gaps.

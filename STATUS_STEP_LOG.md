@@ -6,6 +6,48 @@ record what was known at the time and may have been superseded.
 
 ## Step log
 
+### 2026-09-08 - Documentation-fence validation complete
+
+- All ten compiler checks pass: 1080 Rust (552 library, 528 native), 20 Python,
+  68 debug/release examples, formatting, Clippy, build and repository contracts.
+  Vim and Neovim suites pass. Conformance remains 10 passed, 13 unsupported, 0 failed.
+- The approved fixture separator fixes the sole focused failure. Fences preserve
+  lexical role/count and exact spans; missing closers are E002. Attachment stays B001.
+- Next: structural documentation attachment and assigned diagnostics, then semantic
+  links and checked examples. HTTP/TLS and full release remain unimplemented.
+  Native runtime/sanitizer checks were not rerun; runtime/backend/dependencies unchanged.
+
+### 2026-09-08 - Documentation-fence focused and editor checks pass
+
+- All eleven focused lexer/parser tests pass after the approved fixture correction.
+  Both Vim and Neovim regression suites pass, including exact matching fences.
+- Next: full compiler/native gate, final handoff evidence and cohesive commits.
+
+### 2026-09-08 - Approved documentation-fence fixture correction
+
+- Added the separator between the 64-bar opener and the first near-match run.
+  Scanner behavior is unchanged. Revalidation is pending.
+- Next: focused tests, Vim/Neovim, compiler gate, final evidence and commit.
+
+### 2026-09-08 - Documentation-fence fixture failure
+
+- Formatting/build passed. The focused run passed 10 tests and failed the long
+  near-match fixture: concatenated 64+63 bars form a 127-bar opener with no closer.
+- This is a fixture construction error, not evidence to weaken maximal-bar scanning.
+  Correction awaits approval. Changes are uncommitted; chained editor commands and
+  the native/full compiler gates have not run.
+- Next: add the missing separator in the fixture, rerun focused/editor/compiler
+  checks, update actual evidence and commit only after validation succeeds.
+
+### 2026-09-08 - Documentation-fence lexer and editor implementation
+
+- Added exact maximal-bar declaration/module fences, shared interpolation scanning
+  and byte-span metadata. Unclosed input is E002; unimplemented attachment is B001.
+- Extended Vim/Neovim regions and fixtures without changing ordinary comment commands.
+  Eight lexer, three parser and three native groups await validation with the editors.
+- Next: focused checks, compiler gate, both editors, actual evidence and commit.
+  Runtime/backend, dependencies and reference conformance fixtures are unchanged.
+
 ### 2026-09-08 - HTTP, TLS and checked documentation contracts
 
 - Added a broad HTTP contract for messages, clients, streaming services, codecs,

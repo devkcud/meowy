@@ -4,10 +4,11 @@ Repository workflow: agents commit their completed, validated task changes by
 coherent feature, fix, refactor or other concern, ordered by dependency, unless the
 user requests otherwise. Unrelated changes stay outside those commits.
 
-Updated: 2026-09-08. Mixed shared-header precision verified.
-Documentation-first checkpoint: HTTP/TLS and checked documentation comments are
-specified but unimplemented. No compiler code changed or compiler gate reran.
-Full v0.0.1 remains incomplete. No failing checks or unfinished implementation remain.
+Updated: 2026-09-08. Documentation-fence lexer/native/editor validation complete.
+All eleven focused tests, ten compiler checks and both editor suites pass after
+the approved fixture correction. No failing checks or unfinished implementation remain.
+Attachment, semantic links, examples and HTTP/TLS remain unsupported; code with
+well-formed doc fences is B001. Full v0.0.1 remains incomplete.
 Private owned strings: `e547415`. Streamed runtime snapshots: `ef935da`.
 Generated ownership: `4df0e44`; LLVM proof: `6d2d2b0`; contract: `161543e`.
 Cleanup bridge: `2288ed5`; native archive/LLVM proof: `2da831f`; contract: `53f8e6b`.
@@ -42,15 +43,22 @@ Historical checkpoints are in [STATUS_STEP_LOG.md](STATUS_STEP_LOG.md).
 
 ## Current milestone
 
+The lexer now shares comment scanning with interpolation and recognizes exact
+declaration/module documentation fences. Tokens retain raw bytes, bar counts and
+opening/payload/closing spans. Unclosed documentation reports E002 at its opener;
+the parser reports B001 for unimplemented attachment rather than dropping doc trivia.
+All eight lexer and three parser groups pass, including the corrected near-match
+stress case. Both editor suites and all three new native groups pass. The current
+compiler gate is 552 library + 528 native tests, 20 Python and 68 examples.
+
 The new [documentation contract](../docs/reference/documentation.md) defines
 matching fences, structural attachment, semantic links and checked examples.
 [HTTP](../docs/reference/stdlib/http.md) and [TLS](../docs/reference/stdlib/tls.md)
 specify separate protocol/library work, including typed response policies and
-explicit owners/limits. These are not supported compiler or runtime features.
-Simple doc-looking text accepted as an ordinary comment proves no doc semantics.
-Local documentation validation passes: 1068 links in 103 Markdown files and Git
-whitespace checks. Compiler/native/runtime/editor evidence below is preserved,
-not rerun; no executable documentation-example or HTTP/TLS qualification is claimed.
+explicit owners/limits. HTTP/TLS and high-level documentation semantics remain
+unsupported. Fences are now explicitly lexed and attachment is gated with B001.
+Compiler/native and editor checks ran for this slice. Native runtime/sanitizer
+evidence was not rerun; no executable doc-example or HTTP/TLS qualification is claimed.
 
 `loans/restart_headers.rs` records and audits required active-path coverage for
 every header definition. Entry/backedge key sets must agree, required transfers
@@ -95,7 +103,7 @@ reference proofs remain intact. Reference-bearing, nullable, aggregate or inferr
 carried slots remain B001 pending separate proofs. Exclusive scalar borrowing uses
 the local-loan frontier proof; wider exclusive restart borrowing remains gated.
 
-All ten compiler checks pass: 541 library, 525 native, 20 Python and 68 examples in
+All ten compiler checks pass: 552 library, 528 native, 20 Python and 68 examples in
 both profiles, formatting, Clippy, build and repository contracts. The carried-borrows
 example prints 7, 7, 7, 7, 1. Runtime/backend, dependencies and reference fixtures
 are unchanged; wider ownership, library and release work remain open.
@@ -168,7 +176,7 @@ qualify the documented Linux 5.4/glibc 2.31 baseline.
 | Storage, origins and permissions | `src/borrow_value.rs`, `src/borrow_value/`, `src/borrow_contract.rs`, `src/borrow_contract/`, `src/borrow.rs`, `src/borrow/`, `src/loans.rs`, `src/loans/`, `OWNERSHIP.md` | Scoped origins/bounds, carried scalar initialization, fixed/changing/late publications and permissions; 126 origin/initialization, 137 loan, 15 contract and 2 value-budget groups |
 | Native backend | `src/backend.rs`, `src/backend/`, `build.rs`, `native/` | Verified LLVM to ELF pipeline including bounded lists, records, references and tagged unions; 62 focused backend tests |
 | CLI and diagnostics | `src/main.rs`, `src/driver.rs`, `src/diagnostic.rs` | Native builds, safe output replacement and diagnostic rendering |
-| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 525 native groups, 4 harness tests and 65 covered examples |
+| Tests and examples | `tests/native.rs`, `tests/native/`, `tests/conformance.py`, `examples/`, `README.md` | 528 native groups, 4 harness tests and 65 covered examples |
 
 The main checker module retains state and entrypoints, with semantic operations
 under `src/check/`. `src/backend/` separates aggregate, list, arithmetic, output
@@ -661,7 +669,7 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 ## Validation evidence
 
 - `python3 -B tools/verify.py --compiler`: all ten selected checks passed. Rust:
-  541 library + 525 native (1066 total). Python: 16 tooling + 4 compiler (20).
+  552 library + 528 native (1080 total). Python: 16 tooling + 4 compiler (20).
   All 68 examples execute in debug/release. Formatting, Clippy, build, local links,
   schemas/identities and conformance catalog pass. No selected check was skipped.
 - Eleven new source/proof groups cover exactly-once initialization, Boolean copies
@@ -683,10 +691,12 @@ The bootstrap JSON diagnostic stream is not a release artifact schema.
 
 ## Next steps
 
-1. Implement doc-fence recognition and source-map preservation before attachment
-   and semantic-link checking. Follow the new reference; update editor coverage and
-   assigned diagnostics. Do not silently treat extended fences as ordinary comments
-   or report unchecked examples as validated.
+1. Implement structural attachment in `parser/` using `Token::documentation()`
+   spans and the declaration/module token role. Cover named declarations, parameters,
+   record fields, module placement, orphans and interpolation offsets. Assign the
+   attachment diagnostics before lifting the blanket B001 parser gate. Keep semantic
+   links, example validation and documentation commands separately gated until their
+   actual implementations exist; reuse the same source snapshot and symbol graph.
 2. Keep HTTP/TLS execution gated until module, ownership and runtime prerequisites
    and independent protocol/provider tests exist. Route schemas, error policies,
    JSON owners and generated clients must share one checked contract.
