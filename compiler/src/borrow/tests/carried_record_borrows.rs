@@ -69,7 +69,7 @@ pub(crate) fn carried_record_borrows_keep_unproved_and_exclusive_storage_gated()
         "B001",
     );
     rejects(
-        "<Row>:<{n<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7};p:&!row.n;v:*p;first=false;'loop.restart()}}}",
+        "<Row>:<{n<int32>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:=7};p:&!row;v:p.n;first=false;'loop.restart()}}}",
         "B001",
     );
     rejects(

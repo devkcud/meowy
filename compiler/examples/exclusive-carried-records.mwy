@@ -1,0 +1,20 @@
+d:@"debug"
+<Inner>:<{n<int32>:=}>
+<Row>:<{inner<Inner>:=;label<string>}>
+<R>:<{row<Row>:=}>
+first:=true
+r<R>:'out{
+    'loop{
+        |first|{
+            'out->row:={->inner:={->n:=7};->label:"ready"}
+            old:row
+            p:&!row.inner.n
+            *p=8
+            d.print(old.inner.n)
+            first=false
+            'loop.restart()
+        }
+    }
+}
+d.print(r.row.inner.n)
+d.print(r.row.label)

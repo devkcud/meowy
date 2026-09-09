@@ -7,77 +7,68 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
-The net/HTTP specification merge is complete and passed all four repository checks.
-`@"net"` now owns transport APIs and capability-typed `net.peer()` composition;
-`net.http` provides sender/receiver adapters rather than a separate package or
-lifecycle. TCP streams and UDP datagrams retain their native semantics. No compiler
-or runtime networking implementation is claimed by this documentation-only change.
+Local exclusive borrows of Boolean, integer and float fields in carried records
+are implemented and passed the compiler gate. Exact mutable field paths use the
+existing containing-slot initialization and storage-lifetime proofs. Exclusive
+loans and their descendants must end before every reachable restart edge.
+Nested fields, disjoint siblings, old copies, moves, children, calls, shared headers,
+owner resets and Leave have source/proof and debug/release native coverage.
+Whole-record and non-scalar exclusive paths remain gated.
 
-Shared carried-record borrows are implemented and passed the compiler gate. The existing
-Acquire event proves active, initialized whole-slot storage for direct and field
-borrows; the physical solver retains projection, conflict and owner-lifetime
-checks. Shared references and projected reborrows survive inner restarts and alias
-scope exit while their result owner lives. Exclusive record-storage borrows remain
-gated. Eight new source/proof groups and five native groups cover this boundary.
-
-Declared reference-free record result slots now retain initialization across inner
-restarts. Nested scalar/unit records, copies, mutable fields, whole-record writes,
-owner resets and Leave use the existing whole-slot initialization proof. Shape
-eligibility is bounded to 256 type parts and 32 levels. Ordinary copies and supported
-scalar sibling loans retain their existing rules. No backend, runtime or dependency
-changes were needed.
+Declared reference-free records retain whole-slot initialization across inner
+restarts; shared record references and projected reborrows can survive those
+restarts while their result owner lives. Record shape eligibility remains bounded
+to 256 type parts and 32 levels. No backend, runtime or dependency changes were
+needed for the exclusive-field extension.
 
 The bounded [documentation slice](COMPILER.md#documentation-completion-slice) is
 complete for standalone bootstrap sources: structural attachment, derived
 signatures, checked links, diagnostics, local API pages and checked/opt-in examples.
-Networking, its HTTP adapters and TLS remain specified library work, not executable implementations.
+The net/HTTP specification merge is complete: `@"net"` owns transports and
+capability-typed peers; `net.http` supplies sender/receiver adapters. TCP/UDP keep
+their native semantics. Networking, HTTP and TLS are specified library work,
+not executable implementations.
 
 ## Actual validation
 
-- Current documentation-only merge: `python3 -B tools/verify.py` passed all four
-  checks: 16 tooling tests, 1074 links in 102 Markdown files, 23 conformance catalog
-  records and 7 schemas/6 examples with identities/rejection cases. No Meowy source
-  was compiled or executed. Compiler/native evidence below is the preceding slice's
-  baseline, not a gate rerun for this merge.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
   formatting, Clippy, build, repository contracts and compiler regression coverage.
-- 1123 Rust tests passed: 577 library and 546 native. The 71 compiler examples run
-  in debug and release. Compiler/tool harness coverage remains 20 Python tests.
-- The focused `--lib carried_record` run passed all 17 record groups, including
-  eight new source/proof groups. Five new native groups cover shared record borrows
-  and their execution/diagnostic boundaries in both profiles.
+- 1139 Rust tests passed: 587 library and 552 native. The 72 compiler examples run
+  in debug and release. Python coverage is 16 tooling and 4 compiler harness tests.
+- Focused exclusive carried-record coverage passed all 10 source/proof groups and
+  6 native groups, with native output/diagnostics checked in both profiles.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug and release. Unsupported
   cases are not successful language rejections or full release qualification.
-- Final documentation check: 1074 local links in 102 Markdown files, 0 failures.
-  `git diff --check` passed; external links were not fetched.
-- Vim/Neovim and standalone documentation CLI execution passed in the preceding
-  documentation slice; they were not rerun for this compiler-only change.
-- The separate runtime/sanitizer gate was not rerun. No runtime/backend code changed.
+- Final documentation check passed 1077 local links in 102 Markdown files;
+  `git diff --check` passed. Repository checks also cover 23 conformance catalog
+  records and 7 schemas/6 examples. External links were not fetched.
+- Editor integration and the separate runtime/sanitizer gate were not rerun;
+  no editor, runtime, backend or dependency files changed.
 
 ## Area handoff
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Carried plain-record initialization and shared projections are supported; local exclusive scalar-field borrows are next. |
+| Compiler | Carried plain-record initialization, shared projections and local exclusive scalar fields are supported. Wider carried shapes remain separate. |
 | Documentation tooling | Standalone slice complete; package graphs, assets, public indexes and LSP remain separate. |
 | Editor integration | Documentation fences supported in Vim/Neovim; no changes in this slice. |
-| Standard library | One net package now specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
+| Standard library | One net package specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
 | Runtime and release | Bootstrap evidence is not minimum-platform, bundled-distribution or full v0.0.1 qualification. |
 
 ## Next steps
 
-1. Qualify local exclusive borrows of scalar fields in carried records through
-   `compiler/src/borrow/carried.rs`, `compiler/src/loans/exclusive_restarts.rs` and
-   the existing place/path proof. Require an active, initialized containing slot,
-   an exact projected source and no live exclusive loan or descendant across a
-   restart edge. Keep whole-record and non-scalar exclusive paths gated. Add
-   source/native cases, then run the compiler gate.
-2. Preserve certified shared-header coverage, genuine call/input uncertainty,
-   scalar exclusive backedge boundaries, old-copy loans and no synthetic reads.
-   Nullable, union, list, reference-bearing and owning carried slots remain separate.
+1. Investigate declared fixed-capacity, reference-free carried list slots through
+   `compiler/src/borrow/carried.rs`, `compiler/src/check/statements.rs` and
+   `compiler/src/loans/emission_init.rs`. Establish whole-slot initialization,
+   copies, replacement and owner-reset behavior before changing the shape gate.
+   Qualify indexed borrowing and reservations separately through existing element
+   proofs; nullable, union, reference-bearing and owning slots remain separate.
+2. Preserve exact field sources, active initialization, shared-header certificates,
+   conservative call/input ancestry, exclusive reset frontiers, old-copy loans and
+   no synthetic reads. Add focused source/native proof for any new capability and
+   run the compiler gate.
 3. Continue module graphs and library foundations before executable net peers/TLS;
    implement capability-typed configuration, bounded lifecycle and raw adapters
-   before HTTP sender/receiver adapters, following the updated COMPILER plan.
-   standalone documentation completion is not a prerequisite for more doc polish.
+   before HTTP sender/receiver adapters, following COMPILER.md.
 4. Keep root/compiler STATUS concise with actual evidence and concrete next steps;
    commit cohesive validated changes, never recreate STEP logs and do not push.

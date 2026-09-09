@@ -64,26 +64,5 @@ pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {
             ));
         }
     }
-    if !guards.spend(proofs.aliases.len() + 1) {
-        return Err(State::budget(Span::default()));
-    }
-    for alias in proofs.aliases.values() {
-        let Some(span) = alias.exclusive else {
-            continue;
-        };
-        if !guards.spend(alias.field.len() + proofs.carried.len() + 1) {
-            return Err(State::budget(span));
-        }
-        if let Some(slot) = proofs
-            .carried
-            .get(&(alias.target, Some(alias.field.clone())))
-            && matches!(slot.ty, Type::Record { .. })
-        {
-            return Err(Diagnostic::unsupported(
-                "exclusive borrowing of carried record storage",
-                span,
-            ));
-        }
-    }
     Ok(())
 }

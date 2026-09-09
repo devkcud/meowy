@@ -8,8 +8,9 @@ restart edge. The result cell may survive; the loan must not. This extends the
 
 ## Supported slice
 
-All exclusive acquisitions in a reset graph must address carried scalar slots.
-Canonical result owner, root, lexical view and scalar shape are checked. Existing
+All exclusive acquisitions in a reset graph must address carried scalar slots or
+scalar fields in carried reference-free records. Canonical result owner, root,
+lexical view, exact field path and scalar leaf shape are checked. Existing
 backing-type, mutability, acquisition initialization and storage-lifetime checks
 remain independent. Ordinary local/parameter exclusive roots, wider pointees and
 exclusive handles in restart headers remain unsupported in this slice.
@@ -40,6 +41,31 @@ indirect store is significant: indirect stores and exclusive calls conservativel
 forget Boolean knowledge. The initialization proof does not infer that a scalar
 store cannot affect another flag. Restoring the flag afterward permits proof;
 losing its value before the backedge can still produce B001.
+
+## Carried record fields
+
+Declared reference-free carried records admit exclusive borrows of named Boolean,
+integer and float fields, including nested paths. Every crossed field must be
+mutable. The existing source qualifier traverses each concrete field index from
+the containing slot type, rejects absent/indexed/non-scalar paths and retains
+canonical owner/root/view checks. Traversal consumes the existing proof budget.
+Whole-record, string, unit, nullable, union, reference-bearing and list paths remain
+unsupported; ordinary local exclusive roots in reset graphs remain gated.
+
+Borrow HIR and containing-slot Acquire events are unchanged. The owner must be
+active and the whole slot initialized before acquisition. Exact field projections
+keep siblings disjoint, while parent/whole-record access conflicts with live loans.
+Moves, reborrows, public call bounds, owner expiry and final-use rules still apply.
+The exclusive loan and all descendants must end before every reachable restart;
+certified shared sibling headers retain their independent ancestry. Indirect stores
+and exclusive calls still invalidate Boolean knowledge used by initialization proof.
+
+The [exclusive-carried-records example](examples/exclusive-carried-records.mwy)
+mutates nested result storage, preserves an old value copy and prints 7, 8, ready.
+Seven source groups, three graph groups and six native groups cover paths, widths,
+initialization, mutability, moves, children, conflicts, calls, shared headers, owner
+resets, Leave, expiry and live-backedge rejection. Native cases run in both profiles.
+No backend, runtime, reference fixture or dependency changes are required.
 
 ## Frontier proof
 
@@ -127,8 +153,6 @@ Six further source groups, four graph groups and five native groups cover mixed
 headers, inactive nullable paths, nested targets, owner resets, Leave, missing
 entry/backedge coverage, metadata/definition removal, explicit opacity and conflicts.
 
-All ten compiler checks pass: 541 library and 525 native tests, 20 Python tests and
-68 debug/release examples, formatting, Clippy, build and repository contracts.
-Conformance remains 10 passed, 13 unsupported, 0 failed. Runtime/backend, reference
-fixtures and dependencies are unchanged; runtime/editor checks were not rerun.
-The full v0.0.1 release remains incomplete.
+The current full compiler-gate result is recorded in [STATUS.md](STATUS.md).
+Unsupported conformance cases are not successful language rejections. The full
+v0.0.1 release remains incomplete.

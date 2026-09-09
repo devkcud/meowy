@@ -1,4 +1,6 @@
-use super::{Diagnostic, FALSE, Graph, Guard, Origin, Result, Source, Span, Type, VecDeque};
+use super::{
+    Diagnostic, FALSE, Graph, Guard, Origin, Projection, Result, Source, Span, Type, VecDeque,
+};
 use crate::hir::ReferenceMode;
 
 pub(crate) const ROOTED: u8 = 1;
@@ -22,7 +24,7 @@ impl Graph<'_> {
             } = origin.source
             else {
                 return Err(Diagnostic::unsupported(
-                    "exclusive restart loans outside carried scalar storage",
+                    "exclusive restart loans outside carried scalar storage or record fields",
                     span,
                 ));
             };
@@ -35,16 +37,27 @@ impl Graph<'_> {
                 .proofs
                 .carried
                 .get(&(target, Some(alias.field.clone())));
+            self.charge(fields.len() + 1)?;
+            let ty = slot.and_then(|slot| {
+                fields.iter().try_fold(&slot.ty, |ty, step| {
+                    let (Type::Record { fields, .. }, Projection::Field(index)) = (ty, step) else {
+                        return None;
+                    };
+                    fields
+                        .get(*index)
+                        .filter(|field| field.mutable)
+                        .map(|field| &field.ty)
+                })
+            });
             if !origin.component.is_empty()
-                || !fields.is_empty()
                 || alias.target != target
                 || alias.root != root
-                || !slot.is_some_and(|slot| {
-                    matches!(&slot.ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
+                || !ty.is_some_and(|ty| {
+                    matches!(ty, Type::Bool | Type::Int { .. } | Type::Float { .. })
                 })
             {
                 return Err(Diagnostic::unsupported(
-                    "exclusive restart loans outside carried scalar storage",
+                    "exclusive restart loans outside carried scalar storage or record fields",
                     span,
                 ));
             }

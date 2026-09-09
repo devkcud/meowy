@@ -624,9 +624,10 @@ implementation boundary; it does not change language rules.
   mutability checks. Old value copies are independent of later record writes.
   The extension adds no backend storage, runtime flags, payload reads or cleanup.
 - Shared borrows of original carried record storage and field projections use the
-  acquisition and lifetime proof below. Exclusive record-storage borrows remain
-  B001. Ordinary local copies, copied completed results and supported scalar
-  sibling loans retain their existing borrow rules.
+  acquisition and lifetime proof below. Exclusive scalar-field borrows use the
+  [restart frontier proof](EXCLUSIVE_RESTARTS.md#carried-record-fields); whole-record
+  and non-scalar exclusive borrows remain B001. Ordinary local copies, copied
+  completed results and supported scalar sibling loans retain their existing rules.
 - The [carried-records example](examples/carried-records.mwy) executes its
   initializer once and retains both fields across three iterations. Native
   regressions also cover nested unit/scalar members, copies, writes, owner resets,
@@ -652,9 +653,9 @@ implementation boundary; it does not change language rules.
   source remains E303, even if native storage is later reused at the same address.
 - Replacing an expired handle before its next use is permitted under the existing
   rules. Old reference copies retain their original sources, and reference-returning
-  calls retain their public input bounds. Exclusive whole-record and projected
-  borrows remain B001; nullable, union and reference-bearing carried shapes are
-  still outside this slice.
+  calls retain their public input bounds. Exclusive whole-record and non-scalar
+  projected borrows remain B001; nullable, union and reference-bearing carried
+  shapes are still outside this slice.
 - The [carried-record-borrows example](examples/carried-record-borrows.mwy) retains
   a field reborrow across three iterations after its alias and parent view leave
   scope. Source/proof tests cover early and inactive acquisition; debug/release

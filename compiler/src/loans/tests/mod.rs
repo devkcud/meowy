@@ -6,6 +6,7 @@ mod blocks;
 mod budgets;
 mod control;
 mod elements;
+mod exclusive_carried_records;
 mod exclusive_fields;
 mod exclusive_restarts;
 mod exclusive_slots;

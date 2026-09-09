@@ -72,6 +72,7 @@ compiler/target/debug/meowy run compiler/examples/carried-records.mwy
 compiler/target/debug/meowy run compiler/examples/carried-record-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/carried-borrows.mwy
 compiler/target/debug/meowy run compiler/examples/exclusive-carried.mwy
+compiler/target/debug/meowy run compiler/examples/exclusive-carried-records.mwy
 compiler/target/debug/meowy run compiler/examples/mixed-headers.mwy
 compiler/target/debug/meowy doc check compiler/examples/documentation.mwy --standalone --run-examples
 compiler/target/debug/meowy doc build compiler/examples/documentation.mwy --standalone --output compiler/build/docs
@@ -191,12 +192,17 @@ unit members use the same whole-slot initialization proof, within bounded shape
 and work limits. Copies, mutable fields and whole-record replacement keep their
 ordinary semantics. Shared borrows of the original record or nested fields retain
 the result owner's storage across inner restarts, including after the alias leaves
-scope. Owner completion/reset still expires those references; exclusive borrows
-of carried record storage remain gated. The
+scope. Owner completion/reset still expires those references. Exclusive Boolean,
+integer and float field borrows are supported when the loan and its descendants
+end before every restart edge; whole-record and other exclusive paths remain gated. The
 [carried record borrow example](examples/carried-record-borrows.mwy) keeps a field
 reborrow across three iterations. See
 [carried record ownership](OWNERSHIP.md#carried-reference-free-records) and
 [shared record borrowing](OWNERSHIP.md#shared-carried-record-borrows).
+The [exclusive carried record example](examples/exclusive-carried-records.mwy)
+mutates a nested field while retaining an independent old copy. Its
+[restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
+initialization, exact storage identity and local loan authority.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)
