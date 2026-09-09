@@ -26,6 +26,9 @@ contains the full three-error example used below.
 | Run a program                            | `meowy run main.mwy`                         | Build and execute the selected entry                                 |
 | Exercise the project's test suites       | `meowy test`                                 | Check suites, then run each selected case in its own process         |
 | See which cases would run                | `meowy test --list`                          | Check static suite descriptors and list case IDs without execution   |
+| Check API documentation                  | `meowy doc check main.mwy`                    | Check attached prose, symbol links and example source without execution |
+| Run explicitly runnable documentation    | `meowy doc check main.mwy --run-examples`     | Execute selected doc examples through the ordinary test runner       |
+| Build a local API reference              | `meowy doc build main.mwy --output build/docs` | Render checked documentation without publishing it                  |
 | Produce a native executable              | `meowy build main.mwy --output build/main`   | Build without executing the result                                   |
 | Explain executable size and dependencies | `meowy build --report`                       | Save section sizes, retention evidence, and runtime requirements     |
 | Resolve newly declared dependencies      | `meowy deps resolve`                         | Fill missing lock entries while preserving existing locked revisions |
@@ -42,6 +45,21 @@ contains the full three-error example used below.
 
 `--help` on any command is equivalent to asking for its help. CLI subcommand names
 are shell arguments; they do not introduce reserved words into meowy source.
+
+## Documentation commands
+
+`meowy doc check` and `meowy doc build` follow the
+[checked documentation contract](../reference/documentation.md). They share the
+source graph, target/profile selection and offline dependency policy with checking.
+`--require-public` requires documentation on exported declarations and named record
+members. `--run-examples` belongs to doc check; neither ordinary compilation nor
+doc build runs examples. `--assets DIR` explicitly permits bounded local image assets
+for doc build; it does not fetch remote content or copy arbitrary source files.
+
+Doc build requires `--output DIR`, stages its output safely and never uploads it
+or opens a browser implicitly. Failed or unsupported required checks return nonzero;
+unexecuted examples are not reported as executed passes. These are full-language
+tool contracts, not commands currently implemented by the bootstrap.
 
 ## Check, build, and run
 
@@ -105,11 +123,11 @@ A task-using standalone program still needs an explicit executor configuration;
 
 | Option                                   | Applies to                                                     | Effect                                                                            |
 | ---------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `--profile debug` or `--profile release` | `check`, `build`, `run`, `test`                                | Override `build.profile` for this invocation                                      |
-| `--target TRIPLE`                        | `check`, `build`, `run`, `test`                                | Override `build.target` and record the chosen architecture, OS, and ABI           |
-| `--output PATH`                          | `build`, `err export`                                          | Select the output file                                                            |
+| `--profile debug` or `--profile release` | `check`, `build`, `run`, `test`, `doc check`, `doc build`                                | Override `build.profile` for this invocation                                      |
+| `--target TRIPLE`                        | `check`, `build`, `run`, `test`, `doc check`, `doc build`                                | Override `build.target` and record the chosen architecture, OS, and ABI           |
+| `--output PATH`                          | `build`, `err export`, `doc build`                                          | Select the output file                                                            |
 | `--report`                               | `build`                                                        | Write a build report and link map beside the executable                           |
-| `--offline`                              | `check`, `build`, `run`, `test`, `deps resolve`, `deps update` | Require all dependency content and resolution metadata locally                    |
+| `--offline`                              | `check`, `build`, `run`, `test`, `doc check`, `doc build`, `deps resolve`, `deps update` | Require all dependency content and resolution metadata locally                    |
 | `--record-replay`                        | `run`                                                          | Record supported runtime inputs and scheduling decisions for deterministic replay |
 
 Defaults are the manifest's values, then `debug` and the host target. Both profiles

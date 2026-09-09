@@ -66,8 +66,16 @@ actually contains that intrinsic value.
 | `[1, 2, 3]`                     | Bounded list literal               |
 | `{ -> x : 1 }`                  | Block with a named emission        |
 | `# comment #`                   | Delimited comment; may span lines  |
+| `#\| documentation \|#`         | Documentation for the following declaration |
+| `#!\| module documentation \|!#` | Documentation for the containing source module |
 
-Comments do not nest. `#` inside a string is ordinary text. Strings accept `\n`,
+Ordinary comments do not nest. Documentation fences use matching bar counts and
+their own closers; see [checked documentation comments](documentation.md) for
+quoting, attachment, semantic links and implementation status. The openers `#|`
+and `#!|` take precedence over an ordinary comment; insert a space after `#` when
+that documentation opener was not intended. `##` remains an empty ordinary comment.
+
+`#` inside a string is ordinary text. Strings accept `\n`,
 `\r`, `\t`, `\0`, `\"`, `\\`, `\{`, and `\}` escapes. A raw newline is allowed
 inside a string and is retained. There is no implicit indentation stripping.
 String literals contain UTF-8 bytes and need not be NUL-terminated.

@@ -355,6 +355,13 @@ and import alias/path/file renames. Those changes need an explicit source review
 A local name that happens to be spelled `true` may be renamed when it resolves to
 that local binding. Strings and comments are never changed by spelling alone.
 
+[Documentation comments](documentation.md) supply structurally attached prose,
+resolved symbol links and separately classified example results from the same
+analysis snapshot. Hover and signature help use those facts, not a second annotation
+parser. Permitted rename can update bound documentation links and analyzed example
+code only with complete source maps and reference coverage; ordinary prose is not
+rewritten. Indexing, hover and completion never execute documentation examples.
+
 ## Diagnostics in a changing buffer
 
 Compiler diagnostics use `source : "meowy"`, stable codes such as `E103`, and
