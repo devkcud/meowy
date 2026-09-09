@@ -290,6 +290,12 @@ tests is not enough to qualify their interaction.
 
 ## Documentation completion slice
 
+Completed for the standalone bootstrap profile on 2026-09-09: attachment, checked
+links/signatures, doc check/build, basic safe API pages and checked/opt-in examples.
+Compiler/native and editor gates passed. The broader package/LSP/assets/index-format
+contract remains separate; this is not a reason to extend this slice. Return to
+the reference-free record-slot compiler work next.
+
 Finish a usable documentation feature in one bounded implementation run, rather
 than stopping after each internal piece for another continuation. Reuse the compiler
 and test infrastructure; do not build a new general-purpose framework for this work.
