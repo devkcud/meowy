@@ -56,10 +56,26 @@ same mapping. Existing one-file library compilation remains available without a
 filesystem context. The driver snapshots inputs before checking; build/IR outputs
 cannot replace any loaded source, including a canonicalized alias.
 
-Native panic messages still use the existing numeric byte-offset format. For a
-multi-file graph those are internal graph offsets; file labels and local runtime
-sites are not yet implemented. This slice qualifies compiler diagnostics with file
-identity, not public replay/source-map artifacts or complete native diagnostics.
+Multi-file native P001/P002/P003/P006 failures use the canonical source file and
+local half-open byte range, including failures in module initializers or the entry:
+
+```text
+panic[P001]: index 2 is outside initialized length 1 at "/src/value.mwy" bytes 20..29
+```
+
+File labels are quoted; quotes, backslashes and control bytes are escaped while
+UTF-8 names remain readable. Labels are embedded in the executable, deduplicated
+per source, and require no runtime filesystem access. One-file programs retain the
+existing `at bytes START..END` format. Initializer failure still prevents dependent
+and entry effects. Nested failures retain the actual failing site, and copied panic
+evidence carries the label into the existing cleanup-failure report.
+
+The backend accepts an optional source-range table. It requires ordered disjoint
+ranges, at most 64 labels and 1 MiB of total label bytes; every mapped runtime site
+must fit within one range. Invalid tables/sites fail lowering instead of guessing
+a file. Compiler diagnostics keep their existing file/line/column mapping. This
+is a private bootstrap diagnostic format, not public replay/source-map artifacts
+or complete native stack diagnostics.
 
 ## Limits and remaining gates
 
@@ -83,5 +99,7 @@ Copying an exported value into a local uses ordinary local borrowing/mutation ru
 Eight graph/checker groups and nine native groups cover canonical diamonds/symlinks,
 relative resolution, snapshots and limits, compiler error spans, privacy/export
 boundaries, initialization order/failure, and source-output protection. Native
-execution runs in debug and release. The full compiler-gate result is recorded in
+execution runs in debug and release. Runtime-site groups additionally cover all
+four panic codes, legacy output, escaped names, retained causes, nested failures,
+source-range validation and evaluation order. The full compiler-gate result is recorded in
 [STATUS.md](STATUS.md); this is not complete language or distribution qualification.

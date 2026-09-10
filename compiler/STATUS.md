@@ -1,89 +1,69 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Bounded relative value imports are complete and passed the
-compiler gate. Native panic file labels are in progress. Optional runtime file-site
-helpers pass two native ABI groups in debug/release, including legacy output,
-escaped UTF-8 labels, panic copying and retained cleanup causes. Explicit P006 lowering also passes three source-map groups in both profiles;
-checked-operation lowering and driver integration now pass focused tests.
-The full series gate and final documentation remain pending.
+Updated: 2026-09-10. Native panic file labels are complete and passed the compiler
+gate. No failing checks remain. Implementation was split into four tested commits;
+this handoff accompanies the separate documentation commit.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Planned commits
+## Commit series
 
-1. Runtime file-site helpers and their two ABI/output regression groups pass.
-   Legacy helpers and panic evidence semantics are preserved. All five existing
-   panic-outcome groups, formatting and Clippy also pass. Committed as `2c57546`.
-2. Backend source ranges and P006 mapping pass three focused groups, fmt and
-   Clippy: local spans, invalid-map rejection, escaping, nested failures and label
-   deduplication. Committed as `407688f`.
-3. P001/P002/P003 mapping and both focused groups pass. Runtime probes now
-   tolerate declarations already emitted by lowering; that fix is in `407688f`.
-   All 82 backend tests, formatting and Clippy pass; committed as `6f38463`.
-4. The driver now passes source ranges only for multi-file graphs. CLI tests for
-   local sites, initializer failures, entry sites, aliases and one-file compatibility
-   pass all five groups in both profiles. Formatting and Clippy pass; ready to commit.
-5. Document the format/boundaries, run the compiler gate and finalize the handoff.
+1. `2c57546` — runtime file-site helpers and ABI/captured-cause tests.
+2. `407688f` — validated backend source ranges and explicit P006 mapping/tests.
+3. `6f38463` — P001/P002/P003 mapping and evaluation-order tests.
+4. `eb6edf4` — multi-file driver integration and CLI regressions.
+5. Documentation/handoff records the successful final gate below.
 
-Keep each commit buildable, include its focused tests, inspect staged diffs and
-apply the 400-line/8-file split review threshold. Commit each validated slice
-before starting the next. No package/export expansion is part of this work.
+Each implementation commit includes focused tests and stays below the split-review
+threshold. Continue planning commit slices before implementation; do not bundle
+future module/export work into one feature-sized commit.
 
 ## Current compiler slice
 
-The driver loads a bounded canonical file graph through `modules.rs` and
-`modules/load.rs`. Top-level immutable unannotated bindings can import exact
-relative `.mwy` paths, with grouping allowed. Paths resolve from each importer;
-canonical paths/symlinks deduplicate diamonds. E501 covers invalid/missing files;
-E502 identifies a cycle and its closing import. Files are snapshotted before checking.
+Multi-file native P001/P002/P003/P006 failures now print canonical source paths and
+local half-open byte ranges. The driver passes its source snapshots to
+`backend::emit_ir_with_sources` only for graphs with multiple files. One-file CLI
+programs and `emit_ir` retain their exact prior numeric-offset format.
 
-Each file is parsed separately into disjoint source-span space. The graph assembles
-isolated AST blocks with inaccessible internal bindings in dependency/source order;
-source text is not concatenated. `check::check_imports` runs the complete existing
-checker/ownership pipeline. `Value::FileModule` preserves compile-time alias identity
-and one runtime initializer while exposing immutable reference-free value exports.
-Private scopes remain separate. Dependencies initialize before importer/entry effects;
-initializer panic prevents entry execution.
+`backend/sites.rs` validates ordered disjoint ranges, at most 64 labels and 1 MiB
+of label bytes; unmapped or cross-file failure spans reject lowering. Used labels are
+embedded once per source. Runtime helpers quote/escape paths without allocation or
+mutable global source context, and preserve UTF-8 names. Legacy helper signatures
+remain available. Panic copies retain file-site evidence and original cleanup causes.
 
-`driver::report_at` maps compiler errors to the actual file and local UTF-8 byte
-range, line and column. All graph source paths participate in output protection.
-The one-file library API and standalone documentation retain their prior path.
-Native panic text still prints internal graph offsets; runtime file labels and
-local runtime-site mapping are not implemented and must not be claimed.
+Arithmetic operands, list bounds/capacity checks and explicit panic interpolation
+keep their evaluation order and existing failure codes. An inner failure keeps its
+own site; outer unfinished panic text cannot replace that cause. Initializer failure
+still prevents entry effects. No runtime filesystem lookup, package/export support,
+public artifact format or full native stack diagnostics are added.
 
-Limits: 64 files, 32 active import levels, 4096 edges, 4 MiB per file and 16 MiB
-snapshot span space. Export shapes reuse 256-part/32-level reference-free validation.
-Package manifests remain refused unless the entry policy is explicitly bypassed
-with `--standalone`; imported files cannot cross a different manifest context or
-execute `mod.mwy`. Foundational imports are unchanged. Function/type exports,
-mutable/reference-bearing exports, nested/conditional imports, module references,
-module values in function bodies and documentation graphs stay gated. Type-export
-syntax now reports B001 explicitly. See [MODULES.md](MODULES.md) and
-[the runnable diamond](examples/modules/main.mwy).
+Relative imports retain immutable reference-free exports, isolated private scopes,
+canonical graph identities and ordered once-only initialization. Compiler diagnostics
+and dependency output protection are unchanged. Function/type exports, borrowed
+module storage, runtime module captures and package/manifest support remain gated.
+See [MODULES.md](MODULES.md) for the format and current limits.
 
 ## Actual validation
 
-- `cargo test --locked --manifest-path compiler/Cargo.toml --target
-  x86_64-unknown-linux-gnu --target-dir compiler/target file_modules` passed eight
-  graph/checker groups and nine native groups, including the multi-file example.
-  Native success/failure cases execute in debug and release where applicable.
-- Evidence covers canonical diamonds/symlinks, importer-relative resolution,
-  once-only initialization, private scopes, immutable records/lists/primaries,
-  initializer panic, Unicode/interpolation compiler-error mapping, source snapshots,
-  graph/source limits, export/context gates and protection of dependency inputs.
-- `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, 659 library and 607 native Rust tests (1266 total), 16 tooling
-  plus 4 compiler-harness Python tests, 79 standalone examples and one multi-file
-  example in debug/release. The added dependency-hard-link protection case and
-  Clippy passed afterward.
+- Runtime helper probes passed in debug/release: legacy and named formats,
+  escaped UTF-8 labels, panic copying and retained original causes after cleanup failure.
+- Three explicit-panic groups and two checked-operation groups passed in both
+  profiles: local ranges, invalid-map rejection, deduplicated labels, nested faults,
+  arithmetic causes, bounds prefixes, capacity and completed operand effects.
+- All 82 backend tests passed after lowering integration. Five CLI groups passed
+  in both profiles: all four codes, entry/dependency sites, canonical escaped aliases,
+  diamond initializer failure and unchanged one-file output. Focused fmt/Clippy passed.
+- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
+  Clippy, build, 666 library and 612 native Rust tests (1278 total), 16 tooling plus
+  4 compiler-harness Python tests, 79 standalone examples and one multi-file example
+  in debug/release. Gate log: `/tmp/meowy-panic-file-sites-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
-- Local links, 23 catalog records and 7 schemas/6 examples passed. Whitespace checks
-  passed; external links were not fetched. Gate log: `/tmp/meowy-file-modules-gate.log`.
-- No backend, runtime, dependency or reference-fixture changes were needed. Editor
-  and separate runtime/sanitizer gates were not rerun. Runtime panic file labels
-  remain open.
+- Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
+  External links were not fetched. The compiler's native runtime helpers changed
+  and were executed; separate prototype runtime/sanitizer and editor gates were
+  not rerun.
 
 ## Prior capabilities and other areas
 
@@ -118,28 +98,24 @@ lifecycle implementation precede executable adapters.
 | Module identities and immutable export gate | `src/check/names.rs`, `src/check/statements.rs` |
 | Complete graph checking and ownership | `src/check.rs::check_imports` |
 | File-mapped diagnostics and input/output protection | `src/driver.rs` |
+| Native file-site mapping and formatting | `src/backend/sites.rs`, `native/runtime.cpp` |
 | Carried initialization and indexed access/write proof | `src/loans/emission_init.rs`, `src/loans/elements.rs`, `src/loans/control.rs` |
 
 ## Still outside this compiler
 
 The full package/manifest graph, richer module exports, generic specialization,
-captures, public FFI, wider
-ownership/cleanup, executable networking, public artifacts/replay and LSP remain
+captures, public FFI, wider ownership/cleanup, executable networking, public artifacts/replay and LSP remain
 separate. Host execution does not qualify minimum platforms or bundled distributions.
 Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Carry file identity into native panic sites through `src/modules.rs` and
-   `src/backend/{panic,arithmetic,lists}.rs` and `native/runtime.cpp`. Preserve
-   existing one-file diagnostics;
-   add multi-file bounds/arithmetic/panic tests with local spans and file names.
-   Do not describe the current graph byte offsets as complete runtime diagnostics.
-2. Extend module exports toward annotated functions/types through `check/names.rs`,
+1. Plan small slices for annotated function/type exports through `check/names.rs`,
    `check/statements.rs`, `parser/statements.rs` and the module contract. Preserve
    canonical item identity, public annotations, private scopes and initialization
-   order; do not enable runtime module captures or reference exports without their
-   storage/lifetime proof. Package manifests/aliases remain a separate slice.
-3. Preserve ownership/header certificates, call/input opacity, old copies and owner
-   expiry. Keep root/compiler STATUS current, commit cohesive validated work, and
-   do not push or recreate STEP logs.
+   order. Add focused multi-file fixtures with each implementation slice, then run
+   the final compiler gate. Package policy remains separate.
+2. Keep runtime module captures/reference exports gated until their storage/lifetime
+   proof exists. Preserve ownership/header certificates, call/input opacity, old
+   copies and owner expiry. Keep STATUS current, commit validated slices as they
+   finish, and do not push or recreate STEP logs.
