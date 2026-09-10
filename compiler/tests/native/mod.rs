@@ -54,6 +54,7 @@ pub(crate) mod mixed_writes;
 pub(crate) mod mutable_carriers;
 pub(crate) mod mutable_references;
 pub(crate) mod nested_writes;
+pub(crate) mod panic_sites;
 pub(crate) mod panics;
 pub(crate) mod published_snapshots;
 pub(crate) mod reborrows;

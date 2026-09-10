@@ -372,7 +372,19 @@ pub(crate) fn execute(opts: &Options) -> i32 {
         eprintln!("meowy: executable and LLVM IR outputs must have different paths");
         return 2;
     }
-    let ir = match crate::backend::emit_ir(&program) {
+    let sources = if graph.files.len() > 1 {
+        graph
+            .files
+            .iter()
+            .map(|file| crate::backend::Source {
+                path: file.path.to_string_lossy().into_owned(),
+                span: Span::new(file.base, file.base + file.source.len()),
+            })
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+    let ir = match crate::backend::emit_ir_with_sources(&program, &sources) {
         Ok(ir) => ir,
         Err(err) => {
             report(

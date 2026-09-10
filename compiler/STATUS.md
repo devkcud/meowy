@@ -4,7 +4,8 @@ Updated: 2026-09-10. Bounded relative value imports are complete and passed the
 compiler gate. Native panic file labels are in progress. Optional runtime file-site
 helpers pass two native ABI groups in debug/release, including legacy output,
 escaped UTF-8 labels, panic copying and retained cleanup causes. Explicit P006 lowering also passes three source-map groups in both profiles;
-checked-operation lowering now passes too. Driver integration remains pending.
+checked-operation lowering and driver integration now pass focused tests.
+The full series gate and final documentation remain pending.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
@@ -16,12 +17,13 @@ Git holds history. Do not recreate STEP logs.
    panic-outcome groups, formatting and Clippy also pass. Committed as `2c57546`.
 2. Backend source ranges and P006 mapping pass three focused groups, fmt and
    Clippy: local spans, invalid-map rejection, escaping, nested failures and label
-   deduplication. Committed as `407688f`; the CLI remains on its existing path.
+   deduplication. Committed as `407688f`.
 3. P001/P002/P003 mapping and both focused groups pass. Runtime probes now
    tolerate declarations already emitted by lowering; that fix is in `407688f`.
-   All 82 backend tests, formatting and Clippy pass; this slice is ready to commit.
-4. Pass canonical graph sources from the driver; add multi-file and single-file
-   CLI regressions, including initializer failure and alias identity.
+   All 82 backend tests, formatting and Clippy pass; committed as `6f38463`.
+4. The driver now passes source ranges only for multi-file graphs. CLI tests for
+   local sites, initializer failures, entry sites, aliases and one-file compatibility
+   pass all five groups in both profiles. Formatting and Clippy pass; ready to commit.
 5. Document the format/boundaries, run the compiler gate and finalize the handoff.
 
 Keep each commit buildable, include its focused tests, inspect staged diffs and
