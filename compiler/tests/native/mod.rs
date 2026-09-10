@@ -10,6 +10,7 @@ pub(crate) mod carried_lists;
 pub(crate) mod carried_record_borrows;
 pub(crate) mod carried_records;
 pub(crate) mod carried_scalars;
+pub(crate) mod carried_writes;
 pub(crate) mod changing_published;
 pub(crate) mod cli;
 pub(crate) mod control;

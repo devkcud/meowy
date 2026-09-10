@@ -245,9 +245,6 @@ impl<'a> Graph<'a> {
                     let first = path
                         .iter()
                         .position(|step| matches!(step, WriteStep::Index(_)));
-                    if first.is_some() {
-                        crate::borrow::carried::storage(self.proofs, *id, self.guards, *span)?;
-                    }
                     let fields = path
                         .iter()
                         .take(first.unwrap_or(path.len()))
@@ -268,7 +265,19 @@ impl<'a> Graph<'a> {
                         fields,
                     };
                     self.charge(place.fields.len() + 1)?;
+                    let source = self.proofs.source(&Place {
+                        root: *id,
+                        fields: place.fields.clone(),
+                    });
+                    let emission = if first.is_some() {
+                        self.emission_acquire(&source, *span)?
+                    } else {
+                        None
+                    };
                     let mut access = Node::default();
+                    if let Some(event) = &emission {
+                        access.emissions.push(event.clone());
+                    }
                     self.event(
                         &mut access,
                         EventKind::Use {
@@ -281,10 +290,7 @@ impl<'a> Graph<'a> {
                     let reservation = if first.is_some() {
                         let value = self.value(vec![Origin {
                             component: Vec::new(),
-                            source: self.proofs.source(&Place {
-                                root: *id,
-                                fields: place.fields.clone(),
-                            }),
+                            source,
                             guard: TRUE,
                         }])?;
                         self.append(Node {
@@ -332,6 +338,9 @@ impl<'a> Graph<'a> {
                             },
                         )
                     };
+                    if let Some(event) = emission {
+                        node.emissions.push(event);
+                    }
                     node.access = Some(self.access(
                         Kind::Write,
                         self.storage(*id, place.fields),

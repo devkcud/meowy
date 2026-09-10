@@ -174,7 +174,7 @@ pub(crate) fn exclusive_carried_elements_preserve_conflicts_frontiers_and_write_
         ("p:&!(items[{items=[9];->1}])", "E302"),
         ("p:&!(items[1]);s:&*p;*p=9;v:*s", "E302"),
         ("p:&!(items[1]);q:p;v:*p", "E301"),
-        ("items[1]=9", "B001"),
+        ("s:&items;s[1]=9", "B001"),
         ("p:&!items", "B001"),
         (
             "p:&!(items[1]);i:=0;'again{v:*p;i=i+1;|i<2|'again.restart()}",

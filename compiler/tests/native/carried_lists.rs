@@ -206,7 +206,7 @@ pub(crate) fn carried_lists_preserve_initialization_storage_and_type_rejections(
     ] {
         rejects(source, code);
     }
-    for body in ["p:&!items", "items[1]=9"] {
+    for body in ["p:&!items", "s:&items;s[1]=9"] {
         rejects(
             &format!(
                 "<R>:<{{items<int32[2]>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->items:=[1];{body};first=false;'loop.restart()}}}}}}"

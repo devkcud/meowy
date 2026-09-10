@@ -10,8 +10,8 @@ pub(crate) fn exclusive_carried_elements_mutate_and_end_before_restart() {
 }
 
 #[test]
-pub(crate) fn exclusive_carried_elements_keep_indexed_writes_gated() {
-    rejects(&format!("{PREFIX}items[1]=9;{SUFFIX}"), "B001");
+pub(crate) fn exclusive_carried_elements_end_before_indexed_writes() {
+    accepts(&format!("{PREFIX}p:&!(items[1]);*p=9;items[2]=10;{SUFFIX}"));
 }
 
 #[test]

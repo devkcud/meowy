@@ -668,13 +668,47 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   [scalar-field restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields).
   Indexed scalar acquisition uses the
   [carried-element proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
-  `carried::storage` still gates indexed writes before reservations. Independent
+  Indexed writes use the whole-slot and reservation proof below. Independent
   copies and completed-result locals keep their existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
   The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
   the old copy's length and the retained updated list. Native output, dynamic bounds,
   owner resets, Leave, partial panics and primary rejections are checked in both
   profiles. No backend, runtime or dependency changes were needed.
+
+## Carried indexed writes
+
+- Indexed SetPath assignments can update initialized carried reference-free lists,
+  including mixed fields/indexes, scalar fields inside immutable record elements,
+  and whole scalar, record, list, string or unit leaves. The existing type and
+  selected-slot mutability checks apply; this does not enable new carried shapes.
+- `loans/control.rs` attaches containing-slot Acquire before owner capture and at
+  the completed store. The owner must be active and the entire slot initialized,
+  even if the index or RHS later cancels. The blanket `carried::storage` gate is
+  removed. Static field-only paths retain their previous behavior.
+- The existing first-list reservation covers every returning index/bounds phase
+  and the final store. It has no loan authority and ends at the last actual phase.
+  Returning index or RHS replacement/nested writes in that region remain E302;
+  disjoint holder siblings remain writable. The whole first-list region remains
+  conservative, including different elements and their fields.
+- Each index executes once after its containing length is captured. Bounds are
+  checked before later indices/RHS. The final address stays fixed when RHS changes
+  index variables. Stores replace only the selected leaf; surrounding lengths,
+  capacities, siblings and old value copies remain intact. Shared final-use RHS
+  reads can finish before the store; retained shared/exclusive loans still conflict.
+- Leave, Restart or panic skips unfinished checks/stores and preserves completed
+  effects and earlier reservation demand. Owner reset clears initialization and
+  cancels its pending store; fresh initialization cannot revive expired references.
+  Certified disjoint shared headers and local exclusive sibling loans keep their
+  existing reset rules. Reference/temporary-derived write roots and broader
+  reference-bearing/owning carried shapes remain gated.
+- Nine source groups, four graph groups and eight native groups cover initialization,
+  physical first-list regions, capture/store events, phase demand, typed scalar and
+  aggregate stores, mutability, captured indices, bounds, final use, owner reset,
+  cancellation and shared/exclusive conflicts. Native cases run in both profiles.
+  The [carried-writes example](examples/carried-writes.mwy) combines ordered writes,
+  an independent old copy, a shared header and an exclusive scalar sibling. No
+  backend, runtime, dependency or reference-fixture changes were required.
 
 ## Shared carried list borrows
 
@@ -702,8 +736,9 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   sibling loans under the existing complete-header certificate. Genuine call/input
   opacity and exclusive descendants retain their restart gates. Local exclusive
   scalar list elements use the [restart proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
-  Whole-list exclusive values and indexed SetPath remain separate work; nullable,
-  union, reference-bearing and owning carried slots retain their shape gates.
+  Indexed SetPath uses the [write proof](#carried-indexed-writes). Whole-list exclusive
+  values remain separate; nullable, union, reference-bearing and owning carried
+  slots retain their shape gates.
 - Ten source/proof groups and seven native groups cover initialization, physical
   paths, parent identity, bounds, cancellation, old copies, final use, owner resets,
   Leave, calls and capability gates in both profiles where applicable. The
@@ -1593,6 +1628,7 @@ reuses initialized-length bounds and element addressing. No runtime ABI changed.
 Local exclusive carried scalar paths use the
 [restart extension](EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
 before capture and at acquisition, exact mutable scalar source qualification and
-no live exclusive ancestry across reset. Indexed writes remain gated. Element
+no live exclusive ancestry across reset. Indexed stores use the
+[write proof](#carried-indexed-writes). Element
 overlap and owner metadata access remain conservative; reference/temporary roots,
 wider pointees, owning elements and exclusive header carriage remain separate.

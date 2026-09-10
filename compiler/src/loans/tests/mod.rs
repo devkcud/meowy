@@ -6,6 +6,7 @@ mod blocks;
 mod budgets;
 mod carried_list_borrows;
 mod carried_lists;
+mod carried_writes;
 mod control;
 mod elements;
 mod exclusive_carried_elements;

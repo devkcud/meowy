@@ -225,7 +225,8 @@ proof. Reads, whole-list replacement/addition and completed-result borrowing ret
 their existing rules. Shared borrows of original list-containing carried storage
 and nested element projections retain their owner through inner restarts. Local
 exclusive scalar fields and indexed elements within carried records/lists use the
-restart proof; whole-list exclusive borrows and indexed writes remain gated. See
+restart proof. Indexed writes require whole-slot initialization at capture and
+store, retaining first-list reservations; whole-list exclusive values remain gated. See
 [carried lists](OWNERSHIP.md#carried-reference-free-lists) and
 [shared list borrowing](OWNERSHIP.md#shared-carried-list-borrows). The
 [carried list borrow example](examples/carried-list-borrows.mwy) keeps an element
@@ -233,7 +234,9 @@ view across three iterations after its emitted alias leaves scope. The
 [exclusive list-field example](examples/exclusive-carried-list-fields.mwy) mutates
 a scalar field beside a replaced list and retains a shared list header. The
 [carried-element example](examples/exclusive-carried-elements.mwy) mutates nested
-list storage with ordered index effects and a disjoint shared header.
+list storage with ordered index effects and a disjoint shared header. The
+[carried-writes example](examples/carried-writes.mwy) combines indexed stores with
+a shared header and an exclusive scalar sibling.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)

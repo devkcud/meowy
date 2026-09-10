@@ -1,4 +1,4 @@
-use super::{BTreeMap, BlockId, Diagnostic, Guards, LocalId, Proofs, Result, Span, State, Type};
+use super::{BTreeMap, BlockId, Diagnostic, Guards, Proofs, Result, Span, State, Type};
 
 pub(crate) type Key = (BlockId, Option<String>);
 pub(crate) type Slots = BTreeMap<Key, Slot>;
@@ -69,35 +69,6 @@ pub(crate) fn shape(ty: &Type, guards: &mut Guards, span: Span) -> Result<Option
         }
     }
     Ok(Some(result))
-}
-
-pub(crate) fn storage(proofs: &Proofs, id: LocalId, guards: &mut Guards, span: Span) -> Result<()> {
-    if proofs.carried.is_empty() {
-        return Ok(());
-    }
-    if !guards.spend(proofs.aliases.len().checked_ilog2().unwrap_or(0) as usize + 1) {
-        return Err(State::budget(span));
-    }
-    let Some(alias) = proofs.aliases.get(&id) else {
-        return Ok(());
-    };
-    if !guards.spend(
-        (alias.field.len() + 1)
-            .saturating_mul(proofs.carried.len().checked_ilog2().unwrap_or(0) as usize + 1),
-    ) {
-        return Err(State::budget(span));
-    }
-    if let Some(slot) = proofs
-        .carried
-        .get(&(alias.target, Some(alias.field.clone())))
-        && shape(&slot.ty, guards, span)? != Some(Shape::Plain)
-    {
-        return Err(Diagnostic::unsupported(
-            "indexed writes of carried list storage",
-            span,
-        ));
-    }
-    Ok(())
 }
 
 pub(crate) fn validate(proofs: &Proofs, guards: &mut Guards) -> Result<()> {

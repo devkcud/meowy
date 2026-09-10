@@ -14,6 +14,7 @@ mod carried_proof;
 mod carried_record_borrows;
 mod carried_records;
 mod carried_scalars;
+mod carried_writes;
 mod changing_published;
 mod control;
 mod discarded_aliases;
