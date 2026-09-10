@@ -100,10 +100,36 @@ rules remain those of the underlying type; borrowed module values and unsupporte
 owning storage remain unavailable.
 
 Standalone docs attach to the exported alias as a type declaration, keep its checked
-signature and enforce the existing required-doc policy. Multi-file documentation
-remains a separate capability. The
+signature and enforce the existing required-doc policy. Ordinary graph compilation
+also checks documented aliases in their file scopes. The
 [typed geometry facade](examples/type-modules/main.mwy) demonstrates exported records,
 data and functions and prints geometry, 10, 0.
+
+## Documentation in source graphs
+
+Ordinary `check`, `build` and `run` validate documentation in every loaded file,
+including dependencies imported only by unused functions or inactive branches.
+Each model uses its own source snapshot and lexical scope. Module links resolve
+at the end of that file; function docs can link parameters but not body locals.
+Attachment, normalized Unicode/CRLF maps, checked signatures and E801-E803 retain
+file-local diagnostics. Documentation analysis keeps the existing per-file budgets.
+
+Links such as `[[counter.inc]]`, `[[counter.defaults.start]]` and
+`[[<counter.Count>]]` follow the actual exported value/type namespaces, including
+facade aliases. Private or missing members fail with E802. For multi-file checking,
+explicit exports and their exposed members/parameters are public; ordinary bindings
+and type aliases remain private. Public docs cannot expose private local targets.
+Cross-file link checking does not create public index identities or rendered URLs.
+
+The [documented facade example](examples/documented-modules/main.mwy) prints
+`counter initialized` once, then `8`, in both profiles. Documentation does not run
+initializers during checking/building or execute embedded examples. Ordinary compile
+checks example metadata; standalone `doc check`/`doc build` retain their separate
+example checking and explicit execution policy.
+
+`doc check` and `doc build` still reject relative file imports with B001. Multi-file
+site generation, public coverage/index publication and example graph resolution
+remain separate work. The existing single-file public-coverage policy is unchanged.
 
 ## Resolution and initialization
 
@@ -191,8 +217,7 @@ is not a package identity or manifest implementation. Bare package names, path
 aliases and remote dependencies remain gated; foundational lookup is unchanged.
 
 Mutable or annotated module-identity bindings, references to module storage,
-runtime module-data values in function bodies and multi-file documentation checking
-remain B001. Standalone documentation retains its existing checks.
+runtime module-data values in function bodies remain B001.
 Copying an exported value into a local uses ordinary local borrowing/mutation rules.
 
 Graph/checker and native groups cover canonical diamonds/symlinks, relative

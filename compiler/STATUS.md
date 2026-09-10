@@ -1,77 +1,61 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Broader literal imports and function-scope module identities
-are complete and passed the compiler gate. No failing checks remain. Three tested
-commits precede this separate documentation handoff.
-Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
-[../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
-Git holds history. Do not recreate STEP logs.
+Updated: 2026-09-10. Documentation-bearing relative file graphs passed the compiler
+gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+[../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
+records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-Documentation-bearing graphs are in progress. The tree started clean. Investigation
-confirmed graph spans are disjoint, while documentation source slicing and checking
-still assume one file. Preserve attachment, signature, link and privacy validation.
+1. `7ccc656` — offset-aware documentation source reads and shifted-span regressions.
+2. `19c60e3` — explicit file export visibility and exported function parameters.
+3. `abc78a2` — per-file models checked inside their initializer scopes.
+4. `c784fd0` — imported documentation links through exported namespaces.
+5. `2bc09dd` — native diagnostic/execution boundaries and documented facade example.
+6. This separate documentation handoff records the complete gate below.
 
-1. Offset-aware source reads complete: all 11 documentation library tests, fmt and
-   Clippy passed. Shifted attachment/link/signature and Unicode/CRLF checks passed.
-2. File visibility and exported function parameter modeling complete. All 13
-   documentation library and nine native documentation groups, fmt and Clippy passed.
-3. Per-file initializer documentation checking complete. All 11 graph library and
-   17 native file-module groups passed, alongside 16 library/nine native documentation
-   groups, fmt and Clippy. Local E801/E802/E803 and file isolation are covered.
-4. Imported value/type link checking complete. All 19 documentation library tests,
-   fmt and Clippy passed, including facade aliases, private/inaccessible targets,
-   distinct namespaces and private inferred record roots.
-5. All six native groups passed, including site-command refusal, file-local CLI
-   errors, budgets, unused dependencies, unchanged semantic gates and no implicit
-   example/initializer execution. The three-file example runs in both profiles.
-   Fmt and Clippy passed.
-6. Document the supported slice and run the complete compiler gate.
-
-Commit each tested slice before proceeding; split further if review thresholds require.
-Multi-file site generation and public indexes remain separate.
+Each implementation/test slice passed focused checks before its commit and remained
+below the review threshold. Plan dependency-ordered commits before the next feature.
 
 ## Current compiler slice
 
-`modules/discover.rs` walks all supported AST statement/expression/type operands
-iteratively, including function bodies, matcher branches, annotations and interpolation.
-It collects relative Import nodes, ignores comment/plain-string text and sorts sites
-by source position. Work is bounded to 262144 queued nodes per file; imports retain
-the existing edge limit. Duplicate sites or exhausted work fail closed with B001.
+Ordinary graph `check`, `build` and `run` check documentation in all discovered files,
+including unused/inactive imports. `documentation/model.rs::at` reads each source
+using its graph base, preserving attachment/markup spans and normalized CRLF/Unicode
+maps. File models mark explicit exports public and ordinary bindings/types private;
+single-file documentation keeps its existing public-coverage policy.
 
-`modules/load.rs` resolves this complete discovery result using the existing source
-snapshots, canonical identities, manifest boundary checks and dependency ordering.
-Inactive/unused imports still initialize before their importer/entry. Missing paths
-and cycles remain E501/E502 at the real import site, including nested type operands.
-No runtime loading, package resolution or general type evaluation is introduced.
+`check/exports.rs::module_value` activates and finishes each file's model.
+`check/blocks.rs` checks module docs before that initializer scope closes. Function
+and parameter docs use the checked declaration/signature scope, excluding body locals.
+Models are not merged across files, and private lexical names remain isolated.
 
-`check/exports.rs::import_module` resolves only registered compile-time module
-identities. Functions may bind local import aliases and use exported functions/types
-without treating that identity as a captured local value. Runtime module-data reads,
-borrowed module storage, private members and mutable/annotated identity bindings keep
-their gates. Existing shared/exclusive call and returned-reference rules are unchanged.
+`check/documentation.rs` resolves imported function/data/type links through existing
+export lookup. Facades and aliases preserve namespaces; missing/private targets are
+E802. Inferred record-member links retain private root anchors. Public docs cannot
+expose private local targets. Graph error mapping retains the owning file and local
+byte range for E801/E802/E803 and documentation budget failures.
 
-Inline and nested initializer imports can select supported members. All discovered
-inputs, including dependencies used only inside unused functions, remain protected
-from build/IR output replacement. Initializer panic still prevents entry execution.
-See [MODULES.md](MODULES.md) and [the example](examples/scoped-imports/main.mwy).
+Ordinary compilation validates embedded example metadata without compiling or
+executing example programs. Check/build do not execute initializers. Standalone doc
+commands retain checked/opt-in examples; relative file imports in `doc check/build`
+remain B001. Multi-file site generation, public indexes/coverage and example graph
+resolution are separate. See [MODULES.md](MODULES.md) and
+[the documented facade](examples/documented-modules/main.mwy).
 
 ## Actual validation
 
-- Discovery: three graph groups passed, including source order, nested expression/
-  type traversal, shifted spans, large-tree budget failure and duplicate-site rejection.
-  A native nested/inline initializer group passed in both profiles.
-- Function-scope and boundary checks: seven native groups passed, covering local
-  function/type aliases, repeated calls, capture/privacy gates, reference/exclusive
-  calls, inactive/unused dependencies, cycles/missing paths, initializer panic,
-  plain-string exclusion and hard-link protection.
-- Broader file/module compatibility suites passed after integration. Focused fmt
-  and Clippy passed for each slice.
+- Offset and export-model slices: shifted attachment/link/signature checks,
+  Unicode/CRLF, public/private links and function parameters passed.
+- Graph integration and links: 19 documentation library groups passed; compatibility
+  included 11 graph library, 17 native file-module and nine native documentation groups.
+- Six new native groups passed: documented facade execution, local diagnostics from
+  check/build/run, unused dependencies, budgets, example/initializer boundaries,
+  signature/capture/storage gates and explicit doc-command refusal.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 674 library and 637 native Rust tests (1311 total), 16 tooling plus
-  4 compiler-harness Python tests, 79 standalone and four multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-scoped-imports-gate.log`.
+  Clippy, build, 684 library and 643 native Rust tests (1327 total), 16 tooling plus
+  four compiler-harness Python tests, 79 standalone and five multi-file examples in
+  debug/release. Gate log: `/tmp/meowy-documented-modules-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -104,33 +88,31 @@ lifecycle implementation precede executable adapters.
 
 ## Architecture and proof boundaries
 
-| Responsibility | Existing owner |
-| --- | --- |
-| AST discovery and canonical graph ordering | `src/modules/discover.rs`, `src/modules/load.rs` |
-| Source snapshots and graph compilation | `src/modules.rs` |
-| Disjoint parser spans | `src/parser.rs::parse_documented_at` |
-| Exported value/type namespaces, scopes and public signatures | `src/check/exports.rs`, `src/check/names.rs` |
-| Data export gate and shared declaration checking | `src/check/statements.rs`, `src/check/functions.rs` |
-| Complete graph checking and ownership | `src/check.rs::check_imports` |
-| File-mapped diagnostics and input/output protection | `src/driver.rs` |
-| Native file-site mapping and formatting | `src/backend/sites.rs`, `native/runtime.cpp` |
-| Carried initialization and indexed access/write proof | `src/loans/emission_init.rs`, `src/loans/elements.rs`, `src/loans/control.rs` |
+Graph loading/discovery remains in `src/modules/{load,discover}.rs`; snapshots and
+compilation are in `src/modules.rs`. Literal imports cover the supported AST,
+retain source order and initialize dependencies once before the entry. Canonical
+paths, manifest boundaries, depth/file/edge/source/discovery budgets remain enforced.
+`src/check/exports.rs` owns file export identity, privacy and signatures.
+`src/check.rs::check_imports` retains complete graph ownership checking.
+`src/driver.rs` protects graph inputs from output replacement and maps diagnostics.
+Native file sites remain in `src/backend/sites.rs` and `native/runtime.cpp`.
 
 ## Still outside this compiler
 
-The full package/manifest graph, resource module values, generic specialization,
-captures, public FFI, wider ownership/cleanup, executable networking, public artifacts/replay and LSP remain
-separate. Host execution does not qualify minimum platforms or bundled distributions.
-Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
+Runtime module-data captures, borrowed module storage, package/manifest resolution,
+generic specialization, public FFI, wider ownership/cleanup, executable networking,
+public artifacts/replay and LSP remain separate. Host execution does not qualify
+minimum platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/
+LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Plan support for documentation-bearing module graphs through `modules.rs::compile`,
-   `documentation/model.rs` and `check/documentation.rs`. The current graph rejects
-   any documentation blocks when multiple files are loaded. Preserve per-file spans,
-   attachment/signature/link validation and module scope; do not simply ignore docs.
-   Keep multi-file site generation/public indexes separate until their links and
-   visibility are modeled. Add focused fixtures and commit each validated slice.
-2. Preserve runtime data-capture and borrowed-export gates, package/manifest policy,
-   generic type-evaluation boundaries and ownership/header proofs. Keep STATUS current,
-   commit reviewable slices, and do not push or recreate STEP logs.
+1. Return to compiler type-construction foundations. Read the required-evaluation
+   contract in `../docs/reference/compile-time.md` and the pipeline in `../COMPILER.md`;
+   audit `src/check/names.rs::type_value` and its callers to identify the smallest
+   bounded computed-type capability beyond literal/type-query/name/group handling.
+   Record a concrete commit plan and accepted/effect/budget rejection fixtures before
+   implementation. Preserve unsupported generic/package behavior and source spans.
+2. Keep runtime data-capture/borrowed-export and ownership/header proofs intact.
+   Run focused checks per slice and the complete compiler gate for new behavior;
+   keep STATUS concise, commit reviewable slices, never push or recreate STEP logs.

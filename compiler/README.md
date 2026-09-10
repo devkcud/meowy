@@ -25,7 +25,9 @@ recursive functions and shared/exclusive calls across files. The
 [typed geometry example](examples/type-modules/main.mwy) adds a re-exported record
 type used by callers and public function signatures. The
 [scoped-import example](examples/scoped-imports/main.mwy) demonstrates function-local
-identities and eager initialization of inactive/unused imports.
+identities and eager initialization of inactive/unused imports. The
+[documented facade](examples/documented-modules/main.mwy) checks per-file module,
+export and parameter documentation with links through imported types/functions.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
@@ -254,7 +256,9 @@ a shared header and an exclusive scalar sibling.
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)
 now supports structural attachment, checked links, derived signatures, doc check/build,
-safe local API pages and checked/opt-in examples. Use the CLI or `meowy::compile`
+safe local API pages and checked/opt-in examples. Ordinary CLI check/build/run
+also validate [documentation in relative file graphs](MODULES.md#documentation-in-source-graphs);
+multi-file doc commands and site/index generation remain unsupported. Use the CLI or `meowy::compile`
 for complete source/documentation checks; the low-level AST checker does not invent
 documentation metadata. E801-E805 identify documentation failures; E002 still marks
 unclosed fences. Full LSP/rename, assets, package documentation and public index
