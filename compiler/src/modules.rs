@@ -80,12 +80,13 @@ impl Graph {
         if self.files.len() == 1 {
             return crate::compile(&self.files[0].source);
         }
+        let mut docs = BTreeMap::new();
         for file in &self.files {
-            if let Some(doc) = file.parsed.docs.first() {
-                return Err(vec![Diagnostic::unsupported(
-                    "documentation in file-module graphs",
-                    doc.open,
-                )]);
+            if !file.parsed.docs.is_empty() {
+                let model =
+                    crate::documentation::Model::at(&file.source, &file.parsed, file.base, false)
+                        .map_err(|error| vec![error])?;
+                docs.insert(file.parsed.block.span.start, model);
             }
         }
         let mut statements = Vec::new();
@@ -115,7 +116,7 @@ impl Graph {
             stmts: statements,
             span: self.files[0].parsed.block.span,
         };
-        crate::check::check_imports(&block, None, imports).map(|(program, _)| program)
+        crate::check::check_imports(&block, None, imports, docs).map(|(program, _)| program)
     }
 }
 

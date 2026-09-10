@@ -33,9 +33,16 @@ impl Checker {
                 types: BTreeMap::new(),
             },
         );
+        let docs = self.file_docs.remove(&value.span.start);
+        let saved_docs = std::mem::replace(&mut self.documentation, docs);
         let result = self.expr(value, expected);
         let module = std::mem::replace(&mut self.module, saved);
-        Ok((result?, module))
+        let docs = std::mem::replace(&mut self.documentation, saved_docs);
+        let result = result?;
+        if let Some(mut model) = docs {
+            model.finish()?;
+        }
+        Ok((result, module))
     }
 
     pub(crate) fn export_function(

@@ -104,7 +104,7 @@ impl Checker {
                 block.span,
             ));
         }
-        if id == 0 {
+        if id == self.module.block {
             self.doc_stage(usize::MAX)?;
         }
         self.scopes.pop();

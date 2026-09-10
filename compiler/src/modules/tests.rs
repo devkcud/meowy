@@ -132,7 +132,6 @@ pub(crate) fn file_modules_preserve_export_and_execution_gates() {
         ("m:@\"./value.mwy\";p:&(m.n)", "->n:2", "B001"),
         ("m:@\"./value.mwy\";f<int32>:(){->m.n}", "->n:2", "B001"),
         ("f<null>:(){m:@\"./value.mwy\";v:m.n}", "->n:2", "B001"),
-        ("m:@\"./value.mwy\"", "#| value |#\n->n:2", "B001"),
     ] {
         let (_temp, graph) = graph(&[("main.mwy", source), ("value.mwy", module)]);
         assert_eq!(
@@ -339,4 +338,70 @@ pub(crate) fn discovered_imports_fail_closed_on_large_trees_and_duplicate_sites(
     let error = super::discover::imports(&block).unwrap_err();
     assert_eq!(error.code, "B001");
     assert!(error.message.contains("duplicate import source site"));
+}
+
+#[test]
+pub(crate) fn file_modules_documentation_uses_each_file_scope_and_function_parameters() {
+    let (_temp, graph) = graph(&[
+        (
+            "main.mwy",
+            "#!| Entry [[local]]. |!#m:@\"./a.mwy\";local:1;#| [[local]] |#copy:local",
+        ),
+        (
+            "a.mwy",
+            "#!| Dependency [[local]] and [[inc]]. |!#local:2;#| [[x]] |#->inc<int32>:(#| Input. |#x<int32>){->x+1}",
+        ),
+    ]);
+    graph.compile().unwrap();
+    let (_temp, graph) = self::graph(&[
+        ("main.mwy", "m:@\"./a.mwy\";only_entry:1"),
+        ("a.mwy", "#!| [[only_entry]] |!#->value:1"),
+    ]);
+    let error = graph.compile().unwrap_err().remove(0);
+    assert_eq!(error.code, "E802");
+    assert!(graph.file(error.span).path.ends_with("a.mwy"));
+}
+
+#[test]
+pub(crate) fn file_modules_documentation_maps_attachment_links_and_metadata_errors() {
+    for (source, code, token) in [
+        ("#| Orphan. |#->1", "E801", "#|"),
+        ("#||\r\n É [[missing]]\r\n||#x:1", "E802", "[[missing]]"),
+        (
+            "#||\n```meowy mystery\nx:1\n```\n||#x:1",
+            "E803",
+            "```meowy",
+        ),
+        ("hidden:1;#| [[hidden]] |#->value:2", "E802", "[[hidden]]"),
+        (
+            "f<int32>:(){#| [[missing]] |#x:1;->x}",
+            "E802",
+            "[[missing]]",
+        ),
+    ] {
+        let (_temp, graph) = graph(&[("main.mwy", "m:@\"./a.mwy\""), ("a.mwy", source)]);
+        let error = graph.compile().unwrap_err().remove(0);
+        assert_eq!(error.code, code, "{source}: {error:?}");
+        let file = graph.file(error.span);
+        assert!(file.path.ends_with("a.mwy"));
+        assert_eq!(file.local(&error).span.start, source.find(token).unwrap());
+    }
+}
+
+#[test]
+pub(crate) fn file_modules_documentation_finishes_module_links_after_declarations() {
+    for entry in ["m:@\"./a.mwy\"", "#!| [[later]] |!#m:@\"./a.mwy\";later:1"] {
+        let (_temp, graph) = graph(&[
+            ("main.mwy", entry),
+            ("a.mwy", "#!| [[later]] |!#later:2;->value:later"),
+        ]);
+        graph.compile().unwrap();
+    }
+    let (_temp, graph) = graph(&[
+        ("main.mwy", "#!| [[dependency_only]] |!#m:@\"./a.mwy\""),
+        ("a.mwy", "dependency_only:2;->value:dependency_only"),
+    ]);
+    let error = graph.compile().unwrap_err().remove(0);
+    assert_eq!(error.code, "E802");
+    assert!(graph.file(error.span).path.ends_with("main.mwy"));
 }

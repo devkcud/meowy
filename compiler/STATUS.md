@@ -17,7 +17,9 @@ still assume one file. Preserve attachment, signature, link and privacy validati
    Clippy passed. Shifted attachment/link/signature and Unicode/CRLF checks passed.
 2. File visibility and exported function parameter modeling complete. All 13
    documentation library and nine native documentation groups, fmt and Clippy passed.
-3. Check per-file models inside initializer scopes and enable documented graphs.
+3. Per-file initializer documentation checking complete. All 11 graph library and
+   17 native file-module groups passed, alongside 16 library/nine native documentation
+   groups, fmt and Clippy. Local E801/E802/E803 and file isolation are covered.
 4. Validate imported documentation links and native file diagnostics/boundaries.
 5. Document the supported slice and run the complete compiler gate.
 
