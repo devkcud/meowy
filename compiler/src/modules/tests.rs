@@ -245,3 +245,31 @@ pub(crate) fn file_function_reexports_share_call_ids_without_merging_distinct_fu
         ]
     );
 }
+
+#[test]
+pub(crate) fn exported_types_retain_underlying_nominal_and_structural_types() {
+    let (_temp, graph) = graph(&[
+        (
+            "main.mwy",
+            "a:@\"./types.mwy\";b:@\"./api.mwy\";f<a.Handle>:(p<b.Handle>){->p};g<a.Number>:(n<b.Number>){->n}",
+        ),
+        (
+            "types.mwy",
+            "memory:@\"memory\";-><Handle>:<memory.Allocator>;-><Number>:<uint64>",
+        ),
+        (
+            "api.mwy",
+            "a:@\"./types.mwy\";-><Handle>:<a.Handle>;-><Number>:<a.Number>",
+        ),
+    ]);
+    let program = graph.compile().unwrap();
+    let allocator = crate::hir::Type::Foundation(crate::hir::FoundationType::Allocator);
+    assert_eq!(program.functions[0].result, allocator);
+    assert_eq!(program.locals[program.functions[0].params[0]], allocator);
+    let number = crate::hir::Type::Int {
+        bits: 64,
+        signed: false,
+    };
+    assert_eq!(program.functions[1].result, number);
+    assert_eq!(program.locals[program.functions[1].params[0]], number);
+}

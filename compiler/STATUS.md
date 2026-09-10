@@ -16,9 +16,11 @@ Git holds history. Do not recreate STEP logs.
 2. Separate exported type metadata, qualified lookup and alias declaration checks
    are implemented. Standalone/imported privacy, duplicate and scope regressions
    pass in both profiles. All parser/file regressions, fmt and Clippy pass;
-   this namespace slice is ready to commit.
-3. Qualify transparent alias/re-export identity, including computed type context,
-   callable signatures, existing nominal types and value/type name separation.
+   committed as `d1ef0e5`.
+3. Transparent facade aliases, existing computed type values, callable signatures,
+   nominal foundation types and ownership boundaries pass three library/four native
+   groups in debug/release where applicable. Fmt/Clippy pass; ready to commit.
+   Qualified types use `<module.Type>`; general type evaluation is unchanged.
 4. Exercise documentation and a runnable typed facade with focused integration tests.
 5. Update docs/handoff and run the compiler gate across the complete series.
 
