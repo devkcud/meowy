@@ -46,10 +46,8 @@ impl<'a> Generator<'a> {
             }
             self.output_value(&part.ty, &value, 2, Some(&pending))?;
         }
-        self.line(format!(
-            "call void @meowy_panic_site_v0(ptr {pending}, i64 {}, i64 {})",
-            span.start, span.end
-        ));
+        let site = self.capture("panic_site", &pending, "", span)?;
+        self.line(site);
         self.line(format!(
             "call void @meowy_panic_copy_v0(ptr %panic, ptr {pending})"
         ));

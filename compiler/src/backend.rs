@@ -3,10 +3,12 @@ mod arithmetic;
 mod lists;
 mod output;
 mod panic;
+mod sites;
 mod storage;
 
 use crate::hir::{Block, BlockId, Expr, ExprKind, FoundationType, Program, Stmt, Type};
-use std::collections::{BTreeSet, HashMap};
+pub use sites::Source;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::c_char;
 use std::path::Path;
 use storage::Alias;
@@ -57,7 +59,14 @@ pub fn emit_object(ir: &str, path: &Path, release: bool) -> Result<(), String> {
 }
 
 pub fn emit_ir(program: &Program) -> Result<String, String> {
-    Generator::new(program).generate()
+    emit_ir_with_sources(program, &[])
+}
+
+pub fn emit_ir_with_sources(program: &Program, sources: &[Source]) -> Result<String, String> {
+    sites::validate(sources)?;
+    let mut generator = Generator::new(program);
+    generator.sources = sources;
+    generator.generate()
 }
 
 pub(crate) fn ir_type(ty: &Type) -> String {
@@ -107,6 +116,8 @@ pub(crate) struct Destination {
 
 pub(crate) struct Generator<'a> {
     pub(crate) program: &'a Program,
+    pub(crate) sources: &'a [Source],
+    pub(crate) paths: BTreeMap<usize, String>,
     pub(crate) globals: Vec<String>,
     pub(crate) declarations: BTreeSet<String>,
     pub(crate) functions: Vec<String>,
@@ -123,6 +134,8 @@ impl<'a> Generator<'a> {
     pub(crate) fn new(program: &'a Program) -> Self {
         Self {
             program,
+            sources: &[],
+            paths: BTreeMap::new(),
             globals: Vec::new(),
             declarations: BTreeSet::new(),
             functions: Vec::new(),
@@ -205,6 +218,7 @@ impl<'a> Generator<'a> {
             "declare void @meowy_panic_uint_v0(ptr, i64)",
             "declare void @meowy_panic_float_v0(ptr, double, i32)",
             "declare void @meowy_panic_site_v0(ptr, i64, i64)",
+            "declare void @meowy_panic_site_file_v0(ptr, i64, i64, ptr, i64)",
             "declare void @meowy_arithmetic_capture_v0(ptr, i32, i32, i32, i64, i64, i64, i64)",
             "declare void @meowy_index_capture_v0(ptr, i64, i64, i32, i64, i64)",
             "declare void @meowy_list_capture_v0(ptr, i64, i64, i64, i64)",

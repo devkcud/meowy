@@ -10,6 +10,15 @@ declare void @meowy_list_capture_file_v0(ptr, i64, i64, i64, i64, ptr, i64)
 ";
 pub(crate) const SHOWN: &str = "a\\\"\\\\\\u000aé.mwy";
 
+pub(crate) fn add_declarations(ir: &mut String) {
+    for line in DECLS.lines() {
+        if !ir.lines().any(|existing| existing == line) {
+            ir.push_str(line);
+            ir.push('\n');
+        }
+    }
+}
+
 #[test]
 pub(crate) fn runtime_file_sites_preserve_legacy_output_and_escape_labels() {
     let calls = [
@@ -42,7 +51,7 @@ pub(crate) fn runtime_file_sites_preserve_legacy_output_and_escape_labels() {
             let mut ir = emit_ir(&crate::compile("").unwrap())
                 .unwrap()
                 .replace("define i32 @main()", "define internal i32 @unused_main()");
-            ir.push_str(DECLS);
+            add_declarations(&mut ir);
             ir.push_str(&format!("\ndefine i32 @main() {{\n %size = call i64 @meowy_cleanup_panic_bytes_v0()\n %panic = alloca i8, i64 %size, align 16\n call void @meowy_panic_begin_v0(ptr %panic, i32 6)\n call void @{name}{suffix}(ptr %panic{args}, i64 12, i64 34{file})\n ret i32 0\n}}\n"));
             let site = if mapped {
                 format!(" at \"{SHOWN}\" bytes 12..34\n")
@@ -65,7 +74,7 @@ pub(crate) fn runtime_file_sites_survive_panic_copy_and_cleanup_failure() {
         "%success = call i1 @meowy_entry(ptr %panic)",
         "call void @meowy_index_capture_file_v0(ptr %panic, i64 2, i64 1, i32 1, i64 12, i64 34, ptr @file, i64 10)\n  %success = icmp eq i32 0, 1",
     );
-    ir.push_str(DECLS);
+    add_declarations(&mut ir);
     for release in [false, true] {
         let output = native_ir(&ir, release, false);
         assert_eq!(output.status.signal(), Some(6));

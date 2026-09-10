@@ -3,8 +3,8 @@
 Updated: 2026-09-10. Bounded relative value imports are complete and passed the
 compiler gate. Native panic file labels are in progress. Optional runtime file-site
 helpers pass two native ABI groups in debug/release, including legacy output,
-escaped UTF-8 labels, panic copying and retained cleanup causes. Compiler lowering
-and driver integration are still pending.
+escaped UTF-8 labels, panic copying and retained cleanup causes. Explicit P006 lowering also passes three source-map groups in both profiles;
+checked-operation lowering and driver integration remain pending.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
@@ -13,9 +13,10 @@ Git holds history. Do not recreate STEP logs.
 
 1. Runtime file-site helpers and their two ABI/output regression groups pass.
    Legacy helpers and panic evidence semantics are preserved. All five existing
-   panic-outcome groups, formatting and Clippy also pass. This slice is ready to commit.
-2. Add validated backend source ranges and map explicit P006 sites, with focused
-   mapping/escaping tests. Keep the CLI on its existing path until integration.
+   panic-outcome groups, formatting and Clippy also pass. Committed as `2c57546`.
+2. Backend source ranges and P006 mapping pass three focused groups, fmt and
+   Clippy: local spans, invalid-map rejection, escaping, nested failures and label
+   deduplication. Ready to commit; the CLI remains on its existing path.
 3. Map P001/P002/P003 sites through the same backend source data, with bounds,
    overflow/division/capacity tests and evaluation-order evidence.
 4. Pass canonical graph sources from the driver; add multi-file and single-file

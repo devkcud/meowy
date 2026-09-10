@@ -19,6 +19,7 @@ mod reference_temporaries;
 mod references;
 mod runtime_sites;
 mod scalars;
+mod sites;
 mod temporaries;
 
 use super::*;
