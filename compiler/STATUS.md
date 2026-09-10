@@ -23,7 +23,10 @@ still assume one file. Preserve attachment, signature, link and privacy validati
 4. Imported value/type link checking complete. All 19 documentation library tests,
    fmt and Clippy passed, including facade aliases, private/inaccessible targets,
    distinct namespaces and private inferred record roots.
-5. Add native diagnostics/execution boundaries and a runnable documented graph.
+5. All six native groups passed, including site-command refusal, file-local CLI
+   errors, budgets, unused dependencies, unchanged semantic gates and no implicit
+   example/initializer execution. The three-file example runs in both profiles.
+   Fmt and Clippy passed.
 6. Document the supported slice and run the complete compiler gate.
 
 Commit each tested slice before proceeding; split further if review thresholds require.

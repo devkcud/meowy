@@ -1,0 +1,9 @@
+#!| Counter operations use [[<Count>]] and [[inc]]. |!#
+debug:@"debug"
+debug.print("counter initialized")
+#| A signed counter value. |#
+-><Count>:<int32>
+#| Increment [[value]]. Checked overflow panics. |#
+->inc<Count>:(#| Starting count. |#value<Count>){->value+1}
+#| Default counter data. |#
+->defaults:{->start:7}
