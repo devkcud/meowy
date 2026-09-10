@@ -2,21 +2,25 @@
 
 Updated: 2026-09-10. Exported type aliases are complete and passed the compiler
 gate. No failing checks remain. Four tested commits precede this separate
-documentation handoff.
+documentation handoff. Broader literal-import discovery is now in progress
+under the commit plan below.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Planned commits
 
-1. `2e5ea62` — exported-alias AST flag, parser syntax and compatibility tests.
-2. `d1ef0e5` — separate type namespace, declarations and qualified lookup.
-3. `9bb3dbd` — transparent/nominal facade identity and ownership regressions.
-4. `c0e2997` — typed geometry example and standalone documentation regressions.
-5. This documentation handoff records the successful final gate below.
+1. Bounded AST discovery and loader wiring pass two graph groups and one native
+   nested/inline initializer group. Broader file regressions (11 library/18 native),
+   fmt and Clippy pass. Ready to commit; function-scope resolution is next.
+2. Resolve function-scope imports as compile-time module identities while retaining
+   runtime data-capture restrictions; test local aliases, calls, types and privacy.
+3. Qualify inactive/unused imports, nested cycles/errors, budgets and a runnable
+   example, without weakening source/output protection or package policy.
+4. Document the supported locations and run the compiler gate across the series.
 
-All completed slices stay within the split-review threshold. Continue planning
-small dependency-ordered commits with their focused tests before implementation.
+Keep each commit buildable with focused tests and within the 400-line/8-file
+split-review threshold. Do not add dynamic loading or general type evaluation.
 
 ## Current compiler slice
 

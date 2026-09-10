@@ -273,3 +273,56 @@ pub(crate) fn exported_types_retain_underlying_nominal_and_structural_types() {
     assert_eq!(program.functions[1].result, number);
     assert_eq!(program.locals[program.functions[1].params[0]], number);
 }
+
+#[test]
+pub(crate) fn discovered_imports_include_nested_expressions_in_source_order() {
+    let source = "f<null>:(){m:@\"./first.mwy\"};|false|{m:@\"./second.mwy\"};d:@\"debug\";d.print(\"value {(@\"./third.mwy\").n}\");x:[(@\"./fourth.mwy\").n];# @\"./ignored.mwy\" #";
+    let block = crate::parser::parse_documented_at(source, 100)
+        .unwrap()
+        .block;
+    let imports = super::discover::imports(&block).unwrap();
+    assert_eq!(
+        imports
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        ["./first.mwy", "./second.mwy", "./third.mwy", "./fourth.mwy"]
+    );
+    for (name, span) in imports {
+        assert_eq!(
+            &source[span.start - 100..span.end - 100],
+            format!("@{name:?}")
+        );
+    }
+}
+
+#[test]
+pub(crate) fn discovered_imports_traverse_type_operands_and_bound_work() {
+    let source = "<A>:<int32[(@\"./one.mwy\").n]>;f<(&int32[(@\"./two.mwy\").n])->int32[(@\"./three.mwy\").n]>;-><B>:@\"./four.mwy\"";
+    let block = crate::parser::parse(source).unwrap();
+    let imports = super::discover::imports(&block).unwrap();
+    assert_eq!(
+        imports
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>(),
+        ["./one.mwy", "./two.mwy", "./three.mwy", "./four.mwy"]
+    );
+    let mut scan = super::discover::Scan {
+        pending: Vec::new(),
+        work: super::discover::MAX_WORK,
+        span: block.span,
+    };
+    assert_eq!(
+        scan.push(super::discover::Node::Block(&block))
+            .unwrap_err()
+            .code,
+        "B001"
+    );
+    let (_temp, graph) = graph(&[
+        ("main.mwy", "|false|{m:@\"./value.mwy\"}"),
+        ("value.mwy", "->n:7"),
+    ]);
+    assert_eq!(graph.files.len(), 2);
+    graph.compile().unwrap();
+}

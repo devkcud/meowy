@@ -1,5 +1,5 @@
 use super::{Failure, File, Graph, MAX_BYTES, MAX_DEPTH, MAX_EDGES, MAX_FILES, MAX_SOURCE};
-use crate::ast::{Expr, ExprKind, Span, StmtKind};
+use crate::ast::Span;
 use crate::diagnostic::Diagnostic;
 use std::collections::BTreeMap;
 use std::fs::{self, File as Input};
@@ -61,28 +61,6 @@ impl Loader {
             }
         })?;
         let id = self.graph.files.len();
-        let imports = parsed
-            .block
-            .stmts
-            .iter()
-            .filter_map(|stmt| {
-                let StmtKind::Bind {
-                    mutable: false,
-                    ty: None,
-                    value,
-                    ..
-                } = &stmt.kind
-                else {
-                    return None;
-                };
-                let value = ungroup(value);
-                let ExprKind::Import(name) = &value.kind else {
-                    return None;
-                };
-                (name.starts_with("./") || name.starts_with("../"))
-                    .then(|| (name.clone(), value.span))
-            })
-            .collect::<Vec<_>>();
         self.ids.insert(path.clone(), id);
         self.graph.files.push(File {
             path,
@@ -90,6 +68,8 @@ impl Loader {
             base,
             parsed,
         });
+        let imports = super::discover::imports(&self.graph.files[id].parsed.block)
+            .map_err(|error| self.graph.files[id].failure(error))?;
         self.active.push(id);
         for (name, span) in imports {
             if self.edges >= MAX_EDGES {
@@ -208,11 +188,4 @@ pub(crate) fn manifest(path: &Path) -> Option<PathBuf> {
         .flat_map(Path::ancestors)
         .map(|dir| dir.join("mod.mwy"))
         .find(|path| path.exists())
-}
-
-pub(crate) fn ungroup(mut expr: &Expr) -> &Expr {
-    while let ExprKind::Group(value) = &expr.kind {
-        expr = value;
-    }
-    expr
 }

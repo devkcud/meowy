@@ -148,11 +148,7 @@ pub(crate) fn file_modules_keep_manifest_and_unsupported_context_gates() {
         ),
         ("m:@\"./mod.mwy\"", vec![("mod.mwy", "")], "B001"),
         ("m:@\"value\"", vec![("value.mwy", "->n:1")], "B001"),
-        (
-            "'scope{m:@\"./value.mwy\"}",
-            vec![("value.mwy", "->n:1")],
-            "B001",
-        ),
+        ("m:=@\"./value.mwy\"", vec![("value.mwy", "->n:1")], "B001"),
         (
             "m:@\"./value.mwy\";x:m.private",
             vec![("value.mwy", "private:1;->n:2")],
@@ -364,4 +360,11 @@ pub(crate) fn file_type_exports_preserve_private_names_duplicates_and_scope_gate
             );
         }
     }
+}
+
+#[test]
+pub(crate) fn discovered_imports_initialize_nested_and_inline_dependencies_once() {
+    case("d:@\"debug\";d.print(\"entry\");|false|{m:@\"./value.mwy\"};'scope{m:@\"./value.mwy\";d.print(m.n)};d.print(\"inline {(@\"./value.mwy\").n}\")", &[
+        ("value.mwy","d:@\"debug\";d.print(\"init\");->n:7"),
+    ]).runs(b"init\nentry\n7\ninline 7\n");
 }

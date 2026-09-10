@@ -7,6 +7,10 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Broader literal imports are in progress in separate discovery, function-scope
+identity, edge-case/example and documentation commits. Startup ordering, capture
+restrictions and package gates remain required.
+
 Exported type aliases passed the compiler gate. `-><Name>:` publishes a type separately
 from data/functions, and importers use `<module.Type>`. Facades preserve transparent
 aliases, existing nominal types, record permissions and callable signatures.

@@ -1,3 +1,4 @@
+mod discover;
 mod load;
 
 use crate::ast::{Block, Expr, ExprKind, Span, Stmt, StmtKind};
