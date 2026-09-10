@@ -24,7 +24,7 @@ impl Graph<'_> {
             } = origin.source
             else {
                 return Err(Diagnostic::unsupported(
-                    "exclusive restart loans outside carried scalar storage or record fields",
+                    "exclusive restart loans outside carried scalar storage, fields or elements",
                     span,
                 ));
             };
@@ -41,12 +41,16 @@ impl Graph<'_> {
             let ty = slot.and_then(|slot| {
                 fields
                     .iter()
-                    .try_fold((&slot.ty, alias.mutable), |(ty, _), step| {
-                        let (Type::Record { fields, .. }, Projection::Field(index)) = (ty, step)
-                        else {
-                            return None;
-                        };
-                        fields.get(*index).map(|field| (&field.ty, field.mutable))
+                    .try_fold((&slot.ty, alias.mutable), |(ty, mutable), step| {
+                        match (ty, step) {
+                            (Type::Record { fields, .. }, Projection::Field(index)) => {
+                                fields.get(*index).map(|field| (&field.ty, field.mutable))
+                            }
+                            (Type::List { element, .. }, Projection::Element) => {
+                                Some((element.as_ref(), mutable))
+                            }
+                            _ => None,
+                        }
                     })
             });
             if !origin.component.is_empty()
@@ -57,7 +61,7 @@ impl Graph<'_> {
                 })
             {
                 return Err(Diagnostic::unsupported(
-                    "exclusive restart loans outside carried scalar storage or record fields",
+                    "exclusive restart loans outside carried scalar storage, fields or elements",
                     span,
                 ));
             }

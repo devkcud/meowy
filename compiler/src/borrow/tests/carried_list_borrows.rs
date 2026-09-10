@@ -96,7 +96,7 @@ pub(crate) fn carried_list_borrows_preserve_exclusive_frontiers_and_collection_g
     accepts(
         "<R>:<{items<int32[2]>;n<int32>:=}>;seed<int32[2]>:[0];p:=&seed;first:=true;r<R>:'out{'loop{|first|{'out->items:[7];p=&items;'out->n:=1;q:&!n;*q=2;first=false;'loop.restart()};v:p[1]}};p=&seed",
     );
-    for body in ["p:&!(items[1])", "items[1]=9"] {
+    for body in ["p:&!items", "items[1]=9"] {
         rejects(
             &format!(
                 "<R>:<{{items<int32[2]>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->items:=[7];{body};first=false;'loop.restart()}}}}}}"

@@ -125,5 +125,8 @@ The [indexed fields example](examples/exclusive-indexed-fields.mwy) returns an
 emitted field pointer across its alias scope and mutates the actual target via a call.
 
 Generated payload/diagnostic layouts and scope cleanup are the next integration
-boundary. Reference-derived and temporary roots, owning elements, whole-list
-exclusive values and exclusive restart bodies still require separate contracts.
+boundary. Local exclusive scalar paths in carried lists now use the
+[carried-element restart proof](EXCLUSIVE_RESTARTS.md#carried-list-elements), including
+whole-slot initialization before capture and completed acquisition. Reference-derived
+and temporary roots, owning elements, whole-list exclusive values, ordinary local
+exclusive roots in reset graphs and exclusive header carriage remain separate.

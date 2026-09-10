@@ -242,7 +242,7 @@ pub(crate) fn carried_list_borrows_preserve_expiry_conflicts_initialization_and_
             "E302",
         );
     }
-    for body in ["p:&!(items[1])", "items[1]=9"] {
+    for body in ["p:&!items", "items[1]=9"] {
         rejects(
             &format!(
                 "<R>:<{{items<int32[2]>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->items:=[7];{body};first=false;'loop.restart()}}}}}}"

@@ -9,7 +9,6 @@ impl Graph<'_> {
         let ExprKind::ExclusivePath { place, path } = &expr.kind else {
             return Err(Self::budget());
         };
-        crate::borrow::carried::storage(self.proofs, place.root, self.guards, expr.span)?;
         let element = self
             .proofs
             .exclusive_path_type(self.program, place, path, self.guards, expr.span)
@@ -32,8 +31,14 @@ impl Graph<'_> {
             .iter()
             .map(|index| Step::Slot(index + 1))
             .collect::<Vec<_>>();
-        self.read_local(place.root, &fields, Kind::Read, expr.span, false)?;
         let mut source = self.proofs.source(place);
+        if let Some(event) = self.emission_acquire(&source, expr.span)? {
+            self.append(Node {
+                emissions: vec![event],
+                ..Node::default()
+            })?;
+        }
+        self.read_local(place.root, &fields, Kind::Read, expr.span, false)?;
         let mut reservations = Vec::new();
         for step in path {
             self.charge(place.fields.len() + path.len() + reservations.len() + 1)?;
@@ -57,6 +62,7 @@ impl Graph<'_> {
                 }
             }
         }
+        let emission = self.emission_acquire(&source, expr.span)?;
         let value = self.value(vec![Origin {
             component: Vec::new(),
             source,
@@ -70,6 +76,9 @@ impl Graph<'_> {
             access: Some(access),
             ..Node::default()
         };
+        if let Some(event) = emission {
+            node.emissions.push(event);
+        }
         self.event(
             &mut node,
             EventKind::Use {

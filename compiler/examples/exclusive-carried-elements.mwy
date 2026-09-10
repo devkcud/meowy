@@ -1,0 +1,16 @@
+d:@"debug"
+pos<int32>:(n<int32>){d.print(n);->1}
+<Row>:<{items<int32[2][2]>:=;side<int32[2]>:=}>
+<R>:<{row<Row>}>
+seed<int32[2]>:[0];s:=&seed;old:s;first:=true
+r<R>:'out{
+ 'loop{
+  |first|{
+   'out->row:{->items:=[[7]];->side:=[1]}
+   p:&!(row.items[pos(1)][{row.side=[2];d.print(row.items[1][1]);->pos(3)}])
+   s=row.&side;*p=8;first=false;'loop.restart()
+  }
+  d.print(s[1]);d.print(old[1])
+ }
+}
+s=&seed;d.print(r.row.items[1][1])

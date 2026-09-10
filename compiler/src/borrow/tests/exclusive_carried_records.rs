@@ -154,11 +154,7 @@ pub(crate) fn exclusive_carried_record_fields_allow_list_sibling_replacement_and
 
 #[test]
 pub(crate) fn exclusive_carried_record_fields_keep_list_paths_and_permissions_gated() {
-    for body in [
-        "p:row.inner.&!items",
-        "p:&!(row.inner.items[1])",
-        "row.inner.items[1]=9",
-    ] {
+    for body in ["p:row.inner.&!items", "row.inner.items[1]=9"] {
         super::rejects(&format!("{LIST_PREFIX}{body};{SUFFIX}"), "B001");
     }
     super::rejects(

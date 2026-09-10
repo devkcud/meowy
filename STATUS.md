@@ -7,20 +7,19 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
-Local exclusive named Boolean/integer/float fields inside list-containing carried
-records are implemented and passed the compiler gate. Direct acquisition reaches
-the existing exact field/source and restart-frontier proof. Whole-slot
-initialization, selected-field permission, owner lifetime and no live exclusive
-ancestry across reset remain
-required. Disjoint list replacement and certified shared list headers coexist with
-these local scalar loans. See [the proof](compiler/EXCLUSIVE_RESTARTS.md#carried-record-fields)
-and [runnable example](compiler/examples/exclusive-carried-list-fields.mwy).
+Exclusive Boolean/integer/float elements in carried lists passed the compiler gate,
+including nested indexes and mutable scalar fields within record elements. The
+existing owner/type proof now works with an Element-aware restart source qualifier.
+Containing-slot initialization is required before owner capture and again at
+acquisition. Reservations preserve evaluation order, bounds and completed-index
+demand when a later index cancels. See
+[the proof](compiler/EXCLUSIVE_RESTARTS.md#carried-list-elements) and
+[runnable example](compiler/examples/exclusive-carried-elements.mwy).
 
-Exclusive list/indexed acquisition and indexed writes/reservations remain gated.
-Shared whole-list and element views retain their prior support through inner
-restarts while the result owner lives. Carried list initialization retains whole
-length/payload with 256-part/32-level shape bounds. No backend, runtime, dependency,
-syntax or binding-rule changes were needed.
+Local exclusive scalar fields and disjoint shared list headers retain their support.
+Every exclusive loan/descendant must end before reset. Indexed writes remain gated;
+whole-list exclusive values and exclusive header carriage remain separate. No
+backend, runtime, dependency, syntax or binding-rule changes were needed.
 
 Standalone documentation tooling remains complete for its bounded bootstrap slice.
 Net/HTTP/TLS remain specified library work; module/type/I/O/task foundations and
@@ -28,15 +27,13 @@ capability-typed lifecycle implementation precede executable adapters.
 
 ## Actual validation
 
-- Focused compiler checks passed 12 source/graph groups and eight native groups;
-  native cases execute in debug and release. Coverage includes list siblings,
-  nested fields, copies, children, calls, conflicts, shared headers, owner resets,
-  Leave, final use and preserved capability gates.
-- Graph checks preserve containing-slot Acquire and exact storage identity, and
-  reject missing initialization, inactive owners and post-completion acquisition.
+- Eight focused source groups, six graph groups and eight native groups passed;
+  native cases execute in debug and release. Coverage includes initialization,
+  reservations, mixed paths, mutable fields, parent identity, shared headers, calls,
+  bounds, owner resets, cancellation, expiry and retained capability gates.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, 624 library and 582 native Rust tests (1206 total), 16 tooling
-  plus 4 compiler-harness Python tests, and 77 examples in debug and release.
+  fmt, Clippy, build, 638 library and 590 native Rust tests (1228 total), 16 tooling
+  plus 4 compiler-harness Python tests, and 78 examples in debug and release.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases are not successful language rejections or full release qualification.
 - Local links, catalog/schema and whitespace checks passed. External links were
@@ -46,7 +43,7 @@ capability-typed lifecycle implementation precede executable adapters.
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Local exclusive scalar fields in list-containing carried records passed the compiler gate; indexed paths remain gated. |
+| Compiler | Local exclusive carried scalar elements passed the compiler gate; indexed writes remain gated. |
 | Documentation tooling | Standalone slice complete; package graphs, assets, public indexes and LSP remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
@@ -54,11 +51,9 @@ capability-typed lifecycle implementation precede executable adapters.
 
 ## Next steps
 
-1. Investigate exclusive scalar list elements in `loans/elements.rs`, including
-   initialization, reservations, bounds, source identity and reset frontiers.
-   Qualify indexed writes in `loans/control.rs` as a separate slice afterward.
-2. Preserve shared-header certificates, call/input opacity, old-copy loans and
-   owner expiry. Continue module graphs/library foundations; broader carried shapes,
-   owning cleanup and exclusive header carriage remain separate.
-3. Keep STATUS concise after logical steps, commit cohesive validated changes and
-   never recreate STEP logs or push.
+1. Qualify indexed writes in `loans/control.rs` separately: whole-slot initialization,
+   reservation order, captured addresses, bounds, canceled RHS, owner expiry and
+   final use. Preserve shared-header certificates, call/input opacity and old copies.
+2. Continue module graphs/library foundations. Broader carried shapes, owning
+   cleanup and exclusive header carriage remain separate. Keep STATUS concise,
+   commit cohesive validated changes, and never recreate STEP logs or push.

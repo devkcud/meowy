@@ -9,8 +9,9 @@ restart edge. The result cell may survive; the loan must not. This extends the
 ## Supported slice
 
 All exclusive acquisitions in a reset graph must address carried scalar slots or
-scalar fields in carried reference-free records. Canonical result owner, root,
-lexical view, exact field path and scalar leaf shape are checked. Existing
+scalar fields/elements in carried reference-free records and lists. Canonical
+result owner, root, lexical view, exact field/element path and scalar leaf shape
+are checked. Existing
 backing-type, mutability, acquisition initialization and storage-lifetime checks
 remain independent. Ordinary local/parameter exclusive roots, wider pointees and
 exclusive handles in restart headers remain unsupported in this slice.
@@ -48,13 +49,13 @@ Declared reference-free carried records admit exclusive borrows of named Boolean
 integer and float fields, including nested paths in records containing lists.
 The selected field must be mutable; an immutable alias or enclosing record field
 does not freeze it. The existing source qualifier traverses each concrete field
-index from the containing slot type, rejects absent/indexed/non-scalar paths and retains
+index from the containing slot type, rejects invalid/non-scalar paths and retains
 canonical owner/root/view checks. Traversal consumes the existing proof budget.
-Whole-record, string, unit, nullable, union, reference-bearing and indexed/list
-pointee paths remain unsupported; ordinary local exclusive roots in reset graphs
-remain gated. Direct field acquisition uses this qualifier instead of rejecting
-an entire containing slot because a disjoint sibling is a list. Indexed exclusive
-acquisition and indexed SetPath retain their independent `carried::storage` gates.
+Whole-record, string, unit, nullable, union, reference-bearing and whole-list
+pointees remain unsupported; ordinary local exclusive roots in reset graphs remain
+gated. Direct field acquisition uses this qualifier instead of rejecting an entire
+containing slot because a disjoint sibling is a list. Indexed scalar paths use the
+extension below; indexed SetPath retains its `carried::storage` gate.
 
 Borrow HIR and containing-slot Acquire events are unchanged. The owner must be
 active and the whole slot initialized before acquisition. Exact field projections
@@ -70,7 +71,7 @@ The same source, graph and native cases also run with a list sibling. They cover
 paths, widths, initialization, mutability, moves, children, conflicts, calls, shared
 headers, owner resets, Leave, expiry and live-backedge rejection. Acquisition before
 initialization, outside the active owner and after completion fails at the borrow
-span. Corrupted root/view/owner identities and indexed/non-scalar paths remain B001.
+span. Corrupted root/view/owner identities and invalid/non-scalar paths remain B001.
 
 The [list-field example](examples/exclusive-carried-list-fields.mwy) replaces a list
 sibling while a scalar exclusive loan lives, retains an old value copy and carries
@@ -78,6 +79,41 @@ a separate shared list view through a restart. Conflicting whole-record access,
 list replacement under a live list view and suspended-parent use remain E302;
 last-use writes remain valid. Native cases run in both profiles. No backend,
 runtime, reference fixture or dependency changes are required.
+
+## Carried list elements
+
+Owned indexed paths within carried reference-free lists can acquire local exclusive
+Boolean/integer/float loans. Mixed fields, nested indexes and mutable scalar record
+fields under immutable list slots use the existing `exclusive_path_type` proof.
+The restart qualifier now traverses Element through a concrete List and Field
+through a concrete Record. Indexing inherits the current slot permission; a named
+field supplies its own. Canonical owner/root/view and scalar-leaf checks remain.
+
+`loans/elements.rs` requires containing-slot Acquire before the owner read/reservation
+and again at completed acquisition. The active owner and entire initialized slot
+are required even when an index later cancels. No payload reads or runtime flags
+are added for this proof. The existing backend captures each initialized length
+before evaluating that index once, checks its bounds, then selects the address.
+
+Each enclosing list is reserved before its index. Completed indices retain their
+reservation demand even if a later index leaves or panics; final acquisition demands
+all reservations and ends them. Reservations confer no loan authority. Cancellation
+creates no exclusive loan and no future demand for its unfinished index. Replacing
+a list during a returning index remains E302; disjoint outer fields remain writable.
+Dynamic elements conservatively overlap. Parent suspension, copies, calls, expiry,
+shared-header certificates and exclusive/opaque reset-frontier rules remain intact.
+
+Eight source groups, six graph groups and eight native groups cover mixed paths,
+selected mutability, initialization before capture/acquisition, cancellation, parent
+identity, reservation expiry, source corruption, integer/Boolean/float layouts,
+current-length bounds, signed/unsigned/empty-list cases, owner resets and primary
+rejections. Native cases run in debug and release. The
+[carried-element example](examples/exclusive-carried-elements.mwy) mutates nested
+storage with ordered index effects and a disjoint shared list header.
+
+Indexed writes remain gated before reservations in `loans/control.rs`; whole-list
+exclusive values, reference/temporary-derived roots, owning elements and exclusive
+header carriage remain separate. Backend, runtime and reference fixtures are unchanged.
 
 ## Frontier proof
 

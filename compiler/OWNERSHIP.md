@@ -666,9 +666,10 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   acquisition and lifetime proof below. Exclusive named Boolean/integer/float
   fields within containing records use the existing
   [scalar-field restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields).
-  `carried::storage` still gates indexed exclusive acquisition and indexed writes
-  before reservations. Independent copies and completed-result locals keep their
-  existing rules.
+  Indexed scalar acquisition uses the
+  [carried-element proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  `carried::storage` still gates indexed writes before reservations. Independent
+  copies and completed-result locals keep their existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
   The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
   the old copy's length and the retained updated list. Native output, dynamic bounds,
@@ -699,8 +700,9 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   borrows the selected element. Shared access never grants mutation permission.
 - Known shared list headers can coexist with supported local exclusive scalar
   sibling loans under the existing complete-header certificate. Genuine call/input
-  opacity and exclusive descendants retain their restart gates. Exclusive carried
-  list acquisition and indexed SetPath reservations remain separate work; nullable,
+  opacity and exclusive descendants retain their restart gates. Local exclusive
+  scalar list elements use the [restart proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  Whole-list exclusive values and indexed SetPath remain separate work; nullable,
   union, reference-bearing and owning carried slots retain their shape gates.
 - Ten source/proof groups and seven native groups cover initialization, physical
   paths, parent identity, bounds, cancellation, old copies, final use, owner resets,
@@ -1576,18 +1578,21 @@ carriers and generated cleanup remain separate capabilities.
 
 ## Owned exclusive scalar elements
 
-The [element contract](EXCLUSIVE_ELEMENTS.md) introduces ExclusiveElement HIR for
-ordinary mutable scalar-list locals. The origin and loan passes require explicit
-mutable-owner proof, excluding aliases, temporaries and reference roots. A private
-whole-list reservation has no authority and exists only through returning acquisition.
-Index reads remain compatible; conflicting writes cannot invalidate captured length.
+The [element contract](EXCLUSIVE_ELEMENTS.md) uses ExclusivePath HIR for owned
+scalar-list paths, including named fields, nested indexes and exact-backed emitted
+aliases. The origin and loan passes independently require the existing owner/type
+proof. Private list reservations grant no authority and protect returning index
+evaluation from conflicting writes to captured storage.
 
-The final root exclusive loan uses the existing conservative Element projection and
-is not derived from a shared reference. Non-returning indices create no loan or future
-reservation demand. Lowering captures the actual list/length before one index evaluation
-and reuses initialized-length bounds and element addressing. No runtime ABI changed.
+The final root exclusive loan retains mixed Field/Element projections and is not
+derived from a shared reference. Non-returning indices create no loan or future
+reservation demand, while completed outer indices retain their earlier demand.
+Lowering captures each actual list length before evaluating its index once and
+reuses initialized-length bounds and element addressing. No runtime ABI changed.
 
-Fifteen native groups and three graph proof groups cover ownership, order, bounds,
-cancellation, scopes and exclusions. Element overlap and owner metadata access remain
-conservative; projected/emitted roots, reference/temporary roots, wider elements and
-exclusive restart bodies require later contracts.
+Local exclusive carried scalar paths use the
+[restart extension](EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
+before capture and at acquisition, exact mutable scalar source qualification and
+no live exclusive ancestry across reset. Indexed writes remain gated. Element
+overlap and owner metadata access remain conservative; reference/temporary roots,
+wider pointees, owning elements and exclusive header carriage remain separate.

@@ -18,6 +18,7 @@ mod changing_published;
 mod control;
 mod discarded_aliases;
 mod exclusive_carried;
+mod exclusive_carried_elements;
 mod exclusive_carried_records;
 mod fixed_published;
 mod guarded_references;

@@ -237,7 +237,6 @@ pub(crate) fn exclusive_carried_record_fields_keep_list_conflicts_and_indexed_ga
         ("s:&row;p:row.&!n;*p=8;v:s.items[1]", "E302"),
         ("p:row.&!n;s:&!*p;v:*p;*s=8", "E302"),
         ("p:row.&!items", "B001"),
-        ("p:&!(row.items[1])", "B001"),
         ("row.items[1]=9", "B001"),
     ] {
         super::exclusive_references::rejects(

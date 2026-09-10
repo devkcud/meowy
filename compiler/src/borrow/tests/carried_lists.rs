@@ -62,7 +62,7 @@ pub(crate) fn carried_lists_preserve_owner_resets_and_leave_completion() {
 
 #[test]
 pub(crate) fn carried_lists_keep_exclusive_acquisition_and_reservations_gated() {
-    for body in ["p:&!(items[1]);*p=9", "items[1]=9"] {
+    for body in ["p:&!items", "items[1]=9"] {
         rejects(
             &format!(
                 "<R>:<{{items<int32[2]>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->items:=[1];{body};first=false;'loop.restart()}}}}}}"
