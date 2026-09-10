@@ -223,12 +223,15 @@ an independent old copy and retains the updated length/payload across inner rest
 Nested reference-free lists/records and empty lists use the same bounded whole-slot
 proof. Reads, whole-list replacement/addition and completed-result borrowing retain
 their existing rules. Shared borrows of original list-containing carried storage
-and nested element projections retain their owner through inner restarts. Exclusive
-borrows and indexed writes/reservations remain gated; see
+and nested element projections retain their owner through inner restarts. Local
+exclusive named scalar fields within list-containing records use the existing
+restart proof; exclusive list/indexed borrows and indexed writes remain gated. See
 [carried lists](OWNERSHIP.md#carried-reference-free-lists) and
 [shared list borrowing](OWNERSHIP.md#shared-carried-list-borrows). The
 [carried list borrow example](examples/carried-list-borrows.mwy) keeps an element
-view across three iterations after its emitted alias leaves scope.
+view across three iterations after its emitted alias leaves scope. The
+[exclusive list-field example](examples/exclusive-carried-list-fields.mwy) mutates
+a scalar field beside a replaced list and retains a shared list header.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
 Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)

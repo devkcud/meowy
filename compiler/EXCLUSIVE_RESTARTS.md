@@ -45,12 +45,16 @@ losing its value before the backedge can still produce B001.
 ## Carried record fields
 
 Declared reference-free carried records admit exclusive borrows of named Boolean,
-integer and float fields, including nested paths. The selected field must be
-mutable; an immutable alias or enclosing record field does not freeze it. The existing source qualifier traverses each concrete field index from
-the containing slot type, rejects absent/indexed/non-scalar paths and retains
+integer and float fields, including nested paths in records containing lists.
+The selected field must be mutable; an immutable alias or enclosing record field
+does not freeze it. The existing source qualifier traverses each concrete field
+index from the containing slot type, rejects absent/indexed/non-scalar paths and retains
 canonical owner/root/view checks. Traversal consumes the existing proof budget.
-Whole-record, string, unit, nullable, union, reference-bearing and list paths remain
-unsupported; ordinary local exclusive roots in reset graphs remain gated.
+Whole-record, string, unit, nullable, union, reference-bearing and indexed/list
+pointee paths remain unsupported; ordinary local exclusive roots in reset graphs
+remain gated. Direct field acquisition uses this qualifier instead of rejecting
+an entire containing slot because a disjoint sibling is a list. Indexed exclusive
+acquisition and indexed SetPath retain their independent `carried::storage` gates.
 
 Borrow HIR and containing-slot Acquire events are unchanged. The owner must be
 active and the whole slot initialized before acquisition. Exact field projections
@@ -62,10 +66,18 @@ and exclusive calls still invalidate Boolean knowledge used by initialization pr
 
 The [exclusive-carried-records example](examples/exclusive-carried-records.mwy)
 mutates nested result storage, preserves an old value copy and prints 7, 8, ready.
-Seven source groups, three graph groups and six native groups cover paths, widths,
-initialization, mutability, moves, children, conflicts, calls, shared headers, owner
-resets, Leave, expiry and live-backedge rejection. Native cases run in both profiles.
-No backend, runtime, reference fixture or dependency changes are required.
+The same source, graph and native cases also run with a list sibling. They cover
+paths, widths, initialization, mutability, moves, children, conflicts, calls, shared
+headers, owner resets, Leave, expiry and live-backedge rejection. Acquisition before
+initialization, outside the active owner and after completion fails at the borrow
+span. Corrupted root/view/owner identities and indexed/non-scalar paths remain B001.
+
+The [list-field example](examples/exclusive-carried-list-fields.mwy) replaces a list
+sibling while a scalar exclusive loan lives, retains an old value copy and carries
+a separate shared list view through a restart. Conflicting whole-record access,
+list replacement under a live list view and suspended-parent use remain E302;
+last-use writes remain valid. Native cases run in both profiles. No backend,
+runtime, reference fixture or dependency changes are required.
 
 ## Frontier proof
 

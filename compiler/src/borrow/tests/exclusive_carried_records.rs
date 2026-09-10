@@ -1,4 +1,18 @@
-use super::{accepts, rejects};
+pub(crate) fn with_lists(source: &str) -> String {
+    source
+        .replace("<{n<", "<{items<int32[2]>:=;n<")
+        .replace("->n:", "->items:=[1];->n:")
+}
+
+pub(crate) fn accepts(source: &str) {
+    super::accepts(source);
+    super::accepts(&with_lists(source));
+}
+
+pub(crate) fn rejects(source: &str, code: &str) {
+    super::rejects(source, code);
+    super::rejects(&with_lists(source), code);
+}
 
 pub(crate) const PREFIX: &str = "<Inner>:<{n<int32>:=;other<int32>:=}>;<Row>:<{inner<Inner>:=;flag<boolean>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->inner:={->n:=7;->other:=1};->flag:=true};";
 pub(crate) const SUFFIX: &str = "first=false;'loop.restart()}}}";
@@ -116,5 +130,45 @@ pub(crate) fn exclusive_carried_record_fields_keep_mutability_shapes_and_boolean
     rejects(
         "<Row>:<{n<int32>}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->n:7};p:&!(row.n);first=false;'loop.restart()}}}",
         "E305",
+    );
+}
+
+pub(crate) const LIST_PREFIX: &str = "<Inner>:<{n<int32>:=;items<int32[3]>:=}>;<Row>:<{inner<Inner>}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->inner:{->n:=7;->items:=[1]}};";
+
+#[test]
+pub(crate) fn exclusive_carried_record_fields_allow_list_sibling_replacement_and_shared_headers() {
+    super::accepts(&format!(
+        "{LIST_PREFIX}old:row;p:row.inner.&!n;row.inner.items=[2,3];s:row.inner.&items;*p=8;v:s[2];w:old.inner.items[1];{SUFFIX}"
+    ));
+    super::accepts(&format!(
+        "seed<int32[3]>:[0];s:=&seed;old:s;{LIST_PREFIX}s=row.inner.&items;p:row.inner.&!n;*p=8;first=false;'loop.restart()}};v:s[1];w:old[1]}}}};s=&seed"
+    ));
+    for body in [
+        "p:row.inner.&!n;s:row.inner.&items;row.inner.items=[2];v:s[1];w:*p",
+        "s:&row;p:row.inner.&!n;*p=8;v:s.inner.items[1]",
+        "p:row.inner.&!n;s:&!*p;v:*p;*s=8",
+    ] {
+        super::rejects(&format!("{LIST_PREFIX}{body};{SUFFIX}"), "E302");
+    }
+}
+
+#[test]
+pub(crate) fn exclusive_carried_record_fields_keep_list_paths_and_permissions_gated() {
+    for body in [
+        "p:row.inner.&!items",
+        "p:&!(row.inner.items[1])",
+        "row.inner.items[1]=9",
+    ] {
+        super::rejects(&format!("{LIST_PREFIX}{body};{SUFFIX}"), "B001");
+    }
+    super::rejects(
+        &format!("{LIST_PREFIX}p:row.inner.&!n;*p=8;{SUFFIX}")
+            .replace("n<int32>:=", "n<int32>")
+            .replace("->n:=7", "->n:7"),
+        "E305",
+    );
+    super::rejects(
+        &format!("{LIST_PREFIX}s:&row;p:s.inner.&!n;{SUFFIX}"),
+        "B001",
     );
 }

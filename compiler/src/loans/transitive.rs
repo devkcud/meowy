@@ -68,11 +68,6 @@ impl Graph<'_> {
             _ => None,
         };
         let temporary = matches!(source, Source::Temporary { .. });
-        if mode == ReferenceMode::Exclusive
-            && let Source::Slot { view, .. } = &source
-        {
-            crate::borrow::carried::storage(self.proofs, *view, self.guards, span)?;
-        }
         let emission = self.emission_acquire(&source, span)?;
         let pointer = self.value(vec![Origin {
             component: Vec::new(),

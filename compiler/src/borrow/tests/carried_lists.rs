@@ -74,7 +74,7 @@ pub(crate) fn carried_lists_keep_exclusive_acquisition_and_reservations_gated() 
         "<R>:<{items<int32[2]>:=}>;run<null>:(stop<boolean>){first:=true;r<R>:'out{'loop{|first|{'out->items:=[1];items[{|stop|'out.leave();->1}]=9;first=false;'loop.restart()}}}}",
         "B001",
     );
-    for body in ["p:row.&!n", "row.items[1]=9"] {
+    for body in ["p:row.&!items", "row.items[1]=9"] {
         rejects(
             &format!(
                 "<Row>:<{{items<int32[2]>:=;n<int32>:=}}>; <R>:<{{row<Row>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row:={{->items:=[1];->n:=2}};{body};first=false;'loop.restart()}}}}}}"

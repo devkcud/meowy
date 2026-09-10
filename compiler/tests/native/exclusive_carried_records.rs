@@ -1,8 +1,19 @@
 use super::Case;
 
+pub(crate) fn with_lists(source: &str) -> String {
+    source
+        .replace("<{n<", "<{items<int32[2]>:=;n<")
+        .replace("->n:", "->items:=[1];->n:")
+}
+
+pub(crate) fn runs(source: &str, expected: &[u8]) {
+    Case::new(source).runs(expected);
+    Case::new(&with_lists(source)).runs(expected);
+}
+
 #[test]
 pub(crate) fn exclusive_carried_record_fields_mutate_nested_widths_and_preserve_copies() {
-    Case::new(
+    runs(
         r#"
 d:@"debug"
 <Inner>:<{n<uint8>:=;other<int32>:=}>
@@ -35,13 +46,13 @@ d.print(r.row.flag)
 d.print(r.row.amount)
 d.print(r.row.label)
 "#,
-    )
-    .runs(b"7\n255\n9\nfalse\n2.5\nready\n");
+        b"7\n255\n9\nfalse\n2.5\nready\n",
+    );
 }
 
 #[test]
 pub(crate) fn exclusive_carried_record_fields_keep_children_calls_and_final_use() {
-    Case::new(
+    runs(
         r#"
 d:@"debug"
 <Inner>:<{n<int32>:=;other<int32>:=}>
@@ -71,13 +82,13 @@ r<R>:'out{
 }
 d.print(r.row.inner.n)
 "#,
-    )
-    .runs(b"7\n8\n10\n11\n");
+        b"7\n8\n10\n11\n",
+    );
 }
 
 #[test]
 pub(crate) fn exclusive_carried_record_fields_reacquire_after_owner_resets() {
-    Case::new(
+    runs(
         r#"
 d:@"debug"
 <Row>:<{n<int32>:=}>
@@ -100,13 +111,13 @@ r<R>:'out{
 }
 d.print(r.row.n)
 "#,
-    )
-    .runs(b"10\n11\n11\n");
+        b"10\n11\n11\n",
+    );
 }
 
 #[test]
 pub(crate) fn exclusive_carried_record_fields_leave_skips_unfinished_stores() {
-    Case::new(
+    runs(
         r#"
 d:@"debug"
 <Row>:<{n<int32>:=}>
@@ -129,13 +140,13 @@ run<null>:(stop<boolean>){
 run(false)
 run(true)
 "#,
-    )
-    .runs(b"rhs\n9\nrhs\n3\n");
+        b"rhs\n9\nrhs\n3\n",
+    );
 }
 
 #[test]
 pub(crate) fn exclusive_carried_record_fields_preserve_shared_headers() {
-    Case::new(
+    runs(
         r#"
 d:@"debug"
 <Row>:<{n<int32>:=;other<int32>:=}>
@@ -162,8 +173,8 @@ s=&x
 d.print(r.row.n)
 d.print(*s)
 "#,
-    )
-    .runs(b"2\n1\n8\n1\n");
+        b"2\n1\n8\n1\n",
+    );
 }
 
 #[test]
@@ -192,18 +203,48 @@ pub(crate) fn exclusive_carried_record_fields_preserve_rejection_boundaries() {
             "B001",
         ),
     ] {
-        let case = Case::new(&format!(
+        let source = format!(
             "keep<&int32>:(p<&!int32>){{->&*p}};x:1;s:=&x;<Row>:<{{n<int32>:=}}>; <R>:<{{row<Row>:=}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row:={{->n:=7}};{body};first=false;'loop.restart()}}}}}}{tail}"
-        ));
-        for profile in ["debug", "release"] {
-            let output = case.command("run", &["--profile", profile]);
-            assert_eq!(output.status.code(), Some(1), "{body}: {profile}");
-            assert!(output.stdout.is_empty());
-            assert!(
-                String::from_utf8_lossy(&output.stderr).starts_with(&format!("error[{code}]:")),
-                "{body}: {profile}: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+        );
+        for source in [source.clone(), with_lists(&source)] {
+            let case = Case::new(&source);
+            for profile in ["debug", "release"] {
+                let output = case.command("run", &["--profile", profile]);
+                assert_eq!(output.status.code(), Some(1), "{body}: {profile}");
+                assert!(output.stdout.is_empty());
+                assert!(
+                    String::from_utf8_lossy(&output.stderr).starts_with(&format!("error[{code}]:")),
+                    "{body}: {profile}: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
         }
+    }
+}
+
+#[test]
+pub(crate) fn exclusive_carried_record_fields_replace_list_siblings_with_shared_headers() {
+    Case::new(include_str!(
+        "../../examples/exclusive-carried-list-fields.mwy"
+    ))
+    .runs(b"1\n3\n0\n8\n2\n");
+}
+
+#[test]
+pub(crate) fn exclusive_carried_record_fields_keep_list_conflicts_and_indexed_gates() {
+    for (body, code) in [
+        ("p:row.&!n;s:row.&items;row.items=[2];v:s[1];w:*p", "E302"),
+        ("s:&row;p:row.&!n;*p=8;v:s.items[1]", "E302"),
+        ("p:row.&!n;s:&!*p;v:*p;*s=8", "E302"),
+        ("p:row.&!items", "B001"),
+        ("p:&!(row.items[1])", "B001"),
+        ("row.items[1]=9", "B001"),
+    ] {
+        super::exclusive_references::rejects(
+            &format!(
+                "<Row>:<{{n<int32>:=;items<int32[2]>:=}}>; <R>:<{{row<Row>}}>;first:=true;r<R>:'out{{'loop{{|first|{{'out->row:{{->n:=7;->items:=[1]}};{body};first=false;'loop.restart()}}}}}}"
+            ),
+            code,
+        );
     }
 }

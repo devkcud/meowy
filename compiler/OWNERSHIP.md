@@ -663,10 +663,12 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   Owner reset clears initialization, inner reset preserves ancestor slots, and
   Leave/panic skips unfinished initializers or replacement stores.
 - Shared direct/projected borrows of list-containing carried slots use the
-  acquisition and lifetime proof below. `carried::storage` still gates exclusive
-  acquisition and indexed writes before reservations. This includes exclusive
-  scalar-field borrows from a record containing a list. Plain scalar/record sibling
-  slots, independent copies and completed-result locals keep existing rules.
+  acquisition and lifetime proof below. Exclusive named Boolean/integer/float
+  fields within containing records use the existing
+  [scalar-field restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields).
+  `carried::storage` still gates indexed exclusive acquisition and indexed writes
+  before reservations. Independent copies and completed-result locals keep their
+  existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
   The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
   the old copy's length and the retained updated list. Native output, dynamic bounds,
@@ -677,10 +679,10 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 
 - A shared whole-list or element borrow addresses the original carried slot.
   Containing records, nested lists and record fields retain canonical Slot/Field/
-  Element sources. `loans/transitive.rs::referenced` applies the collection gate
-  only to exclusive acquisition; every shared root still emits the existing
-  containing-slot Acquire event. The owner must be active and its entire slot
-  initialized, including empty lists. No synthetic payload reads are introduced.
+  Element sources. `loans/transitive.rs::referenced` emits the existing
+  containing-slot Acquire event for every direct shared or exclusive root. The
+  owner must be active and its entire slot initialized, including empty lists.
+  No synthetic payload reads are introduced.
 - Element and field reborrows retain their parent reference identity and authority.
   Index expressions execute once in source order and check the current initialized
   length at each selected list. A returning index cannot replace borrowed storage;

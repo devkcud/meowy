@@ -1,64 +1,61 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-09. Shared carried-list borrowing is complete and passed the
-compiler gate. No failing checks remain. Full v0.0.1 is incomplete.
-[../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
-records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
+Updated: 2026-09-10. Local exclusive scalar fields in list-containing carried
+records are complete and passed the compiler gate. No failing checks remain.
+Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
+[../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
+Git holds history. Do not recreate STEP logs.
 
 ## Current compiler slice
 
-`loans/transitive.rs::referenced` now applies `carried::storage` only to exclusive
-Slot acquisition. `loans/emission_init.rs::emission_acquire` still attaches the
-containing-slot Acquire event to every shared root. The existing state proof
-requires the owner active and the full slot initialized, including empty lists.
-The collection gate remains independently enforced for ExclusivePath and indexed
-SetPath reservations. No AST/HIR, backend, runtime or dependency changes were needed.
+Direct acquisition in `loans/transitive.rs::referenced` now reaches the existing
+exclusive restart source/frontier proof without a blanket list-containing-slot
+rejection. `exclusive_restart_source` already requires canonical owner/root/view,
+exact named record-field paths, mutable Boolean/integer/float leaves and no live
+exclusive loan or descendant across reset. It needs no new representation or rule.
 
-Whole-list shared views, nested element/record-field projections and reborrows
-retain canonical Slot/Field/Element sources and parent reference identity. Index
-expressions execute once and check current initialized length. Returning index
-access conflicts with replacement of its borrowed storage; canceled acquisition
-preserves completed effects and skips unfinished checks/use.
+Every direct root retains containing-slot Acquire: the owner must be active and
+its entire slot initialized, including list siblings. Physical paths preserve
+field disjointness. A list sibling may be replaced while a scalar-field loan lives;
+whole-record access, overlapping loans and parent use under live children remain
+E302. Mutable fields remain writable under immutable owned aliases/parent fields.
+Shared-reference access does not grant mutation permission.
 
-Shared views survive inner restarts and alias scope exit while their result owner
-lives. Owner completion, Leave and owner reset expire old sources; reinitializing
-the same physical site cannot revive them. Overwriting an expired reference before
-reading it retains the existing rule. Whole-list replacement remains E302 while a
-whole/element view is live; disjoint fields and writes after final use remain valid.
-Old reference copies and call-returned views retain their original lifetime bounds.
+Old value copies remain independent. Moves, calls, reborrows, final use, owner
+reset, completion and Leave retain their existing rules. Certified shared list
+headers may coexist with local exclusive scalar loans. Genuine call/input opacity
+and exclusive descendants still reject reset frontiers. Indirect stores/calls
+still invalidate Boolean knowledge, so loop flags may need restoring afterward.
 
-Known shared list headers coexist with supported local exclusive scalar sibling
-loans under existing header certificates. Genuine call/input opacity and exclusive
-descendants still reject reset frontiers. Exclusive acquisition of list-containing
-carried storage remains B001, even for named scalar fields within those records;
-indexed writes/reservations also remain gated. These are distinct next slices.
-See [the contract](OWNERSHIP.md#shared-carried-list-borrows) and
-[the example](examples/carried-list-borrows.mwy).
+`carried::storage` remains at ExclusivePath and indexed SetPath before reservations.
+Exclusive list pointees and indexed paths remain B001; wider exclusive pointees,
+exclusive headers and unsupported carried shapes remain separate work. See
+[the proof](EXCLUSIVE_RESTARTS.md#carried-record-fields) and
+[the example](examples/exclusive-carried-list-fields.mwy).
 
 ## Actual validation
 
-- The whole-list restart regression first reproduced B001 from the blanket list
-  gate. Only obsolete shared-borrow rejection cases were removed after focused
-  source/native proof passed; genuine exclusive/indexed-write gates remain tested.
+- The first field-acceptance regression reproduced B001 from the blanket list gate.
 - Focused `cargo test --locked --manifest-path compiler/Cargo.toml --target
-  x86_64-unknown-linux-gnu --target-dir compiler/target carried_list_borrows` passed
-  10 source/proof groups and seven native groups, with native cases in both profiles.
-- Graph evidence checks canonical containing-slot ownership, root Acquire without
-  synthetic uses, exact field/element paths and copied parent reference identity.
-  Missing Emit, inactive owner and acquisition after Complete all fail with B001
-  at the original borrow span.
-- Native checks cover retained views, nested parents/fields, current-length bounds,
-  once-only/canceled index effects, owner reset, old copies, calls, empty lists,
-  final use, disjoint writes, mixed headers and remaining primary rejections.
+  x86_64-unknown-linux-gnu --target-dir compiler/target exclusive_carried_record`
+  passed 12 source/graph groups and eight native groups. Native cases run in both
+  debug and release. Existing plain-record cases also run with list siblings.
+- Source/native coverage includes nested integer/Boolean/float fields, copies,
+  moves, shared/exclusive children, parent suspension, disjoint list replacement,
+  shared headers, calls, owner resets, Leave, expiry, final use and primary gates.
+- Graph evidence preserves exact Slot/Field identity and whole-slot Acquire.
+  Missing Emit, inactive owner and acquisition after Complete fail at the borrow
+  span. Corrupted owner/root/view, invalid fields and indexed/non-scalar paths fail.
 - `python3 -B tools/verify.py --compiler`: all 10 selected checks passed, including
-  fmt, Clippy, build, 622 library and 580 native Rust tests (1202 total), 16 tooling
-  plus 4 compiler-harness Python tests, and 76 examples in debug and release.
+  fmt, Clippy, build, 624 library and 582 native Rust tests (1206 total), 16 tooling
+  plus 4 compiler-harness Python tests, and 77 examples in debug and release.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
-  capabilities remain outside the full language gate.
-- Local-link/whitespace checks passed; repository contracts also cover 23 catalog
-  records and 7 schemas/6 examples. External links were not fetched. No editor,
-  runtime/sanitizer, reference conformance fixture or dependency changes were needed;
-  editor and separate runtime/sanitizer checks were not rerun.
+  capabilities do not count as language rejections or full release qualification.
+- Local links, 23 catalog records and 7 schemas/6 examples passed. Whitespace checks
+  passed; external links were not fetched. Gate log:
+  `/tmp/meowy-exclusive-list-fields-gate.log`.
+- No backend, runtime, editor, reference fixture or dependency changes were needed.
+  Editor and separate runtime/sanitizer gates were not rerun.
 
 ## Prior capabilities and other areas
 
@@ -67,12 +64,17 @@ restarts. Shape limits remain 256 parts/32 levels; list construction retains cap
 65,536, layout 1 MiB and one-based initialized-length checks. Nullable/union/reference-
 bearing/foundation/owning and top-level unit carried slots retain their gates.
 
+Shared whole-list views, nested element/record-field projections and reborrows
+retain canonical Slot/Field/Element sources and parent reference identity. Index
+expressions execute once and check current initialized length. Views can survive
+inner restarts and alias scope exit while their result owner lives; owner expiry
+cannot be undone by reinitializing the same physical site.
+
 Selected-slot mutability is independent of whole-binding replacement. `Proofs.mutable`
 tracks replaceable roots and `Proofs.fields` mutable owned descendants; `variable`
 drives snapshots/refinements without granting writes through shared references.
-Plain carried-record exclusive scalar fields require every loan/descendant to end
-before reset. Pointer syntax uses tight `&`/`&!`/`*`, immediate-field `.&`/`.&!`/`.*`
-and grouping for complete targets.
+Pointer syntax uses tight `&`/`&!`/`*`, immediate-field `.&`/`.&!`/`.*` and grouping
+for complete targets.
 
 Standalone documentation supports attachment, checked links/signatures, E801-E805,
 `doc check`/`doc build`, local API pages and checked/opt-in examples. Net/HTTP/TLS
@@ -83,12 +85,13 @@ lifecycle implementation precede executable adapters.
 
 | Responsibility | Existing owner |
 | --- | --- |
-| Carried shape and remaining collection gate | `src/borrow/carried.rs` |
+| Carried shape and indexed collection gate | `src/borrow/carried.rs` |
 | Whole-slot initialized/active state and Acquire | `src/loans/emission_init.rs` |
-| Shared direct/projected acquisition and parent identity | `src/loans/transitive.rs` |
+| Direct/projected acquisition and parent identity | `src/loans/transitive.rs` |
 | Element evaluation and initialized-length checks | `src/list.rs` |
 | Exclusive indexed acquisition and indexed writes | `src/loans/elements.rs`, `src/loans/control.rs` |
-| Shared-header certificates and exclusive reset frontier | `src/loans/restart_headers.rs`, `src/loans/exclusive_restarts.rs` |
+| Scalar source qualification and exclusive reset frontier | `src/loans/exclusive_restarts.rs` |
+| Shared-header certificates | `src/loans/restart_headers.rs` |
 
 ## Still outside this compiler
 
@@ -99,20 +102,14 @@ Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Qualify exclusive named scalar fields within list-containing carried records
-   before indexed access. Trace `borrow/carried.rs::storage`,
-   `loans/transitive.rs::referenced` and
-   `loans/exclusive_restarts.rs::exclusive_restart_source`; require initialized,
-   active containing storage, exact field paths, selected-slot permission and no
-   exclusive loan/descendant live across reset. Keep element acquisitions and
-   indexed SetPath gated while this non-indexed path is qualified.
-2. Cover list sibling replacement, nested fields, overlapping accesses, shared and
-   exclusive children, last use, owner reset and Leave in source/native tests.
-   Preserve shared-header certificates and genuine opacity; run the compiler gate.
-3. Then investigate exclusive scalar list elements in `loans/elements.rs` and
-   indexed writes in `loans/control.rs` independently. Each needs containing-slot
-   initialization plus its own reservation, bounds, lifetime and frontier evidence.
-   Broader carried shapes, owning cleanup and exclusive header carriage stay separate.
-4. Continue module graphs/library foundations. Keep root/compiler STATUS current,
-   commit cohesive validated work, and do not push or recreate STEP logs. Full
-   release qualification remains open.
+1. Investigate exclusive scalar list elements in `loans/elements.rs` separately.
+   Qualify containing-slot initialization, once-only index evaluation, reservation
+   order, bounds, canonical element identity, parent authority and reset frontiers.
+   Preserve indexed SetPath gates until that independent path is qualified. Add
+   source/graph/native acceptance and boundary tests, then run the compiler gate.
+2. Then investigate indexed writes in `loans/control.rs`, including canceled RHS,
+   completed reservations, list sibling replacement, owner expiry and final use.
+   Preserve shared-header certificates, genuine opacity and old-copy loans.
+3. Continue module graphs/library foundations. Broader carried shapes, owning
+   cleanup and exclusive header carriage remain separate. Keep STATUS current,
+   commit cohesive validated work, and do not push or recreate STEP logs.

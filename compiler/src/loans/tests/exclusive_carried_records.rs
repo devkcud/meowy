@@ -1,11 +1,22 @@
-use super::access::inspect;
 use crate::borrow::{Projection, Source};
-use crate::flow::FALSE;
+use crate::flow::{FALSE, Guard};
 use crate::hir::ReferenceMode;
+use crate::loans::Graph;
 use crate::loans::emission_init::Event;
 use crate::loans::storage::ScopeKind;
 
 pub(crate) const SOURCE: &str = "<Inner>:<{n<int32>:=;other<int32>:=}>;<Row>:<{inner<Inner>:=}>;<R>:<{row<Row>:=}>;first:=true;r<R>:'out{'loop{|first|{'out->row:={->inner:={->n:=7;->other:=1}};p:&!(row.inner.n);q:&!(row.inner.other);*p=8;*q=9;first=false;'loop.restart()}}}";
+
+pub(crate) fn inspect(source: &str, mut check: impl FnMut(&mut Graph<'_>, &[Guard])) {
+    for source in [
+        source.to_owned(),
+        source
+            .replace("<Inner>:<{", "<Inner>:<{items<int32[2]>:=;")
+            .replace("->n:=", "->items:=[1];->n:="),
+    ] {
+        super::access::inspect(&source, &mut check);
+    }
+}
 
 #[test]
 pub(crate) fn exclusive_carried_record_sources_keep_paths_initialization_and_authority() {
@@ -55,7 +66,7 @@ pub(crate) fn exclusive_carried_record_sources_keep_paths_initialization_and_aut
 
 #[test]
 pub(crate) fn exclusive_carried_record_acquisition_requires_active_initialized_storage() {
-    for inactive in [false, true] {
+    for change in 0..3 {
         inspect(SOURCE, |graph, _| {
             let loan = graph
                 .loans
@@ -69,7 +80,22 @@ pub(crate) fn exclusive_carried_record_acquisition_requires_active_initialized_s
                 .find(|event| matches!(event, Event::Acquire(_, _)))
                 .unwrap()
                 .clone();
-            if inactive {
+            let Event::Acquire((owner, _), span) = &event else {
+                unreachable!()
+            };
+            let span = *span;
+            if change == 2 {
+                let node = graph
+                    .nodes
+                    .iter_mut()
+                    .find(|node| {
+                        node.emissions.iter().any(
+                            |event| matches!(event, Event::Complete(target) if target == owner),
+                        )
+                    })
+                    .unwrap();
+                node.emissions.push(event);
+            } else if change == 1 {
                 graph.nodes[0].emissions.push(event);
             } else {
                 for node in &mut graph.nodes {
@@ -79,6 +105,7 @@ pub(crate) fn exclusive_carried_record_acquisition_requires_active_initialized_s
             }
             let error = graph.emission_states().unwrap_err();
             assert_eq!(error.code, "B001");
+            assert_eq!(error.span, span);
             assert!(
                 error.message.contains("initialized before borrowing"),
                 "{error:?}"

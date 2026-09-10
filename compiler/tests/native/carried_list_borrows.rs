@@ -251,10 +251,6 @@ pub(crate) fn carried_list_borrows_preserve_expiry_conflicts_initialization_and_
         );
     }
     rejects(
-        "<Row>:<{items<int32[2]>;n<int32>:=}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->items:[7];->n:=1};p:row.&!n;first=false;'loop.restart()}}}",
-        "B001",
-    );
-    rejects(
         "<R>:<{items<int32[2]>}>;first:=false;i:=0;r<R>:'out{'loop{|first|{'out->items:[7];p:&items;v:p[1];first=false};i=i+1;|i<2|'loop.restart()}}",
         "B001",
     );

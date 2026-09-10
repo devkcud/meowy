@@ -104,9 +104,8 @@ pub(crate) fn carried_list_borrows_preserve_exclusive_frontiers_and_collection_g
             "B001",
         );
     }
-    rejects(
+    accepts(
         "<Row>:<{items<int32[2]>;n<int32>:=}>;<R>:<{row<Row>}>;first:=true;r<R>:'out{'loop{|first|{'out->row:{->items:[7];->n:=1};p:row.&!n;*p=2;first=false;'loop.restart()}}}",
-        "B001",
     );
     rejects(
         "<R>:<{items<int32[2]>;n<int32>:=}>;keep<&int32[2]>:(p<&int32[2]>,extra<string>){->p};seed:[0,1];p:=keep(&seed,\"\");first:=true;r<R>:'out{'loop{|first|{'out->items:[7];'out->n:=1;q:&!n;*q=2;first=false;'loop.restart()};v:p[1]}}",

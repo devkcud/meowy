@@ -1,0 +1,28 @@
+d:@"debug"
+<Inner>:<{n<int32>:=;items<int32[3]>:=}>
+<Row>:<{inner<Inner>}>
+<R>:<{row<Row>}>
+seed<int32[3]>:[0]
+view:=&seed
+old:view
+first:=true
+r<R>:'out{
+    'loop{
+        |first|{
+            'out->row:{->inner:{->n:=7;->items:=[1]}}
+            copy:row
+            p:row.inner.&!n
+            row.inner.items=[2,3]
+            view=row.inner.&items
+            *p=8
+            d.print(copy.inner.items[1])
+            first=false
+            'loop.restart()
+        }
+        d.print(view[2])
+        d.print(old[1])
+    }
+}
+view=&seed
+d.print(r.row.inner.n)
+d.print(r.row.inner.items.size())
