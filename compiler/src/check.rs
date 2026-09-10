@@ -1,6 +1,7 @@
 mod aliases;
 mod blocks;
 mod documentation;
+mod exports;
 mod expressions;
 mod functions;
 mod indexed;
@@ -124,6 +125,8 @@ pub(crate) struct Checker {
     pub(crate) required: bool,
     pub(crate) documentation: Option<crate::documentation::Model>,
     pub(crate) imports: BTreeMap<usize, String>,
+    pub(crate) exports: BTreeMap<usize, BTreeMap<String, Value>>,
+    pub(crate) module: exports::Module,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
@@ -238,6 +241,8 @@ impl Checker {
             required: false,
             documentation: None,
             imports: BTreeMap::new(),
+            exports: BTreeMap::new(),
+            module: exports::Module::default(),
         }
     }
 

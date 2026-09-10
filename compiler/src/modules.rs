@@ -98,15 +98,11 @@ impl Graph {
                 kind: ExprKind::Block(file.parsed.block.clone()),
                 span: file.parsed.block.span,
             };
-            let kind = if *id == 0 {
-                StmtKind::Expr(value)
-            } else {
-                StmtKind::Bind {
-                    name: format!("\0module{id}"),
-                    ty: None,
-                    mutable: false,
-                    value,
-                }
+            let kind = StmtKind::Bind {
+                name: format!("\0module{id}"),
+                ty: None,
+                mutable: false,
+                value,
             };
             statements.push(Stmt {
                 kind,

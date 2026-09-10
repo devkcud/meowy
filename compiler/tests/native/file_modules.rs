@@ -207,3 +207,48 @@ pub(crate) fn file_modules_example_executes_in_both_profiles() {
     )
     .runs(b"shared\nleft\nright\nentry\n17\n");
 }
+
+#[test]
+pub(crate) fn file_function_exports_call_annotated_definitions_and_private_helpers() {
+    case("d:@\"debug\";m:@\"./ops.mwy\";->twice<int32>:(x<int32>){->m.inc(m.inc(x))};d.print(twice(1));alias:m.inc;d.print(alias(4))", &[
+        ("ops.mwy", "helper<int32>:(x<int32>){->x+1};->inc<int32>:(x<int32>){->helper(x)}"),
+    ]).runs(b"3\n5\n");
+    Case::new("d:@\"debug\";->inc<int32>:(x<int32>){->x+1};d.print(inc(7))").runs(b"8\n");
+}
+
+#[test]
+pub(crate) fn file_function_exports_preserve_privacy_annotations_and_capture_gates() {
+    for (entry, source, code) in [
+        ("m:@\"./ops.mwy\"", "->inc:(x<int32>){->x+1}", "E214"),
+        (
+            "m:@\"./ops.mwy\";m.helper(1)",
+            "helper<int32>:(x<int32>){->x};->inc<int32>:(x<int32>){->helper(x)}",
+            "E201",
+        ),
+        ("m:@\"./ops.mwy\"", "x:=1;->inc<int32>:(){->x}", "B001"),
+        (
+            "m:@\"./ops.mwy\";m.inc(true)",
+            "->inc<int32>:(x<int32>){->x+1}",
+            "E212",
+        ),
+        ("m:@\"./ops.mwy\"", "->inc<int32>:(){->true}", "E207"),
+        ("m:@\"./ops.mwy\"", "->inc<int32>:(){->1};->inc:2", "E205"),
+        ("m:@\"./ops.mwy\"", "->inc:2;->inc<int32>:(){->1}", "E205"),
+        (
+            "m:@\"./ops.mwy\"",
+            "->inc<int32>:(){->1};->inc<int32>:(){->2}",
+            "E205",
+        ),
+    ] {
+        let case = case(entry, &[("ops.mwy", source)]);
+        for profile in ["debug", "release"] {
+            let output = case.command("check", &["--json", "--profile", profile]);
+            assert_eq!(output.status.code(), Some(1), "{entry}: {source}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains(&format!("\"code\":\"{code}\"")),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+}

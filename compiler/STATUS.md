@@ -12,9 +12,12 @@ Git holds history. Do not recreate STEP logs.
 
 1. Function declaration checking is extracted without behavior changes. Existing
    function regressions (14 library/35 native groups), checker tests, fmt and Clippy
-   pass. The refactor is ready to commit.
-2. Support top-level annotated function definitions in file modules and look up
-   exported function identities; include scalar/privacy/annotation regressions.
+   pass. Committed as `d4ed144`.
+2. The baseline export case reproduced B001. Top-level definition checking and
+   a separate compile-time export namespace are now implemented; focused scalar,
+   privacy and annotation regressions pass in debug/release. The broader file
+   tests (10 library/12 native groups), all 47 checker tests, fmt and Clippy pass;
+   this slice is ready to commit.
 3. Support explicitly typed function re-exports, preserving canonical identity,
    exact signatures, duplicate checks and import-cycle behavior.
 4. Qualify cross-module borrow/call and panic behavior with focused regressions

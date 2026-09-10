@@ -62,9 +62,15 @@ impl Checker {
                     return Ok(Vec::new());
                 }
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
-                let value = self.expr(value, expected.as_ref())?;
+                let (value, exports) = if name.starts_with('\0') {
+                    let (value, module) = self.module_value(value, expected.as_ref())?;
+                    (value, Some(module.values))
+                } else {
+                    (self.expr(value, expected.as_ref())?, None)
+                };
                 let ty = expected.unwrap_or_else(|| value.ty.clone());
                 if name.starts_with('\0')
+                    && name != "\0module0"
                     && (ty.has_mutable_fields()
                         || (ty != Type::Null
                             && ty != Type::Never
@@ -86,6 +92,9 @@ impl Checker {
                     ));
                 }
                 let id = self.local(ty.clone());
+                if let Some(exports) = exports {
+                    self.exports.insert(id, exports);
+                }
                 if !*mutable && let Some(fact) = self.list_fact(&value) {
                     self.lengths.insert(id, fact);
                 }
@@ -391,6 +400,9 @@ impl Checker {
         value: &ast::Expr,
         span: Span,
     ) -> Result<Vec<hir::Stmt>> {
+        if self.export_function(label, name, annotation, mutable, value, span)? {
+            return Ok(Vec::new());
+        }
         if mutable && name.is_none() {
             return Err(Diagnostic::unsupported("mutable primary emissions", span));
         }

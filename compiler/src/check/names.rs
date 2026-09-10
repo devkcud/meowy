@@ -336,7 +336,11 @@ impl Checker {
                         )),
                     };
                 }
-                if let Some(Value::Module(module)) = self.symbol(value)? {
+                let symbol = self.symbol(value)?;
+                if let Some(Value::FileModule { id, ty }) = &symbol {
+                    return self.module_member(*id, ty, name, expr.span);
+                }
+                if let Some(Value::Module(module)) = symbol {
                     let result = match (module, name.as_str()) {
                         (Module::Core, "true") => Value::Constant(Constant::Bool(true)),
                         (Module::Core, "false") => Value::Constant(Constant::Bool(false)),
