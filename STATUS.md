@@ -7,6 +7,10 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Annotated function exports are in progress as separate refactor, definition,
+re-export, ownership/example and documentation commits. Type exports remain the
+next slice; the compiler handoff records the commit boundaries.
+
 Native panic file labels passed the compiler gate. Multi-file P001/P002/P003/P006 failures
 name their canonical source file and local byte range. Names are escaped and embedded
 in the executable; copied panic evidence retains the actual failing site. One-file

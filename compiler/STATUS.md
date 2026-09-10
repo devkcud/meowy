@@ -2,22 +2,28 @@
 
 Updated: 2026-09-10. Native panic file labels are complete and passed the compiler
 gate. No failing checks remain. Implementation was split into four tested commits;
-this handoff accompanies the separate documentation commit.
+this handoff accompanies the separate documentation commit. Annotated function
+exports are now being implemented using the commit plan below.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Planned commits
 
-1. `2c57546` — runtime file-site helpers and ABI/captured-cause tests.
-2. `407688f` — validated backend source ranges and explicit P006 mapping/tests.
-3. `6f38463` — P001/P002/P003 mapping and evaluation-order tests.
-4. `eb6edf4` — multi-file driver integration and CLI regressions.
-5. Documentation/handoff records the successful final gate below.
+1. Function declaration checking is extracted without behavior changes. Existing
+   function regressions (14 library/35 native groups), checker tests, fmt and Clippy
+   pass. The refactor is ready to commit.
+2. Support top-level annotated function definitions in file modules and look up
+   exported function identities; include scalar/privacy/annotation regressions.
+3. Support explicitly typed function re-exports, preserving canonical identity,
+   exact signatures, duplicate checks and import-cycle behavior.
+4. Qualify cross-module borrow/call and panic behavior with focused regressions
+   and a runnable example; keep runtime module-data captures and type exports gated.
+5. Update documentation/handoff and run the full compiler gate across the series.
 
-Each implementation commit includes focused tests and stays below the split-review
-threshold. Continue planning commit slices before implementation; do not bundle
-future module/export work into one feature-sized commit.
+Keep implementation/tests together and every slice buildable. Apply the
+400-line/8-file split-review threshold, stage explicit paths/hunks and commit each
+validated slice before starting the next. Type exports are a separate next slice.
 
 ## Current compiler slice
 

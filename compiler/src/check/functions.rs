@@ -6,6 +6,39 @@ use crate::hir::{self, Type};
 use std::collections::BTreeMap;
 
 impl Checker {
+    pub(crate) fn declare_function(
+        &mut self,
+        name: &str,
+        annotation: Option<&ast::TypeExpr>,
+        params: &[ast::Param],
+        body: &ast::Block,
+        span: Span,
+    ) -> Result<()> {
+        let result = annotation.map(|ty| self.ty(ty)).transpose()?;
+        let args = params
+            .iter()
+            .map(|param| self.ty(&param.ty))
+            .collect::<Result<_>>()?;
+        let id = self.functions.len();
+        self.functions.push(None);
+        self.declare(
+            name,
+            Value::Function {
+                id,
+                params: args,
+                result: result.clone(),
+            },
+            span,
+        )?;
+        let result = self.function(id, name, params, body, result, span)?;
+        if let Some(Value::Function { result: target, .. }) =
+            self.scopes.last_mut().expect("scope").values.get_mut(name)
+        {
+            *target = Some(result);
+        }
+        Ok(())
+    }
+
     pub(crate) fn forward(&mut self, stmts: &[ast::Stmt], start: usize) -> Result<usize> {
         let mut index = start;
         let mut names = BTreeMap::new();

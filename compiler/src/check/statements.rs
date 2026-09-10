@@ -41,28 +41,7 @@ impl Checker {
                             stmt.span,
                         ));
                     }
-                    let result = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
-                    let args = params
-                        .iter()
-                        .map(|param| self.ty(&param.ty))
-                        .collect::<Result<_>>()?;
-                    let id = self.functions.len();
-                    self.functions.push(None);
-                    self.declare(
-                        name,
-                        Value::Function {
-                            id,
-                            params: args,
-                            result: result.clone(),
-                        },
-                        stmt.span,
-                    )?;
-                    let result = self.function(id, name, params, body, result, stmt.span)?;
-                    if let Some(Value::Function { result: target, .. }) =
-                        self.scopes.last_mut().expect("scope").values.get_mut(name)
-                    {
-                        *target = Some(result);
-                    }
+                    self.declare_function(name, ty.as_ref(), params, body, stmt.span)?;
                     return Ok(Vec::new());
                 }
                 if let Some(symbol) = self.symbol(value)?
