@@ -57,9 +57,9 @@ impl Model {
         }
     }
     pub(crate) fn new(source: &str, parsed: &Parsed) -> Result<Self> {
-        Self::at(source, parsed, 0)
+        Self::at(source, parsed, 0, true)
     }
-    pub(crate) fn at(source: &str, parsed: &Parsed, base: usize) -> Result<Self> {
+    pub(crate) fn at(source: &str, parsed: &Parsed, base: usize, standalone: bool) -> Result<Self> {
         if source.len() > MAX_SOURCE {
             return Err(Self::budget(parsed.block.span));
         }
@@ -80,7 +80,19 @@ impl Model {
             false,
             None,
         )?;
-        model.walk_block(source, parsed, &parsed.block, None, true, 0)?;
+        for stmt in &parsed.block.stmts {
+            let public = standalone
+                || matches!(
+                    stmt.kind,
+                    StmtKind::TypeAlias { exported: true, .. }
+                        | StmtKind::Emit {
+                            label: None,
+                            name: Some(_),
+                            ..
+                        }
+                );
+            model.walk_stmt(source, parsed, stmt, None, public, 1)?;
+        }
         for doc in &parsed.docs {
             let id = if doc.module {
                 if parsed
@@ -214,23 +226,7 @@ impl Model {
                 if let Some(ty) = ty {
                     self.walk_type(source, parsed, ty, id, stage, depth + 1)?;
                 }
-                if let ExprKind::Function { params, body } = &value.kind {
-                    for param in params {
-                        let child = self.add(
-                            &param.name,
-                            Kind::Parameter,
-                            param.span,
-                            stage,
-                            Some(id),
-                            public,
-                            Some(param.ty.span.start),
-                        )?;
-                        self.walk_type(source, parsed, &param.ty, child, stage, depth + 1)?;
-                    }
-                    self.walk_block(source, parsed, body, Some(id), false, depth + 1)?;
-                } else {
-                    self.walk_expr(source, parsed, value, Some(id), stage, depth + 1)?;
-                }
+                self.walk_expr(source, parsed, value, Some(id), stage, depth + 1)?;
             }
             StmtKind::TypeAlias { name, ty, .. } | StmtKind::Forward { name, ty } => {
                 let kind = if matches!(stmt.kind, StmtKind::TypeAlias { .. }) {
@@ -247,11 +243,15 @@ impl Model {
                 let owner = if let Some(name) = name {
                     Some(self.add(
                         name,
-                        Kind::Emission,
+                        if matches!(value.kind, ExprKind::Function { .. }) {
+                            Kind::Function
+                        } else {
+                            Kind::Emission
+                        },
                         stmt.span,
                         stage,
                         parent,
-                        parent.is_some_and(|id| self.entries[id].public),
+                        public || parent.is_some_and(|id| self.entries[id].public),
                         None,
                     )?)
                 } else {
@@ -360,8 +360,20 @@ impl Model {
             ExprKind::Block(block) => {
                 self.walk_block(source, parsed, block, parent, false, depth + 1)?
             }
-            ExprKind::Function { body, .. } => {
-                self.walk_block(source, parsed, body, None, false, depth + 1)?
+            ExprKind::Function { params, body } => {
+                for param in params {
+                    let id = self.add(
+                        &param.name,
+                        Kind::Parameter,
+                        param.span,
+                        stage,
+                        parent,
+                        parent.is_some_and(|id| self.entries[id].public),
+                        Some(param.ty.span.start),
+                    )?;
+                    self.walk_type(source, parsed, &param.ty, id, stage, depth + 1)?;
+                }
+                self.walk_block(source, parsed, body, parent, false, depth + 1)?
             }
             ExprKind::Group(value) => {
                 self.walk_expr(source, parsed, value, parent, stage, depth + 1)?

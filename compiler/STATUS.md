@@ -15,7 +15,8 @@ still assume one file. Preserve attachment, signature, link and privacy validati
 
 1. Offset-aware source reads complete: all 11 documentation library tests, fmt and
    Clippy passed. Shifted attachment/link/signature and Unicode/CRLF checks passed.
-2. Model exported declarations and their parameters with file visibility rules.
+2. File visibility and exported function parameter modeling complete. All 13
+   documentation library and nine native documentation groups, fmt and Clippy passed.
 3. Check per-file models inside initializer scopes and enable documented graphs.
 4. Validate imported documentation links and native file diagnostics/boundaries.
 5. Document the supported slice and run the complete compiler gate.

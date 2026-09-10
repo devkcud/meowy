@@ -148,7 +148,7 @@ pub(crate) fn documentation_checks_shifted_sources_and_maps_normalized_links() {
     let source = "#!| [[f]] |!#\r\n#|| É [[x]]. ||#f<int32>:(#| Input. |#x<int32>){->x};<R>:<{#| Field. |#n<int32>}>";
     let base = 4097;
     let parsed = crate::parser::parse_documented_at(source, base).unwrap();
-    let model = Model::at(source, &parsed, base).unwrap();
+    let model = Model::at(source, &parsed, base, true).unwrap();
     let (_, model) = crate::check::check_documented(&parsed.block, Some(model)).unwrap();
     let model = model.unwrap();
     assert!(model.entries.iter().all(|entry| entry.checked));
@@ -168,9 +168,63 @@ pub(crate) fn documentation_shifted_attachment_and_markup_errors_keep_source_spa
         let parsed = crate::parser::parse_documented(source).unwrap();
         let local = Model::new(source, &parsed).unwrap_err();
         let parsed = crate::parser::parse_documented_at(source, 512).unwrap();
-        let shifted = Model::at(source, &parsed, 512).unwrap_err();
+        let shifted = Model::at(source, &parsed, 512, true).unwrap_err();
         assert_eq!(shifted.code, local.code);
         assert_eq!(shifted.span.start, local.span.start + 512);
         assert_eq!(shifted.span.end, local.span.end + 512);
     }
+}
+
+#[test]
+pub(crate) fn documentation_file_exports_keep_signatures_parameters_and_visibility() {
+    let source = "private:7;<Hidden>:<int32>;#| Public type. |#-><Count>:<int32>;#| Increment [[x]] using [[<Count>]]. |#->inc<Count>:(#| Input. |#x<Count>){->x+1};#| Alias [[inc]]. |#->alias<(int32)->int32>:inc";
+    let parsed = crate::parser::parse_documented(source).unwrap();
+    let model = Model::at(source, &parsed, 0, false).unwrap();
+    let (_, model) = crate::check::check_documented(&parsed.block, Some(model)).unwrap();
+    let model = model.unwrap();
+    model.require_public().unwrap();
+    for name in ["private", "Hidden"] {
+        assert!(
+            !model
+                .entries
+                .iter()
+                .find(|entry| entry.name == name)
+                .unwrap()
+                .public
+        );
+    }
+    let function = model
+        .entries
+        .iter()
+        .find(|entry| entry.name == "inc")
+        .unwrap();
+    assert_eq!(function.kind, Kind::Function);
+    assert_eq!(function.signature, "(int32)->int32");
+    assert!(function.checked);
+    let param = model
+        .entries
+        .iter()
+        .find(|entry| entry.name == "x")
+        .unwrap();
+    assert_eq!(param.signature, "int32");
+    assert!(param.checked);
+}
+
+#[test]
+pub(crate) fn documentation_public_file_exports_reject_private_links() {
+    for source in [
+        "hidden:7;#| [[hidden]] |#->value:1",
+        "<Hidden>:<int32>;#| [[<Hidden>]] |#-><Public>:<int32>",
+        "hidden<int32>:(){->1};#| [[hidden]] |#->f<int32>:(){->1}",
+    ] {
+        let parsed = crate::parser::parse_documented(source).unwrap();
+        let model = Model::at(source, &parsed, 0, false).unwrap();
+        let error = crate::check::check_documented(&parsed.block, Some(model)).unwrap_err();
+        assert_eq!(error[0].code, "E802", "{source}");
+        assert!(error[0].message.contains("private"), "{error:?}");
+    }
+    let source = "hidden:1;#| [[hidden]] |#private:2;#| Public. |#->value:3";
+    let parsed = crate::parser::parse_documented(source).unwrap();
+    let model = Model::at(source, &parsed, 0, false).unwrap();
+    crate::check::check_documented(&parsed.block, Some(model)).unwrap();
 }
