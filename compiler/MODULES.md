@@ -17,12 +17,53 @@ private:7
 ```
 
 The second file exports only `port` and `label`. Ordinary bindings remain private.
-A primary emission exports the module's primary value. Exported values may be
+A primary emission exports the module's primary value. Exported data may be
 immutable reference-free scalars, records or bounded lists; no mutable descendants,
 references, unions, owning values or foundational resource values are enabled.
 A module alias is a compile-time identity, so aliasing or importing it again does
 not rerun initialization or create another module-storage binding. Reading an
 exported Copy value retains normal value-copy semantics.
+
+## Annotated function exports
+
+Named top-level function emissions now export the existing checked function identity:
+
+```meowy
+->increment<int32>:(n<int32>){->n+1}
+```
+
+Parameters and results must be annotated. Missing result/signature annotations
+report E214. Definitions can call private helpers and recurse using ordinary
+function rules. Imported calls and immutable aliases reuse the original function ID;
+no function pointers, closures or callable record storage are introduced.
+
+A facade can re-export an existing function under a fresh name with its complete
+function-type annotation:
+
+```meowy
+ops:@"./ops.mwy"
+->increase<(int32)->int32>:ops.increment
+```
+
+The annotation must match all parameter and result types exactly (E207 otherwise).
+An explicitly annotated export can expose a private function whose result was
+inferred internally. An existing local name still cannot be redeclared (E203).
+Data and function exports share the value namespace; repeated exports and conflicts
+introduced by unnamed record emissions report E205. Unreachable data emissions
+retain their existing behavior. Function equality remains E222; canonical identity
+is preserved internally through imports and typed re-exports.
+
+Only unconditional top-level function exports are supported. Nested or matcher-arm
+exports remain gated. Private helper names are not visible through an import.
+Calls retain existing argument checking, exclusive permissions, all-input returned
+reference bounds and local-storage escape checks. A function may return a borrow
+of its input; exporting a function does not export a borrow of module storage.
+Runtime module-data captures, type exports and package policy remain separate.
+
+The [facade example](examples/function-modules/main.mwy) mixes data exports,
+recursive functions and shared/exclusive calls. It prints ops, api, main, 1, 7, 4,
+10, demonstrating dependency initialization before calls. Imported function panics
+retain the callee's file and local span, including through facade aliases.
 
 ## Resolution and initialization
 
@@ -90,15 +131,17 @@ different nearest manifest context or import `mod.mwy` as executable source. Thi
 is not a package identity or manifest implementation. Bare package names, path
 aliases and remote dependencies remain gated; foundational lookup is unchanged.
 
-Function/type exports, nested/conditional imports, mutable or annotated import
-bindings, references to module storage, module values in function bodies and
+Type exports, nested/conditional imports, mutable or annotated import bindings,
+references to module storage, runtime module-data values in function bodies and
 multi-file documentation checking remain B001. Type-export syntax now receives an
 explicit capability diagnostic. Standalone documentation retains its existing checks.
 Copying an exported value into a local uses ordinary local borrowing/mutation rules.
 
-Eight graph/checker groups and nine native groups cover canonical diamonds/symlinks,
-relative resolution, snapshots and limits, compiler error spans, privacy/export
-boundaries, initialization order/failure, and source-output protection. Native
+Graph/checker and native groups cover canonical diamonds/symlinks, relative
+resolution, snapshots and limits, compiler error spans, privacy/export boundaries,
+initialization order/failure, and source-output protection. Function-export groups
+also cover exact signatures, canonical call IDs, namespace collisions, recursion,
+all-input borrow bounds, exclusive arguments and callee panic attribution. Native
 execution runs in debug and release. Runtime-site groups additionally cover all
 four panic codes, legacy output, escaped names, retained causes, nested failures,
 source-range validation and evaluation order. The full compiler-gate result is recorded in

@@ -7,43 +7,41 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
-Annotated function exports are in progress as separate refactor, definition,
-re-export, ownership/example and documentation commits. Type exports remain the
-next slice; the compiler handoff records the commit boundaries.
+Annotated module functions and explicitly typed re-exports passed the compiler gate.
+Imports and facades retain canonical function IDs, private helper boundaries and
+ordered initialization. Calls preserve recursion, shared/exclusive permissions,
+returned-reference bounds and callee panic locations. Data/function namespace
+collisions are checked, including record spreads. See
+[the module slice](compiler/MODULES.md#annotated-function-exports) and
+[runnable facade](compiler/examples/function-modules/main.mwy).
 
-Native panic file labels passed the compiler gate. Multi-file P001/P002/P003/P006 failures
-name their canonical source file and local byte range. Names are escaped and embedded
-in the executable; copied panic evidence retains the actual failing site. One-file
-output remains byte-identical. Runtime helpers, P006 mapping, checked-operation
-mapping and driver integration are committed separately, followed by documentation.
+Five small implementation/regression commits are complete, followed by a separate
+documentation handoff. Type exports are the next slice. Runtime module
+data captures, borrowed exports and package/manifest support remain gated.
 
-Relative value imports retain canonical identities, private scopes and ordered
-initialization. Function/type exports, package manifests/aliases, module references/
-captures and multi-file documentation remain gated. See [the module slice](compiler/MODULES.md).
-
-Carried initialization, shared/exclusive scalar borrows and indexed writes retain
-their ownership and reservation rules. Standalone documentation remains complete
-for its bounded slice. Net/HTTP/TLS implementation still needs module/type/I/O/task
-foundations. The full v0.0.1 release remains incomplete.
+Carried initialization, shared/exclusive scalar borrows, indexed writes and native
+file-site diagnostics retain their existing boundaries. Standalone documentation
+is unchanged. Net/HTTP/TLS still needs module/type/I/O/task foundations; the full
+v0.0.1 release remains incomplete.
 
 ## Actual validation
 
-- Runtime probes, source-map tests and five CLI groups passed in debug/release.
-  All 82 backend tests passed; focused formatting and Clippy passed.
-- Evidence covers all four panic codes, source ranges, escaped names, nested failures,
-  retained cleanup causes, operand order, aliases and unchanged one-file output.
-- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1278 Rust
-  tests, 20 Python tests, 79 standalone examples and one multi-file example.
-- Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Local-link,
-  catalog/schema and whitespace checks passed; full release qualification remains open.
-- The compiler's native runtime helpers were exercised. Separate prototype
-  runtime/sanitizer and editor gates were not rerun.
+- Existing function/checker tests and focused export groups passed. Evidence covers
+  public signatures, identity, private names, scope, collisions and import cycles.
+- Four cross-module call groups passed in debug/release, including the facade,
+  recursion, all-input bounds, exclusive calls, storage escape and callee panic sites.
+- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1288 Rust
+  tests, 20 Python tests, 79 standalone and two multi-file examples in debug/release.
+- Conformance: 10 passed, 13 unsupported, 0 failed. Local-link, catalog/schema and
+  whitespace checks passed; full release qualification remains open.
+- Backend/runtime code, reference fixtures and dependencies are unchanged. Editor
+  and separate runtime/sanitizer gates were not rerun.
 
 ## Area handoff
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Native panic file labels passed the compiler gate; richer module exports remain gated. |
+| Compiler | Annotated function exports passed the compiler gate; exported types are next. |
 | Documentation tooling | Standalone slice complete; package graphs, assets, public indexes and LSP remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
@@ -54,8 +52,8 @@ foundations. The full v0.0.1 release remains incomplete.
 Commit workflow: plan dependency-ordered slices before implementation, commit each
 validated slice, and apply the size review threshold in [AGENTS.md](AGENTS.md).
 
-1. Plan separate annotated function/type export slices with canonical identity,
-   public annotations, privacy and initialization-order tests.
-2. Preserve ownership proofs; keep package policy, module captures and borrowed
-   exports gated until their corresponding rules are implemented. Keep STATUS
-   concise, commit validated slices, never recreate STEP logs, and do not push.
+1. Plan exported-type syntax and namespace slices with private alias and canonical
+   identity tests; keep package policy separate.
+2. Preserve ownership proofs and keep runtime module captures/borrowed exports
+   gated until their rules are implemented. Keep STATUS concise, commit validated
+   slices, never recreate STEP logs, and do not push.

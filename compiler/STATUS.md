@@ -1,87 +1,71 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Native panic file labels are complete and passed the compiler
-gate. No failing checks remain. Implementation was split into four tested commits;
-this handoff accompanies the separate documentation commit. Annotated function
-exports are now being implemented using the commit plan below.
+Updated: 2026-09-10. Annotated function exports and typed re-exports are complete
+and passed the compiler gate. No failing checks remain. Five implementation/test
+commits precede this documentation handoff; type exports are the next slice.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Planned commits
+## Commit series
 
-1. Function declaration checking is extracted without behavior changes. Existing
-   function regressions (14 library/35 native groups), checker tests, fmt and Clippy
-   pass. Committed as `d4ed144`.
-2. The baseline export case reproduced B001. Top-level definition checking and
-   a separate compile-time export namespace are now implemented; focused scalar,
-   privacy and annotation regressions pass in debug/release. The broader file
-   tests (10 library/12 native groups), all 47 checker tests, fmt and Clippy pass;
-   committed as `3410a6f`.
-3. Explicitly typed function re-exports are implemented using existing identities
-   and exact signatures. Canonical identity, duplicates, annotation diagnostics
-   and import-cycle regressions are being checked. Function equality remains E222;
-   the identity test now inspects HIR call IDs instead of inventing equality support.
-   An explicit scope-depth check also keeps matcher-arm exports gated. All file
-   regressions (11 library/14 native groups), fmt and Clippy pass; committed as `3b31d61`.
-4. A boundary test found record-spread data emissions could collide with function
-   exports. The shared result-slot check now rejects collisions and preserves
-   unreachable data emissions. Focused regression, fmt and Clippy pass; committed as `a0b3be6`.
-5. Four ownership/panic/example groups pass in debug/release, including recursion,
-   shared/exclusive calls, all-input bounds, private-storage expiry and callee sites.
-   The facade also mixes data and function exports; its final example passes.
-   Formatting and Clippy pass. Ready to commit; runtime data captures/types stay gated.
-6. Update documentation/handoff and run the full compiler gate across the series.
+1. `d4ed144` — shared function declaration checking, behavior-preserving refactor.
+2. `3410a6f` — annotated module definitions and exported identity lookup.
+3. `3b31d61` — typed re-exports, exact signatures, scope and identity regressions.
+4. `a0b3be6` — function/data collisions through result-slot writes and record spreads.
+5. `b85b38c` — cross-module ownership/panic regressions and a runnable facade example.
+6. This documentation handoff records the successful final gate below.
 
-Keep implementation/tests together and every slice buildable. Apply the
-400-line/8-file split-review threshold, stage explicit paths/hunks and commit each
-validated slice before starting the next. Type exports are a separate next slice.
+All completed commits include appropriate validation and stay below the split-review
+threshold. Continue planning dependency-ordered slices before implementation.
 
 ## Current compiler slice
 
-Multi-file native P001/P002/P003/P006 failures now print canonical source paths and
-local half-open byte ranges. The driver passes its source snapshots to
-`backend::emit_ir_with_sources` only for graphs with multiple files. One-file CLI
-programs and `emit_ir` retain their exact prior numeric-offset format.
+`check/exports.rs` tracks each file's compile-time function exports separately from
+its runtime data fields. `declare_function` is shared with ordinary private
+bindings. Named top-level `->f<Result>:(arg<Type>){...}` definitions require an
+explicit public signature (E214), preserve recursion/private helper access and reuse
+existing global function IDs. Member lookup exposes only exported names.
 
-`backend/sites.rs` validates ordered disjoint ranges, at most 64 labels and 1 MiB
-of label bytes; unmapped or cross-file failure spans reject lowering. Used labels are
-embedded once per source. Runtime helpers quote/escape paths without allocation or
-mutable global source context, and preserve UTF-8 names. Legacy helper signatures
-remain available. Panic copies retain file-site evidence and original cleanup causes.
+`->alias<(Args)->Result>:module.function` re-exports an existing identity with an
+exact full signature (E207 on mismatch). Ordinary names must remain fresh (E203),
+while duplicate exports and function/data collisions use E205. Result-slot checking
+also catches unnamed record spreads; unreachable data emissions keep their rules.
+Matcher-arm/nested exports remain gated by file-frame and scope-depth checks.
+Function equality remains E222; HIR regressions verify shared/distinct call IDs.
 
-Arithmetic operands, list bounds/capacity checks and explicit panic interpolation
-keep their evaluation order and existing failure codes. An inner failure keeps its
-own site; outer unfinished panic text cannot replace that cause. Initializer failure
-still prevents entry effects. No runtime filesystem lookup, package/export support,
-public artifact format or full native stack diagnostics are added.
+Every graph file, including the entry, uses an isolated initializer binding;
+standalone file roots also support function definitions. Dependency data remains
+immutable/reference-free, while entry data retains its previous permissions.
+Functions are compile-time namespace entries, not runtime callable fields. No HIR,
+backend, runtime or dependency changes were required for calls.
 
-Relative imports retain immutable reference-free exports, isolated private scopes,
-canonical graph identities and ordered once-only initialization. Compiler diagnostics
-and dependency output protection are unchanged. Function/type exports, borrowed
-module storage, runtime module captures and package/manifest support remain gated.
-See [MODULES.md](MODULES.md) for the format and current limits.
+Existing argument checks, shared/exclusive authority, public all-input bounds,
+private-storage escape rejection, initialization order and callee panic sites remain
+in force. Runtime module-data captures, borrowed module storage, exported types and
+package/manifest features stay gated. See [MODULES.md](MODULES.md#annotated-function-exports)
+and [the facade example](examples/function-modules/main.mwy).
 
 ## Actual validation
 
-- Runtime helper probes passed in debug/release: legacy and named formats,
-  escaped UTF-8 labels, panic copying and retained original causes after cleanup failure.
-- Three explicit-panic groups and two checked-operation groups passed in both
-  profiles: local ranges, invalid-map rejection, deduplicated labels, nested faults,
-  arithmetic causes, bounds prefixes, capacity and completed operand effects.
-- All 82 backend tests passed after lowering integration. Five CLI groups passed
-  in both profiles: all four codes, entry/dependency sites, canonical escaped aliases,
-  diamond initializer failure and unchanged one-file output. Focused fmt/Clippy passed.
+- Refactor: 14 library/35 native function groups and 47 checker tests passed.
+- Definition/re-export work: file regressions, E214/E207/E203/E205/E222 boundaries,
+  HIR call-ID identity, privacy, capture and cycle checks passed. Scope-depth
+  validation rejects conditional function exports.
+- Record-spread collision reproduced an incorrectly accepted duplicate; the shared
+  result-slot check now rejects it and preserves unreachable emissions.
+- Four cross-module call groups pass in debug/release: mixed data/function facade,
+  recursion, shared returns, exclusive arguments, all-input bounds, private-storage
+  escape and callee panic sites. Focused fmt/Clippy checks passed for every slice.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 666 library and 612 native Rust tests (1278 total), 16 tooling plus
-  4 compiler-harness Python tests, 79 standalone examples and one multi-file example
-  in debug/release. Gate log: `/tmp/meowy-panic-file-sites-gate.log`.
+  Clippy, build, 667 library and 621 native Rust tests (1288 total), 16 tooling plus
+  4 compiler-harness Python tests, 79 standalone and two multi-file examples in
+  debug/release. Gate log: `/tmp/meowy-function-exports-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
-  External links were not fetched. The compiler's native runtime helpers changed
-  and were executed; separate prototype runtime/sanitizer and editor gates were
-  not rerun.
+  External links were not fetched. Backend/runtime code, reference fixtures and
+  dependencies are unchanged; editor and separate runtime/sanitizer gates were not rerun.
 
 ## Prior capabilities and other areas
 
@@ -113,7 +97,8 @@ lifecycle implementation precede executable adapters.
 | --- | --- |
 | Canonical graph, snapshots, bounds and dependency order | `src/modules.rs`, `src/modules/load.rs` |
 | Disjoint parser spans | `src/parser.rs::parse_documented_at` |
-| Module identities and immutable export gate | `src/check/names.rs`, `src/check/statements.rs` |
+| Module function identities, scopes and public signatures | `src/check/exports.rs`, `src/check/names.rs` |
+| Data export gate and shared declaration checking | `src/check/statements.rs`, `src/check/functions.rs` |
 | Complete graph checking and ownership | `src/check.rs::check_imports` |
 | File-mapped diagnostics and input/output protection | `src/driver.rs` |
 | Native file-site mapping and formatting | `src/backend/sites.rs`, `native/runtime.cpp` |
@@ -121,19 +106,19 @@ lifecycle implementation precede executable adapters.
 
 ## Still outside this compiler
 
-The full package/manifest graph, richer module exports, generic specialization,
+The full package/manifest graph, type/resource module exports, generic specialization,
 captures, public FFI, wider ownership/cleanup, executable networking, public artifacts/replay and LSP remain
 separate. Host execution does not qualify minimum platforms or bundled distributions.
 Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Plan small slices for annotated function/type exports through `check/names.rs`,
-   `check/statements.rs`, `parser/statements.rs` and the module contract. Preserve
-   canonical item identity, public annotations, private scopes and initialization
-   order. Add focused multi-file fixtures with each implementation slice, then run
-   the final compiler gate. Package policy remains separate.
-2. Keep runtime module captures/reference exports gated until their storage/lifetime
-   proof exists. Preserve ownership/header certificates, call/input opacity, old
-   copies and owner expiry. Keep STATUS current, commit validated slices as they
-   finish, and do not push or recreate STEP logs.
+1. Plan small exported-type slices from `parser/statements.rs`, `ast.rs`,
+   `check/names.rs` and `check/exports.rs`. Represent the type namespace explicitly,
+   preserve private aliases/canonical identity and support the documented `-><Name>:`
+   boundary without inventing syntax. Include parser and multi-file tests with each
+   implementation step, then run the compiler gate. Package policy stays separate.
+2. Keep runtime module-data captures, borrowed exports and callable storage gated
+   until their storage/lifetime proofs exist. Preserve ownership/header certificates,
+   call/input opacity, old copies and owner expiry. Keep STATUS current, commit
+   validated slices as they finish, and do not push or recreate STEP logs.

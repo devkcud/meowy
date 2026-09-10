@@ -16,9 +16,11 @@ storage and constructors remain gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
-[Relative file modules](MODULES.md) support top-level imports of immutable
-reference-free value exports with canonical identity and ordered initialization.
-Function/type exports, package manifests and borrowed module exports remain gated.
+[Relative file modules](MODULES.md) support immutable reference-free data, annotated
+functions and explicitly typed function re-exports with canonical identities and
+ordered initialization. Type exports, package manifests and borrowed module storage
+remain gated. The [facade example](examples/function-modules/main.mwy) exercises
+recursive functions and shared/exclusive calls across files.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
