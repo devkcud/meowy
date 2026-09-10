@@ -58,12 +58,51 @@ exports remain gated. Private helper names are not visible through an import.
 Calls retain existing argument checking, exclusive permissions, all-input returned
 reference bounds and local-storage escape checks. A function may return a borrow
 of its input; exporting a function does not export a borrow of module storage.
-Runtime module-data captures, type exports and package policy remain separate.
+Runtime module-data captures and package policy remain separate.
 
 The [facade example](examples/function-modules/main.mwy) mixes data exports,
 recursive functions and shared/exclusive calls. It prints ops, api, main, 1, 7, 4,
 10, demonstrating dependency initialization before calls. Imported function panics
 retain the callee's file and local span, including through facade aliases.
+
+## Exported type aliases
+
+`-><Name>:` declares a top-level exported alias in the separate type namespace:
+
+```meowy
+-><Point>:<{x<int32>;y<int32>}>
+```
+
+Importers use `<geometry.Point>` in type positions. A facade can re-export the
+same type with `-><Point>:<geometry.Point>`. Private aliases can define the underlying
+type without making their private names visible. Missing or private imported type
+names report E202; type declarations do not create values in the value namespace.
+A type and a data/function export may intentionally use the same name.
+
+Aliases remain transparent: record field order is normalized, permissions remain
+part of the type, and aliases of one primitive/record type remain interchangeable.
+Existing nominal foundation types retain their original identity; exporting an alias
+does not make them constructible as lookalike records. No wrapper or layout change
+is introduced. Supported callable-signature aliases can annotate function re-exports;
+this does not enable stored function pointers.
+
+Existing computed type values still work, for example
+`token:<geometry.Point>;-><PublicPoint>:token`. Qualified type references use the
+angle-bracket type context; general compile-time type-expression evaluation is not
+expanded. Type lookup and copied signatures charge the existing proof budget.
+
+Duplicate type bindings, including attempts to redeclare a private alias under the
+same name, report E203. Exported names must be unqualified. Nested, conditional and
+labeled type exports remain gated. Types may be used in function signatures/bodies
+without granting runtime access to module data. Reference, mutability and ownership
+rules remain those of the underlying type; borrowed module values and unsupported
+owning storage remain unavailable.
+
+Standalone docs attach to the exported alias as a type declaration, keep its checked
+signature and enforce the existing required-doc policy. Multi-file documentation
+remains a separate capability. The
+[typed geometry facade](examples/type-modules/main.mwy) demonstrates exported records,
+data and functions and prints geometry, 10, 0.
 
 ## Resolution and initialization
 
@@ -131,17 +170,18 @@ different nearest manifest context or import `mod.mwy` as executable source. Thi
 is not a package identity or manifest implementation. Bare package names, path
 aliases and remote dependencies remain gated; foundational lookup is unchanged.
 
-Type exports, nested/conditional imports, mutable or annotated import bindings,
-references to module storage, runtime module-data values in function bodies and
-multi-file documentation checking remain B001. Type-export syntax now receives an
-explicit capability diagnostic. Standalone documentation retains its existing checks.
+Nested/conditional imports, mutable or annotated import bindings, references to
+module storage, runtime module-data values in function bodies and multi-file
+documentation checking remain B001. Standalone documentation retains its existing checks.
 Copying an exported value into a local uses ordinary local borrowing/mutation rules.
 
 Graph/checker and native groups cover canonical diamonds/symlinks, relative
 resolution, snapshots and limits, compiler error spans, privacy/export boundaries,
 initialization order/failure, and source-output protection. Function-export groups
 also cover exact signatures, canonical call IDs, namespace collisions, recursion,
-all-input borrow bounds, exclusive arguments and callee panic attribution. Native
+all-input borrow bounds, exclusive arguments and callee panic attribution. Type-export
+groups cover separate namespaces, transparent/nominal identity, callable aliases,
+privacy, permissions, documentation roles and the typed facade. Native
 execution runs in debug and release. Runtime-site groups additionally cover all
 four panic codes, legacy output, escaped names, retained causes, nested failures,
 source-range validation and evaluation order. The full compiler-gate result is recorded in

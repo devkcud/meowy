@@ -17,10 +17,12 @@ Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
 
 [Relative file modules](MODULES.md) support immutable reference-free data, annotated
-functions and explicitly typed function re-exports with canonical identities and
-ordered initialization. Type exports, package manifests and borrowed module storage
+functions, typed function re-exports and exported type aliases with preserved
+identities and ordered initialization. Package manifests and borrowed module storage
 remain gated. The [facade example](examples/function-modules/main.mwy) exercises
-recursive functions and shared/exclusive calls across files.
+recursive functions and shared/exclusive calls across files. The
+[typed geometry example](examples/type-modules/main.mwy) adds a re-exported record
+type used by callers and public function signatures.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the

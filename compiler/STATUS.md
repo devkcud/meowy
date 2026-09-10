@@ -1,77 +1,64 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Annotated function exports and typed re-exports are complete
-and passed the compiler gate. No failing checks remain. Five implementation/test
-commits precede this documentation handoff. Exported-type work is now in progress
-under the commit plan below; aliases must retain their existing structural identity.
+Updated: 2026-09-10. Exported type aliases are complete and passed the compiler
+gate. No failing checks remain. Four tested commits precede this separate
+documentation handoff.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Planned commits
+## Commit series
 
-1. Exported aliases have an explicit AST flag and share private-alias parsing.
-   Two focused groups, all 23 parser tests, documentation/module regressions, fmt
-   and Clippy pass. Committed as `2e5ea62`.
-2. Separate exported type metadata, qualified lookup and alias declaration checks
-   are implemented. Standalone/imported privacy, duplicate and scope regressions
-   pass in both profiles. All parser/file regressions, fmt and Clippy pass;
-   committed as `d1ef0e5`.
-3. Transparent facade aliases, existing computed type values, callable signatures,
-   nominal foundation types and ownership boundaries pass three library/four native
-   groups in debug/release where applicable. Fmt/Clippy pass; committed as `9bb3dbd`.
-   Qualified types use `<module.Type>`; general type evaluation is unchanged.
-4. A typed geometry facade and standalone exported-type documentation tests are
-   pass. Four library/six native exported-type groups, including documentation
-   roles/spans, generated HTML and E803 policy, pass with fmt/Clippy; ready to commit.
-5. Update docs/handoff and run the compiler gate across the complete series.
+1. `2e5ea62` — exported-alias AST flag, parser syntax and compatibility tests.
+2. `d1ef0e5` — separate type namespace, declarations and qualified lookup.
+3. `9bb3dbd` — transparent/nominal facade identity and ownership regressions.
+4. `c0e2997` — typed geometry example and standalone documentation regressions.
+5. This documentation handoff records the successful final gate below.
 
-Keep syntax, namespace behavior, integration and documentation reviewable. Include
-focused tests in each commit and stay within the 400-line/8-file split threshold.
-No package policy, generic specialization or runtime module-capture expansion.
+All completed slices stay within the split-review threshold. Continue planning
+small dependency-ordered commits with their focused tests before implementation.
 
 ## Current compiler slice
 
-`check/exports.rs` tracks each file's compile-time function exports separately from
-its runtime data fields. `declare_function` is shared with ordinary private
-bindings. Named top-level `->f<Result>:(arg<Type>){...}` definitions require an
-explicit public signature (E214), preserve recursion/private helper access and reuse
-existing global function IDs. Member lookup exposes only exported names.
+`StmtKind::TypeAlias` explicitly records whether `-><Name>:` exports the alias.
+Parser extraction retains private-alias behavior and original spans. Exported
+names must be unqualified; labeled exports are gated. `check/exports.rs` handles
+alias declarations and enforces unconditional file-level scope for exported types.
 
-`->alias<(Args)->Result>:module.function` re-exports an existing identity with an
-exact full signature (E207 on mismatch). Ordinary names must remain fresh (E203),
-while duplicate exports and function/data collisions use E205. Result-slot checking
-also catches unnamed record spreads; unreachable data emissions keep their rules.
-Matcher-arm/nested exports remain gated by file-frame and scope-depth checks.
-Function equality remains E222; HIR regressions verify shared/distinct call IDs.
+Each module retains separate `types` and `values` namespaces. `<module.Type>` resolves
+only exported type specifications; private/missing names use E202 and duplicate
+bindings use E203. Data/function exports may share a name with a type. No runtime
+field, storage or wrapper is created for a type declaration.
 
-Every graph file, including the entry, uses an isolated initializer binding;
-standalone file roots also support function definitions. Dependency data remains
-immutable/reference-free, while entry data retains its previous permissions.
-Functions are compile-time namespace entries, not runtime callable fields. No HIR,
-backend, runtime or dependency changes were required for calls.
+Resolved specifications retain structural alias identity, normalized record fields,
+mutability and existing nominal foundation tags. Type/signature copying charges
+existing proof work. Callable signature aliases work in typed function re-exports;
+stored function pointers remain gated. Existing computed type values can define
+aliases, without enabling general type-expression evaluation.
 
-Existing argument checks, shared/exclusive authority, public all-input bounds,
-private-storage escape rejection, initialization order and callee panic sites remain
-in force. Runtime module-data captures, borrowed module storage, exported types and
-package/manifest features stay gated. See [MODULES.md](MODULES.md#annotated-function-exports)
-and [the facade example](examples/function-modules/main.mwy).
+Standalone documentation preserves type roles, spans, checked signatures and E803
+public-doc policy. The typed geometry facade combines type, data and function exports.
+Private type names, runtime module-data captures, borrowed module storage, unsupported
+owning storage and package/manifest features retain their boundaries. See
+[MODULES.md](MODULES.md#exported-type-aliases) and
+[the example](examples/type-modules/main.mwy).
 
 ## Actual validation
 
-- Refactor: 14 library/35 native function groups and 47 checker tests passed.
-- Definition/re-export work: file regressions, E214/E207/E203/E205/E222 boundaries,
-  HIR call-ID identity, privacy, capture and cycle checks passed. Scope-depth
-  validation rejects conditional function exports.
-- Record-spread collision reproduced an incorrectly accepted duplicate; the shared
-  result-slot check now rejects it and preserves unreachable emissions.
-- Four cross-module call groups pass in debug/release: mixed data/function facade,
-  recursion, shared returns, exclusive arguments, all-input bounds, private-storage
-  escape and callee panic sites. Focused fmt/Clippy checks passed for every slice.
+- Parser slice: two focused groups, all 23 parser tests, documentation/module
+  regressions, formatting and Clippy passed before its commit.
+- Namespace slice: privacy, duplicates, separate type/value names, function-local
+  type use and scope gates pass; parser/file suites and fmt/Clippy passed.
+- Identity/integration: four library and six native exported-type groups pass,
+  including transparent facades, HIR nominal/primitive identity, computed aliases,
+  callable signatures, record permissions, reference bounds and the geometry example.
+  Native execution runs in debug/release where applicable.
+- Standalone documentation checks/builds, checked type signatures and missing-doc
+  E803 policy pass.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 667 library and 621 native Rust tests (1288 total), 16 tooling plus
-  4 compiler-harness Python tests, 79 standalone and two multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-function-exports-gate.log`.
+  Clippy, build, 671 library and 629 native Rust tests (1300 total), 16 tooling plus
+  4 compiler-harness Python tests, 79 standalone and three multi-file examples in
+  debug/release. Gate log: `/tmp/meowy-type-exports-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -108,7 +95,7 @@ lifecycle implementation precede executable adapters.
 | --- | --- |
 | Canonical graph, snapshots, bounds and dependency order | `src/modules.rs`, `src/modules/load.rs` |
 | Disjoint parser spans | `src/parser.rs::parse_documented_at` |
-| Module function identities, scopes and public signatures | `src/check/exports.rs`, `src/check/names.rs` |
+| Exported value/type namespaces, scopes and public signatures | `src/check/exports.rs`, `src/check/names.rs` |
 | Data export gate and shared declaration checking | `src/check/statements.rs`, `src/check/functions.rs` |
 | Complete graph checking and ownership | `src/check.rs::check_imports` |
 | File-mapped diagnostics and input/output protection | `src/driver.rs` |
@@ -117,19 +104,20 @@ lifecycle implementation precede executable adapters.
 
 ## Still outside this compiler
 
-The full package/manifest graph, type/resource module exports, generic specialization,
+The full package/manifest graph, resource module values, generic specialization,
 captures, public FFI, wider ownership/cleanup, executable networking, public artifacts/replay and LSP remain
 separate. Host execution does not qualify minimum platforms or bundled distributions.
 Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Plan small exported-type slices from `parser/statements.rs`, `ast.rs`,
-   `check/names.rs` and `check/exports.rs`. Represent the type namespace explicitly,
-   preserve private aliases/canonical identity and support the documented `-><Name>:`
-   boundary without inventing syntax. Include parser and multi-file tests with each
-   implementation step, then run the compiler gate. Package policy stays separate.
-2. Keep runtime module-data captures, borrowed exports and callable storage gated
-   until their storage/lifetime proofs exist. Preserve ownership/header certificates,
-   call/input opacity, old copies and owner expiry. Keep STATUS current, commit
+1. Plan broader literal import discovery through `modules/load.rs`, the AST and
+   `check/names.rs::symbol`. The loader currently scans only top-level immutable
+   bindings. Traverse supported expression/type operands with bounded work and
+   preserve source order, canonical identity, cycles and once-only initialization.
+   Qualify additional import locations in small tested slices; preserve runtime
+   module-data capture and package/manifest gates.
+2. Keep general type evaluation, generic specialization, callable storage and borrowed
+   module values separate until their rules are proved. Preserve ownership/header
+   certificates, call/input opacity and owner expiry. Keep STATUS current, commit
    validated slices as they finish, and do not push or recreate STEP logs.
