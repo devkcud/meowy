@@ -1,7 +1,8 @@
 # Meowy compiler bootstrap
 
 This directory contains a working Rust compiler with a C++20 LLVM backend.
-It checks standalone Meowy source and produces Linux x86-64 native executables.
+It checks standalone Meowy source and bounded relative file modules, and produces
+Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to local and emitted storage, including guarded
 block results, fixed mutable records and unions carrying references, direct-function
@@ -14,6 +15,10 @@ field writes, shared-reference members, restart headers and shared snapshots. Ow
 storage and constructors remain gated.
 Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
 and [AGENTS.md](AGENTS.md) before changing the implementation.
+
+[Relative file modules](MODULES.md) support top-level imports of immutable
+reference-free value exports with canonical identity and ordered initialization.
+Function/type exports, package manifests and borrowed module exports remain gated.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
@@ -33,6 +38,7 @@ From the repository root:
 cargo build --locked --manifest-path compiler/Cargo.toml
 compiler/target/debug/meowy check compiler/examples/factorial.mwy
 compiler/target/debug/meowy run compiler/examples/hello.mwy
+compiler/target/debug/meowy run compiler/examples/modules/main.mwy
 compiler/target/debug/meowy run compiler/examples/heap-handles.mwy
 compiler/target/debug/meowy run compiler/examples/allocator-bounds.mwy
 compiler/target/debug/meowy run compiler/examples/mutable-allocators.mwy

@@ -37,7 +37,7 @@ Documentation options:
   --example-timeout-ms N   Per-example limit, 1..60000 (default 5000)
 
 Bootstrap options:
-  --standalone             Check one file outside ancestor manifest policy
+  --standalone             Check source outside ancestor manifest policy
   --json                   Emit bootstrap JSON diagnostics on stderr
   --emit-llvm PATH          Preserve LLVM IR (build only)
 
@@ -325,11 +325,21 @@ pub(crate) fn execute(opts: &Options) -> i32 {
     if matches!(opts.action, Action::DocCheck | Action::DocBuild) {
         return crate::documentation::execute(opts, source, &entry);
     }
-    let program = match crate::compile(source) {
+    let graph = match crate::modules::Graph::load(&entry, source) {
+        Ok(graph) => graph,
+        Err(failure) => {
+            for error in &failure.errors {
+                report_at(opts, &failure.path, &failure.source, error);
+            }
+            return 1;
+        }
+    };
+    let program = match graph.compile() {
         Ok(program) => program,
         Err(errors) => {
             for error in errors {
-                report(opts, source, &error);
+                let file = graph.file(error.span);
+                report_at(opts, &file.path, &file.source, &file.local(&error));
             }
             return 1;
         }
@@ -347,9 +357,11 @@ pub(crate) fn execute(opts: &Options) -> i32 {
             .join(entry.file_stem().unwrap_or_default())
     });
     for path in std::iter::once(&output).chain(opts.ir.iter()) {
-        if let Err(err) = protect(path, &entry) {
-            eprintln!("meowy: {err}");
-            return 2;
+        for file in &graph.files {
+            if let Err(err) = protect(path, &file.path) {
+                eprintln!("meowy: {err}");
+                return 2;
+            }
         }
     }
     if opts
@@ -577,6 +589,10 @@ pub(crate) fn exit_code(status: ExitStatus) -> i32 {
 }
 
 pub(crate) fn report(opts: &Options, source: &str, error: &Diagnostic) {
+    report_at(opts, &opts.entry, source, error);
+}
+
+pub(crate) fn report_at(opts: &Options, path: &Path, source: &str, error: &Diagnostic) {
     let start = floor_char(source, error.span.start.min(source.len()));
     let line = source[..start].bytes().filter(|b| *b == b'\n').count() + 1;
     let left = source[..start].rfind('\n').map_or(0, |i| i + 1);
@@ -586,7 +602,7 @@ pub(crate) fn report(opts: &Options, source: &str, error: &Diagnostic) {
             "{{\"schema\":\"meowy.bootstrap.diagnostic\",\"version\":1,\"code\":{},\"message\":{},\"path\":{},\"start\":{},\"end\":{},\"line\":{line},\"column\":{column}}}",
             json(error.code),
             json(&error.message),
-            json(&opts.entry.to_string_lossy()),
+            json(&path.to_string_lossy()),
             error.span.start,
             error.span.end
         );
@@ -598,7 +614,7 @@ pub(crate) fn report(opts: &Options, source: &str, error: &Diagnostic) {
         ("", "")
     };
     eprintln!("{red}error[{}]{reset}: {}", error.code, error.message);
-    eprintln!("  --> {}:{line}:{column}", opts.entry.display());
+    eprintln!("  --> {}:{line}:{column}", path.display());
     if source.is_empty() {
         return;
     }

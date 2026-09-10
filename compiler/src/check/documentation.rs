@@ -109,6 +109,7 @@ impl Checker {
                 )
             }
             Value::Module(module) => format!("module {}", module.name()),
+            Value::FileModule { .. } => "file module".into(),
             Value::Foundation(item) => format!("intrinsic {}", item.name()),
             Value::Print => "intrinsic debug.print".into(),
             Value::Panic => "intrinsic debug.panic".into(),

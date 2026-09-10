@@ -1,0 +1,5 @@
+d:@"debug"
+d.print("entry")
+left:@"./left.mwy"
+right:@"./right.mwy"
+d.print(left.n+right.n)

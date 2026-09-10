@@ -248,6 +248,31 @@ impl Checker {
     }
 
     pub(crate) fn borrowed(&mut self, expr: &ast::Expr, span: Span) -> Result<hir::Expr> {
+        if !self.imports.is_empty() {
+            let mut root = expr;
+            loop {
+                if !self.flow.spend(1) {
+                    return Err(Diagnostic::unsupported(
+                        "file-module reference path budget exhausted",
+                        span,
+                    ));
+                }
+                match &root.kind {
+                    ExprKind::Group(value)
+                    | ExprKind::Field { value, .. }
+                    | ExprKind::Index { value, .. } => root = value,
+                    _ => break,
+                }
+            }
+            if matches!(root.kind, ExprKind::Name(_) | ExprKind::Import(_))
+                && matches!(self.symbol(root)?, Some(Value::FileModule { .. }))
+            {
+                return Err(Diagnostic::unsupported(
+                    "references to file-module storage",
+                    span,
+                ));
+            }
+        }
         match &expr.kind {
             ExprKind::Group(value) => return self.borrowed(value, span),
             ExprKind::Index { value, index } => return self.element_borrow(value, index, span),

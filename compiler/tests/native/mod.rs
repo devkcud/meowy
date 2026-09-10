@@ -39,6 +39,7 @@ pub(crate) mod exclusive_slot_fields;
 pub(crate) mod exclusive_slots;
 pub(crate) mod expired_restarts;
 pub(crate) mod fields;
+pub(crate) mod file_modules;
 pub(crate) mod fixed_published;
 pub(crate) mod function_borrows;
 pub(crate) mod guarded_references;

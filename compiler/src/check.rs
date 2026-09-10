@@ -43,6 +43,10 @@ pub(crate) enum Value {
     },
     Constant(Constant),
     Module(crate::foundation::Module),
+    FileModule {
+        id: usize,
+        ty: Type,
+    },
     Foundation(crate::foundation::Item),
     Function {
         id: usize,
@@ -119,6 +123,7 @@ pub(crate) struct Checker {
     pub(crate) block_lengths: BTreeMap<usize, crate::list::Fact>,
     pub(crate) required: bool,
     pub(crate) documentation: Option<crate::documentation::Model>,
+    pub(crate) imports: BTreeMap<usize, String>,
 }
 
 pub fn check(block: &ast::Block) -> std::result::Result<hir::Program, Vec<Diagnostic>> {
@@ -129,8 +134,17 @@ pub(crate) fn check_documented(
     block: &ast::Block,
     docs: Option<crate::documentation::Model>,
 ) -> std::result::Result<(hir::Program, Option<crate::documentation::Model>), Vec<Diagnostic>> {
+    check_imports(block, docs, BTreeMap::new())
+}
+
+pub(crate) fn check_imports(
+    block: &ast::Block,
+    docs: Option<crate::documentation::Model>,
+    imports: BTreeMap<usize, String>,
+) -> std::result::Result<(hir::Program, Option<crate::documentation::Model>), Vec<Diagnostic>> {
     let mut checker = Checker::new();
     checker.documentation = docs;
+    checker.imports = imports;
     match checker.block(block, None, None) {
         Ok(body) => {
             let program = hir::Program {
@@ -223,6 +237,7 @@ impl Checker {
             block_lengths: BTreeMap::new(),
             required: false,
             documentation: None,
+            imports: BTreeMap::new(),
         }
     }
 

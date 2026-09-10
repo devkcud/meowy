@@ -180,6 +180,12 @@ impl Parser {
 
     pub(crate) fn emission(&mut self, label: Option<String>) -> ParseResult<StmtKind> {
         self.newlines();
+        if self.at("<") && self.annotation_binding(self.pos) {
+            return Err(Diagnostic::unsupported(
+                "exported type declarations",
+                self.token().span,
+            ));
+        }
         let (name, ty, mutable) = match self.binding_head()? {
             Some((name, ty, mutable)) => (Some(name), ty, mutable),
             None => (None, None, false),

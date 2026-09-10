@@ -122,6 +122,19 @@ impl Checker {
                         expr.span,
                     ));
                 }
+                Value::FileModule { id, ty } => {
+                    if self.owner != 0 {
+                        return Err(Diagnostic::unsupported(
+                            "file-module values in function bodies",
+                            expr.span,
+                        ));
+                    }
+                    return Ok(hir::Expr {
+                        kind: hir::ExprKind::Local(id),
+                        ty,
+                        span: expr.span,
+                    });
+                }
                 Value::Local { id, ty, .. } => {
                     return self.narrow(hir::Expr {
                         kind: hir::ExprKind::Local(id),

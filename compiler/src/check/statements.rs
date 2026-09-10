@@ -85,6 +85,17 @@ impl Checker {
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
                 let value = self.expr(value, expected.as_ref())?;
                 let ty = expected.unwrap_or_else(|| value.ty.clone());
+                if name.starts_with('\0')
+                    && (ty.has_mutable_fields()
+                        || (ty != Type::Null
+                            && ty != Type::Never
+                            && !crate::borrow::carried::eligible(&ty, &mut self.flow, stmt.span)?))
+                {
+                    return Err(Diagnostic::unsupported(
+                        "file-module exports outside immutable reference-free values",
+                        stmt.span,
+                    ));
+                }
                 if *mutable
                     && ty.has_reference()
                     && !matches!(ty, Type::Reference(_) | Type::Exclusive(_))

@@ -14,6 +14,7 @@ pub mod lexer;
 pub(crate) mod list;
 pub(crate) mod list_context;
 pub(crate) mod loans;
+pub(crate) mod modules;
 pub mod parser;
 
 pub fn compile(source: &str) -> Result<hir::Program, Vec<diagnostic::Diagnostic>> {

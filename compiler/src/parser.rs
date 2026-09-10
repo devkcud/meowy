@@ -32,12 +32,32 @@ pub struct Parsed {
 }
 
 pub fn parse_documented(source: &str) -> Result<Parsed, Vec<Diagnostic>> {
-    let tokens = lexer::lex(source)?;
+    parse_documented_at(source, 0)
+}
+
+pub(crate) fn parse_documented_at(source: &str, base: usize) -> Result<Parsed, Vec<Diagnostic>> {
+    if base.checked_add(source.len()).is_none() {
+        return Err(vec![Diagnostic::unsupported(
+            "source span budget exhausted",
+            crate::ast::Span::default(),
+        )]);
+    }
+    let mut tokens = lexer::lex(source).map_err(|mut errors| {
+        for error in &mut errors {
+            error.span.start += base;
+            error.span.end += base;
+        }
+        errors
+    })?;
+    for token in &mut tokens {
+        token.span.start += base;
+        token.span.end += base;
+    }
     let mut parser = Parser::new(tokens);
     if !parser.errors.is_empty() {
         return Err(parser.errors);
     }
-    let block = parser.block(None, false, 0);
+    let block = parser.block(None, false, base);
     if parser.errors.is_empty() {
         parser.docs.sort_by_key(|doc| doc.open.start);
         parser.docs.dedup_by_key(|doc| doc.open.start);
