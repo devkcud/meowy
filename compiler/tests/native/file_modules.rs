@@ -328,3 +328,40 @@ pub(crate) fn file_function_exports_reject_record_spread_collisions() {
     )
     .runs(b"1\n");
 }
+
+#[test]
+pub(crate) fn file_type_exports_keep_type_and_value_namespaces_separate() {
+    case("m:@\"./types.mwy\";d:@\"debug\";x<m.Box>:{->n:=1};x.n=2;v<m.T>:5;d.print(x.n);d.print(v);d.print(m.T);->get<m.T>:(){->7};d.print(get())", &[
+        ("types.mwy", "<Private>:<{n<int32>:=}>;-><Box>:<Private>;-><T>:<int32>;->T:9"),
+    ]).runs(b"2\n5\n9\n7\n");
+    Case::new("-><T>:<int32>;d:@\"debug\";x<T>:7;d.print(x)").runs(b"7\n");
+}
+
+#[test]
+pub(crate) fn file_type_exports_preserve_private_names_duplicates_and_scope_gates() {
+    for (entry, source, code) in [
+        (
+            "m:@\"./types.mwy\";x<m.Private>:1",
+            "<Private>:<int32>;-><Public>:<Private>",
+            "E202",
+        ),
+        ("m:@\"./types.mwy\";v:m.T", "-><T>:<int32>", "E201"),
+        ("m:@\"./types.mwy\";x<m.T>:1", "->T:7", "E202"),
+        ("m:@\"./types.mwy\"", "-><T>:<int32>;-><T>:<int32>", "E203"),
+        ("m:@\"./types.mwy\"", "<T>:<int32>;-><T>:<int32>", "E203"),
+        ("m:@\"./types.mwy\"", "|true|-><T>:<int32>", "B001"),
+        ("m:@\"./types.mwy\"", "f<null>:(){-><T>:<int32>}", "B001"),
+        ("m:@\"./types.mwy\"", "{-><T>:<int32>}", "B001"),
+    ] {
+        let case = case(entry, &[("types.mwy", source)]);
+        for profile in ["debug", "release"] {
+            let output = case.command("check", &["--json", "--profile", profile]);
+            assert_eq!(output.status.code(), Some(1), "{entry}: {source}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains(&format!("\"code\":\"{code}\"")),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+}

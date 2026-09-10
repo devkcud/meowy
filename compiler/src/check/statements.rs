@@ -64,7 +64,7 @@ impl Checker {
                 let expected = ty.as_ref().map(|ty| self.ty(ty)).transpose()?;
                 let (value, exports) = if name.starts_with('\0') {
                     let (value, module) = self.module_value(value, expected.as_ref())?;
-                    (value, Some(module.values))
+                    (value, Some(module))
                 } else {
                     (self.expr(value, expected.as_ref())?, None)
                 };
@@ -121,25 +121,7 @@ impl Checker {
                 Ok(vec![hir::Stmt::Bind { id, value }])
             }
             StmtKind::TypeAlias { name, ty, exported } => {
-                if *exported {
-                    return Err(Diagnostic::unsupported(
-                        "exported type declarations",
-                        stmt.span,
-                    ));
-                }
-                let spec = self.spec(ty)?;
-                let scope = self.scopes.last_mut().expect("scope");
-                if scope.types.contains_key(name) {
-                    return Err(Self::error(
-                        "E203",
-                        format!("type `{name}` is already declared in this scope"),
-                        stmt.span,
-                    ));
-                }
-                scope.types.insert(name.clone(), spec);
-                if self.documentation.is_some() {
-                    scope.doc_types.insert(name.clone(), stmt.span.start);
-                }
+                self.declare_type(name, ty, *exported, stmt.span)?;
                 Ok(Vec::new())
             }
             StmtKind::Assign { target, value } => {

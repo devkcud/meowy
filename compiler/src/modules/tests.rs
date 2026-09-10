@@ -160,14 +160,10 @@ pub(crate) fn file_modules_reject_invalid_import_contents_and_exact_paths() {
         );
     }
     fs::write(temp.path.join("value.mwy"), "-><Point>:<int32>").unwrap();
-    assert_eq!(
-        Graph::load(&entry, "m:@\"./value.mwy\"")
-            .unwrap()
-            .compile()
-            .unwrap_err()[0]
-            .code,
-        "B001"
-    );
+    Graph::load(&entry, "m:@\"./value.mwy\"")
+        .unwrap()
+        .compile()
+        .unwrap();
     fs::write(temp.path.join("value.mwy"), "->n:missing\n").unwrap();
     let graph = Graph::load(&entry, "m:@\"./value.mwy\"").unwrap();
     fs::write(temp.path.join("value.mwy"), "->n:7").unwrap();

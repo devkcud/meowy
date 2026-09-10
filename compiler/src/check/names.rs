@@ -88,6 +88,9 @@ impl Checker {
         match &expr.kind {
             TypeKind::Name(name) => {
                 if let Some((module, member)) = name.split_once('.') {
+                    if let Value::FileModule { id, .. } = self.value(module, expr.span)? {
+                        return self.module_type(id, member, expr.span);
+                    }
                     if let Value::Module(module) = self.value(module, expr.span)?
                         && module == Module::Core
                     {

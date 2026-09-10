@@ -262,7 +262,7 @@ pub(crate) fn exported_types_parse_distinct_namespace_flags_and_shifted_spans() 
             ..
         }
     ));
-    assert_eq!(crate::compile("-><T>:<int32>").unwrap_err()[0].code, "B001");
+    assert!(crate::compile("-><T>:<int32>").is_ok());
 }
 
 #[test]

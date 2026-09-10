@@ -125,7 +125,7 @@ pub(crate) struct Checker {
     pub(crate) required: bool,
     pub(crate) documentation: Option<crate::documentation::Model>,
     pub(crate) imports: BTreeMap<usize, String>,
-    pub(crate) exports: BTreeMap<usize, BTreeMap<String, Value>>,
+    pub(crate) exports: BTreeMap<usize, exports::Module>,
     pub(crate) module: exports::Module,
 }
 

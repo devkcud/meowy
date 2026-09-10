@@ -12,9 +12,11 @@ Git holds history. Do not recreate STEP logs.
 
 1. Exported aliases have an explicit AST flag and share private-alias parsing.
    Two focused groups, all 23 parser tests, documentation/module regressions, fmt
-   and Clippy pass. Ready to commit; semantic use stays gated until integration.
-2. Add a separate exported type namespace and qualified type lookup. Support
-   standalone/imported aliases with privacy, duplicate and scope regressions.
+   and Clippy pass. Committed as `2e5ea62`.
+2. Separate exported type metadata, qualified lookup and alias declaration checks
+   are implemented. Standalone/imported privacy, duplicate and scope regressions
+   pass in both profiles. All parser/file regressions, fmt and Clippy pass;
+   this namespace slice is ready to commit.
 3. Qualify transparent alias/re-export identity, including computed type context,
    callable signatures, existing nominal types and value/type name separation.
 4. Exercise documentation and a runnable typed facade with focused integration tests.

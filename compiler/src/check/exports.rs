@@ -9,6 +9,7 @@ pub(crate) struct Module {
     pub(crate) block: usize,
     pub(crate) depth: usize,
     pub(crate) values: BTreeMap<String, Value>,
+    pub(crate) types: BTreeMap<String, Spec>,
 }
 
 impl Checker {
@@ -29,6 +30,7 @@ impl Checker {
                 block: self.block,
                 depth: self.scopes.len() + 1,
                 values: BTreeMap::new(),
+                types: BTreeMap::new(),
             },
         );
         let result = self.expr(value, expected);
@@ -130,6 +132,87 @@ impl Checker {
         Ok(true)
     }
 
+    pub(crate) fn declare_type(
+        &mut self,
+        name: &str,
+        ty: &ast::TypeExpr,
+        exported: bool,
+        span: Span,
+    ) -> Result<()> {
+        if exported
+            && (self.owner != 0
+                || self.scopes.len() != self.module.depth
+                || self
+                    .frames
+                    .last()
+                    .is_none_or(|frame| frame.id != self.module.block))
+        {
+            return Err(Diagnostic::unsupported("non-top-level type exports", span));
+        }
+        if exported && !self.flow.spend(name.len() + self.module.types.len() + 1) {
+            return Err(Diagnostic::unsupported(
+                "module type export budget exhausted",
+                span,
+            ));
+        }
+        let spec = self.spec(ty)?;
+        if exported {
+            Self::charge_spec(&spec, &mut self.flow, span)?;
+        }
+        let scope = self.scopes.last_mut().expect("scope");
+        if scope.types.contains_key(name) {
+            return Err(Self::error(
+                "E203",
+                format!("type `{name}` is already declared in this scope"),
+                span,
+            ));
+        }
+        if exported {
+            self.module.types.insert(name.into(), spec.clone());
+        }
+        scope.types.insert(name.into(), spec);
+        if self.documentation.is_some() {
+            scope.doc_types.insert(name.into(), span.start);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn charge_spec(spec: &Spec, flow: &mut crate::flow::Flow, span: Span) -> Result<()> {
+        match spec {
+            Spec::Data(ty) => {
+                crate::borrow_contract::type_weight(ty, flow, span)?;
+            }
+            Spec::Function { params, result } => {
+                for ty in params.iter().chain(std::iter::once(result)) {
+                    crate::borrow_contract::type_weight(ty, flow, span)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn module_type(&mut self, id: usize, name: &str, span: Span) -> Result<Spec> {
+        if !self.flow.spend(name.len() + self.exports.len() + 1) {
+            return Err(Diagnostic::unsupported(
+                "module type lookup budget exhausted",
+                span,
+            ));
+        }
+        let spec = self
+            .exports
+            .get(&id)
+            .and_then(|module| module.types.get(name))
+            .ok_or_else(|| {
+                Self::error(
+                    "E202",
+                    format!("module has no exported type `{name}`"),
+                    span,
+                )
+            })?;
+        Self::charge_spec(spec, &mut self.flow, span)?;
+        Ok(spec.clone())
+    }
+
     pub(crate) fn module_member(
         &mut self,
         id: usize,
@@ -143,7 +226,11 @@ impl Checker {
                 span,
             ));
         }
-        if let Some(value) = self.exports.get(&id).and_then(|values| values.get(name)) {
+        if let Some(value) = self
+            .exports
+            .get(&id)
+            .and_then(|module| module.values.get(name))
+        {
             return Ok(Some(value.clone()));
         }
         if let Type::Record { fields, .. } = ty {
