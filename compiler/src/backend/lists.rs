@@ -156,13 +156,13 @@ impl<'a> Generator<'a> {
         let zero = self.value(format!("icmp eq i64 {position}, 0"));
         let beyond = self.value(format!("icmp ugt i64 {position}, {length}"));
         let invalid = self.value(format!("or i1 {zero}, {beyond}"));
-        self.list_guard(
-            &invalid,
-            format!(
-                "call void @meowy_index_capture_v0(ptr %panic, i64 {position}, i64 {length}, i32 {}, i64 {}, i64 {})",
-                i32::from(signed), span.start, span.end
-            ),
-        );
+        let call = self.capture(
+            "index_capture",
+            "%panic",
+            &format!("i64 {position}, i64 {length}, i32 {}", i32::from(signed)),
+            span,
+        )?;
+        self.list_guard(&invalid, call);
         Ok(self.value(format!("sub i64 {position}, 1")))
     }
 
@@ -188,13 +188,13 @@ impl<'a> Generator<'a> {
         }
         let result = self.coerce(&item.ty, element, &result)?;
         let full = self.value(format!("icmp uge i64 {length}, {capacity}"));
-        self.list_guard(
-            &full,
-            format!(
-                "call void @meowy_list_capture_v0(ptr %panic, i64 {length}, i64 {capacity}, i64 {}, i64 {})",
-                span.start, span.end
-            ),
-        );
+        let call = self.capture(
+            "list_capture",
+            "%panic",
+            &format!("i64 {length}, i64 {capacity}"),
+            span,
+        )?;
+        self.list_guard(&full, call);
         let dest = self.list_item(&value.ty, &ptr, &length);
         self.store_value(element, &result, &dest);
         let size = self.value(format!("add i64 {length}, 1"));

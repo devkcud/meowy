@@ -10,6 +10,7 @@ mod generated_owned;
 mod generated_strings;
 mod immutable_aliases;
 mod lists;
+mod mapped_checks;
 mod mixed_assignments;
 mod mutable_references;
 mod nested_assignments;

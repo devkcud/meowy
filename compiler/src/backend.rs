@@ -222,6 +222,9 @@ impl<'a> Generator<'a> {
             "declare void @meowy_arithmetic_capture_v0(ptr, i32, i32, i32, i64, i64, i64, i64)",
             "declare void @meowy_index_capture_v0(ptr, i64, i64, i32, i64, i64)",
             "declare void @meowy_list_capture_v0(ptr, i64, i64, i64, i64)",
+            "declare void @meowy_arithmetic_capture_file_v0(ptr, i32, i32, i32, i64, i64, i64, i64, ptr, i64)",
+            "declare void @meowy_index_capture_file_v0(ptr, i64, i64, i32, i64, i64, ptr, i64)",
+            "declare void @meowy_list_capture_file_v0(ptr, i64, i64, i64, i64, ptr, i64)",
         ];
         Ok(format!(
             "target triple = \"x86_64-unknown-linux-gnu\"\n\n{}\n\n{}\n{}\n\n{}\n",
@@ -588,7 +591,7 @@ impl<'a> Generator<'a> {
                     ("!", Type::Bool) => Ok(self.value(format!("xor i1 {result}, true"))),
                     ("~", Type::Int { .. }) => Ok(self.value(format!("xor {ty} {result}, -1"))),
                     ("-", Type::Int { .. }) => {
-                        Ok(self.checked("-", &expression.ty, &result, None, expression.span))
+                        self.checked("-", &expression.ty, &result, None, expression.span)
                     }
                     ("-", Type::Float { .. }) => Ok(self.value(format!("fneg {ty} {result}"))),
                     _ => Err(format!("unsupported checked unary operator {op}")),

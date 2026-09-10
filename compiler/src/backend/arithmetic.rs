@@ -10,7 +10,7 @@ impl<'a> Generator<'a> {
         left: &str,
         right: Option<&str>,
         span: Span,
-    ) -> String {
+    ) -> Result<String, String> {
         let Type::Int { bits, signed } = ty else {
             unreachable!()
         };
@@ -30,8 +30,8 @@ impl<'a> Generator<'a> {
             "call {{ i{bits}, i1 }} @{name}(i{bits} {first}, i{bits} {second})"
         ));
         let overflow = self.value(format!("extractvalue {{ i{bits}, i1 }} {pair}, 1"));
-        self.arithmetic_guard(&overflow, op, ty, (left, right), span);
-        self.value(format!("extractvalue {{ i{bits}, i1 }} {pair}, 0"))
+        self.arithmetic_guard(&overflow, op, ty, (left, right), span)?;
+        Ok(self.value(format!("extractvalue {{ i{bits}, i1 }} {pair}, 0")))
     }
 
     pub(crate) fn arithmetic_guard(
@@ -41,7 +41,7 @@ impl<'a> Generator<'a> {
         ty: &Type,
         operands: (&str, Option<&str>),
         span: Span,
-    ) {
+    ) -> Result<(), String> {
         let Type::Int { bits, signed } = ty else {
             unreachable!()
         };
@@ -61,12 +61,19 @@ impl<'a> Generator<'a> {
         } else {
             i32::from(op.as_bytes()[0])
         };
-        self.line(format!(
-            "call void @meowy_arithmetic_capture_v0(ptr %panic, i32 {operation}, i32 {bits}, i32 {}, i64 {left}, i64 {right}, i64 {}, i64 {})",
-            i32::from(*signed), span.start, span.end
-        ));
+        let call = self.capture(
+            "arithmetic_capture",
+            "%panic",
+            &format!(
+                "i32 {operation}, i32 {bits}, i32 {}, i64 {left}, i64 {right}",
+                i32::from(*signed)
+            ),
+            span,
+        )?;
+        self.line(call);
         self.jump("panic_exit");
         self.label(&next);
+        Ok(())
     }
 
     pub(crate) fn binary(
@@ -117,7 +124,7 @@ impl<'a> Generator<'a> {
                 let mut divisor = second.clone();
                 let operation = match op {
                     "+" | "-" | "*" => {
-                        return Ok(self.checked(op, &left.ty, &first, Some(&second), span));
+                        return self.checked(op, &left.ty, &first, Some(&second), span);
                     }
                     "/" | "%" => {
                         let zero = self.value(format!("icmp eq {ty} {second}, 0"));
@@ -142,7 +149,7 @@ impl<'a> Generator<'a> {
                             &left.ty,
                             (&first, Some(&second)),
                             span,
-                        );
+                        )?;
                         match (op, signed) {
                             ("/", true) => "sdiv",
                             ("/", false) => "udiv",
