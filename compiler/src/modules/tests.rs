@@ -326,3 +326,17 @@ pub(crate) fn discovered_imports_traverse_type_operands_and_bound_work() {
     assert_eq!(graph.files.len(), 2);
     graph.compile().unwrap();
 }
+
+#[test]
+pub(crate) fn discovered_imports_fail_closed_on_large_trees_and_duplicate_sites() {
+    let mut block = crate::parser::parse("x:1").unwrap();
+    block.stmts = vec![block.stmts[0].clone(); super::discover::MAX_WORK / 2];
+    let error = super::discover::imports(&block).unwrap_err();
+    assert_eq!(error.code, "B001");
+    assert!(error.message.contains("work exhausted"));
+    let mut block = crate::parser::parse("m:@\"./one.mwy\"").unwrap();
+    block.stmts.push(block.stmts[0].clone());
+    let error = super::discover::imports(&block).unwrap_err();
+    assert_eq!(error.code, "B001");
+    assert!(error.message.contains("duplicate import source site"));
+}

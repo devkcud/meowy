@@ -17,9 +17,11 @@ Git holds history. Do not recreate STEP logs.
    applying runtime-local capture checks to that identity. Function/type uses and
    unchanged data-capture/privacy gates pass three native groups in both profiles.
    Module compatibility suites (8 library/17 native), fmt and Clippy also pass;
-   this slice is ready to commit.
-3. Qualify inactive/unused imports, nested cycles/errors, budgets and a runnable
-   example, without weakening source/output protection or package policy.
+   committed as `b2a06be`.
+3. Added inactive/unused import, cycle/missing-path, complete-tree budget,
+   initializer failure and dependency hard-link tests plus a runnable example.
+   Three discovery groups and seven scoped-import groups pass, including the
+   example in both profiles. Formatting and Clippy pass; ready to commit.
 4. Document the supported locations and run the compiler gate across the series.
 
 Keep each commit buildable with focused tests and within the 400-line/8-file

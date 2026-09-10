@@ -50,3 +50,104 @@ pub(crate) fn scoped_imports_keep_exported_reference_and_exclusive_call_rules() 
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E302\""));
 }
+
+#[test]
+pub(crate) fn scoped_imports_example_initializes_unused_and_inactive_dependencies() {
+    case(
+        include_str!("../../examples/scoped-imports/main.mwy"),
+        &[
+            (
+                "side.mwy",
+                include_str!("../../examples/scoped-imports/side.mwy"),
+            ),
+            (
+                "ops.mwy",
+                include_str!("../../examples/scoped-imports/ops.mwy"),
+            ),
+        ],
+    )
+    .runs(b"side\nops\nentry\n8\nagain 9\n");
+}
+
+#[test]
+pub(crate) fn scoped_imports_report_missing_paths_and_nested_cycles_at_the_import() {
+    for source in [
+        "unused<null>:(){m:@\"./missing.mwy\"}",
+        "|false|{m:@\"./missing.mwy\"}",
+        "<Items>:<int32[(@\"./missing.mwy\").n]>",
+    ] {
+        let case = case(source, &[]);
+        let output = case.command("check", &["--json"]);
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(error.contains("\"code\":\"E501\""), "{error}");
+        assert!(
+            error.contains(&format!("\"start\":{}", source.find('@').unwrap())),
+            "{error}"
+        );
+    }
+    let closing = "|false|{a:@\"./a.mwy\"}";
+    let case = case(
+        "m:@\"./a.mwy\"",
+        &[
+            ("a.mwy", "unused<null>:(){b:@\"./b.mwy\"}"),
+            ("b.mwy", closing),
+        ],
+    );
+    let output = case.command("check", &["--json"]);
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(error.contains("\"code\":\"E502\""), "{error}");
+    assert!(
+        error.contains(&format!(
+            "\"path\":\"{}\"",
+            case.path.join("b.mwy").display()
+        )),
+        "{error}"
+    );
+    assert!(
+        error.contains(&format!("\"start\":{}", closing.find('@').unwrap())),
+        "{error}"
+    );
+}
+
+#[test]
+pub(crate) fn scoped_imports_preserve_initializer_failure_and_ignore_literal_text() {
+    let source = "d:@\"debug\";d.panic(\"startup\")";
+    let case = case(
+        "d:@\"debug\";unused<null>:(){m:@\"./bad.mwy\"};d.print(\"never\")",
+        &[("bad.mwy", source)],
+    );
+    for profile in ["debug", "release"] {
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            output.stderr,
+            format!(
+                "panic[P006]: startup at \"{}\" bytes 11..{}\n",
+                case.path.join("bad.mwy").display(),
+                source.len()
+            )
+            .as_bytes()
+        );
+    }
+    super::Case::new("d:@\"debug\";# @\"./missing.mwy\" #d.print(\"@\\\"./missing.mwy\\\"\")")
+        .runs(b"@\"./missing.mwy\"\n");
+}
+
+#[cfg(unix)]
+#[test]
+pub(crate) fn scoped_imports_protect_dependencies_used_only_inside_functions() {
+    let source = "->n:7";
+    let case = case(
+        "unused<null>:(){m:@\"./value.mwy\"}",
+        &[("value.mwy", source)],
+    );
+    let output = case.path.join("artifact");
+    std::fs::hard_link(case.path.join("value.mwy"), &output).unwrap();
+    let result = case.command("build", &["--output", output.to_str().unwrap()]);
+    assert_eq!(result.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&result.stderr).contains("hard link to the source"));
+    assert_eq!(std::fs::read_to_string(output).unwrap(), source);
+}

@@ -1,0 +1,11 @@
+d:@"debug"
+unused<null>:(){side:@"./side.mwy"}
+calc<int32>:(value<int32>){
+    ops:@"./ops.mwy"
+    n<ops.Number>:value
+    ->ops.inc(n)
+}
+d.print("entry")
+d.print(calc(7))
+|false|d.print((@"./side.mwy").n)
+d.print("again {(@"./ops.mwy").inc(8)}")
