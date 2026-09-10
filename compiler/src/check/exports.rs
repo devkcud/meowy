@@ -61,13 +61,6 @@ impl Checker {
                 span,
             ));
         }
-        if self.module.values.contains_key(name) {
-            return Err(Self::error(
-                "E205",
-                format!("module export `{name}` is already emitted"),
-                span,
-            ));
-        }
         let function = if matches!(value.kind, ExprKind::Function { .. }) {
             None
         } else {
@@ -76,6 +69,13 @@ impl Checker {
                 _ => return Ok(false),
             }
         };
+        if self.module.values.contains_key(name) {
+            return Err(Self::error(
+                "E205",
+                format!("module export `{name}` is already emitted"),
+                span,
+            ));
+        }
         if self.scopes.len() != self.module.depth {
             return Err(Diagnostic::unsupported(
                 "conditional function exports",

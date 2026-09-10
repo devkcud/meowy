@@ -612,6 +612,24 @@ impl Checker {
         if self.reach == FALSE {
             return Ok(());
         }
+        if target == self.module.block
+            && !self.module.values.is_empty()
+            && let Some(name) = &name
+        {
+            if !self.flow.spend(name.len() + self.module.values.len() + 1) {
+                return Err(Diagnostic::unsupported(
+                    "module export budget exhausted",
+                    span,
+                ));
+            }
+            if self.module.values.contains_key(name) {
+                return Err(Self::error(
+                    "E205",
+                    format!("module export `{name}` is already emitted"),
+                    span,
+                ));
+            }
+        }
         let frame = self
             .frames
             .iter()

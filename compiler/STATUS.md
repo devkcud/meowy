@@ -23,10 +23,14 @@ Git holds history. Do not recreate STEP logs.
    and import-cycle regressions are being checked. Function equality remains E222;
    the identity test now inspects HIR call IDs instead of inventing equality support.
    An explicit scope-depth check also keeps matcher-arm exports gated. All file
-   regressions (11 library/14 native groups), fmt and Clippy pass; ready to commit.
-4. Qualify cross-module borrow/call and panic behavior with focused regressions
-   and a runnable example; keep runtime module-data captures and type exports gated.
-5. Update documentation/handoff and run the full compiler gate across the series.
+   regressions (11 library/14 native groups), fmt and Clippy pass; committed as `3b31d61`.
+4. A boundary test found record-spread data emissions could collide with function
+   exports. The shared result-slot check now rejects collisions and preserves
+   unreachable data emissions. Focused regression, fmt and Clippy pass; ready to commit.
+5. Complete cross-module borrow/call and panic tests plus the facade example.
+   Three ownership/panic groups pass; the recursive example now uses the existing
+   explicit base-case Leave pattern. Runtime data captures/types remain gated.
+6. Update documentation/handoff and run the full compiler gate across the series.
 
 Keep implementation/tests together and every slice buildable. Apply the
 400-line/8-file split-review threshold, stage explicit paths/hunks and commit each

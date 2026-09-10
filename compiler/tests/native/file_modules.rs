@@ -303,3 +303,28 @@ pub(crate) fn file_function_reexports_require_exact_annotated_signatures_and_fre
     assert_eq!(output.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E502\""));
 }
+
+#[test]
+pub(crate) fn file_function_exports_reject_record_spread_collisions() {
+    for source in [
+        "->f<int32>:(){->1};->{->f:2}",
+        "->{->f:2};->f<int32>:(){->1}",
+    ] {
+        let case = case("m:@\"./ops.mwy\"", &[("ops.mwy", source)]);
+        let output = case.command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1), "{source}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E205\""),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    case(
+        "m:@\"./ops.mwy\";d:@\"debug\";d.print(m.f())",
+        &[(
+            "ops.mwy",
+            "->f<int32>:(){->1};|false|->f:2;|false|->{->f:3}",
+        )],
+    )
+    .runs(b"1\n");
+}
