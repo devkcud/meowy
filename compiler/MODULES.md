@@ -1,8 +1,9 @@
 # Relative file modules
 
 The driver supports a bounded executable slice of
-[the module contract](../docs/reference/modules-and-ffi.md). A top-level immutable,
-unannotated binding may import an exact relative `.mwy` file:
+[the module contract](../docs/reference/modules-and-ffi.md). Literal imports are
+discovered throughout the parsed AST. An immutable, unannotated binding can name
+an exact relative `.mwy` module:
 
 ```meowy
 settings:@"./settings.mwy"
@@ -114,13 +115,30 @@ The graph's dependency order assembles isolated AST blocks and internal bindings
 then passes the complete program through the existing checker, ownership passes
 and backend. Private lexical scopes remain separate.
 
-Imports are collected from top-level immutable unannotated bindings, with optional
-grouping around the literal import. Dependencies initialize before their importer,
-with siblings visited in source order, even when an import binding appears after
-an ordinary statement. All dependencies initialize before the entry body. Cycles
-report E502 with the ordered path chain and closing import site. Missing files,
-directories and malformed relative paths report E501. No working-directory fallback,
-extension guessing, network access or package resolution is added.
+Discovery visits statement, expression and type operands, including function bodies,
+matcher branches, list/index expressions, annotations and string interpolation.
+Comments and ordinary string text are not imports. Import sites are ordered by
+source position, independent of AST traversal order. Inactive branches and unused
+functions still contribute dependencies: this is a static graph, not lazy loading.
+
+Dependencies initialize before their importer, with siblings visited in source
+order, even when an import appears after an ordinary statement. All dependencies
+initialize before the entry body. Cycles report E502 with the ordered path chain
+and closing import site; nested or inactive imports cannot hide a cycle. Missing
+files, directories and malformed relative paths report E501, including imports in
+unused code. No working-directory fallback, extension guessing, network access or
+package resolution is added.
+
+A function-local import binds a compile-time module identity. Exported functions
+and type names are available there without capturing the module's runtime storage.
+Private members, runtime module-data captures and references to module storage keep
+their existing gates. Inline imports can select supported members directly, such
+as `(@"./ops.mwy").increment(7)`. Discovery does not make unsupported type evaluation
+or mutable/annotated module-identity bindings valid.
+
+The [scoped-import example](examples/scoped-imports/main.mwy) prints side, ops,
+entry, 8, again 9. It demonstrates initialization from an unused function and an
+inactive branch, function-local type/call use and repeated inline imports.
 
 Initializer failure stops startup before dependent/entry effects. Export restrictions
 avoid claiming module resource cleanup or borrowed static exports. The
@@ -160,7 +178,9 @@ or complete native stack diagnostics.
 ## Limits and remaining gates
 
 Graphs are bounded to 64 files, 32 active dependency levels, 4096 import edges,
-4 MiB per source and 16 MiB of snapshot span space. Export shapes reuse the bounded
+4 MiB per source and 16 MiB of snapshot span space. Discovery additionally allows
+at most 262144 queued AST nodes per file and rejects duplicate import source sites.
+A budget failure returns no partial discovery result. Export shapes reuse the bounded
 256-part/32-level reference-free shape check. Existing parser, type and ownership
 budgets still apply. Exhaustion reports B001; it never admits an incomplete graph.
 
@@ -170,9 +190,9 @@ different nearest manifest context or import `mod.mwy` as executable source. Thi
 is not a package identity or manifest implementation. Bare package names, path
 aliases and remote dependencies remain gated; foundational lookup is unchanged.
 
-Nested/conditional imports, mutable or annotated import bindings, references to
-module storage, runtime module-data values in function bodies and multi-file
-documentation checking remain B001. Standalone documentation retains its existing checks.
+Mutable or annotated module-identity bindings, references to module storage,
+runtime module-data values in function bodies and multi-file documentation checking
+remain B001. Standalone documentation retains its existing checks.
 Copying an exported value into a local uses ordinary local borrowing/mutation rules.
 
 Graph/checker and native groups cover canonical diamonds/symlinks, relative

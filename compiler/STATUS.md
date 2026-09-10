@@ -1,73 +1,62 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Exported type aliases are complete and passed the compiler
-gate. No failing checks remain. Four tested commits precede this separate
-documentation handoff. Broader literal-import discovery is now in progress
-under the commit plan below.
+Updated: 2026-09-10. Broader literal imports and function-scope module identities
+are complete and passed the compiler gate. No failing checks remain. Three tested
+commits precede this separate documentation handoff.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Planned commits
+## Commit series
 
-1. Bounded AST discovery and loader wiring pass two graph groups and one native
-   nested/inline initializer group. Broader file regressions (11 library/18 native),
-   fmt and Clippy pass. Committed as `78ab811`; function-scope resolution is next.
-2. Function-scope import lookup now requires a registered module identity without
-   applying runtime-local capture checks to that identity. Function/type uses and
-   unchanged data-capture/privacy gates pass three native groups in both profiles.
-   Module compatibility suites (8 library/17 native), fmt and Clippy also pass;
-   committed as `b2a06be`.
-3. Added inactive/unused import, cycle/missing-path, complete-tree budget,
-   initializer failure and dependency hard-link tests plus a runnable example.
-   Three discovery groups and seven scoped-import groups pass, including the
-   example in both profiles. Formatting and Clippy pass; ready to commit.
-4. Document the supported locations and run the compiler gate across the series.
+1. `78ab811` — bounded AST discovery, source ordering and loader integration.
+2. `b2a06be` — function-local module identities with capture/privacy gates preserved.
+3. `ba0d015` — nested startup/error/budget/protection tests and a runnable example.
+4. This documentation handoff records the successful final gate below.
 
-Keep each commit buildable with focused tests and within the 400-line/8-file
-split-review threshold. Do not add dynamic loading or general type evaluation.
+Each completed slice includes focused validation and stays below the split-review
+threshold. Continue planning dependency-ordered commits before implementation.
 
 ## Current compiler slice
 
-`StmtKind::TypeAlias` explicitly records whether `-><Name>:` exports the alias.
-Parser extraction retains private-alias behavior and original spans. Exported
-names must be unqualified; labeled exports are gated. `check/exports.rs` handles
-alias declarations and enforces unconditional file-level scope for exported types.
+`modules/discover.rs` walks all supported AST statement/expression/type operands
+iteratively, including function bodies, matcher branches, annotations and interpolation.
+It collects relative Import nodes, ignores comment/plain-string text and sorts sites
+by source position. Work is bounded to 262144 queued nodes per file; imports retain
+the existing edge limit. Duplicate sites or exhausted work fail closed with B001.
 
-Each module retains separate `types` and `values` namespaces. `<module.Type>` resolves
-only exported type specifications; private/missing names use E202 and duplicate
-bindings use E203. Data/function exports may share a name with a type. No runtime
-field, storage or wrapper is created for a type declaration.
+`modules/load.rs` resolves this complete discovery result using the existing source
+snapshots, canonical identities, manifest boundary checks and dependency ordering.
+Inactive/unused imports still initialize before their importer/entry. Missing paths
+and cycles remain E501/E502 at the real import site, including nested type operands.
+No runtime loading, package resolution or general type evaluation is introduced.
 
-Resolved specifications retain structural alias identity, normalized record fields,
-mutability and existing nominal foundation tags. Type/signature copying charges
-existing proof work. Callable signature aliases work in typed function re-exports;
-stored function pointers remain gated. Existing computed type values can define
-aliases, without enabling general type-expression evaluation.
+`check/exports.rs::import_module` resolves only registered compile-time module
+identities. Functions may bind local import aliases and use exported functions/types
+without treating that identity as a captured local value. Runtime module-data reads,
+borrowed module storage, private members and mutable/annotated identity bindings keep
+their gates. Existing shared/exclusive call and returned-reference rules are unchanged.
 
-Standalone documentation preserves type roles, spans, checked signatures and E803
-public-doc policy. The typed geometry facade combines type, data and function exports.
-Private type names, runtime module-data captures, borrowed module storage, unsupported
-owning storage and package/manifest features retain their boundaries. See
-[MODULES.md](MODULES.md#exported-type-aliases) and
-[the example](examples/type-modules/main.mwy).
+Inline and nested initializer imports can select supported members. All discovered
+inputs, including dependencies used only inside unused functions, remain protected
+from build/IR output replacement. Initializer panic still prevents entry execution.
+See [MODULES.md](MODULES.md) and [the example](examples/scoped-imports/main.mwy).
 
 ## Actual validation
 
-- Parser slice: two focused groups, all 23 parser tests, documentation/module
-  regressions, formatting and Clippy passed before its commit.
-- Namespace slice: privacy, duplicates, separate type/value names, function-local
-  type use and scope gates pass; parser/file suites and fmt/Clippy passed.
-- Identity/integration: four library and six native exported-type groups pass,
-  including transparent facades, HIR nominal/primitive identity, computed aliases,
-  callable signatures, record permissions, reference bounds and the geometry example.
-  Native execution runs in debug/release where applicable.
-- Standalone documentation checks/builds, checked type signatures and missing-doc
-  E803 policy pass.
+- Discovery: three graph groups passed, including source order, nested expression/
+  type traversal, shifted spans, large-tree budget failure and duplicate-site rejection.
+  A native nested/inline initializer group passed in both profiles.
+- Function-scope and boundary checks: seven native groups passed, covering local
+  function/type aliases, repeated calls, capture/privacy gates, reference/exclusive
+  calls, inactive/unused dependencies, cycles/missing paths, initializer panic,
+  plain-string exclusion and hard-link protection.
+- Broader file/module compatibility suites passed after integration. Focused fmt
+  and Clippy passed for each slice.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 671 library and 629 native Rust tests (1300 total), 16 tooling plus
-  4 compiler-harness Python tests, 79 standalone and three multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-type-exports-gate.log`.
+  Clippy, build, 674 library and 637 native Rust tests (1311 total), 16 tooling plus
+  4 compiler-harness Python tests, 79 standalone and four multi-file examples in
+  debug/release. Gate log: `/tmp/meowy-scoped-imports-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -102,7 +91,8 @@ lifecycle implementation precede executable adapters.
 
 | Responsibility | Existing owner |
 | --- | --- |
-| Canonical graph, snapshots, bounds and dependency order | `src/modules.rs`, `src/modules/load.rs` |
+| AST discovery and canonical graph ordering | `src/modules/discover.rs`, `src/modules/load.rs` |
+| Source snapshots and graph compilation | `src/modules.rs` |
 | Disjoint parser spans | `src/parser.rs::parse_documented_at` |
 | Exported value/type namespaces, scopes and public signatures | `src/check/exports.rs`, `src/check/names.rs` |
 | Data export gate and shared declaration checking | `src/check/statements.rs`, `src/check/functions.rs` |
@@ -120,13 +110,12 @@ Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8 are the recorded toolchain.
 
 ## Next steps
 
-1. Plan broader literal import discovery through `modules/load.rs`, the AST and
-   `check/names.rs::symbol`. The loader currently scans only top-level immutable
-   bindings. Traverse supported expression/type operands with bounded work and
-   preserve source order, canonical identity, cycles and once-only initialization.
-   Qualify additional import locations in small tested slices; preserve runtime
-   module-data capture and package/manifest gates.
-2. Keep general type evaluation, generic specialization, callable storage and borrowed
-   module values separate until their rules are proved. Preserve ownership/header
-   certificates, call/input opacity and owner expiry. Keep STATUS current, commit
-   validated slices as they finish, and do not push or recreate STEP logs.
+1. Plan support for documentation-bearing module graphs through `modules.rs::compile`,
+   `documentation/model.rs` and `check/documentation.rs`. The current graph rejects
+   any documentation blocks when multiple files are loaded. Preserve per-file spans,
+   attachment/signature/link validation and module scope; do not simply ignore docs.
+   Keep multi-file site generation/public indexes separate until their links and
+   visibility are modeled. Add focused fixtures and commit each validated slice.
+2. Preserve runtime data-capture and borrowed-export gates, package/manifest policy,
+   generic type-evaluation boundaries and ownership/header proofs. Keep STATUS current,
+   commit reviewable slices, and do not push or recreate STEP logs.

@@ -7,35 +7,29 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
-Broader literal imports are in progress in separate discovery, function-scope
-identity, edge-case/example and documentation commits. Startup ordering, capture
-restrictions and package gates remain required.
+Broader literal import discovery passed the compiler gate. Imports are found throughout
+the parsed AST, including functions, inactive branches, interpolation and type
+operands. Dependencies retain source order and initialize once before entry execution.
+Function-local aliases may use exported functions/types while runtime module-data
+captures remain gated. See [the module slice](compiler/MODULES.md) and
+[runnable example](compiler/examples/scoped-imports/main.mwy).
 
-Exported type aliases passed the compiler gate. `-><Name>:` publishes a type separately
-from data/functions, and importers use `<module.Type>`. Facades preserve transparent
-aliases, existing nominal types, record permissions and callable signatures.
-Standalone documentation retains type roles and required-doc checks. See
-[the type-export slice](compiler/MODULES.md#exported-type-aliases) and
-[runnable geometry facade](compiler/examples/type-modules/main.mwy).
+Three small implementation/test commits are complete, followed by a separate
+documentation handoff. Package policy, general type evaluation, borrowed module
+storage and multi-file documentation remain separate.
 
-Four small implementation/test commits are complete, followed by a separate
-documentation handoff. Literal imports still require top-level immutable
-bindings. Broader import locations, package policy, runtime module captures and
-borrowed exports remain separate.
-
-Carried initialization, shared/exclusive scalar borrows, indexed writes and native
-file-site diagnostics retain their boundaries. Net/HTTP/TLS still needs broader
-module/generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
+Type/function exports, ownership and native source diagnostics retain their existing
+rules. Net/HTTP/TLS still needs broader generic-type/I/O/task foundations; the full
+v0.0.1 release remains incomplete.
 
 ## Actual validation
 
-- Parser, namespace and exported-type identity suites passed, with formatting/Clippy
-  checked per slice. Evidence covers privacy, duplicates, transparent/nominal types,
-  callable aliases, mutable fields, references and the geometry facade.
-- Four library and six native exported-type groups pass, including standalone docs
-  generation and public-doc policy. Native examples run in debug/release.
-- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1300 Rust
-  tests, 20 Python tests, 79 standalone and three multi-file examples in debug/release.
+- Three graph discovery groups, seven scoped-import groups and a nested/inline
+  initializer group passed. Native execution runs in debug/release where applicable.
+- Evidence covers order, types/calls, captures, privacy, missing paths/cycles,
+  inactive dependencies, budgets, initializer failure and source-output protection.
+- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1311 Rust
+  tests, 20 Python tests, 79 standalone and four multi-file examples in debug/release.
 - Conformance: 10 passed, 13 unsupported, 0 failed. Local-link, catalog/schema and
   whitespace checks passed; full release qualification remains open.
 - Backend/runtime code, reference fixtures and dependencies are unchanged. Editor
@@ -45,7 +39,7 @@ module/generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Exported type aliases passed the compiler gate; broader import locations remain gated. |
+| Compiler | Broader literal imports passed the compiler gate; runtime module-data captures remain gated. |
 | Documentation tooling | Standalone slice complete; package graphs, assets, public indexes and LSP remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; module/type/I/O/task foundations precede implementation. |
@@ -56,8 +50,8 @@ module/generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
 Commit workflow: plan dependency-ordered slices before implementation, commit each
 validated slice, and apply the size review threshold in [AGENTS.md](AGENTS.md).
 
-1. Plan bounded literal import discovery beyond top-level bindings, preserving
-   canonical graph identity, initialization order, source diagnostics and scope gates.
-2. Preserve ownership proofs; keep package policy, generic type evaluation, runtime
-   module captures and borrowed exports separate. Keep STATUS concise, commit
-   validated slices, never recreate STEP logs, and do not push.
+1. Plan compilation/checking of documentation-bearing module graphs, preserving
+   per-file spans, attachment/signature/link validation and scope privacy.
+2. Keep package policy, general type evaluation, runtime module-data captures and
+   borrowed exports separate. Preserve ownership proofs, keep STATUS concise,
+   commit validated slices, never recreate STEP logs, and do not push.
