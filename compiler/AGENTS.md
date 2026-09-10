@@ -62,9 +62,16 @@ These instructions apply to this directory and all descendants.
 ## Scope and permissions
 
 - Keep this implementation in `compiler/` unless an integration change outside it is necessary.
-- Commit completed, validated changes following the root AGENTS.md rule: split
-  distinct features, fixes, refactors or other concerns into cohesive commits ordered
-  by dependency, unless the user requests otherwise. Include only your task's changes.
+- Follow the root AGENTS.md commit-slicing rules, including its size review threshold.
+  A complete compiler feature is not a single commit by default. Record the ordered
+  slices in STATUS before implementation and commit them as they become validated.
+- Separate independently reviewable source/AST changes, analysis or graph machinery,
+  checker behavior and driver/backend integration. Include the focused tests with
+  each slice; keep every intermediate commit buildable and meaningful. Do not
+  postpone all tests or documentation until a final oversized commit.
+- Inspect staged hunks against the planned purpose before each commit. Stage only
+  that slice's files/hunks and preserve unrelated changes. Run the compiler gate
+  across the completed series and list its commits in the handoff.
 - Do not push, publish, deploy, or contact other people without explicit authorization.
 - Do not add dependencies before the owning component needs them. Keep the dependency graph locked and bootstrap inputs explicit.
 - Keep permission requests limited to actual environment restrictions or actions outside the authorized task.

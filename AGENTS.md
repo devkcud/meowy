@@ -24,9 +24,29 @@
   when practical, and retain the existing checks across each move.
 - Run checks appropriate to changed behavior. Never count unsupported features,
   missing tools or crashes as successful conformance rejections.
-- After completing and validating a task, commit the changes you made unless the
-  user requests otherwise. Split distinct features, fixes, refactors or other
-  concerns into separate, cohesive commits ordered by dependency. Do not combine
-  unrelated work or include changes made by the user or other agents outside your
-  assigned task. Use short, clear commit messages describing each change.
+- Commit each validated, reviewable work slice unless the user requests otherwise.
+  Do not wait until the entire task is finished and then commit everything together.
+- Before implementing a multi-part change, record a short, dependency-ordered
+  commit plan in the relevant STATUS. Split within a feature: one feature, milestone
+  or user request is not automatically one commit. Plan independently reviewable
+  prerequisites, behavior changes, integration and documentation where appropriate.
+- Each commit must answer one concrete review question. Keep behavior-preserving
+  refactors separate from behavior changes. For example, source-span support,
+  import graph loading, checker integration and CLI wiring are separate concerns
+  even when they all enable file modules.
+- Keep the implementation and its focused regression tests together. Separate
+  additional scenarios, examples or documentation only when they are independently
+  useful; do not create broken intermediate commits or defer all tests to the end.
+- Aim for roughly 100-300 changed lines per commit, counting tests and documentation.
+  More than 400 changed non-generated lines or 8 files requires another split pass
+  before committing. Do not split mechanically by file or move tests elsewhere just
+  to meet the size target. If a larger slice truly cannot be separated while staying
+  buildable and meaningful, explain the concrete dependency in STATUS and the
+  progress update before committing. "One feature" is not a valid exception.
+- Validate each slice with appropriate focused checks and inspect its staged diff
+  and `git diff --cached --check` before committing. Run the required final gate
+  across the complete series. Stage explicit files or hunks for the planned slice;
+  do not use repository-wide or directory-wide staging to bundle a multi-part task.
+- Preserve unrelated user/agent changes. Use short, clear imperative commit subjects
+  describing each slice. Report the individual commits in the final handoff.
 - Do not push, publish or send messages to others without explicit authorization.

@@ -49,6 +49,10 @@ library work; module/type/I/O/task foundations precede executable adapters.
 
 ## Next steps
 
+Commit workflow: plan dependency-ordered slices before implementation, commit each
+validated slice, and apply the size review threshold in [AGENTS.md](AGENTS.md).
+A feature must not be bundled into one large commit merely because it is related.
+
 1. Map native panic sites to source files/local spans, preserving single-file output.
 2. Extend annotated function/type exports with canonical identity and private scope
    preservation. Keep package policy, module captures and borrowed exports gated
