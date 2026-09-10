@@ -26,10 +26,11 @@ Git holds history. Do not recreate STEP logs.
    regressions (11 library/14 native groups), fmt and Clippy pass; committed as `3b31d61`.
 4. A boundary test found record-spread data emissions could collide with function
    exports. The shared result-slot check now rejects collisions and preserves
-   unreachable data emissions. Focused regression, fmt and Clippy pass; ready to commit.
-5. Complete cross-module borrow/call and panic tests plus the facade example.
-   Three ownership/panic groups pass; the recursive example now uses the existing
-   explicit base-case Leave pattern. Runtime data captures/types remain gated.
+   unreachable data emissions. Focused regression, fmt and Clippy pass; committed as `a0b3be6`.
+5. Four ownership/panic/example groups pass in debug/release, including recursion,
+   shared/exclusive calls, all-input bounds, private-storage expiry and callee sites.
+   The facade also mixes data and function exports; its final example passes.
+   Formatting and Clippy pass. Ready to commit; runtime data captures/types stay gated.
 6. Update documentation/handoff and run the full compiler gate across the series.
 
 Keep implementation/tests together and every slice buildable. Apply the
