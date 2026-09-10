@@ -213,6 +213,40 @@ impl Checker {
         Ok(spec.clone())
     }
 
+    pub(crate) fn import_module(&mut self, target: &str, span: Span) -> Result<Value> {
+        if !self
+            .flow
+            .spend(self.scopes.len().saturating_mul(target.len() + 1) + self.exports.len() + 1)
+        {
+            return Err(Diagnostic::unsupported(
+                "module identity lookup budget exhausted",
+                span,
+            ));
+        }
+        let value = self
+            .scopes
+            .iter()
+            .rev()
+            .find_map(|scope| scope.values.get(target));
+        let Some(Value::Local { id, ty, .. }) = value else {
+            return Err(Diagnostic::unsupported(
+                "missing file-module identity",
+                span,
+            ));
+        };
+        if !self.exports.contains_key(id) {
+            return Err(Diagnostic::unsupported(
+                "unregistered file-module identity",
+                span,
+            ));
+        }
+        crate::borrow_contract::type_weight(ty, &mut self.flow, span)?;
+        Ok(Value::FileModule {
+            id: *id,
+            ty: ty.clone(),
+        })
+    }
+
     pub(crate) fn module_member(
         &mut self,
         id: usize,

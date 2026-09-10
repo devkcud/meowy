@@ -12,9 +12,12 @@ Git holds history. Do not recreate STEP logs.
 
 1. Bounded AST discovery and loader wiring pass two graph groups and one native
    nested/inline initializer group. Broader file regressions (11 library/18 native),
-   fmt and Clippy pass. Ready to commit; function-scope resolution is next.
-2. Resolve function-scope imports as compile-time module identities while retaining
-   runtime data-capture restrictions; test local aliases, calls, types and privacy.
+   fmt and Clippy pass. Committed as `78ab811`; function-scope resolution is next.
+2. Function-scope import lookup now requires a registered module identity without
+   applying runtime-local capture checks to that identity. Function/type uses and
+   unchanged data-capture/privacy gates pass three native groups in both profiles.
+   Module compatibility suites (8 library/17 native), fmt and Clippy also pass;
+   this slice is ready to commit.
 3. Qualify inactive/unused imports, nested cycles/errors, budgets and a runnable
    example, without weakening source/output protection or package policy.
 4. Document the supported locations and run the compiler gate across the series.

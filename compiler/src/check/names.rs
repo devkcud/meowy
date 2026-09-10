@@ -307,14 +307,8 @@ impl Checker {
             ExprKind::Name(name) => Ok(Some(self.value(name, expr.span)?)),
             ExprKind::Group(value) => self.symbol(value),
             ExprKind::Import(name) => {
-                if let Some(target) = self.imports.get(&expr.span.start) {
-                    let Value::Local { id, ty, .. } = self.value(target, expr.span)? else {
-                        return Err(Diagnostic::unsupported(
-                            "missing file-module value",
-                            expr.span,
-                        ));
-                    };
-                    return Ok(Some(Value::FileModule { id, ty }));
+                if let Some(target) = self.imports.get(&expr.span.start).cloned() {
+                    return self.import_module(&target, expr.span).map(Some);
                 }
                 let module = Module::resolve(name).ok_or_else(|| {
                     Diagnostic::unsupported(format!("module import `@\"{name}\"`"), expr.span)

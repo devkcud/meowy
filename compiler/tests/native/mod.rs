@@ -70,6 +70,7 @@ pub(crate) mod reference_unions;
 pub(crate) mod references;
 pub(crate) mod restart_references;
 pub(crate) mod scalars;
+pub(crate) mod scoped_imports;
 pub(crate) mod tagged_allocators;
 pub(crate) mod temporary_borrows;
 pub(crate) mod transitive_borrows;

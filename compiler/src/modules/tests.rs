@@ -131,7 +131,7 @@ pub(crate) fn file_modules_preserve_export_and_execution_gates() {
         ("m:@\"./value.mwy\"", "x:1;->v:&x", "B001"),
         ("m:@\"./value.mwy\";p:&(m.n)", "->n:2", "B001"),
         ("m:@\"./value.mwy\";f<int32>:(){->m.n}", "->n:2", "B001"),
-        ("f<null>:(){m:@\"./value.mwy\"}", "->n:2", "B001"),
+        ("f<null>:(){m:@\"./value.mwy\";v:m.n}", "->n:2", "B001"),
         ("m:@\"./value.mwy\"", "#| value |#\n->n:2", "B001"),
     ] {
         let (_temp, graph) = graph(&[("main.mwy", source), ("value.mwy", module)]);
