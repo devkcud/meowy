@@ -120,7 +120,13 @@ impl Checker {
                 )?;
                 Ok(vec![hir::Stmt::Bind { id, value }])
             }
-            StmtKind::TypeAlias { name, ty } => {
+            StmtKind::TypeAlias { name, ty, exported } => {
+                if *exported {
+                    return Err(Diagnostic::unsupported(
+                        "exported type declarations",
+                        stmt.span,
+                    ));
+                }
                 let spec = self.spec(ty)?;
                 let scope = self.scopes.last_mut().expect("scope");
                 if scope.types.contains_key(name) {

@@ -226,7 +226,7 @@ impl Model {
                     self.walk_expr(source, parsed, value, Some(id), stage, depth + 1)?;
                 }
             }
-            StmtKind::TypeAlias { name, ty } | StmtKind::Forward { name, ty } => {
+            StmtKind::TypeAlias { name, ty, .. } | StmtKind::Forward { name, ty } => {
                 let kind = if matches!(stmt.kind, StmtKind::TypeAlias { .. }) {
                     Kind::Type
                 } else {

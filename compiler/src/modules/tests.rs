@@ -162,9 +162,9 @@ pub(crate) fn file_modules_reject_invalid_import_contents_and_exact_paths() {
     fs::write(temp.path.join("value.mwy"), "-><Point>:<int32>").unwrap();
     assert_eq!(
         Graph::load(&entry, "m:@\"./value.mwy\"")
-            .err()
             .unwrap()
-            .errors[0]
+            .compile()
+            .unwrap_err()[0]
             .code,
         "B001"
     );

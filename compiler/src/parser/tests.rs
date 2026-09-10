@@ -223,3 +223,55 @@ pub(crate) fn malformed_unicode_inputs_preserve_lexer_spans_without_panics() {
         }
     }
 }
+
+#[test]
+pub(crate) fn exported_types_parse_distinct_namespace_flags_and_shifted_spans() {
+    let source = "<Private>:<int32>;-><Public>:<{n<Private>}>;->value:7";
+    let block = parse_documented_at(source, 100).unwrap().block;
+    assert!(matches!(
+        &block.stmts[0].kind,
+        StmtKind::TypeAlias {
+            exported: false,
+            ..
+        }
+    ));
+    let StmtKind::TypeAlias {
+        name,
+        ty,
+        exported: true,
+    } = &block.stmts[1].kind
+    else {
+        panic!("exported type")
+    };
+    assert_eq!(name, "Public");
+    assert!(matches!(ty.kind, TypeKind::Record { .. }));
+    assert_eq!(
+        block.stmts[1].span.start,
+        100 + source.find("-><Public>").unwrap()
+    );
+    assert!(matches!(block.stmts[2].kind, StmtKind::Emit { .. }));
+    let block = parse("-><Alias>:core.int32").unwrap();
+    assert!(matches!(
+        &block.stmts[0].kind,
+        StmtKind::TypeAlias {
+            exported: true,
+            ty: TypeExpr {
+                kind: TypeKind::Computed(_),
+                ..
+            },
+            ..
+        }
+    ));
+    assert_eq!(crate::compile("-><T>:<int32>").unwrap_err()[0].code, "B001");
+}
+
+#[test]
+pub(crate) fn exported_types_keep_invalid_and_labeled_declarations_gated() {
+    assert!(parse("-><T>:=<int32>").is_err());
+    assert!(parse("-><T><U>:<int32>").is_err());
+    assert_eq!(parse("-><m.T>:<int32>").unwrap_err()[0].code, "B001");
+    assert_eq!(
+        parse("'out{'out-><T>:<int32>}").unwrap_err()[0].code,
+        "B001"
+    );
+}

@@ -7,6 +7,10 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Exported types are in progress as separate syntax, namespace, re-export identity,
+integration and documentation commits. Aliases retain their existing type identity;
+the compiler handoff records the commit plan.
+
 Annotated module functions and explicitly typed re-exports passed the compiler gate.
 Imports and facades retain canonical function IDs, private helper boundaries and
 ordered initialization. Calls preserve recursion, shared/exclusive permissions,

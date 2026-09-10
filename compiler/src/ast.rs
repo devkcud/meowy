@@ -38,6 +38,7 @@ pub enum StmtKind {
     TypeAlias {
         name: String,
         ty: TypeExpr,
+        exported: bool,
     },
     Assign {
         target: Expr,

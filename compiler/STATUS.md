@@ -2,22 +2,27 @@
 
 Updated: 2026-09-10. Annotated function exports and typed re-exports are complete
 and passed the compiler gate. No failing checks remain. Five implementation/test
-commits precede this documentation handoff; type exports are the next slice.
+commits precede this documentation handoff. Exported-type work is now in progress
+under the commit plan below; aliases must retain their existing structural identity.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Planned commits
 
-1. `d4ed144` — shared function declaration checking, behavior-preserving refactor.
-2. `3410a6f` — annotated module definitions and exported identity lookup.
-3. `3b31d61` — typed re-exports, exact signatures, scope and identity regressions.
-4. `a0b3be6` — function/data collisions through result-slot writes and record spreads.
-5. `b85b38c` — cross-module ownership/panic regressions and a runnable facade example.
-6. This documentation handoff records the successful final gate below.
+1. Exported aliases have an explicit AST flag and share private-alias parsing.
+   Two focused groups, all 23 parser tests, documentation/module regressions, fmt
+   and Clippy pass. Ready to commit; semantic use stays gated until integration.
+2. Add a separate exported type namespace and qualified type lookup. Support
+   standalone/imported aliases with privacy, duplicate and scope regressions.
+3. Qualify transparent alias/re-export identity, including computed type context,
+   callable signatures, existing nominal types and value/type name separation.
+4. Exercise documentation and a runnable typed facade with focused integration tests.
+5. Update docs/handoff and run the compiler gate across the complete series.
 
-All completed commits include appropriate validation and stay below the split-review
-threshold. Continue planning dependency-ordered slices before implementation.
+Keep syntax, namespace behavior, integration and documentation reviewable. Include
+focused tests in each commit and stay within the 400-line/8-file split threshold.
+No package policy, generic specialization or runtime module-capture expansion.
 
 ## Current compiler slice
 

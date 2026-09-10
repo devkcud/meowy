@@ -87,25 +87,7 @@ impl Parser {
             self.need("->")?;
             self.emission(Some(label))?
         } else if self.at("<") {
-            let alias = self.type_union()?;
-            self.need(":")?;
-            self.newlines();
-            let TypeKind::Name(name) = alias.kind else {
-                return Err(Diagnostic::unsupported(
-                    "generic or computed type alias names",
-                    alias.span,
-                ));
-            };
-            let ty = if self.at("<") {
-                self.type_union()?
-            } else {
-                let value = self.expr(0, false, false, false)?;
-                TypeExpr {
-                    span: value.span,
-                    kind: TypeKind::Computed(Box::new(value)),
-                }
-            };
-            StmtKind::TypeAlias { name, ty }
+            self.type_alias(false)?
         } else if let Some((name, ty, mutable)) = self.binding_head()? {
             self.newlines();
             StmtKind::Bind {
@@ -149,6 +131,34 @@ impl Parser {
         })
     }
 
+    pub(crate) fn type_alias(&mut self, exported: bool) -> ParseResult<StmtKind> {
+        let alias = self.type_union()?;
+        self.need(":")?;
+        self.newlines();
+        let TypeKind::Name(name) = alias.kind else {
+            return Err(Diagnostic::unsupported(
+                "generic or computed type alias names",
+                alias.span,
+            ));
+        };
+        if exported && name.contains('.') {
+            return Err(Diagnostic::unsupported(
+                "qualified exported type names",
+                alias.span,
+            ));
+        }
+        let ty = if self.at("<") {
+            self.type_union()?
+        } else {
+            let value = self.expr(0, false, false, false)?;
+            TypeExpr {
+                span: value.span,
+                kind: TypeKind::Computed(Box::new(value)),
+            }
+        };
+        Ok(StmtKind::TypeAlias { name, ty, exported })
+    }
+
     pub(crate) fn binding_head(&mut self) -> ParseResult<Option<(String, Option<TypeExpr>, bool)>> {
         if self.token().kind != TokenKind::Name {
             return Ok(None);
@@ -181,10 +191,13 @@ impl Parser {
     pub(crate) fn emission(&mut self, label: Option<String>) -> ParseResult<StmtKind> {
         self.newlines();
         if self.at("<") && self.annotation_binding(self.pos) {
-            return Err(Diagnostic::unsupported(
-                "exported type declarations",
-                self.token().span,
-            ));
+            if label.is_some() {
+                return Err(Diagnostic::unsupported(
+                    "labeled type exports",
+                    self.token().span,
+                ));
+            }
+            return self.type_alias(true);
         }
         let (name, ty, mutable) = match self.binding_head()? {
             Some((name, ty, mutable)) => (Some(name), ty, mutable),
