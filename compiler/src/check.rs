@@ -242,7 +242,10 @@ impl Checker {
             documentation: None,
             imports: BTreeMap::new(),
             exports: BTreeMap::new(),
-            module: exports::Module::default(),
+            module: exports::Module {
+                depth: 2,
+                ..exports::Module::default()
+            },
         }
     }
 

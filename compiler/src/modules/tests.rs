@@ -126,7 +126,7 @@ pub(crate) fn file_modules_preserve_export_and_execution_gates() {
     for (source, module, code) in [
         ("m:@\"./value.mwy\";v:m.private", "private:1;->n:2", "E201"),
         ("m:@\"./value.mwy\"", "->n:=2", "B001"),
-        ("m:@\"./value.mwy\"", "f<int32>:(){->1};->f:f", "B001"),
+        ("m:@\"./value.mwy\"", "f<int32>:(){->1};->f:f", "E214"),
         ("m:@\"./value.mwy\"", "->v:{->n:=2}", "B001"),
         ("m:@\"./value.mwy\"", "x:1;->v:&x", "B001"),
         ("m:@\"./value.mwy\";p:&(m.n)", "->n:2", "B001"),
@@ -204,5 +204,48 @@ pub(crate) fn file_modules_bound_total_snapshot_bytes() {
     assert_eq!(
         Graph::load(&entry, &source).err().unwrap().errors[0].code,
         "B001"
+    );
+}
+
+#[test]
+pub(crate) fn file_function_reexports_share_call_ids_without_merging_distinct_functions() {
+    let (_temp, graph) = graph(&[
+        (
+            "main.mwy",
+            "ops:@\"./ops.mwy\";api:@\"./api.mwy\";other:@\"./other.mwy\";ops.inc(1);api.bump(2);other.inc(3)",
+        ),
+        ("ops.mwy", "->inc<int32>:(x<int32>){->x+1}"),
+        (
+            "api.mwy",
+            "ops:@\"./ops.mwy\";->bump<(int32)->int32>:ops.inc",
+        ),
+        ("other.mwy", "->inc<int32>:(x<int32>){->x+1}"),
+    ]);
+    let program = graph.compile().unwrap();
+    assert_eq!(program.functions.len(), 2);
+    let Some(crate::hir::Stmt::Bind { value, .. }) = program.body.stmts.last() else {
+        panic!("entry initializer")
+    };
+    let crate::hir::ExprKind::Block(block) = &value.kind else {
+        panic!("entry block")
+    };
+    let calls = block
+        .stmts
+        .iter()
+        .filter_map(|stmt| match stmt {
+            crate::hir::Stmt::Expr(crate::hir::Expr {
+                kind: crate::hir::ExprKind::Call { id, .. },
+                ..
+            }) => Some(*id),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        calls,
+        [
+            program.functions[0].id,
+            program.functions[0].id,
+            program.functions[1].id
+        ]
     );
 }

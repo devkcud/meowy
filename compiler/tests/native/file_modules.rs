@@ -252,3 +252,54 @@ pub(crate) fn file_function_exports_preserve_privacy_annotations_and_capture_gat
         }
     }
 }
+
+#[test]
+pub(crate) fn file_function_reexports_preserve_canonical_identity_and_initialization() {
+    case("d:@\"debug\";ops:@\"./ops.mwy\";api:@\"./api.mwy\";other:@\"./other.mwy\";d.print(ops.inc(1));d.print(api.bump(2));d.print(other.inc(3));alias:api.bump;d.print(alias(4))", &[
+        ("ops.mwy", "d:@\"debug\";d.print(\"init\");->inc<int32>:(x<int32>){->x+1}"),
+        ("api.mwy", "ops:@\"./ops.mwy\";->bump<(int32)->int32>:ops.inc"),
+        ("other.mwy", "->inc<int32>:(x<int32>){->x+1}"),
+    ]).runs(b"init\n2\n3\n4\n5\n");
+    Case::new("d:@\"debug\";f:(x<int32>){->x+1};->inc<(int32)->int32>:f;d.print(inc(7))")
+        .runs(b"8\n");
+}
+
+#[test]
+pub(crate) fn file_function_reexports_require_exact_annotated_signatures_and_fresh_names() {
+    for (source, code) in [
+        ("f<int32>:(x<int32>){->x};->g:f", "E214"),
+        ("|true|->g<int32>:(){->1}", "B001"),
+        ("f<int32>:(){->1};|true|->g<()->int32>:f", "B001"),
+        ("->f<int32>:(){->1};->g<int32>:(){->1};v:f==g", "E222"),
+        ("f<int32>:(x<int32>){->x};->g<()->int32>:f", "E207"),
+        ("f<int32>:(x<int32>){->x};->g<(int8)->int32>:f", "E207"),
+        ("f<int32>:(x<int32>){->x};->g<(int32)->int8>:f", "E207"),
+        ("f<int32>:(x<int32>){->x};->g<int32>:f", "E207"),
+        ("f<int32>:(x<int32>){->x};->f<(int32)->int32>:f", "E203"),
+        (
+            "f<int32>:(x<int32>){->x};->g<(int32)->int32>:f;->g:2",
+            "E205",
+        ),
+    ] {
+        let case = case("m:@\"./ops.mwy\"", &[("ops.mwy", source)]);
+        for profile in ["debug", "release"] {
+            let output = case.command("check", &["--json", "--profile", profile]);
+            assert_eq!(output.status.code(), Some(1), "{source}");
+            assert!(
+                String::from_utf8_lossy(&output.stderr).contains(&format!("\"code\":\"{code}\"")),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+    let case = case(
+        "m:@\"./a.mwy\"",
+        &[
+            ("a.mwy", "b:@\"./b.mwy\";->f<()->int32>:b.f"),
+            ("b.mwy", "a:@\"./a.mwy\";->f<()->int32>:a.f"),
+        ],
+    );
+    let output = case.command("check", &["--json"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E502\""));
+}

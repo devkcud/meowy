@@ -1,4 +1,4 @@
-use super::{Checker, Result, Value};
+use super::{Checker, Result, Spec, Value};
 use crate::ast::{self, ExprKind, Span};
 use crate::diagnostic::Diagnostic;
 use crate::hir::{self, Type};
@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 #[derive(Default)]
 pub(crate) struct Module {
     pub(crate) block: usize,
+    pub(crate) depth: usize,
     pub(crate) values: BTreeMap<String, Value>,
 }
 
@@ -26,6 +27,7 @@ impl Checker {
             &mut self.module,
             Module {
                 block: self.block,
+                depth: self.scopes.len() + 1,
                 values: BTreeMap::new(),
             },
         );
@@ -66,9 +68,20 @@ impl Checker {
                 span,
             ));
         }
-        let ExprKind::Function { params, body } = &value.kind else {
-            return Ok(false);
+        let function = if matches!(value.kind, ExprKind::Function { .. }) {
+            None
+        } else {
+            match self.symbol(value)? {
+                Some(value @ Value::Function { .. }) => Some(value),
+                _ => return Ok(false),
+            }
         };
+        if self.scopes.len() != self.module.depth {
+            return Err(Diagnostic::unsupported(
+                "conditional function exports",
+                span,
+            ));
+        }
         if self
             .frames
             .last()
@@ -88,11 +101,29 @@ impl Checker {
         let annotation = annotation.ok_or_else(|| {
             Self::error(
                 "E214",
-                "exported function requires an explicit result annotation",
+                "exported function requires an explicit signature",
                 span,
             )
         })?;
-        self.declare_function(name, Some(annotation), params, body, span)?;
+        if let Some(function) = function {
+            let signature = self.spec(annotation)?;
+            if !matches!((&signature, &function),
+                (Spec::Function {params, result}, Value::Function {params: actual, result: Some(found), ..})
+                if params == actual && result == found)
+            {
+                return Err(Self::error(
+                    "E207",
+                    "exported signature does not match the function",
+                    span,
+                ));
+            }
+            self.declare(name, function, span)?;
+        } else {
+            let ExprKind::Function { params, body } = &value.kind else {
+                unreachable!()
+            };
+            self.declare_function(name, Some(annotation), params, body, span)?;
+        }
         self.module
             .values
             .insert(name.into(), self.value(name, span)?);

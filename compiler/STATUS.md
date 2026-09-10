@@ -17,9 +17,13 @@ Git holds history. Do not recreate STEP logs.
    a separate compile-time export namespace are now implemented; focused scalar,
    privacy and annotation regressions pass in debug/release. The broader file
    tests (10 library/12 native groups), all 47 checker tests, fmt and Clippy pass;
-   this slice is ready to commit.
-3. Support explicitly typed function re-exports, preserving canonical identity,
-   exact signatures, duplicate checks and import-cycle behavior.
+   committed as `3410a6f`.
+3. Explicitly typed function re-exports are implemented using existing identities
+   and exact signatures. Canonical identity, duplicates, annotation diagnostics
+   and import-cycle regressions are being checked. Function equality remains E222;
+   the identity test now inspects HIR call IDs instead of inventing equality support.
+   An explicit scope-depth check also keeps matcher-arm exports gated. All file
+   regressions (11 library/14 native groups), fmt and Clippy pass; ready to commit.
 4. Qualify cross-module borrow/call and panic behavior with focused regressions
    and a runnable example; keep runtime module-data captures and type exports gated.
 5. Update documentation/handoff and run the full compiler gate across the series.
