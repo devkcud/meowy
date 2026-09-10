@@ -182,6 +182,23 @@ impl Checker {
                 Value::Module(_) => self.symbol(&expr)?.ok_or_else(|| {
                     Diagnostic::new("E802", "unresolved documentation member", span)
                 })?,
+                Value::FileModule { id, ty } => {
+                    anchor = None;
+                    if let Some(value) = self.module_member(id, &ty, member, span)? {
+                        value
+                    } else {
+                        let Type::Record { fields, .. } = ty else {
+                            unreachable!()
+                        };
+                        Value::Type(
+                            fields
+                                .into_iter()
+                                .find(|field| field.name == member)
+                                .unwrap()
+                                .ty,
+                        )
+                    }
+                }
                 Value::Local { ty, .. } | Value::Type(ty) => {
                     let mut ty = &ty;
                     while let Some(inner) = ty.pointee() {
@@ -214,7 +231,7 @@ impl Checker {
                     ));
                 }
             };
-            anchor = anchor.and_then(|id| model.member(id, member));
+            anchor = anchor.map(|id| model.member(id, member).unwrap_or(id));
         }
         Ok(anchor)
     }

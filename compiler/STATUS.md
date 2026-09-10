@@ -20,8 +20,11 @@ still assume one file. Preserve attachment, signature, link and privacy validati
 3. Per-file initializer documentation checking complete. All 11 graph library and
    17 native file-module groups passed, alongside 16 library/nine native documentation
    groups, fmt and Clippy. Local E801/E802/E803 and file isolation are covered.
-4. Validate imported documentation links and native file diagnostics/boundaries.
-5. Document the supported slice and run the complete compiler gate.
+4. Imported value/type link checking complete. All 19 documentation library tests,
+   fmt and Clippy passed, including facade aliases, private/inaccessible targets,
+   distinct namespaces and private inferred record roots.
+5. Add native diagnostics/execution boundaries and a runnable documented graph.
+6. Document the supported slice and run the complete compiler gate.
 
 Commit each tested slice before proceeding; split further if review thresholds require.
 Multi-file site generation and public indexes remain separate.

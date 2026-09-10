@@ -405,3 +405,62 @@ pub(crate) fn file_modules_documentation_finishes_module_links_after_declaration
     assert_eq!(error.code, "E802");
     assert!(graph.file(error.span).path.ends_with("main.mwy"));
 }
+
+#[test]
+pub(crate) fn file_modules_documentation_links_follow_exported_namespaces_and_aliases() {
+    let (_temp, graph) = graph(&[
+        (
+            "main.mwy",
+            "#!| [[m.call]] [[m.row.n]] [[<m.Count>]] |!#m:@\"./facade.mwy\";alias:m;#| [[alias.call]] [[<alias.Count>]] |#->run<int32>:(){#| [[m.row.n]] |#x:1;->m.call(x)}",
+        ),
+        (
+            "facade.mwy",
+            "m:@\"./value.mwy\";#| [[<m.Count>]] |#-><Count>:<m.Count>;#| [[m.inc]] |#->call<(int32)->int32>:m.inc;#| [[m.row.n]] |#->row:m.row",
+        ),
+        (
+            "value.mwy",
+            "-><Count>:<int32>;->inc<int32>:(x<int32>){->x+1};->row:{->n:7}",
+        ),
+    ]);
+    graph.compile().unwrap();
+}
+
+#[test]
+pub(crate) fn file_modules_documentation_links_reject_private_missing_and_wrong_namespaces() {
+    for target in [
+        "m.private",
+        "m.missing",
+        "m.Count",
+        "<m.hidden>",
+        "<m.inc>",
+        "m.row.missing",
+        "m.inc.missing",
+    ] {
+        let source = format!("m:@\"./value.mwy\";#| [[{target}]] |#x:1");
+        let (_temp, graph) = graph(&[
+            ("main.mwy", &source),
+            (
+                "value.mwy",
+                "private:1;<hidden>:<int32>;-><Count>:<int32>;->inc<int32>:(x<int32>){->x+1};->row:{->n:7}",
+            ),
+        ]);
+        let error = graph.compile().unwrap_err().remove(0);
+        assert_eq!(error.code, "E802", "{target}: {error:?}");
+        assert!(graph.file(error.span).path.ends_with("main.mwy"));
+        assert_eq!(error.span.start, source.find("[[").unwrap());
+    }
+}
+
+#[test]
+pub(crate) fn file_modules_documentation_keeps_private_roots_for_inferred_members() {
+    let (_temp, graph) = graph(&[
+        (
+            "main.mwy",
+            "m:@\"./value.mwy\";private:m.row;#| [[private.n]] |#->value:1",
+        ),
+        ("value.mwy", "->row:{->n:7}"),
+    ]);
+    let error = graph.compile().unwrap_err().remove(0);
+    assert_eq!(error.code, "E802");
+    assert!(error.message.contains("private"));
+}
