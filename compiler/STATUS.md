@@ -19,9 +19,11 @@ Git holds history. Do not recreate STEP logs.
    committed as `d1ef0e5`.
 3. Transparent facade aliases, existing computed type values, callable signatures,
    nominal foundation types and ownership boundaries pass three library/four native
-   groups in debug/release where applicable. Fmt/Clippy pass; ready to commit.
+   groups in debug/release where applicable. Fmt/Clippy pass; committed as `9bb3dbd`.
    Qualified types use `<module.Type>`; general type evaluation is unchanged.
-4. Exercise documentation and a runnable typed facade with focused integration tests.
+4. A typed geometry facade and standalone exported-type documentation tests are
+   pass. Four library/six native exported-type groups, including documentation
+   roles/spans, generated HTML and E803 policy, pass with fmt/Clippy; ready to commit.
 5. Update docs/handoff and run the compiler gate across the complete series.
 
 Keep syntax, namespace behavior, integration and documentation reviewable. Include

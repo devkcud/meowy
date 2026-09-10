@@ -1,0 +1,4 @@
+geometry:@"./geometry.mwy"
+-><Point>:<geometry.Point>
+->origin:geometry.origin
+->translate<(Point,int32)->Point>:geometry.translate

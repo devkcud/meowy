@@ -96,3 +96,60 @@ pub(crate) fn exported_types_do_not_erase_record_permissions_or_public_signature
         }
     }
 }
+
+#[test]
+pub(crate) fn exported_types_example_uses_a_typed_geometry_facade() {
+    case(
+        include_str!("../../examples/type-modules/main.mwy"),
+        &[
+            (
+                "api.mwy",
+                include_str!("../../examples/type-modules/api.mwy"),
+            ),
+            (
+                "geometry.mwy",
+                include_str!("../../examples/type-modules/geometry.mwy"),
+            ),
+        ],
+    )
+    .runs(b"geometry\n10\n0\n");
+}
+
+#[test]
+pub(crate) fn exported_types_documentation_keeps_attachment_signatures_and_public_policy() {
+    let source = "#!| Uses [[<Count>]]. |!#\n#| A public integer. |#\n-><Count>:<int32>";
+    let case = super::Case::new(source);
+    let checked = super::documentation::doc(&case, "check", &["--standalone", "--require-public"]);
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    let output = case.path.join("docs");
+    let built = super::documentation::doc(
+        &case,
+        "build",
+        &[
+            "--standalone",
+            "--require-public",
+            "--output",
+            output.to_str().unwrap(),
+        ],
+    );
+    assert!(
+        built.status.success(),
+        "{}",
+        String::from_utf8_lossy(&built.stderr)
+    );
+    let page = std::fs::read_to_string(output.join("index.html")).unwrap();
+    assert!(page.contains("Count"));
+    assert!(page.contains("int32"));
+    let undocumented = super::Case::new("-><Count>:<int32>");
+    let output = super::documentation::doc(
+        &undocumented,
+        "check",
+        &["--standalone", "--require-public", "--json"],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E803\""));
+}

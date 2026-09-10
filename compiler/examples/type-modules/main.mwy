@@ -1,0 +1,5 @@
+geometry:@"./api.mwy"
+d:@"debug"
+point<geometry.Point>:geometry.translate(geometry.origin,10)
+d.print(point.x)
+d.print(point.y)

@@ -124,3 +124,21 @@ pub(crate) fn documentation_public_policy_and_budgets_fail_explicitly() {
     let source = format!("#|{}|#x:1", "x".repeat(MAX_SOURCE));
     assert_eq!(checked(&source, true).unwrap_err()[0].code, "B001");
 }
+
+#[test]
+pub(crate) fn exported_types_documentation_preserves_type_roles_and_declaration_spans() {
+    let source = "#| Public counter. |#\n-><Count>:<int32>";
+    let (_, model) = checked(source, true).unwrap();
+    let model = model.unwrap();
+    let entry = model
+        .entries
+        .iter()
+        .find(|entry| entry.name == "Count")
+        .unwrap();
+    assert_eq!(entry.kind, Kind::Type);
+    assert!(entry.public);
+    assert!(entry.checked);
+    assert_eq!(entry.signature, "int32");
+    assert_eq!(entry.span.start, source.find("->").unwrap());
+    model.require_public().unwrap();
+}
