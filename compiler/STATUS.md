@@ -9,13 +9,19 @@ Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-1. `78ab811` — bounded AST discovery, source ordering and loader integration.
-2. `b2a06be` — function-local module identities with capture/privacy gates preserved.
-3. `ba0d015` — nested startup/error/budget/protection tests and a runnable example.
-4. This documentation handoff records the successful final gate below.
+Documentation-bearing graphs are in progress. The tree started clean. Investigation
+confirmed graph spans are disjoint, while documentation source slicing and checking
+still assume one file. Preserve attachment, signature, link and privacy validation.
 
-Each completed slice includes focused validation and stays below the split-review
-threshold. Continue planning dependency-ordered commits before implementation.
+1. Offset-aware source reads complete: all 11 documentation library tests, fmt and
+   Clippy passed. Shifted attachment/link/signature and Unicode/CRLF checks passed.
+2. Model exported declarations and their parameters with file visibility rules.
+3. Check per-file models inside initializer scopes and enable documented graphs.
+4. Validate imported documentation links and native file diagnostics/boundaries.
+5. Document the supported slice and run the complete compiler gate.
+
+Commit each tested slice before proceeding; split further if review thresholds require.
+Multi-file site generation and public indexes remain separate.
 
 ## Current compiler slice
 

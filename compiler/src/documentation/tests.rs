@@ -142,3 +142,35 @@ pub(crate) fn exported_types_documentation_preserves_type_roles_and_declaration_
     assert_eq!(entry.span.start, source.find("->").unwrap());
     model.require_public().unwrap();
 }
+
+#[test]
+pub(crate) fn documentation_checks_shifted_sources_and_maps_normalized_links() {
+    let source = "#!| [[f]] |!#\r\n#|| É [[x]]. ||#f<int32>:(#| Input. |#x<int32>){->x};<R>:<{#| Field. |#n<int32>}>";
+    let base = 4097;
+    let parsed = crate::parser::parse_documented_at(source, base).unwrap();
+    let model = Model::at(source, &parsed, base).unwrap();
+    let (_, model) = crate::check::check_documented(&parsed.block, Some(model)).unwrap();
+    let model = model.unwrap();
+    assert!(model.entries.iter().all(|entry| entry.checked));
+    let link = &model.entries[1].links[0];
+    assert_eq!(link.span.start, base + source.find("[[x]]").unwrap());
+    assert_eq!(model.entries[1].signature, "(int32)->int32");
+    assert_eq!(model.entries.last().unwrap().signature, "int32");
+}
+
+#[test]
+pub(crate) fn documentation_shifted_attachment_and_markup_errors_keep_source_spans() {
+    for source in [
+        "#| One. |# #| Two. |#x:1",
+        "x:1 #| Trailing. |#\ny:2",
+        "#| [[x()]] |#x:1",
+    ] {
+        let parsed = crate::parser::parse_documented(source).unwrap();
+        let local = Model::new(source, &parsed).unwrap_err();
+        let parsed = crate::parser::parse_documented_at(source, 512).unwrap();
+        let shifted = Model::at(source, &parsed, 512).unwrap_err();
+        assert_eq!(shifted.code, local.code);
+        assert_eq!(shifted.span.start, local.span.start + 512);
+        assert_eq!(shifted.span.end, local.span.end + 512);
+    }
+}

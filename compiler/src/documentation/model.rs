@@ -41,6 +41,7 @@ pub(crate) struct Model {
     pub(crate) starts: BTreeMap<usize, usize>,
     pub(crate) types: BTreeMap<usize, String>,
     pub(crate) work: usize,
+    pub(crate) origin: Span,
 }
 
 impl Model {
@@ -50,20 +51,25 @@ impl Model {
     pub(crate) fn spend(&mut self, count: usize) -> Result<()> {
         self.work = self.work.saturating_add(count);
         if self.work > MAX_WORK {
-            Err(Self::budget(Span::default()))
+            Err(Self::budget(self.origin))
         } else {
             Ok(())
         }
     }
     pub(crate) fn new(source: &str, parsed: &Parsed) -> Result<Self> {
+        Self::at(source, parsed, 0)
+    }
+    pub(crate) fn at(source: &str, parsed: &Parsed, base: usize) -> Result<Self> {
         if source.len() > MAX_SOURCE {
             return Err(Self::budget(parsed.block.span));
         }
+        let source = Source { text: source, base };
         let mut model = Self {
             entries: Vec::new(),
             starts: BTreeMap::new(),
             types: BTreeMap::new(),
             work: 0,
+            origin: parsed.block.span,
         };
         model.add(
             "module",
@@ -91,7 +97,7 @@ impl Model {
                 }
                 0
             } else {
-                let at = skip(source, doc.close.end)?;
+                let at = source.skip(doc.close.end)?;
                 let id = model.starts.get(&at).copied().ok_or_else(|| {
                     Diagnostic::new(
                         "E801",
@@ -106,7 +112,7 @@ impl Model {
                     .find(|(_, span)| span.end <= doc.open.start);
                 if let Some((kind, span)) = prior
                     && *kind != TokenKind::Newline
-                    && !matches!(&source[span.start..span.end], ";" | "{" | "(" | ",")
+                    && !matches!(source.slice(*span), ";" | "{" | "(" | ",")
                 {
                     return Err(Diagnostic::new(
                         "E801",
@@ -123,7 +129,7 @@ impl Model {
                     doc.open,
                 ));
             }
-            let (text, map) = normalize(source, doc.body);
+            let (text, map) = source.normalize(doc.body);
             model.spend(text.len().saturating_mul(2) + 1)?;
             let entry = &mut model.entries[id];
             entry.doc = Some(*doc);
@@ -172,7 +178,7 @@ impl Model {
     }
     pub(crate) fn walk_block(
         &mut self,
-        source: &str,
+        source: Source<'_>,
         parsed: &Parsed,
         block: &Block,
         parent: Option<usize>,
@@ -186,7 +192,7 @@ impl Model {
     }
     pub(crate) fn walk_stmt(
         &mut self,
-        source: &str,
+        source: Source<'_>,
         parsed: &Parsed,
         stmt: &Stmt,
         parent: Option<usize>,
@@ -276,7 +282,7 @@ impl Model {
     }
     pub(crate) fn walk_type(
         &mut self,
-        source: &str,
+        source: Source<'_>,
         parsed: &Parsed,
         ty: &TypeExpr,
         parent: usize,
@@ -298,7 +304,7 @@ impl Model {
                         .rev()
                         .find(|(kind, _)| *kind != TokenKind::Newline)
                         .ok_or_else(|| Self::budget(ty.span))?;
-                    if &source[span.start..span.end] != name {
+                    if source.slice(*span) != name {
                         return Err(Self::budget(*span));
                     }
                     let id = self.add(
@@ -342,7 +348,7 @@ impl Model {
     }
     pub(crate) fn walk_expr(
         &mut self,
-        source: &str,
+        source: Source<'_>,
         parsed: &Parsed,
         expr: &Expr,
         parent: Option<usize>,
@@ -465,6 +471,37 @@ impl Model {
         self.entries
             .iter()
             .position(|entry| entry.parent == Some(parent) && entry.name == name)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Source<'a> {
+    pub(crate) text: &'a str,
+    pub(crate) base: usize,
+}
+
+impl Source<'_> {
+    pub(crate) fn slice(&self, span: Span) -> &str {
+        &self.text[span.start - self.base..span.end - self.base]
+    }
+
+    pub(crate) fn skip(&self, pos: usize) -> Result<usize> {
+        skip(self.text, pos - self.base)
+            .map(|pos| pos + self.base)
+            .map_err(|mut error| {
+                error.span.start += self.base;
+                error.span.end += self.base;
+                error
+            })
+    }
+
+    pub(crate) fn normalize(&self, span: Span) -> (String, Vec<usize>) {
+        let span = Span::new(span.start - self.base, span.end - self.base);
+        let (text, mut map) = normalize(self.text, span);
+        for pos in &mut map {
+            *pos += self.base;
+        }
+        (text, map)
     }
 }
 
