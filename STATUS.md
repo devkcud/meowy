@@ -7,6 +7,10 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Native panic file labels are in progress as five small commits: runtime helpers,
+explicit-panic mapping, checked-operation mapping, driver integration, and final
+documentation/validation. The compiler STATUS records the ordered commit plan.
+
 Bounded relative file imports passed the compiler gate. Top-level immutable bindings
 can import immutable reference-free value exports. Canonical paths/symlinks deduplicate
 modules; isolated scopes and ordered dependency initialization preserve private

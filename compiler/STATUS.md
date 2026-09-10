@@ -1,10 +1,30 @@
 # Compiler handoff and work tracker
 
 Updated: 2026-09-10. Bounded relative value imports are complete and passed the
-compiler gate. No failing checks remain.
+compiler gate. Native panic file labels are in progress. Optional runtime file-site
+helpers pass two native ABI groups in debug/release, including legacy output,
+escaped UTF-8 labels, panic copying and retained cleanup causes. Compiler lowering
+and driver integration are still pending.
 Full v0.0.1 is incomplete. [../STATUS.md](../STATUS.md) tracks the project;
 [../COMPILER.md](../COMPILER.md) records the plan. Keep this handoff current;
 Git holds history. Do not recreate STEP logs.
+
+## Planned commits
+
+1. Runtime file-site helpers and their two ABI/output regression groups pass.
+   Legacy helpers and panic evidence semantics are preserved. All five existing
+   panic-outcome groups, formatting and Clippy also pass. This slice is ready to commit.
+2. Add validated backend source ranges and map explicit P006 sites, with focused
+   mapping/escaping tests. Keep the CLI on its existing path until integration.
+3. Map P001/P002/P003 sites through the same backend source data, with bounds,
+   overflow/division/capacity tests and evaluation-order evidence.
+4. Pass canonical graph sources from the driver; add multi-file and single-file
+   CLI regressions, including initializer failure and alias identity.
+5. Document the format/boundaries, run the compiler gate and finalize the handoff.
+
+Keep each commit buildable, include its focused tests, inspect staged diffs and
+apply the 400-line/8-file split review threshold. Commit each validated slice
+before starting the next. No package/export expansion is part of this work.
 
 ## Current compiler slice
 

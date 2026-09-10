@@ -132,9 +132,27 @@ extern "C" [[noreturn]] void meowy_arithmetic_fail_v1() {
     meowy_panic_v1();
 }
 
-static void site(const std::uint64_t start, const std::uint64_t end, Panic *panic) {
-    constexpr char text[] = " at bytes ";
-    meowy_panic_text_v0(panic, text, sizeof(text) - 1);
+static void site(const std::uint64_t start, const std::uint64_t end, Panic *panic,
+                 const char *file = nullptr, const std::uint64_t size = 0) {
+    if (size == 0) {
+        meowy_panic_text_v0(panic, " at bytes ", 10);
+    } else {
+        meowy_panic_text_v0(panic, " at \"", 5);
+        for (std::uint64_t i = 0; i < size; ++i) {
+            const unsigned char byte = static_cast<unsigned char>(file[i]);
+            if (byte == '"' || byte == '\\') {
+                meowy_panic_text_v0(panic, "\\", 1);
+                meowy_panic_text_v0(panic, file + i, 1);
+            } else if (byte < 32 || byte == 127) {
+                constexpr char hex[] = "0123456789abcdef";
+                const char escaped[] = {'\\', 'u', '0', '0', hex[byte >> 4], hex[byte & 15]};
+                meowy_panic_text_v0(panic, escaped, sizeof(escaped));
+            } else {
+                meowy_panic_text_v0(panic, file + i, 1);
+            }
+        }
+        meowy_panic_text_v0(panic, "\" bytes ", 8);
+    }
     meowy_panic_uint_v0(panic, start);
     meowy_panic_text_v0(panic, "..", 2);
     meowy_panic_uint_v0(panic, end);
@@ -152,6 +170,12 @@ extern "C" void meowy_panic_site_v0(Panic *panic, const std::uint64_t start,
     meowy_write_v1(2, "\n", 1);
 }
 
+extern "C" void meowy_panic_site_file_v0(Panic *panic, const std::uint64_t start,
+    const std::uint64_t end, const char *file, const std::uint64_t size) {
+    site(start, end, panic, file, size);
+    meowy_write_v1(2, "\n", 1);
+}
+
 static void operand(const std::uint64_t value, const int is_signed, Panic *panic) {
     if (is_signed != 0) {
         meowy_panic_int_v0(panic, static_cast<std::int64_t>(value));
@@ -160,13 +184,14 @@ static void operand(const std::uint64_t value, const int is_signed, Panic *panic
     }
 }
 
-extern "C" void meowy_arithmetic_capture_v0(Panic *panic, const int op,
+extern "C" void meowy_arithmetic_capture_file_v0(Panic *panic, const int op,
                                                      const int bits,
                                                      const int is_signed,
                                                      const std::uint64_t left,
                                                      const std::uint64_t right,
                                                      const std::uint64_t start,
-                                                     const std::uint64_t end) {
+                                                     const std::uint64_t end,
+    const char *file, const std::uint64_t size) {
     meowy_panic_begin_v0(panic, 2);
     if (bits < 1 || bits > 64) {
         meowy_arithmetic_fail_v1();
@@ -201,14 +226,15 @@ extern "C" void meowy_arithmetic_capture_v0(Panic *panic, const int op,
         meowy_panic_uint_v0(panic, UINT64_MAX >> (64 - bits));
     }
     meowy_panic_text_v0(panic, ")", 1);
-    meowy_panic_site_v0(panic, start, end);
+    meowy_panic_site_file_v0(panic, start, end, file, size);
 }
 
-extern "C" void meowy_index_capture_v0(Panic *panic, const std::uint64_t index,
+extern "C" void meowy_index_capture_file_v0(Panic *panic, const std::uint64_t index,
                                                 const std::uint64_t length,
                                                 const int signed_index,
                                                 const std::uint64_t start,
-                                                const std::uint64_t end) {
+                                                const std::uint64_t end,
+    const char *file, const std::uint64_t size) {
     meowy_panic_begin_v0(panic, 1);
     constexpr char prefix[] = "panic[P001]: ";
     constexpr char suffix[] = " is outside initialized length ";
@@ -221,13 +247,14 @@ extern "C" void meowy_index_capture_v0(Panic *panic, const std::uint64_t index,
     }
     meowy_panic_text_v0(panic, suffix, sizeof(suffix) - 1);
     meowy_panic_uint_v0(panic, length);
-    meowy_panic_site_v0(panic, start, end);
+    meowy_panic_site_file_v0(panic, start, end, file, size);
 }
 
-extern "C" void meowy_list_capture_v0(Panic *panic, const std::uint64_t length,
+extern "C" void meowy_list_capture_file_v0(Panic *panic, const std::uint64_t length,
                                                const std::uint64_t capacity,
                                                const std::uint64_t start,
-                                               const std::uint64_t end) {
+                                               const std::uint64_t end,
+    const char *file, const std::uint64_t size) {
     meowy_panic_begin_v0(panic, 3);
     constexpr char prefix[] = "panic[P003]: ";
     constexpr char middle[] = ", capacity ";
@@ -238,7 +265,25 @@ extern "C" void meowy_list_capture_v0(Panic *panic, const std::uint64_t length,
     meowy_panic_text_v0(panic, middle, sizeof(middle) - 1);
     meowy_panic_uint_v0(panic, capacity);
     meowy_panic_text_v0(panic, ")", 1);
-    meowy_panic_site_v0(panic, start, end);
+    meowy_panic_site_file_v0(panic, start, end, file, size);
+}
+
+extern "C" void meowy_arithmetic_capture_v0(Panic *panic, const int op, const int bits,
+    const int is_signed, const std::uint64_t left, const std::uint64_t right,
+    const std::uint64_t start, const std::uint64_t end) {
+    meowy_arithmetic_capture_file_v0(panic, op, bits, is_signed, left, right, start, end,
+                                   nullptr, 0);
+}
+
+extern "C" void meowy_index_capture_v0(Panic *panic, const std::uint64_t index,
+    const std::uint64_t length, const int signed_index, const std::uint64_t start,
+    const std::uint64_t end) {
+    meowy_index_capture_file_v0(panic, index, length, signed_index, start, end, nullptr, 0);
+}
+
+extern "C" void meowy_list_capture_v0(Panic *panic, const std::uint64_t length,
+    const std::uint64_t capacity, const std::uint64_t start, const std::uint64_t end) {
+    meowy_list_capture_file_v0(panic, length, capacity, start, end, nullptr, 0);
 }
 
 extern "C" [[noreturn]] void meowy_arithmetic_fail_v2(const int op, const int bits,
