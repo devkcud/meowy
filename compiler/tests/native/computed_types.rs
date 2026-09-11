@@ -80,3 +80,66 @@ pub(crate) fn computed_types_budget_failure_stays_bootstrap_and_keeps_the_depend
         "{error}"
     );
 }
+
+#[test]
+pub(crate) fn computed_integers_export_calculated_capacities_and_preserve_large_widths() {
+    case(
+        "m:@\"./types.mwy\";d:@\"debug\";items<m.Items>:[3,7];d.print(items[2]);v<m.Wide>:4294967297;d.print(v)",
+        &[("types.mwy", "-><Items>:{base<uint8>:2;capacity:base*2;-><int32[capacity]>};-><Wide>:{base<uint64>:4294967296;copy:base+1;->copy<>}")],
+    ).runs(b"7\n4294967297\n");
+}
+
+#[test]
+pub(crate) fn computed_integers_report_precise_dependency_failures_without_initialization() {
+    for (source, code, text) in [
+        (
+            "#é#\nd:@\"debug\";d.print(\"init\");-><T>:{n<uint8>:255;capacity:n+1;-><int32>}",
+            "E107",
+            "n+1",
+        ),
+        (
+            "d:@\"debug\";d.print(\"init\");f<int32>:(n<int32>){<T>:{capacity:n+1;-><int32>};->1}",
+            "E211",
+            "n+1",
+        ),
+        (
+            "d:@\"debug\";d.print(\"init\");-><T>:{capacity<int32>:d.panic(\"bad\");-><int32>}",
+            "E219",
+            "d.panic",
+        ),
+    ] {
+        let case = case("m:@\"./types.mwy\"", &[("types.mwy", source)]);
+        for action in ["check", "build", "run"] {
+            let output = case.command(action, &["--json"]);
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(error.contains(&format!("\"code\":\"{code}\"")), "{error}");
+            assert!(
+                error.contains(&format!(
+                    "\"path\":\"{}\"",
+                    case.path.join("types.mwy").display()
+                )),
+                "{error}"
+            );
+            assert!(
+                error.contains(&format!("\"start\":{}", source.find(text).unwrap())),
+                "{error}"
+            );
+        }
+    }
+}
+
+#[test]
+pub(crate) fn computed_integers_refuse_folded_runtime_bindings_as_static_inputs() {
+    for source in [
+        "n:4;<T>:{capacity:n+1;-><int32[capacity]>}",
+        "n:4;<T>:{-><int32[n]>}",
+    ] {
+        let output = Case::new(source).command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"B001\""), "{error}");
+        assert!(error.contains("runtime initializer eligibility"), "{error}");
+    }
+}

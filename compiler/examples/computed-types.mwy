@@ -4,7 +4,11 @@ debug:@"debug"
 <Counts>:{
     #| Element type used by the list constructor. |#
     element:<int32>
-    -><(element)[4]>
+    #| Base capacity. |#
+    base<uint8>:2
+    #| Capacity calculated from [[base]]. |#
+    capacity:base*2
+    -><(element)[capacity]>
 }
 #| A record built from a local type alias. |#
 <Row>:{

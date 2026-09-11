@@ -272,3 +272,25 @@ pub(crate) fn computed_integers_count_expression_work_within_the_type_root() {
     assert_eq!(error.code, "B001");
     assert!(error.message.contains("computed type bootstrap budget"));
 }
+
+#[test]
+pub(crate) fn computed_integers_keep_documentation_widths_and_emit_no_runtime_scratch() {
+    let source = include_str!("../../../examples/computed-types.mwy");
+    let (_, model) = crate::documentation::checked(source, true).unwrap();
+    let model = model.unwrap();
+    for name in ["base", "capacity"] {
+        let entry = model
+            .entries
+            .iter()
+            .find(|entry| entry.name == name)
+            .unwrap();
+        assert_eq!(entry.signature, "uint8");
+        assert!(entry.checked);
+        assert!(!entry.public);
+    }
+    let program =
+        crate::compile("<T>:{base<uint8>:2;capacity:base*2;-><int32[capacity]>}").unwrap();
+    assert!(program.locals.is_empty());
+    assert!(program.functions.is_empty());
+    assert!(program.body.stmts.is_empty());
+}

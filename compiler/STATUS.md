@@ -19,7 +19,10 @@ reusing those operations. Restrict this slice to integers and eligible static in
    native matching groups, the existing dead-path extent regression and Clippy.
    All four integer groups, including typed known-effect calls, passed final
    revalidation; fmt and Clippy passed.
-3. Add native/module/documentation coverage and a local-capacity example.
+3. All 14 computed-type library/parser and nine matching native groups passed,
+   including exported capacities, large widths, local diagnostics, documentation
+   signatures and no runtime scratch. Updated example runs in both profiles.
+   Fmt and Clippy passed.
 4. Document the integer-only boundary and run the complete compiler gate.
 
 Runtime initializer eligibility is not tracked yet: even folded runtime bindings
