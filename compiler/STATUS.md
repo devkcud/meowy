@@ -1,83 +1,72 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Straight-line integer block initializer eligibility passed the
-compiler gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-10. Immutable integer record-field eligibility passed the compiler
+gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-Immutable integer record-field eligibility is in progress; the tree started clean.
-Record HIR uses named emissions plus local slot aliases, and field indices come from
-its checked record type. A field must retain the containing initializer's complete
-work/error evidence. Start with flat immutable integer fields and a unit primary.
+1. `27f0c49` — scoped scalar evidence for nested/record-local initialization.
+2. `2e4fa5c` — whole-record evidence with checked field indices and complete body checks.
+3. `87fde75` — preserve that evidence in ordinary copied integer fields.
+4. `449c3fa` — direct field reads in computed scratch and extents.
+5. `a415b5f` — native boundaries, source diagnostics, budgets and updated example.
+6. This separate documentation handoff records the complete gate below.
 
-1. Scoped scalar evidence lookup complete. All 15 initializer-related library and
-   11 native matching groups, fmt and Clippy passed; shadowing, nested values and
-   unused failure provenance are covered.
-2. Bounded record/alias evidence is implemented, including local emission aliases,
-   complete body checks, checked field indices and error-only unreachable records.
-   Synthetic module inputs are excluded. Three record metadata groups, 14 computed-
-   type library/parser and 17 native matching groups passed; fmt/Clippy passed.
-3. Copied integer fields retain whole-record errors/work and exact values. Record
-   metadata/projection groups, 38 native record compatibility groups, the existing
-   initializer exclusion test, fmt and Clippy passed.
-4. Direct computed field reads complete. Seven record groups, 14 computed-type
-   library/parser and 17 native matching groups, fmt and Clippy passed. Aliases,
-   grouped roots, exact widths, type identities and capture gates are covered.
-5. All five native field groups passed, including module initialization, source
-   spans, sibling errors/work and imported-data/capture gates. Example execution,
-   derived documentation signatures, scratch visibility, fmt and Clippy passed.
-6. Document exact boundaries and run the complete compiler gate.
-
-Nested records, imported data, reference projections and helper calls remain separate.
-Commit each validated slice and keep the review threshold before further implementation.
+Each implementation/test slice passed focused checks before its commit and remained
+below the review threshold. Plan dependency-ordered commits before the next feature.
 
 ## Current compiler slice
 
-`Input` now retains a checked integer value as well as original errors and transitive
-work. `check/inputs.rs` folds child evidence through the existing constant arithmetic,
-preserving widths and source-ordered failures after lexical scopes close. It no longer
-needs the departed block's lexical constant map to prove its result.
+`check/inputs/records.rs` records complete initializer evidence for named immutable
+records with a unit primary and 1..256 immutable integer fields. Checked field indices
+retain values independently of declaration order. Record aliases preserve the shape
+and evidence. Named field initializers may read earlier emitted fields through a
+scoped scalar evidence map; nested scalar blocks and ordinary eligible locals work.
 
-`check/inputs/blocks.rs` recognizes checked integer blocks containing immutable eligible
-bindings and exactly one primary emission targeting that block. Nested eligible blocks
-work. Every statement contributes evidence/work, including unused bindings after the
-primary; the emission is not an early return. Calls, mutation, branches/restarts,
-named/outer emissions and other statements remain unproven.
+Every initializer statement is checked: selected fields cannot hide effects, mutable
+siblings, invalid sibling arithmetic or unused tail work. The complete record's error
+and transitive work accompany every field read. Error-only evidence can survive an
+unreachable record with a declared shape; failures retain original source spans.
+Synthetic module bindings receive no initializer evidence, keeping imported data gated.
 
-Required expression reads use proven values only while both required checking and a
-computed-type root are active. Ordinary runtime locals, reads and initialization remain
-unchanged. Inputs still require immutable provenance; runtime parameters, mutable state,
-effectful results and imported data do not become static merely through folding.
+`check/inputs.rs` propagates record evidence into copied integer bindings.
+`check/type_values/fields.rs` resolves direct required paths from named immutable local
+records (including grouped roots/aliases), preserving checked type/member identity.
+`scalars.rs` charges the proof and reports failures before required materialization in
+`expressions.rs`. Type identities such as `core.int32` keep their separate lookup.
 
-Unreachable blocks whose HIR type is `never` retain error-only evidence when possible.
-They do not supply an invented integer result. Required reads surface hidden failures,
-including unused arithmetic after emission, as E107 at the original source expression.
-Source identities, exact integer widths and documentation signatures are preserved.
-See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and the updated
-[block-seed example](examples/computed-types.mwy).
+Computed scratch and extents may read eligible lexical record fields across function
+scope. Ordinary runtime captures remain gated. Runtime record reads and initialization
+are unchanged; no initializer executes during checking/building. Direct extents outside
+computed roots retain their existing profile. Nested records, references, inline roots,
+non-integer fields/non-unit primaries, imported data and helper calls remain separate.
+See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and the
+[field-capacity example](examples/computed-types.mwy).
 
-Transitive/cached reads and unused block work charge the shared bootstrap bound.
-Limits remain 4096 visits, 64 active resolver/validation levels and 16384 traversed
-type nodes, with B001 exhaustion. They are not language E220 counters. Direct extents
-outside computed-type roots retain their previous profile. Runtime captures, owning/
-borrowed export rules and normal type/layout checks remain intact.
+Existing scalar/block provenance, exact integer widths, source-ordered errors and
+scope restoration remain intact. Bootstrap bounds remain 4096 visits, 64 active levels
+and 16384 traversed type nodes; the record shape adds its 256-field bound. This is not
+full required evaluation or language E220 accounting. Ownership/layout/export privacy
+checks remain in the existing shared pipeline.
 
 ## Actual validation
 
-- Value-retention prerequisite passed eight initializer library and four native groups,
-  including scope exit, unsigned complement, large widths and child-error precedence.
-- Block integration passed 13 initializer-related library and seven native matching
-  groups. Earlier computed-type compatibility passed 14 library/13 native groups.
-- Three focused block library and four new native groups passed: nested/module values,
-  unused tail failures/work, excluded effects, mutable/control gates, cache costs and
-  dependency-local error spans from check/build/run. Execution uses both profiles.
-- Updated example execution, exact documentation signatures, fmt and Clippy passed.
+- Scoped evidence passed 15 initializer-related library and 11 native matching groups.
+- Seven record evidence/projection groups passed, including order, aliases, local
+  field dependencies, exact values, excluded shapes, sibling errors/effects and bounds.
+- Record compatibility included 38 native groups and the existing initializer exclusion
+  test. Direct-read compatibility passed 14 computed-type library/17 native groups.
+- Five new native groups passed: local module types/initialization, errors from an
+  unselected sibling at the original dependency span, no effect execution, imported
+  data/capture refusal and whole-record work. Execution uses both profiles.
+- Updated example execution, exact documentation signatures, scratch visibility,
+  fmt and Clippy passed. The new example distinguishes its field from a same-named local.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 708 library and 659 native Rust tests (1367 total), 16 tooling plus
+  Clippy, build, 717 library and 664 native Rust tests (1381 total), 16 tooling plus
   four compiler-harness Python tests, 80 standalone and five multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-block-inputs-gate.log`.
+  debug/release. Gate log: `/tmp/meowy-record-fields-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -132,23 +121,26 @@ binding checking in `src/check/statements.rs` and consumed by scalar required re
 Block evidence lives in `src/check/inputs/blocks.rs`; required-only constant materialization
 is in `src/check/expressions.rs`. Runtime constant folding remains separate.
 
+Whole-record evidence is in `src/check/inputs/records.rs`; direct required field lookup
+is in `src/check/type_values/fields.rs`. Native coverage is `tests/native/computed_fields.rs`.
+
 ## Still outside this compiler
 
-Field/imported-data and helper initializer eligibility, module-data captures, borrowed
-module storage, package/manifest resolution, full required evaluation and generic
-specialization, public FFI, wider ownership/cleanup, executable networking, public
-artifacts/replay and LSP remain separate. Host execution does not qualify minimum
-platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
+Nested-record/imported-data and helper initializer eligibility, module-data captures,
+borrowed module storage, package/manifest resolution, full required evaluation and
+generic specialization, public FFI, wider ownership/cleanup, executable networking,
+public artifacts/replay and LSP remain separate. Host execution does not qualify
+minimum platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/
+LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Plan bounded eligibility for immutable integer record-field projections. Inspect
-   `check/inputs.rs`, checked record/emission HIR and `type_values/scalars.rs` before
-   choosing an evidence representation. Preserve whole-initializer effect checks,
-   concrete field identity, immutable storage and original diagnostic/work provenance;
-   a known field value alone must not hide effects in the containing initializer.
-   Keep imported data and helper calls separate initially. Record reviewable slices
-   and accepted/rejection/native no-initializer-execution tests before implementation.
+1. Plan bounded nested immutable integer-record eligibility through
+   `check/inputs/records.rs` and `type_values/fields.rs`. Preserve checked field paths
+   and the complete ancestor initializer's errors/effects/work, not just a leaf value.
+   Reuse existing shape/depth limits, retain mutation/reference restrictions, and keep
+   imported data/helper calls separate. Record dependency-ordered evidence/path/
+   integration slices and accepted/rejection/native initialization tests before editing.
 2. Preserve capture/borrowed-export and ownership/header proofs. Run focused checks
    per slice and the complete compiler gate for new behavior; keep STATUS concise,
    commit reviewable slices, never push or recreate STEP logs.

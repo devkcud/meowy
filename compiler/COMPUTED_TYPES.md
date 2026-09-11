@@ -4,10 +4,10 @@ The bootstrap supports straight-line blocks in required type expressions, using
 existing type construction and lexical scopes from the checker:
 
 ```meowy
-seed<uint8>:{offset<uint8>:1;->offset+1}
+settings:{->base<uint8>:{offset<uint8>:1;->offset+1}}
 <Counts>:{
     element:<int32>
-    base:seed
+    base:settings.base
     capacity:base*2
     -><(element)[capacity]>
 }
@@ -54,16 +54,16 @@ runtime branch, and its temporary checking state is restored afterwards.
 Inputs may be static integers in the construction scope or immutable integer bindings
 with recorded initializer eligibility. The checker tracks separate evidence over
 checked literals, aliases, supported unary/arithmetic expressions and straight-line
-integer blocks. Every local
-value dependency must already have that evidence; a folded constant alone does not
+integer blocks. Flat immutable integer records also carry complete initializer evidence.
+Every local value dependency must already have that evidence; a folded constant alone does not
 establish eligibility. Exact widths and source declaration identities are preserved.
 
 Required reads can use eligible lexical inputs across function scopes. This does not
 enable runtime captures or expose private names from another file. Original runtime
 bindings and application effects remain in the program; checking/building does not
 execute them. Runtime parameters, mutable state and effectful results remain unavailable
-(E211). Blocks with effects, mutation or control flow, field/imported-data reads and
-helper calls remain unproven; unsupported folded inputs retain B001.
+(E211). Blocks with effects, mutation or control flow, imported-data reads and helper
+calls remain unproven; unsupported folded inputs retain B001.
 
 Evidence retains integer failures from unreachable runtime paths. A required read
 reports E107 at the original failing expression, even through aliases. Dependency
@@ -73,7 +73,7 @@ Extents within computed-type roots use the same eligibility checks as scratch bi
 Direct extents outside those roots retain their existing supported profile.
 
 The [example](examples/computed-types.mwy) calculates a capacity of four from an
-eligible immutable `uint8` seed. Scalar scratch produces no runtime locals, and documentation preserves
+eligible immutable `uint8` record field. Scalar scratch produces no runtime locals, and documentation preserves
 its actual integer signature. Floating-point, boolean and text scratch, comparisons,
 shifts, mutable scratch and helper calls remain separate capabilities.
 
@@ -94,6 +94,27 @@ operation after the result emission.
 The checked result must have a concrete integer type. Unreachable blocks whose HIR
 result was erased to `never` can retain error-only evidence, but do not supply an
 invented integer result. Hidden arithmetic failures remain E107 at their original spans.
+
+## Record-field inputs
+
+Named immutable record bindings and their aliases can supply integer fields to copied
+integer bindings, computed scratch and list extents. The supported record shape has a
+unit primary and 1..256 immutable integer fields. Fields use their checked record
+indices and retain exact widths; source declaration order does not change lookup.
+A field initializer may use earlier emitted fields and eligible scalar blocks/locals.
+
+Eligibility inspects the complete containing initializer. A selected field cannot
+hide an effect, mutable sibling, invalid sibling computation or unused tail work.
+Every read carries the whole record's errors and transitive work. Hidden integer
+failures remain E107 at the originating expression; no partial record is admitted.
+
+Direct required paths have a named local record root, optionally grouped. Lexical
+record fields may be used inside functions without enabling ordinary runtime captures.
+Qualified type identities such as `core.int32` retain their separate behavior.
+Nested records, reference projections, inline record roots, non-integer fields and
+non-unit primaries remain outside this slice. Imported data remains gated, including
+indirect copies through internal module bindings. Checking never runs initializers;
+ordinary record reads and runtime initialization remain unchanged.
 
 ## Explicit limits
 
