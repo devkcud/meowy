@@ -16,8 +16,10 @@ failures from unreachable code and bounded transitive work for required reads.
 1. Bounded HIR eligibility evidence implemented. Three provenance groups, 14
    computed-type library/parser and nine native matching groups, fmt and Clippy
    passed. No required reads consume the new evidence yet.
-2. Consume that evidence in computed scalar bindings/extents. Permit static reads
-   across function scope without enabling runtime captures; test budgets and diagnostics.
+2. Evidence-backed required reads complete. All six initializer groups, 14
+   computed-type library/parser and nine matching native groups, fmt and Clippy passed.
+   Original error spans, cached dependency costs, independent roots and capture gates
+   are covered. Unproven folded blocks retain their previous refusal.
 3. Add native/module/no-initializer-execution coverage and update the capacity example.
 4. Document eligibility boundaries and run the complete compiler gate.
 

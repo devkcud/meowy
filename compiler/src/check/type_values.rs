@@ -176,7 +176,7 @@ impl Checker {
             | ExprKind::Binary { .. }
             | ExprKind::Call { .. } => true,
             ExprKind::Name(name) => matches!(
-                self.value(name, form.span)?,
+                self.required_value(name, form.span)?,
                 Value::Static { .. } | Value::Local { .. } | Value::Constant(_)
             ),
             _ => false,

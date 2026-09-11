@@ -1,19 +1,38 @@
-use crate::ast::{self, ExprKind};
+use crate::ast::{self, ExprKind, Span};
 use crate::check::{Checker, Constant, Result, Value};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
 
 impl Checker {
+    pub(crate) fn required_value(&mut self, name: &str, span: Span) -> Result<Value> {
+        let saved = std::mem::replace(&mut self.required, true);
+        let result = self.value(name, span);
+        self.required = saved;
+        result
+    }
+
     pub(crate) fn scalar_input(&mut self, expr: &ast::Expr) -> Result<()> {
         self.type_work.as_mut().unwrap().enter(expr.span)?;
         let result = (|| match &expr.kind {
             ExprKind::Int(_) => Ok(()),
-            ExprKind::Name(name) => match self.value(name, expr.span)? {
+            ExprKind::Name(name) => match self.required_value(name, expr.span)? {
                 Value::Static {
                     value: Constant::Int(_),
                     ..
                 }
                 | Value::Constant(Constant::Int(_)) => Ok(()),
+                Value::Local { id, .. } if self.inputs.contains_key(&id) => {
+                    let input = &self.inputs[&id];
+                    let work = self.type_work.as_mut().unwrap();
+                    work.visits = work.visits.saturating_add(input.work);
+                    if work.visits > super::MAX_WORK {
+                        return Err(super::Work::budget(expr.span));
+                    }
+                    match &input.error {
+                        Some(error) => Err(error.clone()),
+                        None => Ok(()),
+                    }
+                }
                 Value::Local { constant: None, .. } => Err(Self::error(
                     "E211",
                     "runtime input is unavailable during required type evaluation",

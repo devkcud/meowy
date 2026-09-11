@@ -131,10 +131,10 @@ pub(crate) fn computed_integers_report_precise_dependency_failures_without_initi
 }
 
 #[test]
-pub(crate) fn computed_integers_refuse_folded_runtime_bindings_as_static_inputs() {
+pub(crate) fn computed_integers_refuse_unproven_folded_blocks_as_static_inputs() {
     for source in [
-        "n:4;<T>:{capacity:n+1;-><int32[capacity]>}",
-        "n:4;<T>:{-><int32[n]>}",
+        "n:{->4};<T>:{capacity:n+1;-><int32[capacity]>}",
+        "n:{->4};<T>:{-><int32[n]>}",
     ] {
         let output = Case::new(source).command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1));

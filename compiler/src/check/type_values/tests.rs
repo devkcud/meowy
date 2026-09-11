@@ -237,8 +237,8 @@ pub(crate) fn computed_integers_reject_runtime_inputs_effects_and_unsupported_sc
             "E211",
         ),
         ("n:=3;<T>:{capacity:n+1;-><int32>}", "E211"),
-        ("n:3;<T>:{capacity:n+1;-><int32>}", "B001"),
-        ("n:3;<T>:{-><int32[n]>}", "B001"),
+        ("n:{->3};<T>:{capacity:n+1;-><int32>}", "B001"),
+        ("n:{->3};<T>:{-><int32[n]>}", "B001"),
         (
             "d:@\"debug\";n:{d.print(1);->3};<T>:{capacity:n+1;-><int32>}",
             "E211",
@@ -293,4 +293,46 @@ pub(crate) fn computed_integers_keep_documentation_widths_and_emit_no_runtime_sc
     assert!(program.locals.is_empty());
     assert!(program.functions.is_empty());
     assert!(program.body.stmts.is_empty());
+}
+
+#[test]
+pub(crate) fn initializer_inputs_feed_required_bindings_extents_and_function_scopes() {
+    for source in [
+        "base<uint8>:2;capacity:base*2;alias:capacity;<T>:{n:alias;-><int32[n]>};v<T>:[1,2]",
+        "capacity:4;<T>:{-><int32[capacity]>};v<T>:[1,2]",
+        "capacity:4;f<int32>:(){<T>:{n:capacity;-><int32[n]>};values<T>:[1,2];->values[2]}",
+        "capacity:4;<T>:{capacity:capacity+1;-><int32[capacity]>}",
+        "base:2;capacity:base+1;<T>:{base:99;-><int32[capacity]>}",
+    ] {
+        crate::compile(source).unwrap_or_else(|errors| panic!("{source}: {errors:?}"));
+    }
+    let source = "capacity:4;f<int32>:(){->capacity}";
+    assert_eq!(crate::compile(source).unwrap_err()[0].code, "B001");
+}
+
+#[test]
+pub(crate) fn initializer_inputs_report_hidden_failures_at_the_original_expression() {
+    for expression in ["255+1", "1/0", "(255+1)*0"] {
+        let source =
+            format!("|false|{{bad<uint8>:{expression};alias:bad;<T>:{{n:alias;-><int32>}}}}");
+        let error = crate::compile(&source).unwrap_err().remove(0);
+        assert_eq!(error.code, "E107", "{error:?}");
+        let start = source.find(expression).unwrap();
+        assert!(error.span.start >= start && error.span.end <= start + expression.len());
+    }
+}
+
+#[test]
+pub(crate) fn initializer_inputs_charge_transitive_work_on_cached_reads() {
+    let binds = (1..14)
+        .map(|id| format!("v{id}:v{}+v{};", id - 1, id - 1))
+        .collect::<String>();
+    let source = format!("v0:1;{binds}<T>:{{n:v13;-><int32>}}");
+    let error = crate::compile(&source).unwrap_err().remove(0);
+    assert_eq!(error.code, "B001");
+    assert!(error.message.contains("computed type bootstrap budget"));
+    let roots = (0..1500)
+        .map(|id| format!("<T{id}>:{{n:capacity;-><int32[n]>}};"))
+        .collect::<String>();
+    crate::compile(&format!("capacity:4;{roots}")).unwrap();
 }
