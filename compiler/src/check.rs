@@ -5,6 +5,7 @@ mod exports;
 mod expressions;
 mod functions;
 mod indexed;
+mod inputs;
 mod mutation;
 mod names;
 mod references;
@@ -118,6 +119,7 @@ pub(crate) struct Checker {
     pub(crate) places: BTreeSet<usize>,
     pub(crate) proofs: crate::borrow::Proofs,
     pub(crate) constants: BTreeMap<usize, Constant>,
+    pub(crate) inputs: BTreeMap<usize, inputs::Input>,
     pub(crate) block: usize,
     pub(crate) owner: usize,
     pub(crate) calls: usize,
@@ -238,6 +240,7 @@ impl Checker {
             places: BTreeSet::new(),
             proofs: crate::borrow::Proofs::default(),
             constants: BTreeMap::new(),
+            inputs: BTreeMap::new(),
             block: 0,
             owner: 0,
             calls: 0,

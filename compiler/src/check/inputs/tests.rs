@@ -1,0 +1,48 @@
+use super::*;
+
+pub(crate) fn check(source: &str) -> Checker {
+    let parsed = crate::parser::parse_documented(source).unwrap();
+    let mut checker = Checker::new();
+    checker.block(&parsed.block, None, None).unwrap();
+    checker
+}
+
+#[test]
+pub(crate) fn initializer_inputs_track_immutable_integer_dependencies() {
+    let checker = check("base<uint8>:2;next:base+2;alias:next;mutable:=4");
+    assert_eq!(checker.inputs.len(), 3);
+    assert!(checker.inputs.values().all(|input| input.error.is_none()));
+    let costs = checker
+        .inputs
+        .values()
+        .map(|input| input.work)
+        .collect::<Vec<_>>();
+    assert!(costs[1] > costs[0]);
+    assert!(costs[2] > costs[1]);
+}
+
+#[test]
+pub(crate) fn initializer_inputs_exclude_folded_blocks_calls_and_mutable_reads() {
+    for source in [
+        "x:{->4};alias:x",
+        "d:@\"debug\";x:{d.print(1);->4};alias:x",
+        "x:=4;copy:x;alias:copy",
+        "f<int32>:(x<int32>){copy:x;->copy};result:f(4)",
+        "row:{->n:4};copy:row.n",
+    ] {
+        assert!(check(source).inputs.is_empty(), "{source}");
+    }
+}
+
+#[test]
+pub(crate) fn initializer_inputs_retain_unreachable_arithmetic_failures() {
+    let checker = check("|false|{base<uint8>:255;bad:base+1;alias:bad}");
+    let errors = checker
+        .inputs
+        .values()
+        .filter_map(|input| input.error.as_ref())
+        .collect::<Vec<_>>();
+    assert_eq!(errors.len(), 2);
+    assert!(errors.iter().all(|error| error.code == "E107"));
+    assert_eq!(errors[0].span, errors[1].span);
+}

@@ -7,13 +7,22 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `85c5c83` — typed static integer values and literal/alias bindings.
-2. `7a6b903` — checked calculations, bounded input validation and extent integration.
-3. `620dadd` — native/module/documentation coverage and local-capacity example.
-4. This separate documentation handoff records the complete gate below.
+Immutable integer initializer eligibility is in progress; the tree started clean.
+The constant folder also handles runtime blocks and does not establish purity.
+Track separate evidence over checked integer HIR, restricted to literal/alias/unary/
+arithmetic forms with already eligible immutable dependencies. Retain hidden arithmetic
+failures from unreachable code and bounded transitive work for required reads.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Bounded HIR eligibility evidence implemented. Three provenance groups, 14
+   computed-type library/parser and nine native matching groups, fmt and Clippy
+   passed. No required reads consume the new evidence yet.
+2. Consume that evidence in computed scalar bindings/extents. Permit static reads
+   across function scope without enabling runtime captures; test budgets and diagnostics.
+3. Add native/module/no-initializer-execution coverage and update the capacity example.
+4. Document eligibility boundaries and run the complete compiler gate.
+
+Blocks, fields/imported data, helper calls, mutable inputs and full purity/E220 remain
+separate. Commit each validated slice and preserve unrelated work.
 
 ## Current compiler slice
 

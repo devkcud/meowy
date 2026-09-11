@@ -107,6 +107,9 @@ impl Checker {
                 } else {
                     self.constant(&value)
                 };
+                if !*mutable && let Some(input) = self.integer_input(&value) {
+                    self.inputs.insert(id, input);
+                }
                 self.declare(
                     name,
                     Value::Local {
