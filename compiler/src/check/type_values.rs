@@ -1,3 +1,4 @@
+mod fields;
 mod scalars;
 
 use super::{Checker, Result, Scope, Spec, Value};
@@ -179,6 +180,15 @@ impl Checker {
                 self.required_value(name, form.span)?,
                 Value::Static { .. } | Value::Local { .. } | Value::Constant(_)
             ),
+            ExprKind::Field { .. } => {
+                let saved = std::mem::replace(&mut self.required, true);
+                let symbol = self.symbol(form);
+                self.required = saved;
+                !matches!(
+                    symbol?,
+                    Some(Value::Type(_) | Value::Foundation(crate::foundation::Item::Type(_)))
+                )
+            }
             _ => false,
         };
         if !scalar {

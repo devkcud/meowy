@@ -30,7 +30,7 @@ impl Checker {
         if self.type_work.is_some() {
             self.scalar_input(expr)?;
         }
-        if !Self::extent_form(expr) {
+        if self.type_work.is_none() && !Self::extent_form(expr) {
             return Err(Diagnostic::unsupported(
                 "required evaluation of list extent expressions",
                 expr.span,

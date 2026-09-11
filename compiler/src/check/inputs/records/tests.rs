@@ -68,3 +68,41 @@ pub(crate) fn record_fields_copies_cannot_hide_effects_or_mutable_siblings() {
         );
     }
 }
+
+#[test]
+pub(crate) fn record_fields_feed_required_scratch_extents_and_function_scopes() {
+    for source in [
+        "row:{->width<uint8>:4};<T>:{n:row.width;-><int32[n]>};v<T>:[1,2]",
+        "row:{->width<uint8>:4};alias:row;<T>:{-><int32[(alias).width]>}",
+        "row:{->width:4};f<int32>:(){<T>:{n:row.width;-><int32[n]>};v<T>:[1,2];->v[2]}",
+        "core:@\"core\";<T>:{element:core.int32;->element}",
+    ] {
+        crate::compile(source).unwrap_or_else(|errors| panic!("{source}: {errors:?}"));
+    }
+    let source = "row:{->width<uint8>:255};<T>:{n:row.width+1;-><int32>}";
+    assert_eq!(crate::compile(source).unwrap_err()[0].code, "E107");
+    let source = "row:{->width:4};<T>:{n:row.missing;-><int32>}";
+    assert_eq!(crate::compile(source).unwrap_err()[0].code, "E201");
+}
+
+#[test]
+pub(crate) fn record_fields_require_whole_record_purity_and_retain_error_spans() {
+    for source in [
+        "d:@\"debug\";row:{->good:4;d.print(1)};<T>:{n:row.good;-><int32>}",
+        "row:{->good:4;->mutable:=0};<T>:{n:row.good;-><int32>}",
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            "E211",
+            "{source}"
+        );
+    }
+    let source = "|false|{row<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1};<T>:{n:row.good;-><int32>}}";
+    let error = crate::compile(source).unwrap_err().remove(0);
+    assert_eq!(error.code, "E107");
+    assert_eq!(error.span.start, source.find("255+1").unwrap());
+    assert_eq!(
+        crate::compile("row:{->width:4};f<int32>:(){->row.width}").unwrap_err()[0].code,
+        "B001"
+    );
+}

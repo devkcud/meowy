@@ -49,6 +49,18 @@ impl Checker {
                     expr.span,
                 )),
             },
+            ExprKind::Field { .. } => {
+                let (_, input) = self.required_field(expr)?;
+                let work = self.type_work.as_mut().unwrap();
+                work.visits = work.visits.saturating_add(input.work);
+                if work.visits > super::MAX_WORK {
+                    return Err(super::Work::budget(expr.span));
+                }
+                match input.error {
+                    Some(error) => Err(error),
+                    None => Ok(()),
+                }
+            }
             ExprKind::Group(value) => self.scalar_input(value),
             ExprKind::Unary { op, value } if matches!(op.as_str(), "-" | "~") => {
                 self.scalar_input(value)

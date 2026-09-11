@@ -22,8 +22,9 @@ work/error evidence. Start with flat immutable integer fields and a unit primary
 3. Copied integer fields retain whole-record errors/work and exact values. Record
    metadata/projection groups, 38 native record compatibility groups, the existing
    initializer exclusion test, fmt and Clippy passed.
-4. Add direct computed scratch/extent field reads while preserving qualified type
-   identities, lexical privacy and runtime capture gates.
+4. Direct computed field reads complete. Seven record groups, 14 computed-type
+   library/parser and 17 native matching groups, fmt and Clippy passed. Aliases,
+   grouped roots, exact widths, type identities and capture gates are covered.
 5. Add native/source-diagnostic/budget coverage and a field-capacity example.
 6. Document exact boundaries and run the complete compiler gate.
 

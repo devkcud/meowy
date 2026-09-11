@@ -284,6 +284,24 @@ impl Checker {
                 (hir::ExprKind::Block(block), ty)
             }
             ExprKind::Field { value, name } => {
+                if self.required && self.type_work.is_some() {
+                    let (ty, input) = self.required_field(expr)?;
+                    if let Some(error) = input.error {
+                        return Err(error);
+                    }
+                    let value = input.value.ok_or_else(|| {
+                        Self::error(
+                            "E211",
+                            "required field has no checked integer value",
+                            expr.span,
+                        )
+                    })?;
+                    return Ok(hir::Expr {
+                        kind: hir::ExprKind::Int(value),
+                        ty,
+                        span: expr.span,
+                    });
+                }
                 if let Some(symbol) = self.symbol(expr)? {
                     return match symbol {
                         Value::Foundation(crate::foundation::Item::Heap) => Ok(hir::Expr {
