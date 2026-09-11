@@ -108,3 +108,18 @@ pub(crate) fn initializer_blocks_keep_unused_integer_failures_after_the_primary(
     assert_eq!(error.code, "E107", "{error:?}");
     assert_eq!(error.span.start, source.find("255+1").unwrap());
 }
+
+#[test]
+pub(crate) fn initializer_scopes_preserve_shadowing_and_nested_values() {
+    let checker = check("base:9;capacity:{base:2;step:{base:base+1;->base};->base*step}");
+    assert_eq!(checker.inputs.values().last().unwrap().value, Some(6));
+    crate::compile("base:9;capacity:{base:2;step:{base:base+1;->base};->base*step};<T>:{n:capacity;-><int32[n]>}").unwrap();
+}
+
+#[test]
+pub(crate) fn initializer_scopes_keep_nested_unused_failures_in_source_order() {
+    let source = "|false|{capacity<uint8>:{base<uint8>:255;step<uint8>:{unused<uint8>:base+1;->2};->4};<T>:{n:capacity;-><int32>}}";
+    let error = crate::compile(source).unwrap_err().remove(0);
+    assert_eq!(error.code, "E107");
+    assert_eq!(error.span.start, source.find("base+1").unwrap());
+}

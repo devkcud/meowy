@@ -3,6 +3,7 @@ mod blocks;
 use super::{Checker, Constant};
 use crate::diagnostic::Diagnostic;
 use crate::hir::{self, ExprKind, Type};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Input {
@@ -28,7 +29,7 @@ impl Input {
 
 impl Checker {
     pub(crate) fn integer_input(&mut self, expr: &hir::Expr) -> Option<Input> {
-        self.input_expr(expr, 0, &mut 0)
+        self.input_expr(expr, 0, &mut 0, &BTreeMap::new())
     }
 
     pub(crate) fn input_expr(
@@ -36,6 +37,7 @@ impl Checker {
         expr: &hir::Expr,
         depth: usize,
         count: &mut usize,
+        locals: &BTreeMap<usize, Input>,
     ) -> Option<Input> {
         *count += 1;
         if *count > super::type_values::MAX_WORK
@@ -54,12 +56,12 @@ impl Checker {
         let kind = match &expr.kind {
             ExprKind::Int(value) => ExprKind::Int(*value),
             ExprKind::Local(id) => {
-                let source = self.inputs.get(id)?;
+                let source = locals.get(id).or_else(|| self.inputs.get(id))?;
                 input.add(source);
                 source.literal(expr).kind
             }
             ExprKind::Unary { op, value } if matches!(op.as_str(), "-" | "~") => {
-                let source = self.input_expr(value, depth + 1, count)?;
+                let source = self.input_expr(value, depth + 1, count, locals)?;
                 input.add(&source);
                 ExprKind::Unary {
                     op: op.clone(),
@@ -69,8 +71,8 @@ impl Checker {
             ExprKind::Binary { op, left, right }
                 if matches!(op.as_str(), "+" | "-" | "*" | "/" | "%" | "&" | "|" | "^") =>
             {
-                let a = self.input_expr(left, depth + 1, count)?;
-                let b = self.input_expr(right, depth + 1, count)?;
+                let a = self.input_expr(left, depth + 1, count, locals)?;
+                let b = self.input_expr(right, depth + 1, count, locals)?;
                 input.add(&a);
                 input.add(&b);
                 ExprKind::Binary {
@@ -80,7 +82,7 @@ impl Checker {
                 }
             }
             ExprKind::Block(block) => {
-                let source = self.input_block(block, depth + 1, count)?;
+                let source = self.input_block(block, depth + 1, count, locals)?;
                 input.add(&source);
                 if expr.ty == Type::Never {
                     return input.error.is_some().then_some(input);

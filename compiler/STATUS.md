@@ -7,13 +7,23 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `9722d9e` — retain checked values beyond lexical scope with child-first evidence.
-2. `23a81ce` — strict block eligibility and required-only proven value reads.
-3. `d6bfc10` — native values/effects/budgets and a block-seed example.
-4. This separate documentation handoff records the complete gate below.
+Immutable integer record-field eligibility is in progress; the tree started clean.
+Record HIR uses named emissions plus local slot aliases, and field indices come from
+its checked record type. A field must retain the containing initializer's complete
+work/error evidence. Start with flat immutable integer fields and a unit primary.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Scoped scalar evidence lookup complete. All 15 initializer-related library and
+   11 native matching groups, fmt and Clippy passed; shadowing, nested values and
+   unused failure provenance are covered.
+2. Record bounded whole-initializer evidence and field-indexed integer values for
+   immutable flat records and aliases. Reject effects/mutation anywhere in the record.
+3. Consume proven field values in copied integers, computed scratch and extents;
+   preserve qualified type identities, lexical privacy and runtime capture gates.
+4. Add native/source-diagnostic/budget coverage and a field-capacity example.
+5. Document exact boundaries and run the complete compiler gate.
+
+Nested records, imported data, reference projections and helper calls remain separate.
+Commit each validated slice and keep the review threshold before further implementation.
 
 ## Current compiler slice
 
