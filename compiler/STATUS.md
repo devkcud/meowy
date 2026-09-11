@@ -25,7 +25,9 @@ work/error evidence. Start with flat immutable integer fields and a unit primary
 4. Direct computed field reads complete. Seven record groups, 14 computed-type
    library/parser and 17 native matching groups, fmt and Clippy passed. Aliases,
    grouped roots, exact widths, type identities and capture gates are covered.
-5. Add native/source-diagnostic/budget coverage and a field-capacity example.
+5. All five native field groups passed, including module initialization, source
+   spans, sibling errors/work and imported-data/capture gates. Example execution,
+   derived documentation signatures, scratch visibility, fmt and Clippy passed.
 6. Document exact boundaries and run the complete compiler gate.
 
 Nested records, imported data, reference projections and helper calls remain separate.

@@ -282,7 +282,7 @@ pub(crate) fn computed_integers_keep_documentation_widths_and_emit_no_runtime_sc
         let entry = model
             .entries
             .iter()
-            .find(|entry| entry.name == name)
+            .find(|entry| entry.name == name && entry.kind == crate::documentation::Kind::Binding)
             .unwrap();
         assert_eq!(entry.signature, "uint8");
         assert!(entry.checked);

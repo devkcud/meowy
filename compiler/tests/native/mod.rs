@@ -13,6 +13,7 @@ pub(crate) mod carried_scalars;
 pub(crate) mod carried_writes;
 pub(crate) mod changing_published;
 pub(crate) mod cli;
+pub(crate) mod computed_fields;
 pub(crate) mod computed_types;
 pub(crate) mod control;
 pub(crate) mod discarded_aliases;
