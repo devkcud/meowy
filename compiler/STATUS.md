@@ -20,7 +20,9 @@ subrecords. Shared scoped evidence must carry both integer and record locals.
 3. Nested HIR/required paths and projected aliases complete. Seven nested-record
    library groups, the existing carried-record native group, five native field groups,
    fmt and Clippy passed. Ancestor errors survive projected aliases.
-4. Add native/error/budget/documentation coverage and update the example.
+4. All four nested native groups passed, plus example execution, derived signatures,
+   scratch visibility, fmt and Clippy. The example uses settings.limits.base; aliases
+   retain ancestor failures/work and imported data remains gated.
 5. Document exact boundaries and run the complete compiler gate.
 
 Keep non-integer leaves, mutable/reference storage, imported data, helper calls and
