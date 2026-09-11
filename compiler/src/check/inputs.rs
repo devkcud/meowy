@@ -1,4 +1,7 @@
 mod blocks;
+mod records;
+
+pub(crate) use records::Record;
 
 use super::{Checker, Constant};
 use crate::diagnostic::Diagnostic;

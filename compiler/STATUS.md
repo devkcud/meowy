@@ -15,12 +15,15 @@ work/error evidence. Start with flat immutable integer fields and a unit primary
 1. Scoped scalar evidence lookup complete. All 15 initializer-related library and
    11 native matching groups, fmt and Clippy passed; shadowing, nested values and
    unused failure provenance are covered.
-2. Record bounded whole-initializer evidence and field-indexed integer values for
-   immutable flat records and aliases. Reject effects/mutation anywhere in the record.
-3. Consume proven field values in copied integers, computed scratch and extents;
-   preserve qualified type identities, lexical privacy and runtime capture gates.
-4. Add native/source-diagnostic/budget coverage and a field-capacity example.
-5. Document exact boundaries and run the complete compiler gate.
+2. Bounded record/alias evidence is implemented, including local emission aliases,
+   complete body checks, checked field indices and error-only unreachable records.
+   Synthetic module inputs are excluded. Three record metadata groups, 14 computed-
+   type library/parser and 17 native matching groups passed; fmt/Clippy passed.
+3. Preserve whole-record evidence when an ordinary integer binding copies a field.
+4. Add direct computed scratch/extent field reads while preserving qualified type
+   identities, lexical privacy and runtime capture gates.
+5. Add native/source-diagnostic/budget coverage and a field-capacity example.
+6. Document exact boundaries and run the complete compiler gate.
 
 Nested records, imported data, reference projections and helper calls remain separate.
 Commit each validated slice and keep the review threshold before further implementation.

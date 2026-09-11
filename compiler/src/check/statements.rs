@@ -107,8 +107,13 @@ impl Checker {
                 } else {
                     self.constant(&value)
                 };
-                if !*mutable && let Some(input) = self.integer_input(&value) {
-                    self.inputs.insert(id, input);
+                if !*mutable && !name.starts_with('\0') {
+                    if let Some(input) = self.integer_input(&value) {
+                        self.inputs.insert(id, input);
+                    }
+                    if let Some(input) = self.record_input(&value, &ty) {
+                        self.record_inputs.insert(id, input);
+                    }
                 }
                 self.declare(
                     name,
