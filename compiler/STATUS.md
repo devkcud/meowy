@@ -14,8 +14,9 @@ concrete type construction; reuse them without emitting runtime code.
 
 1. Existing resolver moved unchanged to `check/type_values.rs`. Four exported-type
    library and six native groups, 14 graph library groups, fmt and Clippy passed.
-2. Bound nested type-value work and materialized type traversal before enabling
-   block evaluation; test depth/work failures and budget reset across roots.
+2. Root-shared visit/depth/materialization limits complete. All three focused
+   computed-type/parser groups, fmt and Clippy passed. Nested/wide construction
+   failures and successful/failed-root resets are covered.
 3. Add bounded straight-line computed-type blocks: immutable type bindings, local
    aliases and one primary type emission. Test scope, type identity, sequencing,
    known forbidden effects and explicit unsupported forms with the implementation.
