@@ -4,9 +4,10 @@ The bootstrap supports straight-line blocks in required type expressions, using
 existing type construction and lexical scopes from the checker:
 
 ```meowy
+seed<uint8>:2
 <Counts>:{
     element:<int32>
-    base<uint8>:2
+    base:seed
     capacity:base*2
     -><(element)[capacity]>
 }
@@ -50,15 +51,28 @@ E213, literal overflow E216 and invalid arithmetic E107. Negative or unrepresent
 list capacities retain E104. Required arithmetic is checked even inside an unreachable
 runtime branch, and its temporary checking state is restored afterwards.
 
-Inputs must already be static integers in the construction scope. Runtime parameters,
-mutable bindings and results of effectful initializers are unavailable (E211).
-Folded immutable runtime bindings also remain gated (B001): their transitive initializer
-eligibility has not been recorded. No optimizer result supplies that missing proof.
-Extents within computed-type roots use the same input validation as scratch bindings.
+Inputs may be static integers in the construction scope or immutable integer bindings
+with recorded initializer eligibility. The checker tracks separate evidence over
+checked literals, aliases and supported unary/arithmetic expressions. Every local
+value dependency must already have that evidence; a folded constant alone does not
+establish eligibility. Exact widths and source declaration identities are preserved.
+
+Required reads can use eligible lexical inputs across function scopes. This does not
+enable runtime captures or expose private names from another file. Original runtime
+bindings and application effects remain in the program; checking/building does not
+execute them. Runtime parameters, mutable state and effectful results remain unavailable
+(E211). Folded blocks, field/imported-data reads and helper calls are not yet proven;
+unsupported folded inputs retain B001.
+
+Evidence retains integer failures from unreachable runtime paths. A required read
+reports E107 at the original failing expression, even through aliases. Dependency
+work is charged transitively on each read, including cached values and repeated
+references, against the shared bootstrap bound. Independent required roots reset it.
+Extents within computed-type roots use the same eligibility checks as scratch bindings.
 Direct extents outside those roots retain their existing supported profile.
 
-The [example](examples/computed-types.mwy) calculates a capacity of four from two
-`uint8` values. Scalar scratch produces no runtime locals, and documentation preserves
+The [example](examples/computed-types.mwy) calculates a capacity of four from an
+eligible immutable `uint8` seed. Scalar scratch produces no runtime locals, and documentation preserves
 its actual integer signature. Floating-point, boolean and text scratch, comparisons,
 shifts, mutable scratch and helper calls remain separate capabilities.
 

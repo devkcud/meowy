@@ -7,16 +7,17 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
-Immutable integer calculations inside computed-type blocks passed the compiler gate.
-Local bindings retain exact widths and signedness, and checked arithmetic can compute
-list capacities without creating runtime storage. Documentation and exported types
-reuse the results. See [the supported slice](compiler/COMPUTED_TYPES.md) and
-[updated capacity example](compiler/examples/computed-types.mwy).
+Proven immutable integer initializers can now supply computed-type inputs. Eligibility
+tracks checked literals, aliases and arithmetic separately from constant folding,
+retains original failure spans, and charges dependency work on every required read.
+Eligible lexical reads work inside functions while runtime captures remain gated.
+See [the supported slice](compiler/COMPUTED_TYPES.md) and
+[eligible-seed example](compiler/examples/computed-types.mwy).
 
 Three small implementation/test commits are complete, followed by this documentation
-handoff. Runtime initializer eligibility, mutable/non-integer scratch, helper calls,
-control flow and language E220 accounting remain separate. Runtime inputs and known
-debug effects are rejected without executing initializers.
+handoff. Block/field/imported-data initializers, helper purity, mutable/non-integer
+scratch, control flow and language E220 accounting remain separate. Checking/building
+does not execute initializers; ordinary execution preserves application effects.
 
 Documented relative file graphs, ordered initialization, type/function exports and
 native source diagnostics retain their existing rules. Net/HTTP/TLS still needs
@@ -24,9 +25,9 @@ broader generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
 
 ## Actual validation
 
-- Fourteen focused library/parser and nine matching native groups passed, including
-  widths/overflow, work limits, static-input boundaries, exports and documentation.
-- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1348 Rust
+- Six initializer library and four new native groups passed, alongside computed-type
+  compatibility checks. Coverage includes provenance, budgets and initialization boundaries.
+- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including 1358 Rust
   tests, 20 Python tests, 80 standalone and five multi-file examples in debug/release.
 - Conformance: 10 passed, 13 unsupported, 0 failed. Local-link, catalog/schema and
   whitespace checks passed; full release qualification remains open.
@@ -37,7 +38,7 @@ broader generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Integer scratch in computed-type blocks passes; runtime initializer eligibility remains gated. |
+| Compiler | Immutable integer initializer eligibility passes; block/helper/imported-data forms remain gated. |
 | Documentation tooling | Constructed signatures and file graphs are checked; multi-file doc commands/indexes remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; type/I/O/task foundations precede implementation. |
@@ -45,9 +46,9 @@ broader generic-type/I/O/task foundations; full v0.0.1 remains incomplete.
 
 ## Next steps
 
-1. Plan explicit eligibility evidence for immutable integer runtime bindings before
-   allowing them as required type inputs. Reuse existing constant/purity analysis;
-   distinguish pure initializers from effects, parameters and mutable state.
+1. Plan eligibility for straight-line integer block initializers with local eligible
+   bindings and one primary emission. Preserve effect/mutability restrictions,
+   original diagnostics and dependency work; keep helpers/imported data separate.
    Concrete files and validation are listed in the compiler handoff.
 2. Preserve package, runtime-capture, borrowed-export and ownership gates. Plan and
    commit validated slices using [AGENTS.md](AGENTS.md); keep STATUS concise, never
