@@ -1,6 +1,6 @@
 # CLI applications and file boundaries
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Text and data](text-and-data.md) · Next: [Time and calendars](time-and-calendars.md)
 
 The tool begins as “just print this thing.” Then someone asks for `--help`, pipes
 it into another program, and gives it a filename called `--help`. Time to give

@@ -1,6 +1,6 @@
 # Errors worth keeping
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Borrow the bytes, keep the owner](ownership.md) · Next: [Tests with teeth](testing.md)
 
 “Something went wrong” is technically a message. It is also a terrible gift to
 the person debugging your program at midnight. Give callers the facts: a concrete

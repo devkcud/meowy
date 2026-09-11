@@ -1,6 +1,6 @@
 # Time, calendars, and tomorrow's surprises
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [CLI apps and files](cli-and-files.md) · Next: [Tasks and channels](tasks-and-channels.md)
 
 "Wait a second" is easy. "Same time tomorrow" is where the calendar starts
 asking follow-up questions. Meowy gives elapsed time, civil time, zones, and

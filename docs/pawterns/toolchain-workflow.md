@@ -1,6 +1,6 @@
 # Make the tools pull their weight
 
-[Pawterns](README.md) · [First project](first-project.md) · [Lean binaries](lean-binaries.md)
+[Pawterns](README.md) · Previous: [Deadlocks and shutdown](deadlocks-and-shutdown.md) · Next: [Pack light](lean-binaries.md)
 
 The ecosystem gets useful when it can answer “why?” without making you recreate
 Tuesday's terminal session from memory. Give the editor a project, give gatostyle

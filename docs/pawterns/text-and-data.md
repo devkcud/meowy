@@ -1,6 +1,6 @@
 # Text and data without mystery storage
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Tests with teeth](testing.md) · Next: [CLI apps and files](cli-and-files.md)
 
 Text looks innocent until two identical-looking names disagree about their
 bytes, or a tiny JSON document brings a surprisingly large family of allocations.

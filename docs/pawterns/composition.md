@@ -1,6 +1,6 @@
 # Compose values without losing their meaning
 
-[Pawterns](README.md) · Previous: [Your first project](first-project.md) · Next: [Ownership](ownership.md)
+[Pawterns](README.md) · Previous: [Your first project](first-project.md) · Next: [Borrow the bytes, keep the owner](ownership.md)
 
 A number is useful. A number that remembers which sensor produced it is easier
 to debug at midnight. Meowy's blocks can carry both without making you choose.

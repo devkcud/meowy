@@ -1,6 +1,6 @@
 # Pack light, keep the useful bits
 
-[Pawterns](README.md) · [Ownership](ownership.md) · [Optimization reference](../reference/optimization.md)
+[Pawterns](README.md) · Previous: [Make the tools pull their weight](toolchain-workflow.md)
 
 The greeting is ready to leave your laptop. This is where three different
 questions tend to get stuffed into one suitcase: how large is the executable,

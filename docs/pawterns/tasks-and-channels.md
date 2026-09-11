@@ -1,6 +1,6 @@
 # Tasks and channels
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Time and calendars](time-and-calendars.md) · Next: [Deadlocks and shutdown](deadlocks-and-shutdown.md)
 
 Use a task when a computation has one eventual result. Use a channel when work
 transfers a sequence of owned messages. A group bounds submissions; a channel

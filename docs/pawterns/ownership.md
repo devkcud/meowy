@@ -1,6 +1,6 @@
 # Borrow the bytes, keep the owner
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Compose values](composition.md) · Next: [Errors worth keeping](errors.md)
 
 Storage bugs are remarkably good at turning tiny utilities into detective work.
 Keep two questions handy: “who owns these bytes?” and “who still needs them?”

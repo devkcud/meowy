@@ -1,6 +1,6 @@
 # Teach the suite to complain usefully
 
-[Pawterns](README.md) · [Errors](errors.md) · [Deadlocks and shutdown](deadlocks-and-shutdown.md)
+[Pawterns](README.md) · Previous: [Errors worth keeping](errors.md) · Next: [Text and data](text-and-data.md)
 
 Future-you will change a helper at 01:47, say “surely that's equivalent,” and go
 to bed. Leave that person a few well-placed tripwires. The goal is useful failure:

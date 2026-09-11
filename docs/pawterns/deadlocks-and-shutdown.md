@@ -1,6 +1,6 @@
 # Deadlocks and shutdown
 
-[Pawterns](README.md)
+[Pawterns](README.md) · Previous: [Tasks and channels](tasks-and-channels.md) · Next: [Make the tools pull their weight](toolchain-workflow.md)
 
 A greeting needs only `debug.print("Hello, world!")`. Once there is useful work
 to exchange, channels add an ownership protocol: someone sends, someone drains,
