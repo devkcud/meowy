@@ -143,6 +143,11 @@ impl Checker {
                     });
                 }
                 Value::Constant(value) => return Ok(Self::constant_expr(value, expr.span)),
+                Value::Static { value, ty } => {
+                    let mut value = Self::constant_expr(value, expr.span);
+                    value.ty = ty;
+                    return Ok(value);
+                }
                 Value::Function { .. } => {
                     return Err(Diagnostic::unsupported(
                         "first-class function values",
@@ -424,6 +429,7 @@ impl Checker {
             ExprKind::Name(name) => match self.value(name, expr.span).ok()? {
                 Value::Local { id, ty, .. } => Some(self.refined((id, Vec::new()), &ty)),
                 Value::Constant(value) => Some(Self::constant_expr(value, expr.span).ty),
+                Value::Static { ty, .. } => Some(ty),
                 _ => None,
             },
             ExprKind::Group(value) => self.hint(value),

@@ -179,3 +179,25 @@ pub(crate) fn computed_types_documentation_derives_constructed_signatures() {
         .unwrap();
     assert_eq!(row.signature, "{count<int32>;label<string>}");
 }
+
+#[test]
+pub(crate) fn computed_integers_preserve_literal_widths_aliases_and_local_scope() {
+    for source in [
+        "<T>:{n:4;-><int32[n]>};v<T>:[1,2]",
+        "<T>:{n<uint8>:4;copy:n;-><int32[copy]>};v<T>:[1]",
+        "<T>:{n<uint64>:4294967296;copy:n;->copy<>};v<T>:4294967296",
+    ] {
+        crate::compile(source).unwrap_or_else(|error| panic!("{source}: {error:?}"));
+    }
+    assert_eq!(
+        crate::compile("<T>:{n<uint8>:256;-><int32>}").unwrap_err()[0].code,
+        "E216"
+    );
+    assert_eq!(
+        crate::compile("<T>:{n:4;-><int32[n]>};v:n").unwrap_err()[0].code,
+        "E201"
+    );
+    let program = crate::compile("<T>:{n<uint8>:4;copy:n;-><int32[copy]>}").unwrap();
+    assert!(program.locals.is_empty());
+    assert!(program.body.stmts.is_empty());
+}

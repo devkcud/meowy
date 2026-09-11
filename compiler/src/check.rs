@@ -44,6 +44,10 @@ pub(crate) enum Value {
         constant: Option<Constant>,
     },
     Constant(Constant),
+    Static {
+        value: Constant,
+        ty: Type,
+    },
     Module(crate::foundation::Module),
     FileModule {
         id: usize,

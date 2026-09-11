@@ -7,14 +7,22 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `952446f` — extract the existing type-value resolver without changing behavior.
-2. `db2e88c` — shared bootstrap work/depth/type traversal limits.
-3. `41be3a5` — scoped straight-line type blocks and one computed resolver path.
-4. `4b9b4ef` — module/native/documentation integration and runnable example.
-5. This separate documentation handoff records the complete gate below.
+Immutable integer scratch for computed types is in progress; the tree started clean.
+The scalar checker already handles literal widths, integer arithmetic and constant
+folding. `Value::Constant` loses numeric width, so preserve typed static values before
+reusing those operations. Restrict this slice to integers and eligible static inputs.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Typed static integers and literal/alias bindings complete. All ten computed-type
+   library/parser and six native matching groups, fmt and Clippy passed. Literal
+   overflow retains E216; width, scope and storage erasure are covered.
+2. Reuse checked integer expressions with bounded form/input validation. Reject
+   runtime dependencies and known effects; preserve width/overflow and shared budgets.
+3. Add native/module/documentation coverage and a local-capacity example.
+4. Document the integer-only boundary and run the complete compiler gate.
+
+Runtime initializer eligibility is not tracked yet: even folded runtime bindings
+remain unavailable. Mutable scratch, helper calls, floating/text/boolean scratch,
+control flow and full E220 accounting stay separate. Commit each validated slice.
 
 ## Current compiler slice
 

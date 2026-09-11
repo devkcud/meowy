@@ -1,4 +1,4 @@
-use super::{Checker, Result, Scope, Spec, Value};
+use super::{Checker, Constant, Result, Scope, Spec, Value};
 use crate::ast::{self, ExprKind, Span, StmtKind};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
@@ -159,6 +159,51 @@ impl Checker {
         result
     }
 
+    pub(crate) fn type_binding(
+        &mut self,
+        expr: &ast::Expr,
+        annotation: Option<&ast::TypeExpr>,
+    ) -> Result<Value> {
+        let mut form = expr;
+        while let ExprKind::Group(value) = &form.kind {
+            form = value;
+        }
+        let scalar = match &form.kind {
+            ExprKind::Int(_) => true,
+            ExprKind::Name(name) => matches!(self.value(name, form.span)?, Value::Static { .. }),
+            _ => false,
+        };
+        if !scalar {
+            if annotation.is_some() {
+                return Err(Diagnostic::unsupported(
+                    "annotated computed type identity",
+                    expr.span,
+                ));
+            }
+            return self.type_value(expr).map(Value::Type);
+        }
+        self.type_work.as_mut().unwrap().spend(expr.span)?;
+        let expected = annotation.map(|ty| self.ty(ty)).transpose()?;
+        if expected
+            .as_ref()
+            .is_some_and(|ty| !matches!(ty, Type::Int { .. }))
+        {
+            return Err(Diagnostic::unsupported(
+                "non-integer computed scalar bindings",
+                expr.span,
+            ));
+        }
+        let value = self.expr(expr, expected.as_ref())?;
+        let ty = value.ty.clone();
+        let Some(value @ Constant::Int(_)) = self.constant(&value) else {
+            return Err(Diagnostic::unsupported(
+                "non-integer computed scalar bindings",
+                expr.span,
+            ));
+        };
+        Ok(Value::Static { value, ty })
+    }
+
     pub(crate) fn type_statements(&mut self, block: &ast::Block) -> Result<Type> {
         let mut result = None;
         for stmt in &block.stmts {
@@ -166,12 +211,12 @@ impl Checker {
             match &stmt.kind {
                 StmtKind::Bind {
                     name,
-                    ty: None,
+                    ty,
                     mutable: false,
                     value,
                 } => {
-                    let ty = self.type_value(value)?;
-                    self.declare(name, Value::Type(ty), stmt.span)?;
+                    let value = self.type_binding(value, ty.as_ref())?;
+                    self.declare(name, value, stmt.span)?;
                 }
                 StmtKind::TypeAlias {
                     name,
