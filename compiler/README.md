@@ -33,8 +33,9 @@ export and parameter documentation with links through imported types/functions.
 immutable type bindings, aliases, checked integer calculations and primary emissions,
 without runtime storage. The [example](examples/computed-types.mwy) computes a local
 list capacity from an eligible immutable integer initializer and constructs record/list
-types. Eligibility is tracked separately from constant folding; blocks, field/imported
-data and helper calls remain unproven. Non-integer/mutable scratch and full required
+types. Eligibility is tracked separately from constant folding and includes straight-line
+integer blocks with immutable locals and one primary emission. Field/imported data and
+helper calls remain unproven. Non-integer/mutable scratch and full required
 evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix

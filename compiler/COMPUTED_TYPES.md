@@ -4,7 +4,7 @@ The bootstrap supports straight-line blocks in required type expressions, using
 existing type construction and lexical scopes from the checker:
 
 ```meowy
-seed<uint8>:2
+seed<uint8>:{offset<uint8>:1;->offset+1}
 <Counts>:{
     element:<int32>
     base:seed
@@ -53,7 +53,8 @@ runtime branch, and its temporary checking state is restored afterwards.
 
 Inputs may be static integers in the construction scope or immutable integer bindings
 with recorded initializer eligibility. The checker tracks separate evidence over
-checked literals, aliases and supported unary/arithmetic expressions. Every local
+checked literals, aliases, supported unary/arithmetic expressions and straight-line
+integer blocks. Every local
 value dependency must already have that evidence; a folded constant alone does not
 establish eligibility. Exact widths and source declaration identities are preserved.
 
@@ -61,8 +62,8 @@ Required reads can use eligible lexical inputs across function scopes. This does
 enable runtime captures or expose private names from another file. Original runtime
 bindings and application effects remain in the program; checking/building does not
 execute them. Runtime parameters, mutable state and effectful results remain unavailable
-(E211). Folded blocks, field/imported-data reads and helper calls are not yet proven;
-unsupported folded inputs retain B001.
+(E211). Blocks with effects, mutation or control flow, field/imported-data reads and
+helper calls remain unproven; unsupported folded inputs retain B001.
 
 Evidence retains integer failures from unreachable runtime paths. A required read
 reports E107 at the original failing expression, even through aliases. Dependency
@@ -75,6 +76,24 @@ The [example](examples/computed-types.mwy) calculates a capacity of four from an
 eligible immutable `uint8` seed. Scalar scratch produces no runtime locals, and documentation preserves
 its actual integer signature. Floating-point, boolean and text scratch, comparisons,
 shifts, mutable scratch and helper calls remain separate capabilities.
+
+## Block initializers
+
+A supported integer block has immutable eligible integer bindings and exactly one
+primary emission targeting that block. Nested eligible blocks are supported. Every
+statement is inspected in source order, including unused bindings after the emission;
+an emission does not return early. Assignments, named/outer emissions, calls, branches,
+restarts and other runtime statements do not receive eligibility evidence.
+
+Evidence retains checked integer values after block locals leave scope, along with
+source failures and transitive work. Required reads use those proven values with their
+original widths. Ordinary runtime reads and initialization remain unchanged. Unused
+integer bindings still contribute work and failures, so they cannot hide an invalid
+operation after the result emission.
+
+The checked result must have a concrete integer type. Unreachable blocks whose HIR
+result was erased to `never` can retain error-only evidence, but do not supply an
+invented integer result. Hidden arithmetic failures remain E107 at their original spans.
 
 ## Explicit limits
 

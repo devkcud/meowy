@@ -1,80 +1,65 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Immutable integer initializer eligibility passed the compiler
-gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-10. Straight-line integer block initializer eligibility passed the
+compiler gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-Straight-line block initializer eligibility is in progress; the tree started clean.
-Block locals leave lexical scope before the outer binding is inspected. Retain checked
-integer values in eligibility evidence and fold from child evidence rather than relying
-on the current lexical constant map. Reuse existing checked constant arithmetic.
+1. `9722d9e` — retain checked values beyond lexical scope with child-first evidence.
+2. `23a81ce` — strict block eligibility and required-only proven value reads.
+3. `d6bfc10` — native values/effects/budgets and a block-seed example.
+4. This separate documentation handoff records the complete gate below.
 
-1. Checked values now survive scope exit in initializer evidence, with bounded
-   child-first folding and original failure precedence. All eight initializer library
-   and four native groups, fmt and Clippy passed. Block support is not enabled yet.
-2. Strict block HIR recognition and required-only proven reads complete. All 13
-   initializer-related library and seven native matching groups, fmt and Clippy
-   passed. Earlier computed-type compatibility passed 14 library/13 native groups.
-   Unreachable `never` blocks retain error-only evidence without inventing a result type.
-3. All three block library and four native groups passed, plus example execution,
-   exact documentation signatures, fmt and Clippy. The example seed is now a block
-   initializer; nested widths/modules and post-emission work are covered.
-4. Document the supported block shape and run the complete compiler gate.
-
-Effects, mutable state, branches/restarts, fields/imported data and helper calls remain
-separate. Keep every commit independently validated and below the review threshold.
+Each implementation/test slice passed focused checks before its commit and remained
+below the review threshold. Plan dependency-ordered commits before the next feature.
 
 ## Current compiler slice
 
-`check/inputs.rs::integer_input` inspects checked immutable integer binding initializers.
-It accepts literal, eligible local alias, minus/complement and arithmetic/bitwise HIR
-forms. Every local dependency needs prior evidence in `Checker.inputs`, keyed by
-local ID. Blocks, fields, calls, parameters, mutable dependencies and non-integer
-forms receive no evidence. Inspection is bounded and charges the existing proof work.
-Constant folding alone does not grant initializer eligibility.
+`Input` now retains a checked integer value as well as original errors and transitive
+work. `check/inputs.rs` folds child evidence through the existing constant arithmetic,
+preserving widths and source-ordered failures after lexical scopes close. It no longer
+needs the departed block's lexical constant map to prove its result.
 
-Evidence retains transitive dependency work and any invalid integer operation hidden
-by unreachable runtime paths. Ordinary compilation does not fail merely because
-such dead arithmetic has evidence; required use reports E107 at its original source.
-Repeated/cached dependency reads still charge their full transitive work against the
-computed-type root's bootstrap budget. Independent roots reset the counters.
+`check/inputs/blocks.rs` recognizes checked integer blocks containing immutable eligible
+bindings and exactly one primary emission targeting that block. Nested eligible blocks
+work. Every statement contributes evidence/work, including unused bindings after the
+primary; the emission is not an early return. Calls, mutation, branches/restarts,
+named/outer emissions and other statements remain unproven.
 
-`check/type_values/scalars.rs` consumes evidence before accepting runtime-local input
-names. Its scoped required lookup permits eligible lexical reads across function scope
-while leaving runtime capture checks unchanged. Checking/building never executes
-initializers. Native application effects and initialization order remain intact.
-Runtime parameters/mutable inputs and effectful results remain unavailable (E211);
-unproven folded inputs retain B001. Imported data/helper purity remain separate.
+Required expression reads use proven values only while both required checking and a
+computed-type root are active. Ordinary runtime locals, reads and initialization remain
+unchanged. Inputs still require immutable provenance; runtime parameters, mutable state,
+effectful results and imported data do not become static merely through folding.
 
-Typed integer scratch retains exact widths, signedness and documentation signatures.
-Computed extents share its input validation; direct extents outside computed roots
-retain their existing profile. Type blocks emit one primary type without creating
-runtime scratch. Existing layout, export privacy and ownership checks remain intact.
+Unreachable blocks whose HIR type is `never` retain error-only evidence when possible.
+They do not supply an invented integer result. Required reads surface hidden failures,
+including unused arithmetic after emission, as E107 at the original source expression.
+Source identities, exact integer widths and documentation signatures are preserved.
 See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and the updated
-[eligible-seed example](examples/computed-types.mwy).
+[block-seed example](examples/computed-types.mwy).
 
-Bootstrap bounds remain 4096 visits, 64 active resolver/validation levels and 16384
-traversed concrete type nodes, with B001 exhaustion. These are not language E220
-counters. Mutable/non-integer scratch, comparisons/shifts, control flow, helper calls,
-symbolic `core.Type` signatures and specialization remain separate.
+Transitive/cached reads and unused block work charge the shared bootstrap bound.
+Limits remain 4096 visits, 64 active resolver/validation levels and 16384 traversed
+type nodes, with B001 exhaustion. They are not language E220 counters. Direct extents
+outside computed-type roots retain their previous profile. Runtime captures, owning/
+borrowed export rules and normal type/layout checks remain intact.
 
 ## Actual validation
 
-- Six initializer library groups passed: immutable/transitive provenance, excluded
-  runtime forms, hidden failures, scope/shadowing, cached work and independent roots.
-- Compatibility included 14 computed-type library/parser and nine matching native
-  groups before the four new native groups. Fmt and Clippy passed for every slice.
-- Four new native groups passed: cross-function required reads with one initialization,
-  check/build without application effects, normal startup panic in both run profiles,
-  original dependency overflow spans, and unchanged capture/mutable/parameter gates.
-- Updated example execution and exact constructed documentation signatures passed.
+- Value-retention prerequisite passed eight initializer library and four native groups,
+  including scope exit, unsigned complement, large widths and child-error precedence.
+- Block integration passed 13 initializer-related library and seven native matching
+  groups. Earlier computed-type compatibility passed 14 library/13 native groups.
+- Three focused block library and four new native groups passed: nested/module values,
+  unused tail failures/work, excluded effects, mutable/control gates, cache costs and
+  dependency-local error spans from check/build/run. Execution uses both profiles.
+- Updated example execution, exact documentation signatures, fmt and Clippy passed.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 703 library and 655 native Rust tests (1358 total), 16 tooling plus
+  Clippy, build, 708 library and 659 native Rust tests (1367 total), 16 tooling plus
   four compiler-harness Python tests, 80 standalone and five multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-initializer-inputs-gate.log`.
+  debug/release. Gate log: `/tmp/meowy-block-inputs-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -126,24 +111,26 @@ in `src/check.rs` carries exact types into expression hints and documentation.
 Immutable initializer evidence is in `src/check/inputs.rs`, recorded by ordinary
 binding checking in `src/check/statements.rs` and consumed by scalar required reads.
 
+Block evidence lives in `src/check/inputs/blocks.rs`; required-only constant materialization
+is in `src/check/expressions.rs`. Runtime constant folding remains separate.
+
 ## Still outside this compiler
 
-Block/field/imported-data and helper initializer eligibility, module-data captures,
-borrowed module storage, package/manifest resolution, full required evaluation and
-generic specialization, public FFI, wider ownership/cleanup, executable networking,
-public artifacts/replay and LSP remain separate. Host execution does not qualify
-minimum platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/
-LLD/LLVM ar 22.1.8.
+Field/imported-data and helper initializer eligibility, module-data captures, borrowed
+module storage, package/manifest resolution, full required evaluation and generic
+specialization, public FFI, wider ownership/cleanup, executable networking, public
+artifacts/replay and LSP remain separate. Host execution does not qualify minimum
+platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Plan bounded straight-line block initializer eligibility through `check/inputs.rs`,
-   checked block HIR and existing constant/purity analysis. The next intended source
-   is an immutable integer initialized by a block with local eligible bindings and
-   one primary scalar emission. Preserve source order, reject effects/mutable state,
-   and retain original error spans/transitive work without executing initializers.
-   Keep helper calls, control flow and imported data separate; record reviewable
-   slices and accepted/rejection/native initialization tests before editing.
+1. Plan bounded eligibility for immutable integer record-field projections. Inspect
+   `check/inputs.rs`, checked record/emission HIR and `type_values/scalars.rs` before
+   choosing an evidence representation. Preserve whole-initializer effect checks,
+   concrete field identity, immutable storage and original diagnostic/work provenance;
+   a known field value alone must not hide effects in the containing initializer.
+   Keep imported data and helper calls separate initially. Record reviewable slices
+   and accepted/rejection/native no-initializer-execution tests before implementation.
 2. Preserve capture/borrowed-export and ownership/header proofs. Run focused checks
    per slice and the complete compiler gate for new behavior; keep STATUS concise,
    commit reviewable slices, never push or recreate STEP logs.
