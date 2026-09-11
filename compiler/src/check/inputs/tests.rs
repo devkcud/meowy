@@ -27,7 +27,7 @@ pub(crate) fn initializer_inputs_exclude_folded_blocks_calls_and_mutable_reads()
         "d:@\"debug\";x:{d.print(1);->4};alias:x",
         "x:=4;copy:x;alias:copy",
         "f<int32>:(x<int32>){copy:x;->copy};result:f(4)",
-        "row:{->n:4};copy:row.n",
+        "d:@\"debug\";row:{->n:4;d.print(1)};copy:row.n",
     ] {
         assert!(check(source).inputs.is_empty(), "{source}");
     }

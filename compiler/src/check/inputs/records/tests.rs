@@ -37,3 +37,34 @@ pub(crate) fn record_inputs_retain_whole_initializer_errors_and_field_limits() {
     let fields = (0..257).map(|id| format!("->n{id}:1;")).collect::<String>();
     assert!(check(&format!("row:{{{fields}}}")).record_inputs.is_empty());
 }
+
+#[test]
+pub(crate) fn record_fields_copy_exact_values_without_losing_the_containing_evidence() {
+    crate::compile("row:{->z<uint8>:3;->a<uint8>:4};copy:row.a;<T>:{n:copy;-><int32[n]>}").unwrap();
+    let checker = check("row:{->z<uint8>:3;->a<uint8>:4};copy:row.a;alias:row;next:alias.z");
+    let values = checker
+        .inputs
+        .values()
+        .filter_map(|input| input.value)
+        .collect::<Vec<_>>();
+    assert_eq!(values, [4, 3]);
+    let source = "|false|{row<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1};copy:row.good;<T>:{n:copy;-><int32>}}";
+    let error = crate::compile(source).unwrap_err().remove(0);
+    assert_eq!(error.code, "E107");
+    assert_eq!(error.span.start, source.find("255+1").unwrap());
+}
+
+#[test]
+pub(crate) fn record_fields_copies_cannot_hide_effects_or_mutable_siblings() {
+    for source in [
+        "d:@\"debug\";row:{->good:4;d.print(1)};copy:row.good;<T>:{n:copy;-><int32>}",
+        "row:{->good:4;->mutable:=0};copy:row.good;<T>:{n:copy;-><int32>}",
+        "row:={->good:4};copy:row.good;<T>:{n:copy;-><int32>}",
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            "E211",
+            "{source}"
+        );
+    }
+}

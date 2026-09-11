@@ -19,7 +19,9 @@ work/error evidence. Start with flat immutable integer fields and a unit primary
    complete body checks, checked field indices and error-only unreachable records.
    Synthetic module inputs are excluded. Three record metadata groups, 14 computed-
    type library/parser and 17 native matching groups passed; fmt/Clippy passed.
-3. Preserve whole-record evidence when an ordinary integer binding copies a field.
+3. Copied integer fields retain whole-record errors/work and exact values. Record
+   metadata/projection groups, 38 native record compatibility groups, the existing
+   initializer exclusion test, fmt and Clippy passed.
 4. Add direct computed scratch/extent field reads while preserving qualified type
    identities, lexical privacy and runtime capture gates.
 5. Add native/source-diagnostic/budget coverage and a field-capacity example.

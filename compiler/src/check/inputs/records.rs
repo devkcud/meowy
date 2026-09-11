@@ -11,6 +11,18 @@ pub(crate) struct Record {
 }
 
 impl Checker {
+    pub(crate) fn field_input(&self, id: usize, index: usize) -> Option<Input> {
+        let record = self.record_inputs.get(&id)?;
+        let mut input = record.input.clone();
+        input.work = input.work.saturating_add(1);
+        input.value = if input.error.is_none() {
+            *record.values.get(index)?
+        } else {
+            None
+        };
+        Some(input)
+    }
+
     pub(crate) fn record_input(&mut self, expr: &hir::Expr, ty: &Type) -> Option<Record> {
         let Type::Record { primary, fields } = ty else {
             return None;

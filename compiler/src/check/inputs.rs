@@ -84,6 +84,14 @@ impl Checker {
                     right: Box::new(b.literal(right)),
                 }
             }
+            ExprKind::Field { value, index } => {
+                let ExprKind::Local(id) = value.kind else {
+                    return None;
+                };
+                let source = self.field_input(id, *index)?;
+                input.add(&source);
+                source.literal(expr).kind
+            }
             ExprKind::Block(block) => {
                 let source = self.input_block(block, depth + 1, count, locals)?;
                 input.add(&source);
