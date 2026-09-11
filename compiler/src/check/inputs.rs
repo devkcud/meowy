@@ -1,7 +1,7 @@
 mod blocks;
 mod records;
 
-pub(crate) use records::Record;
+pub(crate) use records::{MAX_DEPTH as MAX_RECORD_DEPTH, Record};
 
 use super::{Checker, Constant};
 use crate::diagnostic::Diagnostic;
@@ -90,11 +90,9 @@ impl Checker {
                     right: Box::new(b.literal(right)),
                 }
             }
-            ExprKind::Field { value, index } => {
-                let ExprKind::Local(id) = value.kind else {
-                    return None;
-                };
-                let source = self.source_record(id, locals)?.field(&[*index])?;
+            ExprKind::Field { .. } => {
+                let (id, path) = Self::record_path(expr)?;
+                let source = self.source_record(id, locals)?.field(&path)?;
                 input.add(&source);
                 source.literal(expr).kind
             }

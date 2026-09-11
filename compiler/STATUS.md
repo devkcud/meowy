@@ -17,8 +17,9 @@ subrecords. Shared scoped evidence must carry both integer and record locals.
    fmt and Clippy passed, including unused local shape bounds. Declared record aliases
    retain descendant errors; unreachable inline emissions with erased field identity
    remain unavailable instead of guessing a layout.
-3. Resolve nested HIR/required field paths and projected record aliases without dropping
-   ancestor evidence; preserve captures, references and imported-data gates.
+3. Nested HIR/required paths and projected aliases complete. Seven nested-record
+   library groups, the existing carried-record native group, five native field groups,
+   fmt and Clippy passed. Ancestor errors survive projected aliases.
 4. Add native/error/budget/documentation coverage and update the example.
 5. Document exact boundaries and run the complete compiler gate.
 

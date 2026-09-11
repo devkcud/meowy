@@ -1,16 +1,27 @@
 use crate::ast::{self, ExprKind};
-use crate::check::{Checker, Result, Value, inputs::Input};
+use crate::check::{
+    Checker, Result, Value,
+    inputs::{Input, MAX_RECORD_DEPTH},
+};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
 
 impl Checker {
     pub(crate) fn required_field(&mut self, expr: &ast::Expr) -> Result<(Type, Input)> {
-        let ExprKind::Field { value, name } = &expr.kind else {
-            unreachable!()
-        };
-        let mut root = value.as_ref();
-        while let ExprKind::Group(value) = &root.kind {
-            root = value;
+        let mut root = expr;
+        let mut names = Vec::new();
+        loop {
+            match &root.kind {
+                ExprKind::Field { value, name } => {
+                    if names.len() == MAX_RECORD_DEPTH {
+                        return Err(super::Work::budget(expr.span));
+                    }
+                    names.push((name, root.span));
+                    root = value;
+                }
+                ExprKind::Group(value) => root = value,
+                _ => break,
+            }
         }
         let ExprKind::Name(root_name) = &root.kind else {
             return Err(Diagnostic::unsupported(
@@ -20,7 +31,7 @@ impl Checker {
         };
         let Value::Local {
             id,
-            ty: Type::Record { fields, .. },
+            ty,
             mutable: false,
             ..
         } = self.required_value(root_name, root.span)?
@@ -30,23 +41,45 @@ impl Checker {
                 expr.span,
             ));
         };
-        if !self.flow.spend(fields.len() + name.len() + 1) {
-            return Err(super::Work::budget(expr.span));
+        let mut current = &ty;
+        let mut path = Vec::new();
+        for (name, span) in names.into_iter().rev() {
+            let Type::Record { fields, .. } = current else {
+                return Err(Diagnostic::unsupported(
+                    "computed field paths outside records",
+                    span,
+                ));
+            };
+            if !self.flow.spend(fields.len() + name.len() + 1) {
+                return Err(super::Work::budget(span));
+            }
+            let (index, field) = fields
+                .iter()
+                .enumerate()
+                .find(|(_, field)| field.name == *name)
+                .ok_or_else(|| {
+                    Self::error("E201", format!("unknown record field `{name}`"), span)
+                })?;
+            path.push(index);
+            current = &field.ty;
         }
-        let (index, field) = fields
-            .iter()
-            .enumerate()
-            .find(|(_, field)| field.name == *name)
-            .ok_or_else(|| {
-                Self::error("E201", format!("unknown record field `{name}`"), expr.span)
-            })?;
-        let input = self.field_input(id, index).ok_or_else(|| {
-            Self::error(
-                "E211",
-                "record initializer is unavailable during required type evaluation",
+        if !matches!(current, Type::Int { .. }) {
+            return Err(Diagnostic::unsupported(
+                "computed record paths without an integer leaf",
                 expr.span,
-            )
-        })?;
-        Ok((field.ty.clone(), input))
+            ));
+        }
+        let input = self
+            .record_inputs
+            .get(&id)
+            .and_then(|record| record.field(&path))
+            .ok_or_else(|| {
+                Self::error(
+                    "E211",
+                    "record initializer is unavailable during required type evaluation",
+                    expr.span,
+                )
+            })?;
+        Ok((current.clone(), input))
     }
 }

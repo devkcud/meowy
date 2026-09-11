@@ -193,3 +193,55 @@ pub(crate) fn nested_record_evidence_checks_unused_local_shapes() {
             .is_empty()
     );
 }
+
+#[test]
+pub(crate) fn nested_record_paths_support_direct_copied_and_grouped_fields() {
+    for source in [
+        "row:{->nested:{->width<uint8>:4}};<T>:{n:row.nested.width;-><int32[n]>}",
+        "row:{->nested:{->width<uint8>:4}};alias:row.nested;copy:alias.width;<T>:{n:copy;-><int32[n]>}",
+        "row:{->nested:{->width<uint8>:4}};<T>:{-><int32[((row).nested).width]>}",
+        "row:{->nested:{->width<uint8>:4}};f<int32>:(){<T>:{n:row.nested.width;-><int32[n]>};v<T>:[1,2];->v[2]}",
+        "row:{->nested:{->width<uint8>:4};->copy:nested.width};<T>:{n:row.copy;-><int32[n]>}",
+    ] {
+        crate::compile(source).unwrap_or_else(|errors| panic!("{source}: {errors:?}"));
+    }
+}
+
+#[test]
+pub(crate) fn nested_record_paths_keep_complete_ancestor_errors_through_aliases() {
+    let source = "|false|{part<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1};row<{nested<{good<uint8>;bad<uint8>}>}>:{->nested:part};alias:row.nested;copy:alias.good;<T>:{n:copy;-><int32>}}";
+    let error = crate::compile(source).unwrap_err().remove(0);
+    assert_eq!(error.code, "E107");
+    assert_eq!(error.span.start, source.find("255+1").unwrap());
+    for source in [
+        "d:@\"debug\";row:{->good:{->n:4};d.print(1)};alias:row.good;<T>:{n:alias.n;-><int32>}",
+        "row:{->good:{->n:4};->bad:{->n:=1}};alias:row.good;<T>:{n:alias.n;-><int32>}",
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            "E211",
+            "{source}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn nested_record_paths_keep_missing_fields_references_and_captures_gated() {
+    for (source, code) in [
+        (
+            "row:{->nested:{->n:4}};<T>:{n:row.nested.missing;-><int32>}",
+            "E201",
+        ),
+        (
+            "row:{->nested:{->n:4}};p:&row;<T>:{n:p.nested.n;-><int32>}",
+            "B001",
+        ),
+        ("row:{->nested:{->n:4}};f<int32>:(){->row.nested.n}", "B001"),
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            code,
+            "{source}"
+        );
+    }
+}

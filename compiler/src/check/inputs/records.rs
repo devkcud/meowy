@@ -1,3 +1,5 @@
+mod paths;
+
 use super::{Checker, Input, Sources};
 use crate::hir::{self, ExprKind, Type};
 use std::collections::BTreeMap;
@@ -31,10 +33,6 @@ impl Checker {
             .records
             .get(&id)
             .or_else(|| self.record_inputs.get(&id))
-    }
-
-    pub(crate) fn field_input(&self, id: usize, index: usize) -> Option<Input> {
-        self.record_inputs.get(&id)?.field(&[index])
     }
 
     pub(crate) fn record_shape(&mut self, ty: &Type) -> bool {
@@ -101,6 +99,10 @@ impl Checker {
             let mut record = self.source_record(*id, locals)?.clone();
             record.input.work = record.input.work.saturating_add(1);
             return Some(record);
+        }
+        if matches!(expr.kind, ExprKind::Field { .. }) {
+            let (id, path) = Self::record_path(expr)?;
+            return self.source_record(id, locals)?.project(&path);
         }
         let ExprKind::Block(block) = &expr.kind else {
             return None;
