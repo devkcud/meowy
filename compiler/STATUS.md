@@ -20,7 +20,10 @@ concrete type construction; reuse them without emitting runtime code.
 3. Straight-line blocks complete. Seven focused computed-type/parser groups, four
    exported-type library/six native groups, 19 documentation library/nine native
    groups, fmt and Clippy passed. Computed annotations use one resolver path.
-4. Exercise native/module/documentation integration and add a runnable example.
+4. All nine focused library/parser and five native groups passed, including exact
+   documentation signatures, absent runtime storage, example execution in both
+   profiles, module exports, query/reference behavior and file-local failures.
+   Fmt and Clippy passed.
 5. Document the exact bootstrap boundary and run the complete compiler gate.
 
 Keep helper calls, branches, mutable scratch, generic specialization and the full

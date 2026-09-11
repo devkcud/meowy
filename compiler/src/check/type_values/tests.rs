@@ -151,3 +151,31 @@ pub(crate) fn computed_types_blocks_share_work_limits_across_sibling_blocks() {
         "{error:?}"
     );
 }
+
+#[test]
+pub(crate) fn computed_types_blocks_leave_no_runtime_statements_or_storage() {
+    let program =
+        crate::compile("<T>:{element:<int32>;row:{-><{n<int32>}>};-><(element)[4]>}").unwrap();
+    assert!(program.body.stmts.is_empty());
+    assert!(program.locals.is_empty());
+    assert!(program.functions.is_empty());
+}
+
+#[test]
+pub(crate) fn computed_types_documentation_derives_constructed_signatures() {
+    let source = include_str!("../../../examples/computed-types.mwy");
+    let (_, model) = crate::documentation::checked(source, true).unwrap();
+    let model = model.unwrap();
+    let counts = model
+        .entries
+        .iter()
+        .find(|entry| entry.name == "Counts")
+        .unwrap();
+    assert_eq!(counts.signature, "int32[4]");
+    let row = model
+        .entries
+        .iter()
+        .find(|entry| entry.name == "Row")
+        .unwrap();
+    assert_eq!(row.signature, "{count<int32>;label<string>}");
+}

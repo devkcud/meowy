@@ -1,0 +1,17 @@
+#!| Build [[<Counts>]] and [[<Row>]] before runtime storage exists. |!#
+debug:@"debug"
+#| A bounded list of signed counts. |#
+<Counts>:{
+    #| Element type used by the list constructor. |#
+    element:<int32>
+    -><(element)[4]>
+}
+#| A record built from a local type alias. |#
+<Row>:{
+    <Count>:<int32>
+    -><{count<Count>;label<string>}>
+}
+counts<Counts>:[3,7]
+row<Row>:{->count:counts[2];->label:"computed"}
+debug.print(row.label)
+debug.print(row.count)
