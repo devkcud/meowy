@@ -89,8 +89,10 @@ this does not enable stored function pointers.
 
 Existing computed type values still work, for example
 `token:<geometry.Point>;-><PublicPoint>:token`. Qualified type references use the
-angle-bracket type context; general compile-time type-expression evaluation is not
-expanded. Type lookup and copied signatures charge the existing proof budget.
+angle-bracket type context. [Straight-line computed type blocks](COMPUTED_TYPES.md)
+can also construct an exported alias using local type bindings and a primary emission.
+General helper evaluation remains unsupported. Type lookup and copied signatures
+charge the existing proof budget.
 
 Duplicate type bindings, including attempts to redeclare a private alias under the
 same name, report E203. Exported names must be unqualified. Nested, conditional and

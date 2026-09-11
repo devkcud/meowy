@@ -1,75 +1,63 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Documentation-bearing relative file graphs passed the compiler
-gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-10. Bounded computed-type blocks passed the compiler gate.
+No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-A bounded computed-type block slice is in progress; the tree started clean.
-The audit found `check/names.rs::type_value` accepts literal/query/name/group forms,
-but no block evaluation. The shared checker already owns type/value scopes and
-concrete type construction; reuse them without emitting runtime code.
+1. `952446f` — extract the existing type-value resolver without changing behavior.
+2. `db2e88c` — shared bootstrap work/depth/type traversal limits.
+3. `41be3a5` — scoped straight-line type blocks and one computed resolver path.
+4. `4b9b4ef` — module/native/documentation integration and runnable example.
+5. This separate documentation handoff records the complete gate below.
 
-1. Existing resolver moved unchanged to `check/type_values.rs`. Four exported-type
-   library and six native groups, 14 graph library groups, fmt and Clippy passed.
-2. Root-shared visit/depth/materialization limits complete. All three focused
-   computed-type/parser groups, fmt and Clippy passed. Nested/wide construction
-   failures and successful/failed-root resets are covered.
-3. Straight-line blocks complete. Seven focused computed-type/parser groups, four
-   exported-type library/six native groups, 19 documentation library/nine native
-   groups, fmt and Clippy passed. Computed annotations use one resolver path.
-4. All nine focused library/parser and five native groups passed, including exact
-   documentation signatures, absent runtime storage, example execution in both
-   profiles, module exports, query/reference behavior and file-local failures.
-   Fmt and Clippy passed.
-5. Document the exact bootstrap boundary and run the complete compiler gate.
-
-Keep helper calls, branches, mutable scratch, generic specialization and the full
-language evaluation counters separate. This slice uses explicit bootstrap work/depth
-limits (B001), not approximate E220 language-budget accounting. Commit each validated
-slice and apply the review threshold before proceeding.
+Each implementation/test slice passed focused checks before its commit and remained
+below the review threshold. Plan dependency-ordered commits before the next feature.
 
 ## Current compiler slice
 
-Ordinary graph `check`, `build` and `run` check documentation in all discovered files,
-including unused/inactive imports. `documentation/model.rs::at` reads each source
-using its graph base, preserving attachment/markup spans and normalized CRLF/Unicode
-maps. File models mark explicit exports public and ordinary bindings/types private;
-single-file documentation keeps its existing public-coverage policy.
+`check/type_values.rs` resolves computed types and interprets straight-line type blocks.
+Local immutable unannotated bindings hold type values; local aliases use the type
+namespace. Nested blocks and symbolic type members preserve concrete identity.
+Exactly one unlabelled/unnamed/unannotated primary emission provides the type result;
+checking continues after it. Missing/non-type results use E211, duplicates E203/E205.
+Scopes are restored on completion/error, and no HIR statements/storage/functions are
+created for the construction block. Existing layout and ownership checks still apply.
 
-`check/exports.rs::module_value` activates and finishes each file's model.
-`check/blocks.rs` checks module docs before that initializer scope closes. Function
-and parameter docs use the checked declaration/signature scope, excluding body locals.
-Models are not merged across files, and private lexical names remain isolated.
+`check/names.rs` routes computed annotations directly through this resolver, avoiding
+its previous duplicate symbolic/type evaluation. Exported aliases and documentation
+reuse the resulting types and checker scopes. Runtime-parameter type queries retain
+existing type-only behavior without making runtime values eligible static inputs.
 
-`check/documentation.rs` resolves imported function/data/type links through existing
-export lookup. Facades and aliases preserve namespaces; missing/private targets are
-E802. Inferred record-member links retain private root anchors. Public docs cannot
-expose private local targets. Graph error mapping retains the owning file and local
-byte range for E801/E802/E803 and documentation budget failures.
+`Checker.type_work` shares 4096 expression/statement visits, 64 active resolver levels
+and 16384 traversed concrete type nodes across one outer type-value resolution.
+Nested blocks share counters; independent roots reset them, including after failure.
+These are B001 bootstrap bounds, not the language's E220 logical evaluation counters.
+Known resolved debug print/panic calls in evaluated positions use E219; source helper
+purity and transitive effect analysis remain unimplemented. Calls never execute here.
 
-Ordinary compilation validates embedded example metadata without compiling or
-executing example programs. Check/build do not execute initializers. Standalone doc
-commands retain checked/opt-in examples; relative file imports in `doc check/build`
-remain B001. Multi-file site generation, public indexes/coverage and example graph
-resolution are separate. See [MODULES.md](MODULES.md) and
-[the documented facade](examples/documented-modules/main.mwy).
+See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and [the example](examples/computed-types.mwy).
+Scalar scratch, mutable scratch, branches/restarts, labeled blocks, named/annotated
+emissions, general statements/helper calls, `core.Type` signatures and specialization
+remain separate. No runtime type-value storage or new syntax is introduced.
 
 ## Actual validation
 
-- Offset and export-model slices: shifted attachment/link/signature checks,
-  Unicode/CRLF, public/private links and function parameters passed.
-- Graph integration and links: 19 documentation library groups passed; compatibility
-  included 11 graph library, 17 native file-module and nine native documentation groups.
-- Six new native groups passed: documented facade execution, local diagnostics from
-  check/build/run, unused dependencies, budgets, example/initializer boundaries,
-  signature/capture/storage gates and explicit doc-command refusal.
+- Resolver extraction: four exported-type library/six native groups and 14 graph
+  library groups passed. Computed block compatibility also passed 19 documentation
+  library and nine native documentation groups.
+- Nine focused library/parser groups passed: scope/identity, missing/duplicate/wrong
+  results, effects after emission, unsupported control, nested/wide work failures,
+  independent-root reset, absent runtime storage and exact documentation signatures.
+- Five native groups passed: computed exports through a facade, runtime queries and
+  references, dependency E219 spans from check/build/run, documentation/example
+  execution and dependency-local B001 budget failures. Execution uses both profiles.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 684 library and 643 native Rust tests (1327 total), 16 tooling plus
-  four compiler-harness Python tests, 79 standalone and five multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-documented-modules-gate.log`.
+  Clippy, build, 692 library and 648 native Rust tests (1340 total), 16 tooling plus
+  four compiler-harness Python tests, 80 standalone and five multi-file examples in
+  debug/release. Gate log: `/tmp/meowy-computed-types-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -111,22 +99,27 @@ paths, manifest boundaries, depth/file/edge/source/discovery budgets remain enfo
 `src/driver.rs` protects graph inputs from output replacement and maps diagnostics.
 Native file sites remain in `src/backend/sites.rs` and `native/runtime.cpp`.
 
+Type-value resolution/work bounds live in `src/check/type_values.rs`; ordinary type
+construction and symbol lookup remain in `src/check/names.rs`. Required list extents
+still use `src/list.rs::list_extent` and scalar checks in `src/check/scalars.rs`.
+
 ## Still outside this compiler
 
 Runtime module-data captures, borrowed module storage, package/manifest resolution,
-generic specialization, public FFI, wider ownership/cleanup, executable networking,
-public artifacts/replay and LSP remain separate. Host execution does not qualify
-minimum platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/
-LLD/LLVM ar 22.1.8.
+full required evaluation and generic specialization, public FFI, wider ownership/
+cleanup, executable networking, public artifacts/replay and LSP remain separate.
+Host execution does not qualify minimum platforms or bundled distributions.
+Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Return to compiler type-construction foundations. Read the required-evaluation
-   contract in `../docs/reference/compile-time.md` and the pipeline in `../COMPILER.md`;
-   audit `src/check/names.rs::type_value` and its callers to identify the smallest
-   bounded computed-type capability beyond literal/type-query/name/group handling.
-   Record a concrete commit plan and accepted/effect/budget rejection fixtures before
-   implementation. Preserve unsupported generic/package behavior and source spans.
-2. Keep runtime data-capture/borrowed-export and ownership/header proofs intact.
-   Run focused checks per slice and the complete compiler gate for new behavior;
-   keep STATUS concise, commit reviewable slices, never push or recreate STEP logs.
+1. Plan immutable scalar scratch inside required type blocks, starting from
+   `check/type_values.rs::type_statements`, `list.rs::list_extent` and existing scalar
+   constant/arithmetic checking. The intended next example computes a local capacity
+   before constructing a list type. Preserve width/overflow checks and reject runtime
+   inputs/effects without executing initializers. Keep this separate from mutable
+   scratch, helper calls, symbolic `core.Type` parameters and full E220 accounting.
+   Record dependency-ordered slices and accepted/rejection/budget tests before editing.
+2. Preserve runtime data-capture/borrowed-export and ownership/header proofs. Run
+   focused checks per slice and the complete compiler gate for new behavior; keep
+   STATUS concise, commit reviewable slices, never push or recreate STEP logs.
