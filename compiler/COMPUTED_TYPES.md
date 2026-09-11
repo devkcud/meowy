@@ -6,12 +6,16 @@ existing type construction and lexical scopes from the checker:
 ```meowy
 <Counts>:{
     element:<int32>
-    -><(element)[4]>
+    base<uint8>:2
+    capacity:base*2
+    -><(element)[capacity]>
 }
 values<Counts>:[3,7]
 ```
 
-Local immutable, unannotated bindings hold supported type values. Local type aliases
+Local immutable, unannotated bindings hold supported type values. Immutable integer
+bindings may have an explicit integer annotation, such as `base<uint8>:2`.
+Local type aliases
 such as `<Count>:<int32>` use the separate type namespace. Nested blocks may produce
 types for these bindings or for computed annotations. Parenthesized expressions and
 supported type queries retain their existing behavior. Symbolic type members such as
@@ -36,13 +40,35 @@ including calls through resolved aliases and calls after a primary emission.
 The checker does not execute them. This is a narrow effect check; source helper
 purity and transitive call analysis are not implemented by this slice.
 
+## Integer calculations
+
+Local integer bindings retain their checked width and signedness through aliases,
+subsequent calculations and type queries. Supported expressions are integer literals,
+eligible names, parentheses, unary `-`/`~` and binary `+`, `-`, `*`, `/`, `%`, `&`, `|`,
+`^`. They reuse the scalar checker and constant evaluator. Incompatible widths use
+E213, literal overflow E216 and invalid arithmetic E107. Negative or unrepresentable
+list capacities retain E104. Required arithmetic is checked even inside an unreachable
+runtime branch, and its temporary checking state is restored afterwards.
+
+Inputs must already be static integers in the construction scope. Runtime parameters,
+mutable bindings and results of effectful initializers are unavailable (E211).
+Folded immutable runtime bindings also remain gated (B001): their transitive initializer
+eligibility has not been recorded. No optimizer result supplies that missing proof.
+Extents within computed-type roots use the same input validation as scratch bindings.
+Direct extents outside those roots retain their existing supported profile.
+
+The [example](examples/computed-types.mwy) calculates a capacity of four from two
+`uint8` values. Scalar scratch produces no runtime locals, and documentation preserves
+its actual integer signature. Floating-point, boolean and text scratch, comparisons,
+shifts, mutable scratch and helper calls remain separate capabilities.
+
 ## Explicit limits
 
 One outer type-value resolution shares these bootstrap bounds with nested resolutions:
 
 | Bound | Maximum |
 | --- | --- |
-| Resolver expression and block-statement visits | 4096 |
+| Resolver/scalar-validation expressions and block-statement visits | 4096 |
 | Active resolver depth | 64 |
 | Concrete type nodes traversed across resolved values/local aliases | 16384 |
 
@@ -50,7 +76,7 @@ Exhaustion reports B001. Nested blocks share the counters; independent roots res
 them. Existing parser, type/layout and proof limits still apply. These limits qualify
 bootstrap support only; they do not implement the language's logical E220 counters.
 
-Scalar scratch bindings, mutable scratch, branches/restarts, labeled blocks,
+Non-integer scalar scratch, mutable scratch, branches/restarts, labeled blocks,
 annotated or named emissions, general expression statements and source/helper calls
 remain unsupported in type blocks. `core.Type` parameter/result annotations, generic
 specialization, type equality, full purity analysis, intrinsic descriptions and the

@@ -30,9 +30,10 @@ identities and eager initialization of inactive/unused imports. The
 export and parameter documentation with links through imported types/functions.
 
 [Computed type blocks](COMPUTED_TYPES.md) now construct supported types using local
-immutable type bindings, aliases and primary emissions, without runtime storage.
-The [example](examples/computed-types.mwy) constructs record and bounded-list types.
-Helper calls, scalar scratch, control flow and full required evaluation remain separate.
+immutable type bindings, aliases, checked integer calculations and primary emissions,
+without runtime storage. The [example](examples/computed-types.mwy) computes a local
+list capacity and constructs record/list types. Runtime initializer eligibility,
+helper calls, non-integer/mutable scratch and full required evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the

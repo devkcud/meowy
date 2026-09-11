@@ -1,76 +1,68 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Bounded computed-type blocks passed the compiler gate.
-No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-10. Immutable integer scratch in computed-type blocks passed the
+compiler gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
 ## Commit series
 
-Immutable integer scratch for computed types is in progress; the tree started clean.
-The scalar checker already handles literal widths, integer arithmetic and constant
-folding. `Value::Constant` loses numeric width, so preserve typed static values before
-reusing those operations. Restrict this slice to integers and eligible static inputs.
+1. `85c5c83` — typed static integer values and literal/alias bindings.
+2. `7a6b903` — checked calculations, bounded input validation and extent integration.
+3. `620dadd` — native/module/documentation coverage and local-capacity example.
+4. This separate documentation handoff records the complete gate below.
 
-1. Typed static integers and literal/alias bindings complete. All ten computed-type
-   library/parser and six native matching groups, fmt and Clippy passed. Literal
-   overflow retains E216; width, scope and storage erasure are covered.
-2. Arithmetic/input validation passed all 13 computed-type library/parser and six
-   native matching groups, the existing dead-path extent regression and Clippy.
-   All four integer groups, including typed known-effect calls, passed final
-   revalidation; fmt and Clippy passed.
-3. All 14 computed-type library/parser and nine matching native groups passed,
-   including exported capacities, large widths, local diagnostics, documentation
-   signatures and no runtime scratch. Updated example runs in both profiles.
-   Fmt and Clippy passed.
-4. Document the integer-only boundary and run the complete compiler gate.
-
-Runtime initializer eligibility is not tracked yet: even folded runtime bindings
-remain unavailable. Mutable scratch, helper calls, floating/text/boolean scratch,
-control flow and full E220 accounting stay separate. Commit each validated slice.
+Each implementation/test slice passed focused checks before its commit and remained
+below the review threshold. Plan dependency-ordered commits before the next feature.
 
 ## Current compiler slice
 
-`check/type_values.rs` resolves computed types and interprets straight-line type blocks.
-Local immutable unannotated bindings hold type values; local aliases use the type
-namespace. Nested blocks and symbolic type members preserve concrete identity.
-Exactly one unlabelled/unnamed/unannotated primary emission provides the type result;
-checking continues after it. Missing/non-type results use E211, duplicates E203/E205.
-Scopes are restored on completion/error, and no HIR statements/storage/functions are
-created for the construction block. Existing layout and ownership checks still apply.
+Computed-type blocks support immutable integer scratch alongside local type values
+and aliases. `Value::Static` retains a constant and its exact type; expression lookup,
+type hints and documentation preserve width/signedness through aliases. Optional
+integer annotations use ordinary literal and type checks. Scratch creates no runtime
+locals/functions/statements, and block scopes still close on completion/error.
 
-`check/names.rs` routes computed annotations directly through this resolver, avoiding
-its previous duplicate symbolic/type evaluation. Exported aliases and documentation
-reuse the resulting types and checker scopes. Runtime-parameter type queries retain
-existing type-only behavior without making runtime values eligible static inputs.
+`check/type_values/scalars.rs` validates integer literals, eligible names, groups,
+unary minus/complement and binary arithmetic/bitwise operands before using the existing
+scalar checker and constant evaluator. Required arithmetic checks run with live reach
+and restore prior reach/required state. E216/E107/E213 retain literal overflow,
+invalid arithmetic and incompatible-width meanings. Known debug calls use E219.
 
-`Checker.type_work` shares 4096 expression/statement visits, 64 active resolver levels
-and 16384 traversed concrete type nodes across one outer type-value resolution.
-Nested blocks share counters; independent roots reset them, including after failure.
-These are B001 bootstrap bounds, not the language's E220 logical evaluation counters.
-Known resolved debug print/panic calls in evaluated positions use E219; source helper
-purity and transitive effect analysis remain unimplemented. Calls never execute here.
+Runtime parameters/mutable inputs and effectful initializer results are unavailable
+(E211). Even folded immutable runtime bindings remain gated (B001): their transitive
+initializer eligibility is not tracked. No runtime initializer is evaluated here.
+`list.rs::list_extent` uses the same input validation inside active computed roots;
+its pre-existing direct-extent profile outside those roots is unchanged.
 
-See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and [the example](examples/computed-types.mwy).
-Scalar scratch, mutable scratch, branches/restarts, labeled blocks, named/annotated
-emissions, general statements/helper calls, `core.Type` signatures and specialization
-remain separate. No runtime type-value storage or new syntax is introduced.
+Scalar validation shares the outer type root's bootstrap work/depth limits. Nested
+blocks do not reset them. The bounds remain 4096 visits, 64 resolver/validation levels
+and 16384 traversed concrete type nodes, with B001 exhaustion. They are not language
+E220 counters. See [COMPUTED_TYPES.md](COMPUTED_TYPES.md) and the updated
+[capacity example](examples/computed-types.mwy).
+
+Type blocks still require one unnamed/unlabelled/unannotated primary type emission;
+checking continues after it. Missing results and runtime names used as types use
+E211; duplicates use E203/E205.
+Mutable/non-integer scratch, comparisons/shifts, control flow, helper calls, symbolic
+`core.Type` signatures and specialization remain separate. Existing type identity,
+layout, export privacy, reference/ownership and documentation checks remain intact.
 
 ## Actual validation
 
-- Resolver extraction: four exported-type library/six native groups and 14 graph
-  library groups passed. Computed block compatibility also passed 19 documentation
-  library and nine native documentation groups.
-- Nine focused library/parser groups passed: scope/identity, missing/duplicate/wrong
-  results, effects after emission, unsupported control, nested/wide work failures,
-  independent-root reset, absent runtime storage and exact documentation signatures.
-- Five native groups passed: computed exports through a facade, runtime queries and
-  references, dependency E219 spans from check/build/run, documentation/example
-  execution and dependency-local B001 budget failures. Execution uses both profiles.
+- Typed values and calculations: 14 focused computed-type library/parser groups and
+  nine matching native groups passed. Existing dead-path extent regression passed.
+- Coverage includes narrow and large integer widths, aliases, signed/complement
+  operations, division/overflow, mixed-width rejection, dead runtime branches,
+  runtime/effectful inputs, unsupported scalar forms and shared expression budgets.
+- Native coverage verifies exported capacities, exact dependency spans from
+  check/build/run, no initializer execution on failures, and the folded-runtime-input
+  gate. The example executes in both profiles; documentation retains uint8 signatures
+  and scalar scratch leaves no runtime storage.
 - `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 692 library and 648 native Rust tests (1340 total), 16 tooling plus
+  Clippy, build, 697 library and 651 native Rust tests (1348 total), 16 tooling plus
   four compiler-harness Python tests, 80 standalone and five multi-file examples in
-  debug/release. Gate log: `/tmp/meowy-computed-types-gate.log`.
+  debug/release. Gate log: `/tmp/meowy-integer-scratch-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in both profiles. Unsupported
   cases do not count as language rejections or full release qualification.
 - Local links, 23 catalog records, 7 schemas/6 examples and whitespace checks passed.
@@ -116,23 +108,26 @@ Type-value resolution/work bounds live in `src/check/type_values.rs`; ordinary t
 construction and symbol lookup remain in `src/check/names.rs`. Required list extents
 still use `src/list.rs::list_extent` and scalar checks in `src/check/scalars.rs`.
 
+Static integer validation/folding is in `src/check/type_values/scalars.rs`; `Value::Static`
+in `src/check.rs` carries exact types into expression hints and documentation.
+
 ## Still outside this compiler
 
-Runtime module-data captures, borrowed module storage, package/manifest resolution,
-full required evaluation and generic specialization, public FFI, wider ownership/
-cleanup, executable networking, public artifacts/replay and LSP remain separate.
-Host execution does not qualify minimum platforms or bundled distributions.
-Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
+Runtime initializer eligibility, module-data captures, borrowed module storage,
+package/manifest resolution, full required evaluation and generic specialization,
+public FFI, wider ownership/cleanup, executable networking, public artifacts/replay
+and LSP remain separate. Host execution does not qualify minimum platforms or bundled
+distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Plan immutable scalar scratch inside required type blocks, starting from
-   `check/type_values.rs::type_statements`, `list.rs::list_extent` and existing scalar
-   constant/arithmetic checking. The intended next example computes a local capacity
-   before constructing a list type. Preserve width/overflow checks and reject runtime
-   inputs/effects without executing initializers. Keep this separate from mutable
-   scratch, helper calls, symbolic `core.Type` parameters and full E220 accounting.
-   Record dependency-ordered slices and accepted/rejection/budget tests before editing.
-2. Preserve runtime data-capture/borrowed-export and ownership/header proofs. Run
-   focused checks per slice and the complete compiler gate for new behavior; keep
-   STATUS concise, commit reviewable slices, never push or recreate STEP logs.
+1. Plan explicit eligibility evidence for immutable integer runtime bindings used
+   by required type evaluation. Inspect `check/statements.rs` binding construction,
+   `check/scalars.rs::constant`, `list_context/pure.rs` and the new scalar validator.
+   A folded value alone is insufficient: literals and transitively eligible arithmetic
+   should be distinguishable from effects, runtime parameters and mutable state.
+   Keep imports/helper purity separate initially. Record dependency-ordered slices and
+   accepted/rejection/native no-initializer-execution tests before implementation.
+2. Preserve capture/borrowed-export and ownership/header proofs. Run focused checks
+   per slice and the complete compiler gate for new behavior; keep STATUS concise,
+   commit reviewable slices, never push or recreate STEP logs.
