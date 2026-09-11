@@ -19,7 +19,9 @@ on the current lexical constant map. Reuse existing checked constant arithmetic.
    initializer-related library and seven native matching groups, fmt and Clippy
    passed. Earlier computed-type compatibility passed 14 library/13 native groups.
    Unreachable `never` blocks retain error-only evidence without inventing a result type.
-3. Add native/module/source-diagnostic/budget coverage and update the example.
+3. All three block library and four native groups passed, plus example execution,
+   exact documentation signatures, fmt and Clippy. The example seed is now a block
+   initializer; nested widths/modules and post-emission work are covered.
 4. Document the supported block shape and run the complete compiler gate.
 
 Effects, mutable state, branches/restarts, fields/imported data and helper calls remain

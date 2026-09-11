@@ -225,3 +225,73 @@ pub(crate) fn initializer_inputs_keep_runtime_captures_and_mutable_dependencies_
         );
     }
 }
+
+#[test]
+pub(crate) fn initializer_blocks_keep_nested_values_widths_and_module_initialization() {
+    case(
+        "m:@\"./types.mwy\";d:@\"debug\";values<m.Items>:[3,7];d.print(values[2]);d.print(m.get())",
+        &[("types.mwy", "d:@\"debug\";d.print(\"init\");capacity<uint8>:{base<uint8>:{->252};size:~base;->size+1};-><Items>:{n:capacity;-><int32[n]>};->get<int32>:(){<Local>:{n:capacity;-><int32[n]>};items<Local>:[4,8];->items[2]}")],
+    ).runs(b"init\n7\n8\n");
+}
+
+#[test]
+pub(crate) fn initializer_blocks_keep_post_emission_failures_at_original_file_spans() {
+    let source =
+        "#é#\n|false|{capacity<uint8>:{->4;unused<uint8>:255+1};<T>:{n:capacity;-><int32>}}";
+    let case = case("m:@\"./types.mwy\"", &[("types.mwy", source)]);
+    for profile in ["debug", "release"] {
+        for action in ["check", "build", "run"] {
+            let output = case.command(action, &["--json", "--profile", profile]);
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(error.contains("\"code\":\"E107\""), "{error}");
+            assert!(
+                error.contains(&format!(
+                    "\"path\":\"{}\"",
+                    case.path.join("types.mwy").display()
+                )),
+                "{error}"
+            );
+            assert!(
+                error.contains(&format!("\"start\":{}", source.find("255+1").unwrap())),
+                "{error}"
+            );
+        }
+    }
+}
+
+#[test]
+pub(crate) fn initializer_blocks_never_execute_excluded_effects_during_required_reads() {
+    let case = Case::new(
+        "d:@\"debug\";capacity:{->4;d.panic(\"post emission\")};<T>:{n:capacity;-><int32[n]>}",
+    );
+    for action in ["check", "build", "run"] {
+        let output = case.command(action, &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E211\""), "{error}");
+        assert!(!error.contains("R001"));
+    }
+}
+
+#[test]
+pub(crate) fn initializer_blocks_charge_cached_dependencies_and_unused_tail_work() {
+    let chain = (1..12)
+        .map(|id| format!("v{id}:{{n:v{};->n+n}};", id - 1))
+        .collect::<String>();
+    let tail = (1..110)
+        .map(|id| format!("v{id}:v{}+1;", id - 1))
+        .collect::<String>();
+    for source in [
+        format!("v0:1;{chain}<T>:{{n:v11;-><int32>}}"),
+        format!("capacity:{{->4;v0:1;{tail}}};<T>:{{n:capacity;-><int32>}}"),
+    ] {
+        let output = Case::new(&source).command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"B001\""), "{error}");
+        assert!(error.contains("computed type bootstrap budget"), "{error}");
+    }
+}
