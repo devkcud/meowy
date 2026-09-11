@@ -7,13 +7,22 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `fe74fd8` — bounded immutable initializer eligibility evidence over checked HIR.
-2. `86d391e` — evidence-backed required reads, error provenance and transitive work.
-3. `6044d20` — native initialization boundaries and eligible-seed example.
-4. This separate documentation handoff records the complete gate below.
+Straight-line block initializer eligibility is in progress; the tree started clean.
+Block locals leave lexical scope before the outer binding is inspected. Retain checked
+integer values in eligibility evidence and fold from child evidence rather than relying
+on the current lexical constant map. Reuse existing checked constant arithmetic.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Checked values now survive scope exit in initializer evidence, with bounded
+   child-first folding and original failure precedence. All eight initializer library
+   and four native groups, fmt and Clippy passed. Block support is not enabled yet.
+2. Recognize integer blocks containing immutable eligible bindings and one primary
+   emission. Inspect every statement, including after emission; feed proven values
+   to required reads without changing runtime initialization.
+3. Add native/module/source-diagnostic/budget coverage and update the example.
+4. Document the supported block shape and run the complete compiler gate.
+
+Effects, mutable state, branches/restarts, fields/imported data and helper calls remain
+separate. Keep every commit independently validated and below the review threshold.
 
 ## Current compiler slice
 

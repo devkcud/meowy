@@ -46,3 +46,27 @@ pub(crate) fn initializer_inputs_retain_unreachable_arithmetic_failures() {
     assert!(errors.iter().all(|error| error.code == "E107"));
     assert_eq!(errors[0].span, errors[1].span);
 }
+
+#[test]
+pub(crate) fn initializer_inputs_retain_values_after_lexical_scopes_close() {
+    let checker = check("base<uint8>:252;complement:~base;wide<uint64>:4294967296;next:wide+1");
+    assert_eq!(
+        checker
+            .inputs
+            .values()
+            .map(|input| input.value)
+            .collect::<Vec<_>>(),
+        [Some(252), Some(3), Some(4294967296), Some(4294967297)]
+    );
+}
+
+#[test]
+pub(crate) fn initializer_inputs_keep_first_invalid_child_before_parent_errors() {
+    let source = "|false|{bad<uint8>:(255+1)+(254+2);alias:bad}";
+    let checker = check(source);
+    let start = source.find("255+1").unwrap();
+    for input in checker.inputs.values() {
+        assert!(input.value.is_none());
+        assert_eq!(input.error.as_ref().unwrap().span.start, start);
+    }
+}
