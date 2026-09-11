@@ -136,6 +136,16 @@ impl Checker {
                     });
                 }
                 Value::Local { id, ty, .. } => {
+                    if self.required
+                        && self.type_work.is_some()
+                        && let Some(value) = self.inputs.get(&id).and_then(|input| input.value)
+                    {
+                        return Ok(hir::Expr {
+                            kind: hir::ExprKind::Int(value),
+                            ty,
+                            span: expr.span,
+                        });
+                    }
                     return self.narrow(hir::Expr {
                         kind: hir::ExprKind::Local(id),
                         ty,

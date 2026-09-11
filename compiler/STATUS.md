@@ -15,9 +15,10 @@ on the current lexical constant map. Reuse existing checked constant arithmetic.
 1. Checked values now survive scope exit in initializer evidence, with bounded
    child-first folding and original failure precedence. All eight initializer library
    and four native groups, fmt and Clippy passed. Block support is not enabled yet.
-2. Recognize integer blocks containing immutable eligible bindings and one primary
-   emission. Inspect every statement, including after emission; feed proven values
-   to required reads without changing runtime initialization.
+2. Strict block HIR recognition and required-only proven reads complete. All 13
+   initializer-related library and seven native matching groups, fmt and Clippy
+   passed. Earlier computed-type compatibility passed 14 library/13 native groups.
+   Unreachable `never` blocks retain error-only evidence without inventing a result type.
 3. Add native/module/source-diagnostic/budget coverage and update the example.
 4. Document the supported block shape and run the complete compiler gate.
 

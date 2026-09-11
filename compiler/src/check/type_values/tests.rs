@@ -237,8 +237,8 @@ pub(crate) fn computed_integers_reject_runtime_inputs_effects_and_unsupported_sc
             "E211",
         ),
         ("n:=3;<T>:{capacity:n+1;-><int32>}", "E211"),
-        ("n:{->3};<T>:{capacity:n+1;-><int32>}", "B001"),
-        ("n:{->3};<T>:{-><int32[n]>}", "B001"),
+        ("n:{scratch:=0;->3};<T>:{capacity:n+1;-><int32>}", "E211"),
+        ("n:{scratch:=0;->3};<T>:{-><int32[n]>}", "E211"),
         (
             "d:@\"debug\";n:{d.print(1);->3};<T>:{capacity:n+1;-><int32>}",
             "E211",

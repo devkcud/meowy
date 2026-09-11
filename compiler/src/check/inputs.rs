@@ -1,3 +1,5 @@
+mod blocks;
+
 use super::{Checker, Constant};
 use crate::diagnostic::Diagnostic;
 use crate::hir::{self, ExprKind, Type};
@@ -39,7 +41,8 @@ impl Checker {
         if *count > super::type_values::MAX_WORK
             || depth >= super::type_values::MAX_DEPTH
             || !self.flow.spend(1)
-            || !matches!(expr.ty, Type::Int { .. })
+            || !(matches!(expr.ty, Type::Int { .. })
+                || expr.ty == Type::Never && matches!(expr.kind, ExprKind::Block(_)))
         {
             return None;
         }
@@ -75,6 +78,14 @@ impl Checker {
                     left: Box::new(a.literal(left)),
                     right: Box::new(b.literal(right)),
                 }
+            }
+            ExprKind::Block(block) => {
+                let source = self.input_block(block, depth + 1, count)?;
+                input.add(&source);
+                if expr.ty == Type::Never {
+                    return input.error.is_some().then_some(input);
+                }
+                source.literal(expr).kind
             }
             _ => return None,
         };
