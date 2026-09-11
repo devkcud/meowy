@@ -189,13 +189,7 @@ impl Checker {
                 };
                 Ok(Spec::Data(ty))
             }
-            TypeKind::Computed(value) => {
-                if let Some(Value::Foundation(Item::Type(ty))) = self.symbol(value)? {
-                    Ok(Spec::Data(Type::Foundation(ty)))
-                } else {
-                    Ok(Spec::Data(self.type_value(value)?))
-                }
-            }
+            TypeKind::Computed(value) => Ok(Spec::Data(self.type_value(value)?)),
             TypeKind::Union(types) => {
                 let types = types
                     .iter()

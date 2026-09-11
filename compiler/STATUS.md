@@ -17,9 +17,9 @@ concrete type construction; reuse them without emitting runtime code.
 2. Root-shared visit/depth/materialization limits complete. All three focused
    computed-type/parser groups, fmt and Clippy passed. Nested/wide construction
    failures and successful/failed-root resets are covered.
-3. Add bounded straight-line computed-type blocks: immutable type bindings, local
-   aliases and one primary type emission. Test scope, type identity, sequencing,
-   known forbidden effects and explicit unsupported forms with the implementation.
+3. Straight-line blocks complete. Seven focused computed-type/parser groups, four
+   exported-type library/six native groups, 19 documentation library/nine native
+   groups, fmt and Clippy passed. Computed annotations use one resolver path.
 4. Exercise native/module/documentation integration and add a runnable example.
 5. Document the exact bootstrap boundary and run the complete compiler gate.
 

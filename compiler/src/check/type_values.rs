@@ -1,5 +1,5 @@
-use super::{Checker, Result, Value};
-use crate::ast::{self, ExprKind, Span};
+use super::{Checker, Result, Scope, Spec, Value};
+use crate::ast::{self, ExprKind, Span, StmtKind};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
 
@@ -102,6 +102,7 @@ impl Checker {
             }
             ExprKind::Name(name) => match self.value(name, expr.span)? {
                 Value::Type(ty) => Ok(ty),
+                Value::Foundation(crate::foundation::Item::Type(ty)) => Ok(Type::Foundation(ty)),
                 _ => Err(Self::error(
                     "E211",
                     "computed annotation does not produce a compile-time type",
@@ -109,11 +110,119 @@ impl Checker {
                 )),
             },
             ExprKind::Group(value) => self.type_value(value),
-            _ => Err(Diagnostic::unsupported(
-                "computed type evaluation",
-                expr.span,
-            )),
+            ExprKind::Block(block) => self.type_block(block),
+            ExprKind::Field { .. } => match self.symbol(expr)? {
+                Some(Value::Type(ty)) => Ok(ty),
+                Some(Value::Foundation(crate::foundation::Item::Type(ty))) => {
+                    Ok(Type::Foundation(ty))
+                }
+                _ => Err(Self::error(
+                    "E211",
+                    "computed member is not a compile-time type",
+                    expr.span,
+                )),
+            },
+            _ => Err(self.type_unavailable(expr)?),
         }
+    }
+
+    pub(crate) fn type_unavailable(&mut self, expr: &ast::Expr) -> Result<Diagnostic> {
+        let mut expr = expr;
+        while let ExprKind::Group(value) = &expr.kind {
+            expr = value;
+        }
+        if let ExprKind::Call { callee, .. } = &expr.kind
+            && matches!(self.symbol(callee)?, Some(Value::Print | Value::Panic))
+        {
+            return Ok(Self::error(
+                "E219",
+                "debug I/O or panic is forbidden during required type evaluation",
+                expr.span,
+            ));
+        }
+        Ok(Diagnostic::unsupported(
+            "computed type evaluation",
+            expr.span,
+        ))
+    }
+
+    pub(crate) fn type_block(&mut self, block: &ast::Block) -> Result<Type> {
+        if block.label.is_some() {
+            return Err(Diagnostic::unsupported(
+                "labeled computed type blocks",
+                block.span,
+            ));
+        }
+        self.scopes.push(Scope::default());
+        let result = self.type_statements(block);
+        self.scopes.pop();
+        result
+    }
+
+    pub(crate) fn type_statements(&mut self, block: &ast::Block) -> Result<Type> {
+        let mut result = None;
+        for stmt in &block.stmts {
+            self.type_work.as_mut().unwrap().spend(stmt.span)?;
+            match &stmt.kind {
+                StmtKind::Bind {
+                    name,
+                    ty: None,
+                    mutable: false,
+                    value,
+                } => {
+                    let ty = self.type_value(value)?;
+                    self.declare(name, Value::Type(ty), stmt.span)?;
+                }
+                StmtKind::TypeAlias {
+                    name,
+                    ty,
+                    exported: false,
+                } => {
+                    self.declare_type(name, ty, false, stmt.span)?;
+                    let spec = &self.scopes.last().unwrap().types[name];
+                    let work = self.type_work.as_mut().unwrap();
+                    match spec {
+                        Spec::Data(ty) => work.materialize(ty, stmt.span)?,
+                        Spec::Function { params, result } => {
+                            for ty in params.iter().chain(std::iter::once(result)) {
+                                work.materialize(ty, stmt.span)?;
+                            }
+                        }
+                    }
+                }
+                StmtKind::Emit {
+                    label: None,
+                    name: None,
+                    ty: None,
+                    mutable: false,
+                    value,
+                } => {
+                    let ty = self.type_value(value)?;
+                    if result.replace(ty).is_some() {
+                        return Err(Self::error(
+                            "E205",
+                            "computed type primary may be emitted twice",
+                            stmt.span,
+                        ));
+                    }
+                }
+                StmtKind::Expr(value) => return Err(self.type_unavailable(value)?),
+                _ => {
+                    return Err(Diagnostic::unsupported(
+                        "computed type block statement",
+                        stmt.span,
+                    ));
+                }
+            }
+            self.doc_stage(stmt.span.start)?;
+        }
+        result.ok_or_else(|| {
+            Self::error(
+                "E211",
+                "computed block does not emit a compile-time type",
+                block.span,
+            )
+        })
     }
 }
 

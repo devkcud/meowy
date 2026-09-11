@@ -71,3 +71,83 @@ pub(crate) fn computed_types_bound_wide_nested_roots_and_materialized_types() {
         assert!(error.message.contains("computed type bootstrap budget"));
     }
 }
+
+#[test]
+pub(crate) fn computed_types_blocks_construct_scoped_records_lists_and_nested_aliases() {
+    for source in [
+        "<T>:{element:<int32>;-><(element)[4]>};v<T>:[1,2]",
+        "<T>:{<Local>:<{n<int32>}>;token:<Local>;->token};v<T>:{->n:7}",
+        "<T>:{t:{-><int32>};-><(t)>};v<T>:7",
+        "core:@\"core\";<T>:{t:core.int32;->t};v<T>:7",
+        "t:<int32>;<T>:{t:<string>;->t};v<T>:\"yes\";n<(t)>:7",
+        "<T>:{-><int32>;unused:<string>};v<T>:7",
+    ] {
+        crate::compile(source).unwrap_or_else(|error| panic!("{source}: {error:?}"));
+    }
+}
+
+#[test]
+pub(crate) fn computed_types_blocks_reject_leaks_duplicate_emissions_and_wrong_results() {
+    for (source, code) in [
+        ("<T>:{inner:<int32>;->inner};v<(inner)>:1", "E201"),
+        ("<T>:{<Inner>:<int32>;-><Inner>};v<Inner>:1", "E202"),
+        ("<T>:{-><int32>;-><string>}", "E205"),
+        ("<T>:{t:<int32>;t:<string>;->t}", "E203"),
+        ("<T>:{<T>:<int32>;<T>:<string>;-><T>}", "E203"),
+        ("<T>:{t:<int32>}", "E211"),
+        ("x:1;<T>:{->x}", "E211"),
+        ("<T>:{-><int32>};v<T>:true", "E207"),
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            code,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn computed_types_blocks_reject_effects_after_emissions_and_unsupported_control() {
+    for source in [
+        "d:@\"debug\";<T>:{d.print(1);-><int32>}",
+        "d:@\"debug\";<T>:{(d.print(1));-><int32>}",
+        "d:@\"debug\";fail:d.panic;<T>:{-><int32>;fail(\"no\")}",
+        "d:@\"debug\";<T>:{t:d.print(1);-><int32>}",
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            "E219",
+            "{source}"
+        );
+    }
+    for source in [
+        "<T>:{t:=<int32>;->t}",
+        "<T>:{|true|-><int32>;|_|-><string>}",
+        "f<int32>:(){->1};<T>:{->f()}",
+        "d:@\"debug\";print<int32>:(){->1};<T>:{->print()}",
+        "<T>:{->named:<int32>}",
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            "B001",
+            "{source}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn computed_types_blocks_share_work_limits_across_sibling_blocks() {
+    let inner = (0..40)
+        .map(|id| format!("t{id}:<int32>;"))
+        .collect::<String>();
+    let outer = (0..60)
+        .map(|id| format!("t{id}:{{{inner}-><int32>}};"))
+        .collect::<String>();
+    let source = format!("<T>:{{{outer}-><int32>}}");
+    let error = crate::compile(&source).unwrap_err().remove(0);
+    assert_eq!(error.code, "B001");
+    assert!(
+        error.message.contains("computed type bootstrap budget"),
+        "{error:?}"
+    );
+}
