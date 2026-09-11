@@ -20,7 +20,9 @@ failures from unreachable code and bounded transitive work for required reads.
    computed-type library/parser and nine matching native groups, fmt and Clippy passed.
    Original error spans, cached dependency costs, independent roots and capture gates
    are covered. Unproven folded blocks retain their previous refusal.
-3. Add native/module/no-initializer-execution coverage and update the capacity example.
+3. All six initializer library and four native groups passed, plus example/doc
+   checks, fmt and Clippy. Check/build avoid application effects; run preserves them
+   in both profiles. The example reads an eligible immutable seed.
 4. Document eligibility boundaries and run the complete compiler gate.
 
 Blocks, fields/imported data, helper calls, mutable inputs and full purity/E220 remain

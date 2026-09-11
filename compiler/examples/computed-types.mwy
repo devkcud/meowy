@@ -1,11 +1,13 @@
 #!| Build [[<Counts>]] and [[<Row>]] before runtime storage exists. |!#
 debug:@"debug"
+#| Immutable seed eligible for required type evaluation. |#
+seed<uint8>:2
 #| A bounded list of signed counts. |#
 <Counts>:{
     #| Element type used by the list constructor. |#
     element:<int32>
     #| Base capacity. |#
-    base<uint8>:2
+    base<uint8>:seed
     #| Capacity calculated from [[base]]. |#
     capacity:base*2
     -><(element)[capacity]>

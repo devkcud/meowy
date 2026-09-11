@@ -143,3 +143,85 @@ pub(crate) fn computed_integers_refuse_unproven_folded_blocks_as_static_inputs()
         assert!(error.contains("runtime initializer eligibility"), "{error}");
     }
 }
+
+#[test]
+pub(crate) fn initializer_inputs_cross_function_scopes_without_repeating_initializers() {
+    case(
+        "m:@\"./types.mwy\";d:@\"debug\";values<m.Items>:[1,2];d.print(m.get());d.print(values[2])",
+        &[("types.mwy", "d:@\"debug\";d.print(\"types\");base<uint8>:2;capacity:base*2;-><Items>:{n:capacity;-><int32[n]>};->get<int32>:(){<Local>:{n:capacity;-><int32[n]>};values<Local>:[4,7];->values[2]}")],
+    ).runs(b"types\n7\n2\n");
+}
+
+#[test]
+pub(crate) fn initializer_inputs_check_and_build_without_running_application_effects() {
+    let case = Case::new(
+        "d:@\"debug\";d.panic(\"application startup\");capacity:4;<T>:{n:capacity;-><int32[n]>}",
+    );
+    for profile in ["debug", "release"] {
+        for action in ["check", "build"] {
+            let output = case.command(action, &["--profile", profile]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+        }
+        let output = case.command("run", &["--profile", profile]);
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("application startup"));
+    }
+}
+
+#[test]
+pub(crate) fn initializer_inputs_report_hidden_dependency_overflow_at_its_source() {
+    let source = "#é#\n|false|{bad<uint8>:255+1;alias:bad;<T>:{n:alias;-><int32>}}";
+    let case = case("m:@\"./types.mwy\"", &[("types.mwy", source)]);
+    for action in ["check", "build", "run"] {
+        let output = case.command(action, &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E107\""), "{error}");
+        assert!(
+            error.contains(&format!(
+                "\"path\":\"{}\"",
+                case.path.join("types.mwy").display()
+            )),
+            "{error}"
+        );
+        assert!(
+            error.contains(&format!("\"start\":{}", source.find("255+1").unwrap())),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn initializer_inputs_keep_runtime_captures_and_mutable_dependencies_unavailable() {
+    for (source, code) in [
+        ("capacity:4;f<int32>:(){->capacity}", "B001"),
+        (
+            "capacity:=4;copy:capacity;<T>:{n:copy;-><int32[n]>}",
+            "E211",
+        ),
+        (
+            "f<int32>:(capacity<int32>){copy:capacity;<T>:{n:copy;-><int32[n]>};->1}",
+            "E211",
+        ),
+        (
+            "d:@\"debug\";capacity:{d.print(1);->4};copy:capacity;<T>:{n:copy;-><int32[n]>}",
+            "E211",
+        ),
+    ] {
+        let output = Case::new(source).command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains(&format!("\"code\":\"{code}\"")),
+            "{source}: {error}"
+        );
+    }
+}
