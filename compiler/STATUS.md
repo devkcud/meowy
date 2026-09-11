@@ -13,8 +13,10 @@ subrecords. Shared scoped evidence must carry both integer and record locals.
 
 1. Checked-path value storage and shared evidence scopes complete. All 17 existing
    initializer/record library groups, fmt and Clippy passed; nested shapes remain gated.
-2. Construct nested record evidence with shared work and bounded shape (256 total
-   fields, 32 record levels), preserving sibling errors/effects and local aliases.
+2. Nested record construction complete. All 21 initializer/record library groups,
+   fmt and Clippy passed, including unused local shape bounds. Declared record aliases
+   retain descendant errors; unreachable inline emissions with erased field identity
+   remain unavailable instead of guessing a layout.
 3. Resolve nested HIR/required field paths and projected record aliases without dropping
    ancestor evidence; preserve captures, references and imported-data gates.
 4. Add native/error/budget/documentation coverage and update the example.

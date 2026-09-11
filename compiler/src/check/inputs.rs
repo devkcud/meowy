@@ -94,7 +94,7 @@ impl Checker {
                 let ExprKind::Local(id) = value.kind else {
                     return None;
                 };
-                let source = self.field_input(id, *index)?;
+                let source = self.source_record(id, locals)?.field(&[*index])?;
                 input.add(&source);
                 source.literal(expr).kind
             }

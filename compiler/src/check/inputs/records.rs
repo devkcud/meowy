@@ -3,11 +3,22 @@ use crate::hir::{self, ExprKind, Type};
 use std::collections::BTreeMap;
 
 pub(crate) const MAX_FIELDS: usize = 256;
+pub(crate) const MAX_DEPTH: usize = 32;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Record {
     pub(crate) input: Input,
     pub(crate) values: BTreeMap<Vec<usize>, Option<i128>>,
+}
+
+impl Record {
+    pub(crate) fn field(&self, path: &[usize]) -> Option<Input> {
+        let value = *self.values.get(path)?;
+        let mut input = self.input.clone();
+        input.work = input.work.saturating_add(path.len());
+        input.value = if input.error.is_none() { value } else { None };
+        Some(input)
+    }
 }
 
 impl Checker {
@@ -23,37 +34,71 @@ impl Checker {
     }
 
     pub(crate) fn field_input(&self, id: usize, index: usize) -> Option<Input> {
-        let record = self.record_inputs.get(&id)?;
-        let mut input = record.input.clone();
-        input.work = input.work.saturating_add(1);
-        input.value = if input.error.is_none() {
-            *record.values.get(&vec![index])?
-        } else {
-            None
-        };
-        Some(input)
+        self.record_inputs.get(&id)?.field(&[index])
+    }
+
+    pub(crate) fn record_shape(&mut self, ty: &Type) -> bool {
+        let mut pending = vec![(ty, 1)];
+        let mut count = 0;
+        while let Some((ty, depth)) = pending.pop() {
+            if !self.flow.spend(1) {
+                return false;
+            }
+            match ty {
+                Type::Int { .. } => {}
+                Type::Record { primary, fields } => {
+                    count += fields.len();
+                    if **primary != Type::Null
+                        || fields.is_empty()
+                        || count > MAX_FIELDS
+                        || depth > MAX_DEPTH
+                    {
+                        return false;
+                    }
+                    for field in fields {
+                        if field.mutable {
+                            return false;
+                        }
+                        pending.push((&field.ty, depth + 1));
+                    }
+                }
+                _ => return false,
+            }
+        }
+        true
     }
 
     pub(crate) fn record_input(&mut self, expr: &hir::Expr, ty: &Type) -> Option<Record> {
-        let Type::Record { primary, fields } = ty else {
+        if !matches!(ty, Type::Record { .. }) {
             return None;
-        };
-        if **primary != Type::Null
-            || fields.is_empty()
-            || fields.len() > MAX_FIELDS
-            || fields
-                .iter()
-                .any(|field| field.mutable || !matches!(field.ty, Type::Int { .. }))
-            || !self.flow.spend(fields.len() + 1)
+        }
+        self.record_expr(expr, ty, 0, &mut 0, &Sources::default())
+    }
+
+    pub(crate) fn record_expr(
+        &mut self,
+        expr: &hir::Expr,
+        ty: &Type,
+        depth: usize,
+        count: &mut usize,
+        locals: &Sources,
+    ) -> Option<Record> {
+        *count += 1;
+        if *count > super::super::type_values::MAX_WORK
+            || depth >= MAX_DEPTH
+            || !self.flow.spend(1)
+            || !self.record_shape(ty)
         {
             return None;
         }
+        let Type::Record { fields, .. } = ty else {
+            return None;
+        };
         if let ExprKind::Local(id) = &expr.kind {
             if self.locals.get(*id) != Some(ty) {
                 return None;
             }
-            let locals = Sources::default();
-            let mut record = self.source_record(*id, &locals)?.clone();
+            let mut record = self.source_record(*id, locals)?.clone();
             record.input.work = record.input.work.saturating_add(1);
             return Some(record);
         }
@@ -68,20 +113,52 @@ impl Checker {
             },
             values: BTreeMap::new(),
         };
-        let mut locals = Sources::default();
+        let mut locals = locals.clone();
         let mut emitted = BTreeMap::new();
-        let mut count = 0;
+        let mut types = BTreeMap::new();
         for stmt in &block.stmts {
-            count += 1;
-            if count > super::super::type_values::MAX_WORK || !self.flow.spend(1) {
+            if !self.flow.spend(1) {
+                return None;
+            }
+            if let hir::Stmt::Emit {
+                field: Some(name),
+                value:
+                    hir::Expr {
+                        kind: ExprKind::Local(id),
+                        ..
+                    },
+                ..
+            } = stmt
+            {
+                if !self.flow.spend(fields.len()) {
+                    return None;
+                }
+                types.insert(*id, &fields.iter().find(|field| field.name == *name)?.ty);
+            }
+        }
+        for stmt in &block.stmts {
+            *count += 1;
+            if *count > super::super::type_values::MAX_WORK || !self.flow.spend(1) {
                 return None;
             }
             record.input.work = record.input.work.saturating_add(1);
             match stmt {
                 hir::Stmt::Bind { id, value } if !self.proofs.mutable.contains(id) => {
-                    let input = self.input_expr(value, 1, &mut count, &locals)?;
-                    record.input.add(&input);
-                    locals.integers.insert(*id, input);
+                    let ty = types
+                        .get(id)
+                        .copied()
+                        .or_else(|| self.locals.get(*id))
+                        .unwrap_or(&value.ty)
+                        .clone();
+                    if matches!(ty, Type::Record { .. }) {
+                        let child = self.record_expr(value, &ty, depth + 1, count, &locals)?;
+                        record.input.add(&child.input);
+                        locals.records.insert(*id, child);
+                    } else {
+                        let input = self.input_expr(value, depth + 1, count, &locals)?;
+                        record.input.add(&input);
+                        locals.integers.insert(*id, input);
+                    }
                 }
                 hir::Stmt::Emit {
                     target,
@@ -99,9 +176,19 @@ impl Checker {
                     if emitted.insert(name.clone(), id).is_some() {
                         return None;
                     }
-                    let input = self.input_expr(value, 1, &mut count, &locals)?;
-                    record.input.add(&input);
-                    record.values.insert(vec![index], input.value);
+                    if matches!(fields[index].ty, Type::Record { .. }) {
+                        let child = self.source_record(id, &locals)?;
+                        record.input.add(&child.input);
+                        for (path, value) in &child.values {
+                            let mut target = vec![index];
+                            target.extend(path);
+                            record.values.insert(target, *value);
+                        }
+                    } else {
+                        let input = self.input_expr(value, depth + 1, count, &locals)?;
+                        record.input.add(&input);
+                        record.values.insert(vec![index], input.value);
+                    }
                 }
                 hir::Stmt::SlotAlias {
                     id,
@@ -112,7 +199,9 @@ impl Checker {
                 _ => return None,
             }
         }
-        if emitted.len() != fields.len() || expr.ty == Type::Never && record.input.error.is_none() {
+        if emitted.len() != fields.len()
+            || depth == 0 && expr.ty == Type::Never && record.input.error.is_none()
+        {
             return None;
         }
         Some(record)

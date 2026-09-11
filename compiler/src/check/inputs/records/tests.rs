@@ -21,7 +21,6 @@ pub(crate) fn record_inputs_reject_effects_mutability_and_noninteger_shapes() {
         "row:={->n:4}",
         "row:{->n:=4}",
         "row:{->n:4;->text:\"x\"}",
-        "row:{->nested:{->n:4}}",
         "row:{->4;->n:4}",
         "row:{|true|->n:4}",
     ] {
@@ -110,5 +109,87 @@ pub(crate) fn record_fields_require_whole_record_purity_and_retain_error_spans()
     assert_eq!(
         crate::compile("row:{->width:4};f<int32>:(){->row.width}").unwrap_err()[0].code,
         "B001"
+    );
+}
+
+#[test]
+pub(crate) fn nested_record_evidence_keeps_paths_and_scoped_record_aliases() {
+    let checker = check("row:{->z:{->width<uint8>:3};copy:z;->a:copy}");
+    let record = checker.record_inputs.values().last().unwrap();
+    assert_eq!(record.values.get(&vec![0, 0]), Some(&Some(3)));
+    assert_eq!(record.values.get(&vec![1, 0]), Some(&Some(3)));
+    assert!(record.input.error.is_none());
+}
+
+#[test]
+pub(crate) fn nested_record_evidence_rejects_effects_and_mutation_in_any_descendant() {
+    for source in [
+        "d:@\"debug\";row:{->a:{->n:4};->b:{->n:1;d.print(1)}}",
+        "row:{->a:{->n:4};->b:{->n:=1}}",
+        "row:{->a:{->n:4};->b:{->text:\"x\"}}",
+    ] {
+        assert!(check(source).record_inputs.is_empty(), "{source}");
+    }
+    let checker = check(
+        "|false|{part<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1};row<{nested<{good<uint8>;bad<uint8>}>}>:{->nested:part}}",
+    );
+    assert_eq!(
+        checker
+            .record_inputs
+            .values()
+            .last()
+            .unwrap()
+            .input
+            .error
+            .as_ref()
+            .unwrap()
+            .code,
+        "E107"
+    );
+}
+
+#[test]
+pub(crate) fn nested_record_evidence_bounds_total_fields_and_record_depth() {
+    use crate::hir::{Field, Type};
+    let mut ty = Type::Int {
+        bits: 32,
+        signed: true,
+    };
+    let mut checker = crate::check::Checker::new();
+    for _ in 0..32 {
+        ty = Type::Record {
+            primary: Box::new(Type::Null),
+            fields: vec![Field {
+                name: "n".into(),
+                ty,
+                mutable: false,
+            }],
+        };
+    }
+    assert!(checker.record_shape(&ty));
+    ty = Type::Record {
+        primary: Box::new(Type::Null),
+        fields: vec![Field {
+            name: "n".into(),
+            ty,
+            mutable: false,
+        }],
+    };
+    assert!(!checker.record_shape(&ty));
+    let fields = (0..256).map(|id| format!("->n{id}:1;")).collect::<String>();
+    assert!(
+        check(&format!("row:{{->nested:{{{fields}}}}}"))
+            .record_inputs
+            .is_empty()
+    );
+}
+
+#[test]
+pub(crate) fn nested_record_evidence_checks_unused_local_shapes() {
+    let fields = (0..257).map(|id| format!("->n{id}:1;")).collect::<String>();
+    assert!(
+        check(&format!("row:{{unused:{{{fields}}};->n:1}}"))
+            .record_inputs
+            .is_empty()
     );
 }
