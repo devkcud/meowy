@@ -110,3 +110,7 @@ CLI that converts dates between six calendar systems, including Chinese.
   file detection, and buffer settings.
 
 Inspired by Smalltalk, OCaml, Rust, Zig, Go, and Lisp.
+
+## License
+
+Licensed under [MPL 2.0](./LICENSE)
