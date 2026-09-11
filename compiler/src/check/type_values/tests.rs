@@ -201,3 +201,74 @@ pub(crate) fn computed_integers_preserve_literal_widths_aliases_and_local_scope(
     assert!(program.locals.is_empty());
     assert!(program.body.stmts.is_empty());
 }
+
+#[test]
+pub(crate) fn computed_integers_check_arithmetic_with_exact_width_and_signedness() {
+    for source in [
+        "<T>:{base:2;capacity:base*3+1;-><int32[capacity]>};v<T>:[1,2]",
+        "<T>:{base<uint8>:254;capacity:base+1;-><int32[capacity]>}",
+        "<T>:{n<uint8>:252;capacity:~n;-><int32[capacity]>}",
+        "<T>:{n<int8>:-8;capacity:-n;-><int32[capacity]>}",
+        "<T>:{n:((8/2)%3)|4;capacity:n^1;-><int32[capacity]>}",
+    ] {
+        crate::compile(source).unwrap_or_else(|error| panic!("{source}: {error:?}"));
+    }
+    for (source, code) in [
+        ("<T>:{n<uint8>:255;capacity:n+1;-><int32>}", "E107"),
+        ("<T>:{n<int8>:-128;capacity:-n;-><int32>}", "E107"),
+        ("<T>:{capacity:1/0;-><int32>}", "E107"),
+        ("<T>:{a<uint8>:2;b<int32>:1;capacity:a+b;-><int32>}", "E213"),
+        ("<T>:{capacity:-1;-><int32[capacity]>}", "E104"),
+        ("|false|{<T>:{n<uint8>:255;capacity:n+1;-><int32>}}", "E107"),
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            code,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn computed_integers_reject_runtime_inputs_effects_and_unsupported_scalars() {
+    for (source, code) in [
+        (
+            "f<int32>:(n<int32>){<T>:{capacity:n+1;-><int32[capacity]>};->1}",
+            "E211",
+        ),
+        ("n:=3;<T>:{capacity:n+1;-><int32>}", "E211"),
+        ("n:3;<T>:{capacity:n+1;-><int32>}", "B001"),
+        ("n:3;<T>:{-><int32[n]>}", "B001"),
+        (
+            "d:@\"debug\";n:{d.print(1);->3};<T>:{capacity:n+1;-><int32>}",
+            "E211",
+        ),
+        ("d:@\"debug\";<T>:{capacity:1+d.print(2);-><int32>}", "E219"),
+        (
+            "d:@\"debug\";<T>:{capacity<int32>:d.print(2);-><int32>}",
+            "E219",
+        ),
+        ("f<int32>:(){->1};<T>:{capacity:1+f();-><int32>}", "B001"),
+        ("<T>:{n<float32>:1.0;-><int32>}", "B001"),
+        ("<T>:{n:true;-><int32>}", "B001"),
+        ("<T>:{n:1<2;-><int32>}", "B001"),
+        ("<T>:{n:=3;-><int32>}", "B001"),
+    ] {
+        assert_eq!(
+            crate::compile(source).unwrap_err()[0].code,
+            code,
+            "{source}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn computed_integers_count_expression_work_within_the_type_root() {
+    let binds = (0..700)
+        .map(|id| format!("n{id}:1+2+3+4;"))
+        .collect::<String>();
+    let source = format!("<T>:{{{binds}-><int32>}}");
+    let error = crate::compile(&source).unwrap_err().remove(0);
+    assert_eq!(error.code, "B001");
+    assert!(error.message.contains("computed type bootstrap budget"));
+}

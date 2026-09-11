@@ -1,4 +1,6 @@
-use super::{Checker, Constant, Result, Scope, Spec, Value};
+mod scalars;
+
+use super::{Checker, Result, Scope, Spec, Value};
 use crate::ast::{self, ExprKind, Span, StmtKind};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
@@ -169,8 +171,14 @@ impl Checker {
             form = value;
         }
         let scalar = match &form.kind {
-            ExprKind::Int(_) => true,
-            ExprKind::Name(name) => matches!(self.value(name, form.span)?, Value::Static { .. }),
+            ExprKind::Int(_)
+            | ExprKind::Unary { .. }
+            | ExprKind::Binary { .. }
+            | ExprKind::Call { .. } => true,
+            ExprKind::Name(name) => matches!(
+                self.value(name, form.span)?,
+                Value::Static { .. } | Value::Local { .. } | Value::Constant(_)
+            ),
             _ => false,
         };
         if !scalar {
@@ -182,26 +190,7 @@ impl Checker {
             }
             return self.type_value(expr).map(Value::Type);
         }
-        self.type_work.as_mut().unwrap().spend(expr.span)?;
-        let expected = annotation.map(|ty| self.ty(ty)).transpose()?;
-        if expected
-            .as_ref()
-            .is_some_and(|ty| !matches!(ty, Type::Int { .. }))
-        {
-            return Err(Diagnostic::unsupported(
-                "non-integer computed scalar bindings",
-                expr.span,
-            ));
-        }
-        let value = self.expr(expr, expected.as_ref())?;
-        let ty = value.ty.clone();
-        let Some(value @ Constant::Int(_)) = self.constant(&value) else {
-            return Err(Diagnostic::unsupported(
-                "non-integer computed scalar bindings",
-                expr.span,
-            ));
-        };
-        Ok(Value::Static { value, ty })
+        self.type_scalar(expr, annotation)
     }
 
     pub(crate) fn type_statements(&mut self, block: &ast::Block) -> Result<Type> {

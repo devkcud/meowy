@@ -15,8 +15,10 @@ reusing those operations. Restrict this slice to integers and eligible static in
 1. Typed static integers and literal/alias bindings complete. All ten computed-type
    library/parser and six native matching groups, fmt and Clippy passed. Literal
    overflow retains E216; width, scope and storage erasure are covered.
-2. Reuse checked integer expressions with bounded form/input validation. Reject
-   runtime dependencies and known effects; preserve width/overflow and shared budgets.
+2. Arithmetic/input validation passed all 13 computed-type library/parser and six
+   native matching groups, the existing dead-path extent regression and Clippy.
+   All four integer groups, including typed known-effect calls, passed final
+   revalidation; fmt and Clippy passed.
 3. Add native/module/documentation coverage and a local-capacity example.
 4. Document the integer-only boundary and run the complete compiler gate.
 
