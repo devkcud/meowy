@@ -4,10 +4,10 @@ The bootstrap supports straight-line blocks in required type expressions, using
 existing type construction and lexical scopes from the checker:
 
 ```meowy
-settings:{->base<uint8>:{offset<uint8>:1;->offset+1}}
+settings:{->limits:{->base<uint8>:{offset<uint8>:1;->offset+1}}}
 <Counts>:{
     element:<int32>
-    base:settings.base
+    base:settings.limits.base
     capacity:base*2
     -><(element)[capacity]>
 }
@@ -54,7 +54,7 @@ runtime branch, and its temporary checking state is restored afterwards.
 Inputs may be static integers in the construction scope or immutable integer bindings
 with recorded initializer eligibility. The checker tracks separate evidence over
 checked literals, aliases, supported unary/arithmetic expressions and straight-line
-integer blocks. Flat immutable integer records also carry complete initializer evidence.
+integer blocks. Nested immutable integer records also carry complete initializer evidence.
 Every local value dependency must already have that evidence; a folded constant alone does not
 establish eligibility. Exact widths and source declaration identities are preserved.
 
@@ -97,24 +97,34 @@ invented integer result. Hidden arithmetic failures remain E107 at their origina
 
 ## Record-field inputs
 
-Named immutable record bindings and their aliases can supply integer fields to copied
-integer bindings, computed scratch and list extents. The supported record shape has a
-unit primary and 1..256 immutable integer fields. Fields use their checked record
-indices and retain exact widths; source declaration order does not change lookup.
-A field initializer may use earlier emitted fields and eligible scalar blocks/locals.
+Named immutable record bindings and their aliases can supply integer leaves to copied
+integer bindings, computed scratch and list extents. Every record has a unit primary
+and nonempty immutable fields containing integers or records of the same kind. A shape
+is bounded to 256 total fields across all descendants and 32 record levels; unused
+local records must also have supported shapes. Checked field-index paths retain exact
+widths independently of source declaration order.
 
-Eligibility inspects the complete containing initializer. A selected field cannot
-hide an effect, mutable sibling, invalid sibling computation or unused tail work.
-Every read carries the whole record's errors and transitive work. Hidden integer
-failures remain E107 at the originating expression; no partial record is admitted.
+Nested record construction shares scoped scalar/record evidence and work. Initializers
+may use earlier emitted records, record aliases, integer fields and eligible scalar
+blocks/locals. Every initializer statement remains checked. A selected leaf cannot hide
+an effect, mutable descendant, invalid sibling computation or unused tail work.
 
-Direct required paths have a named local record root, optionally grouped. Lexical
-record fields may be used inside functions without enabling ordinary runtime captures.
-Qualified type identities such as `core.int32` retain their separate behavior.
-Nested records, reference projections, inline record roots, non-integer fields and
-non-unit primaries remain outside this slice. Imported data remains gated, including
-indirect copies through internal module bindings. Checking never runs initializers;
-ordinary record reads and runtime initialization remain unchanged.
+Ordinary immutable subrecord aliases retain the complete original ancestor's errors
+and transitive work. A subsequent leaf read cannot escape that evidence by shortening
+the path. Hidden failures remain E107 at the originating expression, even when the
+failing sibling lies outside the projected subrecord. No partial record is admitted.
+Unreachable inline record emissions whose field identity was erased from HIR remain
+unavailable; declared record aliases can retain known error evidence.
+
+Direct required paths have a named local record root, optionally grouped. Nested paths
+and copied subrecords preserve checked type/member identity. Eligible lexical leaves
+may be used inside functions without enabling ordinary runtime captures. Qualified
+type identities such as `core.int32` retain their separate behavior.
+
+Reference projections, inline roots, non-integer leaves, empty records and non-unit
+primaries remain outside this slice. Imported data remains gated, including indirect
+copies through internal module bindings. Checking never runs initializers; ordinary
+record reads and runtime initialization remain unchanged.
 
 ## Explicit limits
 

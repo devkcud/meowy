@@ -34,10 +34,9 @@ immutable type bindings, aliases, checked integer calculations and primary emiss
 without runtime storage. The [example](examples/computed-types.mwy) computes a local
 list capacity from an eligible immutable integer initializer and constructs record/list
 types. Eligibility is tracked separately from constant folding and includes straight-line
-integer blocks and flat immutable integer records. Named record fields retain evidence
-for the complete initializer when used in computed scratch/extents. Imported data, nested
-records, helper calls, non-integer/mutable scratch and full required evaluation remain
-separate.
+integer blocks and bounded nested immutable integer records. Field paths and subrecord
+aliases retain complete ancestor evidence in computed scratch/extents. Imported data,
+helper calls, non-integer/mutable scratch and full required evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
