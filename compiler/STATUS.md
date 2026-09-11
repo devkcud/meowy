@@ -7,15 +7,25 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `7ccc656` — offset-aware documentation source reads and shifted-span regressions.
-2. `19c60e3` — explicit file export visibility and exported function parameters.
-3. `abc78a2` — per-file models checked inside their initializer scopes.
-4. `c784fd0` — imported documentation links through exported namespaces.
-5. `2bc09dd` — native diagnostic/execution boundaries and documented facade example.
-6. This separate documentation handoff records the complete gate below.
+A bounded computed-type block slice is in progress; the tree started clean.
+The audit found `check/names.rs::type_value` accepts literal/query/name/group forms,
+but no block evaluation. The shared checker already owns type/value scopes and
+concrete type construction; reuse them without emitting runtime code.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Existing resolver moved unchanged to `check/type_values.rs`. Four exported-type
+   library and six native groups, 14 graph library groups, fmt and Clippy passed.
+2. Bound nested type-value work and materialized type traversal before enabling
+   block evaluation; test depth/work failures and budget reset across roots.
+3. Add bounded straight-line computed-type blocks: immutable type bindings, local
+   aliases and one primary type emission. Test scope, type identity, sequencing,
+   known forbidden effects and explicit unsupported forms with the implementation.
+4. Exercise native/module/documentation integration and add a runnable example.
+5. Document the exact bootstrap boundary and run the complete compiler gate.
+
+Keep helper calls, branches, mutable scratch, generic specialization and the full
+language evaluation counters separate. This slice uses explicit bootstrap work/depth
+limits (B001), not approximate E220 language-budget accounting. Commit each validated
+slice and apply the review threshold before proceeding.
 
 ## Current compiler slice
 
