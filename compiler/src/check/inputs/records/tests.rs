@@ -5,7 +5,10 @@ pub(crate) fn record_inputs_preserve_field_order_aliases_and_local_emission_depe
     let checker = check("row:{seed<uint8>:2;->z<uint8>:seed+1;->a<uint8>:{->z+1}};alias:row");
     assert_eq!(checker.record_inputs.len(), 2);
     for record in checker.record_inputs.values() {
-        assert_eq!(record.values, [Some(4), Some(3)]);
+        assert_eq!(
+            record.values.values().copied().collect::<Vec<_>>(),
+            [Some(4), Some(3)]
+        );
         assert!(record.input.error.is_none());
     }
 }
@@ -33,7 +36,10 @@ pub(crate) fn record_inputs_retain_whole_initializer_errors_and_field_limits() {
         check("|false|{row<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1}}");
     let record = checker.record_inputs.values().last().unwrap();
     assert_eq!(record.input.error.as_ref().unwrap().code, "E107");
-    assert_eq!(record.values, [None, Some(4)]);
+    assert_eq!(
+        record.values.values().copied().collect::<Vec<_>>(),
+        [None, Some(4)]
+    );
     let fields = (0..257).map(|id| format!("->n{id}:1;")).collect::<String>();
     assert!(check(&format!("row:{{{fields}}}")).record_inputs.is_empty());
 }

@@ -1,6 +1,5 @@
-use super::{Checker, Input};
+use super::{Checker, Input, Sources};
 use crate::hir;
-use std::collections::BTreeMap;
 
 impl Checker {
     pub(crate) fn input_block(
@@ -8,7 +7,7 @@ impl Checker {
         block: &hir::Block,
         depth: usize,
         count: &mut usize,
-        locals: &BTreeMap<usize, Input>,
+        locals: &Sources,
     ) -> Option<Input> {
         let mut locals = locals.clone();
         let mut result = Input {
@@ -30,7 +29,7 @@ impl Checker {
                 hir::Stmt::Bind { id, value } if !self.proofs.mutable.contains(id) => {
                     let input = self.input_expr(value, depth, count, &locals)?;
                     result.add(&input);
-                    locals.insert(*id, input);
+                    locals.integers.insert(*id, input);
                 }
                 hir::Stmt::Emit {
                     target,

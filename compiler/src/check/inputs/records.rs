@@ -1,4 +1,4 @@
-use super::{Checker, Input};
+use super::{Checker, Input, Sources};
 use crate::hir::{self, ExprKind, Type};
 use std::collections::BTreeMap;
 
@@ -7,16 +7,27 @@ pub(crate) const MAX_FIELDS: usize = 256;
 #[derive(Clone, Debug)]
 pub(crate) struct Record {
     pub(crate) input: Input,
-    pub(crate) values: Vec<Option<i128>>,
+    pub(crate) values: BTreeMap<Vec<usize>, Option<i128>>,
 }
 
 impl Checker {
+    pub(crate) fn source_record<'a>(
+        &'a self,
+        id: usize,
+        locals: &'a Sources,
+    ) -> Option<&'a Record> {
+        locals
+            .records
+            .get(&id)
+            .or_else(|| self.record_inputs.get(&id))
+    }
+
     pub(crate) fn field_input(&self, id: usize, index: usize) -> Option<Input> {
         let record = self.record_inputs.get(&id)?;
         let mut input = record.input.clone();
         input.work = input.work.saturating_add(1);
         input.value = if input.error.is_none() {
-            *record.values.get(index)?
+            *record.values.get(&vec![index])?
         } else {
             None
         };
@@ -41,7 +52,8 @@ impl Checker {
             if self.locals.get(*id) != Some(ty) {
                 return None;
             }
-            let mut record = self.record_inputs.get(id)?.clone();
+            let locals = Sources::default();
+            let mut record = self.source_record(*id, &locals)?.clone();
             record.input.work = record.input.work.saturating_add(1);
             return Some(record);
         }
@@ -54,9 +66,9 @@ impl Checker {
                 error: None,
                 value: None,
             },
-            values: vec![None; fields.len()],
+            values: BTreeMap::new(),
         };
-        let mut locals = BTreeMap::new();
+        let mut locals = Sources::default();
         let mut emitted = BTreeMap::new();
         let mut count = 0;
         for stmt in &block.stmts {
@@ -69,7 +81,7 @@ impl Checker {
                 hir::Stmt::Bind { id, value } if !self.proofs.mutable.contains(id) => {
                     let input = self.input_expr(value, 1, &mut count, &locals)?;
                     record.input.add(&input);
-                    locals.insert(*id, input);
+                    locals.integers.insert(*id, input);
                 }
                 hir::Stmt::Emit {
                     target,
@@ -89,7 +101,7 @@ impl Checker {
                     }
                     let input = self.input_expr(value, 1, &mut count, &locals)?;
                     record.input.add(&input);
-                    record.values[index] = input.value;
+                    record.values.insert(vec![index], input.value);
                 }
                 hir::Stmt::SlotAlias {
                     id,

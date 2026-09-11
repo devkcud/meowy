@@ -8,6 +8,12 @@ use crate::diagnostic::Diagnostic;
 use crate::hir::{self, ExprKind, Type};
 use std::collections::BTreeMap;
 
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Sources {
+    pub(crate) integers: BTreeMap<usize, Input>,
+    pub(crate) records: BTreeMap<usize, Record>,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Input {
     pub(crate) work: usize,
@@ -32,7 +38,7 @@ impl Input {
 
 impl Checker {
     pub(crate) fn integer_input(&mut self, expr: &hir::Expr) -> Option<Input> {
-        self.input_expr(expr, 0, &mut 0, &BTreeMap::new())
+        self.input_expr(expr, 0, &mut 0, &Sources::default())
     }
 
     pub(crate) fn input_expr(
@@ -40,7 +46,7 @@ impl Checker {
         expr: &hir::Expr,
         depth: usize,
         count: &mut usize,
-        locals: &BTreeMap<usize, Input>,
+        locals: &Sources,
     ) -> Option<Input> {
         *count += 1;
         if *count > super::type_values::MAX_WORK
@@ -59,7 +65,7 @@ impl Checker {
         let kind = match &expr.kind {
             ExprKind::Int(value) => ExprKind::Int(*value),
             ExprKind::Local(id) => {
-                let source = locals.get(id).or_else(|| self.inputs.get(id))?;
+                let source = locals.integers.get(id).or_else(|| self.inputs.get(id))?;
                 input.add(source);
                 source.literal(expr).kind
             }

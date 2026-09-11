@@ -7,15 +7,21 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Commit series
 
-1. `27f0c49` — scoped scalar evidence for nested/record-local initialization.
-2. `2e4fa5c` — whole-record evidence with checked field indices and complete body checks.
-3. `87fde75` — preserve that evidence in ordinary copied integer fields.
-4. `449c3fa` — direct field reads in computed scratch and extents.
-5. `a415b5f` — native boundaries, source diagnostics, budgets and updated example.
-6. This separate documentation handoff records the complete gate below.
+Nested immutable integer records are in progress; the tree started clean. Store leaf
+values by checked field-index paths and retain complete outer evidence when projecting
+subrecords. Shared scoped evidence must carry both integer and record locals.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+1. Checked-path value storage and shared evidence scopes complete. All 17 existing
+   initializer/record library groups, fmt and Clippy passed; nested shapes remain gated.
+2. Construct nested record evidence with shared work and bounded shape (256 total
+   fields, 32 record levels), preserving sibling errors/effects and local aliases.
+3. Resolve nested HIR/required field paths and projected record aliases without dropping
+   ancestor evidence; preserve captures, references and imported-data gates.
+4. Add native/error/budget/documentation coverage and update the example.
+5. Document exact boundaries and run the complete compiler gate.
+
+Keep non-integer leaves, mutable/reference storage, imported data, helper calls and
+full E220 accounting separate. Commit each validated slice before continuing.
 
 ## Current compiler slice
 
