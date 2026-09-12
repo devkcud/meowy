@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Conditional local-record evidence is being implemented.
-The previous compiler gate passed. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Literal-conditional record inputs are implemented.
+All ten compiler gate checks passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -21,9 +21,24 @@ Git preserves that documentation series; the root STATUS links its preservation 
 
 ## Current compiler slice
 
+Record initializers now retain eligible input evidence through matcher branches proven
+from checked boolean literals, `!`, `&&` and `||`. `inputs/records/conditions.rs` proves
+only visited operands, preserving short circuiting without using runtime constant
+folding as eligibility. Boolean locals, comparisons and evaluated helper calls remain
+gated. Original runtime HIR and ordinary flow/type/ownership checks are unchanged.
+
+`inputs/records/build.rs` accumulates selected statements in source order and restores
+branch-local evidence after each branch. Condition/statement visits and selected
+unused bindings contribute retained work; skipped branches/operands contribute none.
+Selected sibling/tail failures retain E107 source spans even under an unreachable
+outer path with a declared record shape. Selected effects still disqualify the record.
+Branch traversal shares the existing 32-level record-evidence recursion bound;
+predicate traversal shares 64 active levels and 4096 visits. The isolated 31/32 branch
+boundary passes checker tests; nested record/branch depths consume the bound together.
+
 Eligible unit-primary local records now preserve computed-input evidence through
 composition, including inline sources, aliases, projected subrecords and extensions
-with named fields. `inputs/records.rs` recognizes the checked temporary Bind plus
+with named fields. `inputs/records/build.rs` recognizes the checked temporary Bind plus
 unit-primary/field projection HIR and retains complete ancestor eligibility, errors
 and work. The runtime HIR and evaluation order are unchanged.
 
@@ -37,7 +52,7 @@ File-module namespace eligibility stays distinct: direct module composition forw
 individually eligible exports and an eligible integer primary. It never grants
 whole-record eligibility to a synthetic namespace. A local record constructed from
 individual eligible exports can qualify. Mutable, effectful or unsupported siblings
-and tails inside an ordinary record prevent eligibility for all composed fields;
+and tails evaluated inside a record prevent eligibility for all composed fields;
 unrelated file initialization does not. Privacy, exact widths, ordinary collision
 checks, startup order, runtime captures and borrowed-export gates remain intact.
 
@@ -53,29 +68,31 @@ B001. Other bootstrap limits remain 4096 visits, 64 resolver/validation levels a
 16384 type nodes; these are not language E220 counters. Native ownership analysis
 may exhaust its own budget before a shape reaches its input-field limit.
 
-Conditional composition/export evidence, helper purity, non-integer/mutable scratch
-and full required evaluation remain separate. See
-[COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#local-record-composition).
+Conditional module exports, nonliteral predicate evidence, integer-block branches,
+helper purity, non-integer/mutable scratch and full required evaluation remain separate. See
+[COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#conditional-record-initializers).
 
 ## Actual validation
 
-- `f763ee8`: retained export paths; nine export/path library tests and nine existing
-  native composition groups passed with unchanged runtime HIR.
-- `cc8337f`: local composition evidence; 733 library/704 native tests, fmt and Clippy
-  passed. Log: `/tmp/meowy-local-compose-tests.log`.
-- `3e97948`: top-level local-record exports; 734 library/706 native tests, fmt and
-  Clippy passed. Log: `/tmp/meowy-record-export-tests.log`.
-- Final integration probes passed: repeated ancestor work versus separate roots in
-  debug/release; silent check/build; startup diamonds initialized once. Checker-only
-  coverage verifies the 256/257 field evidence boundary. The 256-field native probe
-  hit B001 borrow-origin budget exhaustion, so it is not claimed as native support.
-- The new guide example passed debug/release, printing `7`. Extracted files:
-  `/tmp/meowy-local-compose-doc-cnm3qnoe`.
-- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 735
-  library/708 native Rust tests (1443 total), 20 Python tests, fmt, Clippy and build.
-  Log: `/tmp/meowy-local-record-inputs-gate.log`.
+- `bfb9678`: behavior-preserving statement accumulator extraction; all 735 library/
+  708 native tests, fmt and Clippy passed. Log: `/tmp/meowy-record-builder-tests.log`.
+- `c4651f3`: literal-branch proof and scoped record evidence; all 736 library/712
+  native tests passed, plus the added branch-depth test. Fmt and Clippy passed.
+  Log: `/tmp/meowy-conditional-record-tests.log`.
+- Eight conditional native groups pass: named/nested/composed fields, selected
+  effects/runtime-read gates, skipped effects/errors/operands, retained E107 spans,
+  branch depth, forwarded repeated work, staging/startup and runtime-only effects.
+  Execution and work/staging integration exercise debug/release. Conditional module
+  exports still reject required reads; no unsupported case counts as conformance.
+- The conditional guide example prints `7` in debug/release. Extracted file:
+  `/tmp/meowy-conditional-record-doc-7pzni1an/main.mwy`.
+- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 736
+  library/716 native Rust tests (1452 total), 20 Python tests, fmt, Clippy and build.
+  Log: `/tmp/meowy-conditional-record-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links,
-  catalog/schema and whitespace checks passed; full release qualification is open.
+  catalog/schema and whitespace checks passed. Full release qualification remains open.
+- The prior 256/257 field evidence boundary is checker-only; its 256-field native
+  probe exhausted the borrow-origin budget. No larger native-shape claim is made.
 - Runtime implementation, reference fixtures and dependencies are unchanged. Editor
   and separate runtime/sanitizer gates were not rerun; release qualification is open.
 
@@ -135,37 +152,19 @@ Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
 
 ## Still outside this compiler
 
-Whole-record module inputs, conditional composition inputs, helper
+Whole-record module inputs, conditional module exports, nonliteral predicates, helper
 initializer eligibility, module-data captures, borrowed module storage, package/manifest
 resolution, full required evaluation and generic specialization, public FFI, wider
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
-## Active plan and next steps
+## Next steps
 
-Inspection: matchers lower to `hir::Stmt::If` with lexical branch scope and explicit
-statement lists. Record input checking now follows only proven literal branches. Constant folding
-alone cannot prove eligibility because it may hide runtime reads or effects.
-
-Bound this slice to conditions built from checked boolean literals, `!`, `&&` and
-`||`, respecting short circuiting. Boolean locals, integer comparisons, helper calls
-when evaluated, loops and conditional module exports remain gated. Keep the existing
-record shape and required-evaluation budgets. Do not alter runtime HIR or flow analysis.
-
-Dependency-ordered commits:
-
-1. Complete: record statement accumulation lives in `inputs/records/build.rs`.
-   All 735 library/708 native tests, fmt and Clippy passed with unchanged behavior.
-   Log: `/tmp/meowy-record-builder-tests.log`.
-2. Complete: bounded literal-condition proof selects branches with scoped locals,
-   retained condition/statement work and unchanged HIR. Full Rust tests passed
-   (736 library/712 native), plus the added 31/32 branch-depth boundary test.
-   Selected effects and runtime reads reject; skipped effects/operands do not run.
-   Retained selected sibling/tail errors keep E107 source spans. Fmt/Clippy passed.
-   Log: `/tmp/meowy-conditional-record-tests.log`.
-3. Add independent work/staging/forwarding regressions and document supported
-   conditions. Run the complete compiler gate and update both handoffs.
-
-Next: prove repeated branch work, skipped work and module staging/forwarding;
-update guides and run the complete compiler gate.
-Keep helper purity, packages, borrowed storage and whole-module inputs separate.
+1. Plan predicate eligibility beyond literal booleans in `inputs/records/conditions.rs`
+   and `inputs.rs`. Boolean locals and integer comparisons need their own retained
+   source/value/error/work evidence; runtime constant folding is not proof. Preserve
+   checked widths, short circuiting and failures in evaluated predicates. Split
+   evidence plumbing from record integration and verify effects plus repeated work.
+2. Keep integer-block branches, selected standalone expression statements, conditional
+   module exports, helper purity, packages and borrowed storage separate. Record
+   reviewable commit slices before edits; never push or create STEP logs.

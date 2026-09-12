@@ -54,7 +54,8 @@ runtime branch, and its temporary checking state is restored afterwards.
 Inputs may be static integers in the construction scope or immutable integer bindings
 with recorded initializer eligibility. The checker tracks separate evidence over
 checked literals, aliases, supported unary/arithmetic expressions and straight-line
-integer blocks. Nested immutable integer records also carry complete initializer evidence.
+integer blocks. Nested immutable integer records also carry complete initializer evidence,
+including the [literal branches](#conditional-record-initializers) below.
 Every local value dependency must already have that evidence; a folded constant alone does not
 establish eligibility. Exact widths and source declaration identities are preserved.
 
@@ -62,7 +63,7 @@ Required reads can use eligible lexical inputs across function scopes. This does
 enable runtime captures or expose private names from another file. Original runtime
 bindings and application effects remain in the program; checking/building does not
 execute them. Runtime parameters, mutable state and effectful results remain unavailable
-(E211). Blocks with effects, mutation or control flow and helper calls remain
+(E211). Integer blocks with effects, mutation or control flow and helper calls remain
 unproven; unsupported folded inputs retain B001. Named imported inputs follow the
 [export eligibility rules](#imported-immutable-inputs) below.
 
@@ -108,7 +109,7 @@ widths independently of source declaration order.
 Nested record construction shares scoped scalar/record evidence and work. Initializers
 may use earlier emitted records, record aliases, integer fields and eligible scalar
 blocks/locals. Every initializer statement remains checked. A selected leaf cannot hide
-an effect, mutable descendant, invalid sibling computation or unused tail work.
+an evaluated effect, mutable descendant, invalid sibling computation or unused tail work.
 
 Ordinary immutable subrecord aliases retain the complete original ancestor's errors
 and transitive work. A subsequent leaf read cannot escape that evidence by shortening
@@ -125,6 +126,44 @@ type identities such as `core.int32` retain their separate behavior.
 Reference projections, inline roots, non-integer leaves, empty records and non-unit
 primaries remain outside this record slice. Checking never runs initializers; ordinary
 record reads and runtime initialization remain unchanged.
+
+### Conditional record initializers
+
+Record evidence can select matcher branches using checked boolean literals, `!`,
+`&&` and `||`. Logical operands retain short-circuit order. This is separate from
+optimizer folding: an evaluated boolean local, comparison or helper call remains
+unavailable even if its result appears constant.
+
+```meowy
+debug : @"debug"
+settings : {
+    | true && !false | -> width <uint8> : 4
+    | false | debug.print("skipped")
+}
+copy : { | true | -> settings }
+<Items> : { -> <int32[copy.width]> }
+items <Items> : [3, 7]
+debug.print(items[2])
+```
+
+This prints `7`. Selected branches use scoped locals and the same eligible integer,
+record and composition statements as straight-line record initializers. Every
+visited condition and statement contributes work, including selected unused bindings
+and statements after emissions. An effect or invalid sibling in a selected branch
+cannot be hidden by reading another field. Proven skipped branches and short-circuited
+operands contribute no evaluation work or effects; ordinary source checks still apply.
+
+Aliases, projections and module forwarding retain the selected evidence. Every
+required read charges it again; independent required roots start fresh. Checking and
+building remain silent, and ordinary runtime conditions and effects are preserved.
+
+Selected branch traversal shares the existing 32-level record-evidence recursion
+bound; predicate traversal shares the 64-level/4096-visit limits. Nested records and
+branches consume depth together. These bootstrap bounds do not implement E220.
+Standalone expression statements in selected branches, loops, boolean locals,
+comparisons, integer-block branches and conditional module exports remain outside
+this slice. A top-level unconditional export may still forward an eligible record
+whose own initializer contains branches.
 
 ## Imported immutable inputs
 
@@ -260,8 +299,8 @@ debug.print(items[2])
 
 This prints `7`. Each exported field retains a path into the complete eligible
 source record. Further module compositions and subrecord copies preserve that path
-and its evidence. Effects, mutation or unsupported values anywhere in the source
-initializer, including unselected siblings and unused tail statements, prevent
+and its evidence. Evaluated effects, mutation or unsupported values in the source
+initializer, including unread siblings and unused tail statements, prevent
 eligibility for every composed field. Unrelated file initialization remains allowed.
 Composing a module namespace into a local record does not make the namespace eligible
 as a whole record; constructing a record from individually eligible exports works.
@@ -272,9 +311,8 @@ valid shapes may encounter other bootstrap work or ownership-analysis limits bef
 native execution. Declared shapes retain source errors on unreachable paths;
 unannotated unreachable shapes can still lose field identity.
 
-Conditional compositions/exports and inline required import roots remain outside
-this slice. Annotated or mutable ordinary module-identity aliases retain their
-existing restrictions. Ordinary runtime captures remain unavailable; a type-only
+Conditional module exports and inline required import roots remain outside this slice.
+Annotated or mutable ordinary module-identity aliases retain their existing restrictions. Ordinary runtime captures remain unavailable; a type-only
 use does not grant runtime access.
 
 ## Explicit limits

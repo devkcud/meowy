@@ -23,39 +23,38 @@ The compiler entry guide is [compiler/README.md](compiler/README.md); detailed
 guides live in `compiler/docs/`. The compiler root keeps `README.md`, `AGENTS.md`
 and `STATUS.md`. Links and Cargo metadata follow this layout.
 
-Eligible local records now retain computed inputs through composition and top-level
-module exports. Inline sources, aliases and projected subrecords preserve complete
-ancestor eligibility, error spans and work. Module facades retain the checked source
-ID and field path; each required read charges the retained work again. Runtime HIR,
-privacy, capture gates and initialization order remain unchanged.
+Record initializers now retain computed inputs through matcher branches proven from
+boolean literals, negation and short-circuit logic. Selected conditions/statements
+retain work and source errors; skipped branches and operands contribute no evaluation
+work or effects. Aliases, local compositions and module forwarding preserve the evidence.
+Runtime HIR, ordinary checks, capture gates and initialization order remain unchanged.
 
-Commits: `f763ee8` (export paths), `cc8337f` (local record composition), `3e97948`
-(local-record exports). Integration checks and the supported guide are complete.
-Whole-module record inputs, conditional compositions and helper purity remain separate.
-See [the supported slice](compiler/docs/COMPUTED_TYPES.md#local-record-composition).
+Commits: `bfb9678` (record statement accumulator), `c4651f3` (literal-branch evidence).
+Integration checks and the supported guide are complete. Nonliteral predicates,
+conditional module exports and helper purity remain separate.
+See [the supported slice](compiler/docs/COMPUTED_TYPES.md#conditional-record-initializers).
 
 Net/HTTP/TLS still needs broader generic-type/I/O/task foundations. Full v0.0.1
 release qualification remains incomplete.
 
 ## Actual validation
 
-- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 1443
+- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 1452
   Rust tests, 20 Python tests, fmt, Clippy and build.
-- Added debug/release integration probes pass for repeated ancestor work, separate
-  required roots, silent check/build and one-time startup. The guide example prints
-  `7` in debug/release. The 256/257 field evidence boundary is checker-only; native
-  ownership analysis reaches its own budget first for the tested large record.
+- Eight focused conditional groups pass, including selected/skipped effects and
+  errors, forwarded work, silent check/build and one-time startup. Execution and
+  work/staging integration exercise debug/release. The guide example prints `7`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links
-  and catalog/schema checks passed. Log: `/tmp/meowy-local-record-inputs-gate.log`.
-  Full release qualification remains open.
+  and catalog/schema checks passed. Log: `/tmp/meowy-conditional-record-gate.log`.
 - Runtime implementation, reference fixtures and dependencies are unchanged.
-  Editor and separate runtime/sanitizer gates were not rerun.
+  Editor and separate runtime/sanitizer gates were not rerun. Full release qualification
+  remains open; record-field shape limits are not native ownership-budget guarantees.
 
 ## Area handoff
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Local-record and module compositions retain complete input evidence. |
+| Compiler | Literal record branches retain selected evidence through composition/imports. |
 | Documentation tooling | Constructed signatures and file graphs are checked; multi-file doc commands/indexes remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; type/I/O/task foundations precede implementation. |
@@ -63,8 +62,8 @@ release qualification remains incomplete.
 
 ## Next steps
 
-1. Plan conditional local-record evidence with complete branch work/effect proofs;
-   keep conditional module exports, helper purity and whole-module inputs separate.
-   See the concrete [compiler handoff](compiler/STATUS.md#next-steps).
-2. Preserve package, borrowed-export and ownership gates. Commit validated slices
+1. Plan boolean-local and integer-comparison predicate evidence with source errors,
+   widths and repeated-work accounting. See the [compiler handoff](compiler/STATUS.md#next-steps).
+2. Preserve package, borrowed-export and ownership gates. Keep conditional module
+   exports, integer-block branches and helper purity separate. Commit validated slices
    using [AGENTS.md](AGENTS.md), keep STATUS concise, and do not push.
