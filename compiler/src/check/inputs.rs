@@ -1,4 +1,5 @@
 mod blocks;
+mod predicates;
 mod records;
 
 pub(crate) use records::{MAX_DEPTH as MAX_RECORD_DEPTH, Record};
@@ -15,18 +16,20 @@ pub(crate) struct Sources {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Input {
+pub(crate) struct Input<T = i128> {
     pub(crate) work: usize,
     pub(crate) error: Option<Diagnostic>,
-    pub(crate) value: Option<i128>,
+    pub(crate) value: Option<T>,
 }
 
-impl Input {
-    pub(crate) fn add(&mut self, source: &Self) {
+impl<T> Input<T> {
+    pub(crate) fn add<U>(&mut self, source: &Input<U>) {
         self.work = self.work.saturating_add(source.work);
         self.error = self.error.take().or_else(|| source.error.clone());
     }
+}
 
+impl Input {
     pub(crate) fn literal(&self, source: &hir::Expr) -> hir::Expr {
         hir::Expr {
             kind: ExprKind::Int(self.value.unwrap_or(0)),

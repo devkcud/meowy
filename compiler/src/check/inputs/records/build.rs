@@ -135,8 +135,9 @@ impl Checker {
                     then,
                     otherwise,
                 } => {
-                    let (value, work) = self.literal_condition(condition, depth + 1, count)?;
-                    build.record.input.work = build.record.input.work.saturating_add(work);
+                    let input = self.predicate_expr(condition, depth + 1, count)?;
+                    build.record.input.add(&input);
+                    let value = input.value?;
                     let locals = build.locals.clone();
                     let branch = if value { then } else { otherwise };
                     self.record_stmts(branch, depth + 1, count, build)?;

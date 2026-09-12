@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Literal-conditional record inputs are implemented.
-All ten compiler gate checks passed. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Boolean-local and comparison predicate evidence is in progress.
+The previous compiler gate passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -160,11 +160,25 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Plan predicate eligibility beyond literal booleans in `inputs/records/conditions.rs`
-   and `inputs.rs`. Boolean locals and integer comparisons need their own retained
-   source/value/error/work evidence; runtime constant folding is not proof. Preserve
-   checked widths, short circuiting and failures in evaluated predicates. Split
-   evidence plumbing from record integration and verify effects plus repeated work.
-2. Keep integer-block branches, selected standalone expression statements, conditional
-   module exports, helper purity, packages and borrowed storage separate. Record
-   reviewable commit slices before edits; never push or create STEP logs.
+Inspection: literal conditions return only a bool/work pair. `Input` already retains
+source errors and transitive work for integers. Reuse typed input evidence for boolean
+results; keep eligibility separate from runtime folding. Failed evaluated predicates
+must preserve their source error without inventing a branch or losing record paths.
+
+Dependency-ordered commits:
+
+1. Typed metadata and literal predicate evidence preserve existing behavior; the
+   full 736 library/716 native tests, fmt and Clippy passed. Predicate proof is
+   now in `inputs/predicates.rs` for reuse by boolean bindings; its focused test
+   and Clippy also pass after the move. Log: `/tmp/meowy-predicate-metadata-tests.log`.
+2. Add integer-comparison evidence plus failed-predicate propagation into records.
+   Preserve widths, first evaluated failures and short circuiting; test native
+   acceptance, effect gates and retained-error paths.
+3. Record immutable boolean-local evidence and scoped boolean scratch in record
+   initializers; retain value/error/work through aliases. Keep boolean record fields,
+   module boolean exports and boolean required scratch separate.
+4. Add independent repeated-work/module/staging coverage and update guides/handoffs.
+   Run `python3 -B tools/verify.py --compiler` across the series.
+
+Keep integer-block branches, selected standalone expression statements, conditional
+module exports, helper purity, packages and borrowed storage separate. Do not push.
