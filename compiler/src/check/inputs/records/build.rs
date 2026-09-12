@@ -64,6 +64,13 @@ impl Checker {
                             self.record_expr(value, &ty, depth + 1, count, &build.locals)?;
                         build.record.input.add(&child.input);
                         build.locals.records.insert(*id, child);
+                    } else if ty == Type::Bool {
+                        let input = self.predicate_expr(value, depth + 1, count, &build.locals)?;
+                        build.record.input.add(&input);
+                        if input.error.is_some() {
+                            return Some(false);
+                        }
+                        build.locals.booleans.insert(*id, input);
                     } else {
                         let input = self.input_expr(value, depth + 1, count, &build.locals)?;
                         build.record.input.add(&input);

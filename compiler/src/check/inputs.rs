@@ -13,6 +13,7 @@ use std::collections::BTreeMap;
 pub(crate) struct Sources {
     pub(crate) integers: BTreeMap<usize, Input>,
     pub(crate) records: BTreeMap<usize, Record>,
+    pub(crate) booleans: BTreeMap<usize, Input<bool>>,
 }
 
 #[derive(Clone, Debug)]

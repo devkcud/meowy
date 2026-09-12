@@ -232,6 +232,7 @@ pub(crate) fn boolean_record_inputs_keep_aliases_and_function_type_reads() {
 pub(crate) fn boolean_record_inputs_preserve_aliased_and_unused_predicate_failures() {
     for body in [
         "flag:n+1==0;alias:!flag;row<{good<uint8>}>:{|alias|->good<uint8>:4}",
+        "row<{good<uint8>}>:{unused:n+1==0;->good<uint8>:4}",
         "flag:n+1==0;row<{good<uint8>}>:{|false| |flag|->good<uint8>:2;|flag|->good<uint8>:4}",
     ] {
         let source = format!("|false|{{n<uint8>:255;{body};<T>:{{v:row.good;-><int32>}}}}");
@@ -269,5 +270,26 @@ pub(crate) fn boolean_record_inputs_keep_mutable_effectful_and_capture_boundarie
             code,
             "{source}"
         );
+    }
+}
+
+#[test]
+pub(crate) fn boolean_record_inputs_keep_scoped_scratch_and_compositions() {
+    Case::new("d:@\"debug\";base:{->n<uint8>:4};ready:base.n==4;alias:ready;row:{n:4;ok:n==4;copy:ok;|alias&&copy|->width:4;|!(alias&&copy)|->width:2};part:{|ready|->row;|!ready|->{->width:2}};<T>:{-><int32[part.width]>};v<T>:[7];d.print(v[1]);d.print(part.width)").runs(b"7\n4\n");
+}
+
+#[test]
+pub(crate) fn boolean_record_inputs_keep_branch_scope_and_check_unused_scratch() {
+    Case::new("d:@\"debug\";row:{flag:false;|true|flag:true;|flag|d.print(99);->n:4};<T>:{-><int32[row.n]>};v<T>:[7];d.print(v[1])").runs(b"7\n");
+    for source in [
+        "f<boolean>:(){->false};row:{->n:4;unused:f()};<T>:{n:row.n;-><int32>}",
+        "row:{unused:1.0<2.0;->n:4};<T>:{n:row.n;-><int32>}",
+        "d:@\"debug\";row:{flag:true;|flag|d.print(99);->n:4};<T>:{n:row.n;-><int32>}",
+    ] {
+        let output = Case::new(source).command("run", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E211\""), "{source}: {error}");
     }
 }

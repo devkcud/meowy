@@ -184,7 +184,9 @@ Dependency-ordered commits:
    Global binding slice: all 736 library/722 native tests and Clippy/fmt passed.
    Log: `/tmp/meowy-boolean-binding-tests.log`. Runtime predicate fixtures keep
    complete shapes so they test eligibility independently of nullable-field gates.
-   Scoped record scratch remains next; boolean fields/exports/required scratch stay gated.
+   Scoped record scratch now passes 736 library/723 native tests, plus the added
+   branch-scope/unused-scratch group. Fmt/Clippy pass; log:
+   `/tmp/meowy-scoped-boolean-tests.log`. Boolean fields/exports/required scratch stay gated.
 4. Add independent repeated-work/module/staging coverage and update guides/handoffs.
    Run `python3 -B tools/verify.py --compiler` across the series.
 

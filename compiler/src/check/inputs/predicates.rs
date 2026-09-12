@@ -36,7 +36,10 @@ impl Checker {
         match &expr.kind {
             ExprKind::Bool(value) => input.value = Some(*value),
             ExprKind::Local(id) => {
-                let source = self.bool_inputs.get(id)?;
+                let source = locals
+                    .booleans
+                    .get(id)
+                    .or_else(|| self.bool_inputs.get(id))?;
                 input.add(source);
                 input.value = source.value;
             }
