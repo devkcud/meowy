@@ -22,7 +22,7 @@ pub(crate) fn record_inputs_reject_effects_mutability_and_noninteger_shapes() {
         "row:{->n:=4}",
         "row:{->n:4;->text:\"x\"}",
         "row:{->4;->n:4}",
-        "flag:true;row:{|flag|->n:4}",
+        "flag:=true;row:{|flag|->n:4}",
     ] {
         let checker = check(source);
         assert!(checker.record_inputs.is_empty(), "{source}");

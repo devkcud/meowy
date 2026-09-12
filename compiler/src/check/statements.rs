@@ -111,6 +111,9 @@ impl Checker {
                     if let Some(input) = self.integer_input(&value) {
                         self.inputs.insert(id, input);
                     }
+                    if let Some(input) = self.boolean_input(&value) {
+                        self.bool_inputs.insert(id, input);
+                    }
                     if let Some(input) = self.record_input(&value, &ty) {
                         self.record_inputs.insert(id, input);
                     }

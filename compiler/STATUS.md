@@ -177,9 +177,14 @@ Dependency-ordered commits:
    Clippy/fmt pass; log: `/tmp/meowy-comparison-input-tests.log`.
    Repeated field comparisons remain unstable flow atoms; the uint64 test verifies
    a skipped effect with an unconditional field, without broadening flow inference.
-3. Record immutable boolean-local evidence and scoped boolean scratch in record
-   initializers; retain value/error/work through aliases. Keep boolean record fields,
-   module boolean exports and boolean required scratch separate.
+3. Split boolean work into two buildable slices: first capture/read ordinary immutable
+   boolean binding evidence and update formerly gated fixtures; then add scoped
+   boolean scratch to record accumulation with its focused tests. This keeps the
+   shared state/declaration change separate from record-local initialization behavior.
+   Global binding slice: all 736 library/722 native tests and Clippy/fmt passed.
+   Log: `/tmp/meowy-boolean-binding-tests.log`. Runtime predicate fixtures keep
+   complete shapes so they test eligibility independently of nullable-field gates.
+   Scoped record scratch remains next; boolean fields/exports/required scratch stay gated.
 4. Add independent repeated-work/module/staging coverage and update guides/handoffs.
    Run `python3 -B tools/verify.py --compiler` across the series.
 

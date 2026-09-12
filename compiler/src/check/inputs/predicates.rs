@@ -6,6 +6,13 @@ use crate::check::{
 use crate::hir::{Expr, ExprKind, Type};
 
 impl Checker {
+    pub(crate) fn boolean_input(&mut self, expr: &Expr) -> Option<Input<bool>> {
+        if expr.ty != Type::Bool {
+            return None;
+        }
+        self.predicate_expr(expr, 0, &mut 0, &Sources::default())
+    }
+
     pub(crate) fn predicate_expr(
         &mut self,
         expr: &Expr,
@@ -28,6 +35,11 @@ impl Checker {
         };
         match &expr.kind {
             ExprKind::Bool(value) => input.value = Some(*value),
+            ExprKind::Local(id) => {
+                let source = self.bool_inputs.get(id)?;
+                input.add(source);
+                input.value = source.value;
+            }
             ExprKind::Unary { op, value } if op == "!" => {
                 let source = self.predicate_expr(value, depth + 1, count, locals)?;
                 input.add(&source);

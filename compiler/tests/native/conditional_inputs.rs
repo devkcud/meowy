@@ -46,7 +46,7 @@ pub(crate) fn conditional_record_inputs_reject_selected_effects_and_folded_runti
         "|true|->part:{->n:4};|true|->bad:{->n:1;d.print(1)};->n:4",
     ] {
         let source = format!(
-            "d:@\"debug\";flag:false;effect<boolean>:(){{d.print(9);->true}};row:{{{body}}};<T>:{{n:row.n;-><int32>}}"
+            "d:@\"debug\";flag:=false;effect<boolean>:(){{d.print(9);->true}};row:{{{body}}};<T>:{{n:row.n;-><int32>}}"
         );
         let output = Case::new(&source).command("run", &["--json"]);
         assert_eq!(output.status.code(), Some(1));
@@ -220,5 +220,54 @@ pub(crate) fn comparison_record_inputs_do_not_admit_runtime_operands() {
         assert!(output.stdout.is_empty());
         let error = String::from_utf8_lossy(&output.stderr);
         assert!(error.contains("\"code\":\"E211\""), "{source}: {error}");
+    }
+}
+
+#[test]
+pub(crate) fn boolean_record_inputs_keep_aliases_and_function_type_reads() {
+    Case::new("d:@\"debug\";ready:false;alias:!ready;row:{|ready|d.print(99);|alias|->n:4;|!alias|->n:2};f<int32>:(){<T>:{-><int32[row.n]>};v<T>:[7];->v[1]};d.print(f())").runs(b"7\n");
+}
+
+#[test]
+pub(crate) fn boolean_record_inputs_preserve_aliased_and_unused_predicate_failures() {
+    for body in [
+        "flag:n+1==0;alias:!flag;row<{good<uint8>}>:{|alias|->good<uint8>:4}",
+        "flag:n+1==0;row<{good<uint8>}>:{|false| |flag|->good<uint8>:2;|flag|->good<uint8>:4}",
+    ] {
+        let source = format!("|false|{{n<uint8>:255;{body};<T>:{{v:row.good;-><int32>}}}}");
+        let error = meowy::compile(&source).unwrap_err().remove(0);
+        assert_eq!(error.code, "E107", "{source}: {error:?}");
+        assert_eq!(error.span.start, source.find("n+1").unwrap());
+    }
+}
+
+#[test]
+pub(crate) fn boolean_record_inputs_keep_mutable_effectful_and_capture_boundaries() {
+    for prefix in [
+        "flag:=false;alias:flag",
+        "d:@\"debug\";flag:{d.print(1);->false};alias:flag",
+        "f<boolean>:(){->false};flag:f();alias:flag",
+    ] {
+        let source = format!("{prefix};row:{{|alias|unused:1;->n:4}};<T>:{{n:row.n;-><int32>}}");
+        let output = Case::new(&source).command("run", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E211\""), "{source}: {error}");
+    }
+    for (source, code) in [
+        ("flag:true;f<boolean>:(){->flag}", "B001"),
+        (
+            "row:{flag:=true;|flag|unused:1;->n:4};<T>:{n:row.n;-><int32>}",
+            "E211",
+        ),
+        ("row:{->flag:true;->n:4};<T>:{n:row.n;-><int32>}", "E211"),
+        ("flag:true;<T>:{value:flag;-><int32>}", "B001"),
+    ] {
+        assert_eq!(
+            meowy::compile(source).unwrap_err()[0].code,
+            code,
+            "{source}"
+        );
     }
 }
