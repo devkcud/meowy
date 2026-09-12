@@ -102,8 +102,10 @@ impl Checker {
         }
         if matches!(expr.kind, ExprKind::Field { .. }) {
             let (id, path) = self.record_path(expr)?;
-            let (source, tail) = self.input_path(id, &path)?;
-            let mut record = self.source_record(source.id, locals)?.project(tail)?;
+            let source = self.input_path(id, &path)?;
+            let mut record = self
+                .source_record(source.id, locals)?
+                .project(&source.path)?;
             record.input.work = record.input.work.saturating_add(source.work);
             return Some(record);
         }

@@ -14,9 +14,10 @@ pub(crate) struct Module {
     pub(crate) primary: Option<(hir::EmitId, super::inputs::Input)>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Input {
     pub(crate) id: usize,
+    pub(crate) path: Vec<usize>,
     pub(crate) work: usize,
 }
 
@@ -86,15 +87,25 @@ impl Checker {
         }
         if let Some(input) = self.integer_input(value) {
             self.inputs.insert(id, input);
-            self.module
-                .inputs
-                .insert(name.into(), Input { id, work: 0 });
+            self.module.inputs.insert(
+                name.into(),
+                Input {
+                    id,
+                    path: Vec::new(),
+                    work: 0,
+                },
+            );
         }
         if let Some(input) = self.record_input(value, &value.ty) {
             self.record_inputs.insert(id, input);
-            self.module
-                .inputs
-                .insert(name.into(), Input { id, work: 0 });
+            self.module.inputs.insert(
+                name.into(),
+                Input {
+                    id,
+                    path: Vec::new(),
+                    work: 0,
+                },
+            );
         }
     }
 
@@ -129,7 +140,7 @@ impl Checker {
             }
             if let Some(name) = field {
                 if let Some(input) = source.inputs.get(name) {
-                    let mut input = *input;
+                    let mut input = input.clone();
                     input.work = input.work.saturating_add(2);
                     self.module.inputs.insert(name.clone(), input);
                 }

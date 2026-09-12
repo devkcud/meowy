@@ -111,8 +111,8 @@ pub(crate) fn composed_inputs_keep_source_ids_without_changing_runtime_emissions
             None,
         )
         .unwrap();
-    let width = source.inputs["width"];
-    let row = source.inputs["row"];
+    let width = source.inputs["width"].clone();
+    let row = source.inputs["row"].clone();
     let primary = source.primary.as_ref().unwrap().1.clone();
     let id = checker.local(value.ty.clone());
     checker.exports.insert(id, source);
@@ -152,4 +152,37 @@ pub(crate) fn composed_inputs_keep_source_ids_without_changing_runtime_emissions
         matches!(&body.stmts[1], hir::Stmt::Emit { id, field: None, value, .. } if *id == emitted && matches!(value.kind, hir::ExprKind::Primary(_)))
     );
     assert!(body.stmts[2..].iter().all(|stmt| matches!(stmt, hir::Stmt::Emit { field: Some(_), value, .. } if matches!(value.kind, hir::ExprKind::Field { .. }))));
+}
+
+#[test]
+pub(crate) fn exported_paths_retain_record_ancestor_work_and_values() {
+    use crate::check::{
+        exports::{Input, Module},
+        inputs::Sources,
+    };
+    let mut checker = check("->row:{->nested:{->n:4};unused:2}");
+    let id = checker.module.inputs["row"].id;
+    let ty = checker.locals[id].clone();
+    let root = checker.local(ty);
+    let record = checker.record_inputs[&id].clone();
+    let mut module = Module::default();
+    module.inputs.insert(
+        "nested".into(),
+        Input {
+            id,
+            path: vec![0],
+            work: 2,
+        },
+    );
+    checker.exports.insert(root, module);
+    let source = checker.input_path(root, &[0, 0]).unwrap();
+    assert_eq!(source.id, id);
+    assert_eq!(source.path, [0, 0]);
+    assert_eq!(source.work, 3);
+    let input = checker
+        .field_input(root, &[0, 0], &Sources::default())
+        .unwrap();
+    assert_eq!(input.value, Some(4));
+    assert_eq!(input.work, record.input.work + 5);
+    assert!(checker.input_path(root, &vec![0; 34]).is_none());
 }

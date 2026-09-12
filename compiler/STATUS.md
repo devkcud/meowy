@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Direct module composition inputs passed the full compiler gate.
-No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Local-record composition evidence is being implemented.
+The prior module composition gate passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -150,15 +150,25 @@ resolution, full required evaluation and generic specialization, public FFI, wid
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
-## Next steps
+## Active plan and next steps
 
-1. Plan ordinary local-record composition evidence separately. Trace
-   `src/check/exports.rs::composed_inputs`, `src/check/inputs/records.rs` and
-   `src/check/inputs/records/paths.rs`. Unlike file-module namespaces, these records
-   must retain complete ancestor eligibility, failures and work for every selected
-   field. Start with existing eligible unit-primary immutable records; keep other
-   primary shapes gated. Record a dependency-ordered plan before editing, and verify
-   projected copies, sibling/tail failures, repeated work and runtime effects with
-   `tests/native/composed_inputs.rs` and existing computed-field tests.
-2. Keep conditional exports, helper purity, borrowed storage and packages separate.
-   Keep STATUS concise and current; never recreate STEP logs or push.
+Inspection: composition lowers to one temporary Bind followed by primary/field
+projections. Module exports currently retain only an ID/work pair; local records
+need a retained path so every field carries its complete ancestor evidence.
+`record_expr` also rejects projected emissions and the unit primary of composition.
+
+Dependency-ordered commits:
+
+1. Complete: export input identity now includes a bounded record path. All nine
+   export/path library tests and all nine native composition groups passed; fmt
+   passed. Existing module behavior and runtime HIR remain unchanged.
+2. Accept eligible local record compositions in `inputs/records.rs`, retaining all
+   initializer work/errors. Include focused execution, ancestor and shape tests.
+3. Forward local composition fields through top-level module exports using the
+   retained path. Include projected/inline sources, widths and eligibility tests.
+4. Add independent staging/work integration coverage and update the supported guide
+   and root handoff. Run `python3 -B tools/verify.py --compiler` across the series.
+
+Keep unit primaries, immutable integer/record fields and existing shape bounds.
+Synthetic module namespaces remain ineligible as whole records. Conditional exports,
+helper purity, borrowed storage and packages stay separate. Do not push.
