@@ -22,15 +22,8 @@ pub(crate) fn exported_inputs_separate_initializer_effects_from_file_effects() {
 }
 
 #[test]
-pub(crate) fn exported_inputs_exclude_mutable_conditional_and_composed_emissions() {
-    for source in [
-        "->n:=4",
-        "|true|->n:4",
-        "row:{->n:4};->row",
-        "->{->n:4}",
-        "->row:{->n:=4}",
-        "->4",
-    ] {
+pub(crate) fn exported_inputs_exclude_mutable_conditional_and_primary_emissions() {
+    for source in ["->n:=4", "|true|->n:4", "->row:{->n:=4}", "->4"] {
         assert!(check(source).module.inputs.is_empty(), "{source}");
     }
 }
@@ -185,4 +178,28 @@ pub(crate) fn exported_paths_retain_record_ancestor_work_and_values() {
     assert_eq!(input.value, Some(4));
     assert_eq!(input.work, record.input.work + 5);
     assert!(checker.input_path(root, &vec![0; 34]).is_none());
+}
+
+#[test]
+pub(crate) fn composed_record_exports_share_complete_evidence_and_keep_runtime_hir() {
+    use crate::hir::{ExprKind, Stmt};
+    let parsed = crate::parser::parse_documented("row:{->z:4;->a:{->n:2};unused:1};->row").unwrap();
+    let mut checker = crate::check::Checker::new();
+    let block = checker.block(&parsed.block, None, None).unwrap();
+    let a = &checker.module.inputs["a"];
+    let z = &checker.module.inputs["z"];
+    assert_eq!(a.id, z.id);
+    assert_eq!(a.path, [0]);
+    assert_eq!(z.path, [1]);
+    let record = &checker.record_inputs[&a.id];
+    assert_eq!(record.field(&[0, 0]).unwrap().value, Some(2));
+    assert_eq!(record.field(&[1]).unwrap().value, Some(4));
+    assert!(record.input.work > 10);
+    assert!(
+        matches!(&block.stmts[1], Stmt::Bind { id, value } if *id == a.id && matches!(value.kind, ExprKind::Local(_)))
+    );
+    assert!(
+        matches!(&block.stmts[2], Stmt::Emit { field: None, value, .. } if matches!(value.kind, ExprKind::Primary(_)))
+    );
+    assert!(block.stmts[3..].iter().all(|stmt| matches!(stmt, Stmt::Emit { field: Some(_), value, .. } if matches!(value.kind, ExprKind::Field { .. }))));
 }

@@ -113,14 +113,15 @@ impl Checker {
         if !self.input_export(target) {
             return Ok(());
         }
-        let Some(hir::Stmt::Bind { value, .. }) = stmts.first() else {
+        let Some(hir::Stmt::Bind { id, value }) = stmts.first() else {
             return Ok(());
         };
-        let hir::ExprKind::Local(id) = value.kind else {
-            return Ok(());
+        let source = match value.kind {
+            hir::ExprKind::Local(id) => self.exports.get(&id),
+            _ => None,
         };
-        let Some(source) = self.exports.get(&id) else {
-            return Ok(());
+        let Some(source) = source else {
+            return self.composed_record_inputs(*id, value);
         };
         for stmt in stmts {
             let hir::Stmt::Emit {
@@ -151,6 +152,33 @@ impl Checker {
                 input.work = input.work.saturating_add(2);
                 self.module.primary = Some((*id, input));
             }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn composed_record_inputs(&mut self, id: usize, value: &hir::Expr) -> Result<()> {
+        let Some(record) = self.record_input(value, &value.ty) else {
+            return Ok(());
+        };
+        let Type::Record { fields, .. } = &value.ty else {
+            return Ok(());
+        };
+        self.record_inputs.insert(id, record);
+        for (index, field) in fields.iter().enumerate() {
+            if !self.flow.spend(field.name.len() + fields.len() + 1) {
+                return Err(Diagnostic::unsupported(
+                    "record input composition budget exhausted",
+                    value.span,
+                ));
+            }
+            self.module.inputs.insert(
+                field.name.clone(),
+                Input {
+                    id,
+                    path: vec![index],
+                    work: 0,
+                },
+            );
         }
         Ok(())
     }

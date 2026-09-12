@@ -62,11 +62,9 @@ pub(crate) fn composed_inputs_keep_each_initializer_eligible_independently() {
 }
 
 #[test]
-pub(crate) fn composed_inputs_keep_conditional_and_nonmodule_compositions_unavailable() {
+pub(crate) fn composed_inputs_keep_conditional_and_whole_module_copies_unavailable() {
     for facade in [
         "m:@\"./data.mwy\";|true|->m",
-        "row:{->width:4};->row",
-        "->{->width:4}",
         "m:@\"./data.mwy\";copy:{->m};->copy",
     ] {
         let output = case(
@@ -282,5 +280,74 @@ pub(crate) fn local_composed_inputs_retain_unreachable_sibling_error_spans() {
         let error = meowy::compile(&source).unwrap_err().remove(0);
         assert_eq!(error.code, "E107", "{source}: {error:?}");
         assert_eq!(error.span.start, source.find("255+1").unwrap());
+    }
+}
+
+#[test]
+pub(crate) fn composed_record_exports_forward_inline_projected_and_copied_inputs() {
+    for data in [
+        "row:{->z<uint8>:2;->a:{->n<uint8>:3}};->row",
+        "->{->z<uint8>:2;->a:{->n<uint8>:3}}",
+        "row:{->part:{->z<uint8>:2;->a:{->n<uint8>:3}};unused:1};->(row.part)",
+        "row:{->z<uint8>:2;->a:{->n<uint8>:3}};copy:{->row};->copy",
+        "row:{->part:{->z<uint8>:2;->a:{->n<uint8>:3}};unused:1};part:row.part;->part",
+    ] {
+        case(
+            "m:@\"./facade.mwy\";d:@\"debug\";part:m.a;copy:m.z;<T>:{-><int32[copy+part.n]>};v<T>:[7];f<int32>:(){<U>:{-><int32[m.a.n]>};v<U>:[9];->v[1]};d.print(v[1]);d.print(f());d.print(m.z)",
+            &[("data.mwy", data), ("facade.mwy", "m:@\"./data.mwy\";->m")],
+        ).runs(b"7\n9\n2\n");
+    }
+}
+
+#[test]
+pub(crate) fn composed_record_exports_keep_ancestor_eligibility_and_widths() {
+    for (data, code) in [
+        (
+            "d:@\"debug\";row:{->part:{->n:4};d.print(1)};->row.part",
+            "E211",
+        ),
+        (
+            "d:@\"debug\";row:{->part:{->n:4};->other:{->n:1;d.print(1)}};->row.part",
+            "E211",
+        ),
+        ("d:@\"debug\";->{->n:4;d.print(1)}", "E211"),
+        ("row:{->n:4;unused:=1};->row", "E211"),
+        ("row:={->n:4};->row", "E211"),
+        ("row:{->n:=4};->row", "B001"),
+        ("row:{->1;->n:4};->row", "E211"),
+        ("row:{->n:4;->label:\"x\"};->row", "E211"),
+        ("row:{->n:4};|true|->row", "E211"),
+    ] {
+        let output = case(
+            "m:@\"./facade.mwy\";<T>:{n:m.n;-><int32>}",
+            &[("data.mwy", data), ("facade.mwy", "m:@\"./data.mwy\";->m")],
+        )
+        .command("run", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains(&format!("\"code\":\"{code}\"")),
+            "{data}: {error}"
+        );
+    }
+    for (body, code) in [
+        ("<T>:{n:m.n+1;-><int32>}", "E107"),
+        ("<T>:{n<uint16>:m.n;-><int32>}", "E207"),
+        ("<T>:{n:m.private;-><int32>}", "E201"),
+        ("f<uint8>:(){->m.n}", "B001"),
+    ] {
+        let source = format!("m:@\"./data.mwy\";{body}");
+        let output = case(
+            &source,
+            &[("data.mwy", "private:2;row:{->n<uint8>:255};->row")],
+        )
+        .command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains(&format!("\"code\":\"{code}\"")),
+            "{body}: {error}"
+        );
     }
 }

@@ -165,8 +165,11 @@ Dependency-ordered commits:
    evidence. All 733 library/704 native tests, fmt and Clippy passed. Log:
    `/tmp/meowy-local-compose-tests.log`. Retained sibling/tail errors keep E107
    source spans with declared shapes; unannotated unreachable shapes retain B001.
-3. Forward local composition fields through top-level module exports using the
-   retained path. Include projected/inline sources, widths and eligibility tests.
+3. Complete: top-level local composition exports retain a shared record ID and
+   field path. All 734 library/706 native tests, fmt and Clippy passed; log:
+   `/tmp/meowy-record-export-tests.log`. Inline/projected/copied execution, unchanged
+   HIR, widths, privacy, ancestor effects and conditional gates passed. Mutable
+   module fields retain the earlier B001 file-export rejection.
 4. Add independent staging/work integration coverage and update the supported guide
    and root handoff. Run `python3 -B tools/verify.py --compiler` across the series.
 
