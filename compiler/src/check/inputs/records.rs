@@ -15,6 +15,31 @@ pub(crate) struct Record {
 }
 
 impl Record {
+    pub(crate) fn failed(&mut self, fields: &[hir::Field]) -> Option<()> {
+        self.input.error.as_ref()?;
+        let mut pending = fields
+            .iter()
+            .enumerate()
+            .map(|(index, field)| (vec![index], &field.ty))
+            .collect::<Vec<_>>();
+        while let Some((path, ty)) = pending.pop() {
+            match ty {
+                Type::Int { .. } => {
+                    self.values.insert(path, None);
+                }
+                Type::Record { fields, .. } => {
+                    for (index, field) in fields.iter().enumerate() {
+                        let mut path = path.clone();
+                        path.push(index);
+                        pending.push((path, &field.ty));
+                    }
+                }
+                _ => return None,
+            }
+        }
+        Some(())
+    }
+
     pub(crate) fn field(&self, path: &[usize]) -> Option<Input> {
         let value = *self.values.get(path)?;
         let mut input = self.input.clone();
@@ -127,7 +152,10 @@ impl Checker {
             locals: locals.clone(),
             emitted: BTreeMap::new(),
         };
-        self.record_stmts(&block.stmts, depth, count, &mut build)?;
+        if !self.record_stmts(&block.stmts, depth, count, &mut build)? {
+            build.record.failed(fields)?;
+            return Some(build.record);
+        }
         if build.emitted.len() != fields.len()
             || depth == 0 && expr.ty == Type::Never && build.record.input.error.is_none()
         {

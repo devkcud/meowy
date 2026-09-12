@@ -17,7 +17,7 @@ impl Checker {
         depth: usize,
         count: &mut usize,
         build: &mut Build<'_>,
-    ) -> Option<()> {
+    ) -> Option<bool> {
         if depth >= super::MAX_DEPTH {
             return None;
         }
@@ -135,12 +135,17 @@ impl Checker {
                     then,
                     otherwise,
                 } => {
-                    let input = self.predicate_expr(condition, depth + 1, count)?;
+                    let input = self.predicate_expr(condition, depth + 1, count, &build.locals)?;
                     build.record.input.add(&input);
+                    if input.error.is_some() {
+                        return Some(false);
+                    }
                     let value = input.value?;
                     let locals = build.locals.clone();
                     let branch = if value { then } else { otherwise };
-                    self.record_stmts(branch, depth + 1, count, build)?;
+                    if !self.record_stmts(branch, depth + 1, count, build)? {
+                        return Some(false);
+                    }
                     build.locals = locals;
                 }
                 hir::Stmt::SlotAlias {
@@ -152,6 +157,6 @@ impl Checker {
                 _ => return None,
             }
         }
-        Some(())
+        Some(true)
     }
 }

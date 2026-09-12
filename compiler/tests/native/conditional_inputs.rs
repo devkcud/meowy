@@ -42,7 +42,7 @@ pub(crate) fn conditional_record_inputs_reject_selected_effects_and_folded_runti
         "|true&&effect()|d.print(1);->n:4",
         "|false||effect()|d.print(1);->n:4",
         "|flag|d.print(1);->n:4",
-        "|1<2|->n:4",
+        "|1.0<2.0|unused:1;->n:4",
         "|true|->part:{->n:4};|true|->bad:{->n:1;d.print(1)};->n:4",
     ] {
         let source = format!(
@@ -167,4 +167,58 @@ pub(crate) fn conditional_record_inputs_keep_staging_startup_and_module_export_g
 pub(crate) fn conditional_record_inputs_keep_runtime_body_effects_without_required_reads() {
     Case::new("d:@\"debug\";effect<boolean>:(){d.print(\"condition\");->true};row:{|effect()|d.print(\"body\");->n:4;|false|d.print(\"skipped\")};d.print(row.n)")
         .runs(b"condition\nbody\n4\n");
+}
+
+#[test]
+pub(crate) fn comparison_record_inputs_use_exact_eligible_integer_operands() {
+    for condition in [
+        "n==4",
+        "n!=3",
+        "n<5",
+        "n<=4",
+        "n>3",
+        "n>=4",
+        "n+1==5&&n>0",
+        "!(n<4)",
+    ] {
+        let source = format!(
+            "d:@\"debug\";base<uint8>:4;row:{{n:base;|{condition}|->width<uint8>:4;|!({condition})|->width<uint8>:2}};<T>:{{-><int32[row.width]>}};v<T>:[7];d.print(v[1]);d.print(row.width)"
+        );
+        Case::new(&source).runs(b"7\n4\n");
+    }
+    Case::new("d:@\"debug\";base:{->n<uint64>:18446744073709551615};row:{|!(base.n>9223372036854775808)|d.print(99);->width:4};<T>:{-><int32[row.width]>};v<T>:[7];d.print(v[1])").runs(b"7\n");
+}
+
+#[test]
+pub(crate) fn comparison_record_inputs_preserve_first_predicate_failure_paths() {
+    for condition in [
+        "n+1==0",
+        "(n+1==0)&&effect()",
+        "(n+1==0)||effect()",
+        "n+1==get()",
+    ] {
+        let source = format!(
+            "effect<boolean>:(){{->true}};get<uint8>:(){{->0}};|false|{{n<uint8>:255;row<{{part<{{good<uint8>}}>}}>:{{|true| |{condition}|->part:{{->good<uint8>:4}}}};copy:row.part;<T>:{{v:copy.good;-><int32>}}}}"
+        );
+        let error = meowy::compile(&source).unwrap_err().remove(0);
+        assert_eq!(error.code, "E107", "{source}: {error:?}");
+        assert_eq!(error.span.start, source.find("n+1").unwrap());
+    }
+}
+
+#[test]
+pub(crate) fn comparison_record_inputs_do_not_admit_runtime_operands() {
+    for prefix in [
+        "n:=4",
+        "get<int32>:(){->4};n:get()",
+        "d:@\"debug\";n:{d.print(1);->4}",
+    ] {
+        let source =
+            format!("{prefix};row:{{|n==4|unused:1;->width:4}};<T>:{{n:row.width;-><int32>}}");
+        let output = Case::new(&source).command("run", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E211\""), "{source}: {error}");
+    }
 }

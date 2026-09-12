@@ -171,9 +171,12 @@ Dependency-ordered commits:
    full 736 library/716 native tests, fmt and Clippy passed. Predicate proof is
    now in `inputs/predicates.rs` for reuse by boolean bindings; its focused test
    and Clippy also pass after the move. Log: `/tmp/meowy-predicate-metadata-tests.log`.
-2. Add integer-comparison evidence plus failed-predicate propagation into records.
-   Preserve widths, first evaluated failures and short circuiting; test native
-   acceptance, effect gates and retained-error paths.
+2. Complete: integer comparisons use eligible exact-width operands; failed predicates
+   retain record paths without inventing a branch. All 736 library/719 native tests
+   passed after isolating the floating-predicate gate from nullable-field checks.
+   Clippy/fmt pass; log: `/tmp/meowy-comparison-input-tests.log`.
+   Repeated field comparisons remain unstable flow atoms; the uint64 test verifies
+   a skipped effect with an unconditional field, without broadening flow inference.
 3. Record immutable boolean-local evidence and scoped boolean scratch in record
    initializers; retain value/error/work through aliases. Keep boolean record fields,
    module boolean exports and boolean required scratch separate.

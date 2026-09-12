@@ -1,4 +1,8 @@
-use crate::check::{Checker, inputs::Input, type_values};
+use crate::check::{
+    Checker,
+    inputs::{Input, Sources},
+    type_values,
+};
 use crate::hir::{Expr, ExprKind, Type};
 
 impl Checker {
@@ -7,6 +11,7 @@ impl Checker {
         expr: &Expr,
         depth: usize,
         count: &mut usize,
+        locals: &Sources,
     ) -> Option<Input<bool>> {
         *count += 1;
         if *count > type_values::MAX_WORK
@@ -24,20 +29,45 @@ impl Checker {
         match &expr.kind {
             ExprKind::Bool(value) => input.value = Some(*value),
             ExprKind::Unary { op, value } if op == "!" => {
-                let source = self.predicate_expr(value, depth + 1, count)?;
+                let source = self.predicate_expr(value, depth + 1, count, locals)?;
                 input.add(&source);
                 input.value = source.value.map(|value| !value);
             }
             ExprKind::Binary { op, left, right } if matches!(op.as_str(), "&&" | "||") => {
-                let left = self.predicate_expr(left, depth + 1, count)?;
+                let left = self.predicate_expr(left, depth + 1, count, locals)?;
                 input.add(&left);
                 input.value = left.value;
-                if input.value == Some(op == "||") {
+                if input.error.is_some() || input.value == Some(op == "||") {
                     return Some(input);
                 }
-                let right = self.predicate_expr(right, depth + 1, count)?;
+                let right = self.predicate_expr(right, depth + 1, count, locals)?;
                 input.add(&right);
                 input.value = right.value;
+            }
+            ExprKind::Binary { op, left, right }
+                if matches!(op.as_str(), "==" | "!=" | "<" | "<=" | ">" | ">=")
+                    && matches!(left.ty, Type::Int { .. })
+                    && left.ty == right.ty =>
+            {
+                let a = self.input_expr(left, depth + 1, count, locals)?;
+                input.add(&a);
+                if input.error.is_some() {
+                    return Some(input);
+                }
+                let b = self.input_expr(right, depth + 1, count, locals)?;
+                input.add(&b);
+                if input.error.is_none() {
+                    let (a, b) = (a.value?, b.value?);
+                    input.value = Some(match op.as_str() {
+                        "==" => a == b,
+                        "!=" => a != b,
+                        "<" => a < b,
+                        "<=" => a <= b,
+                        ">" => a > b,
+                        ">=" => a >= b,
+                        _ => unreachable!(),
+                    });
+                }
             }
             _ => return None,
         }
@@ -61,20 +91,29 @@ mod tests {
         let mut count = type_values::MAX_WORK - 1;
         assert_eq!(
             checker
-                .predicate_expr(&expr, 0, &mut count)
-                .map(|input| (input.value, input.work)),
-            Some((Some(true), 1))
-        );
-        assert!(checker.predicate_expr(&expr, 0, &mut count).is_none());
-        assert_eq!(
-            checker
-                .predicate_expr(&expr, type_values::MAX_DEPTH - 1, &mut 0)
+                .predicate_expr(&expr, 0, &mut count, &Sources::default())
                 .map(|input| (input.value, input.work)),
             Some((Some(true), 1))
         );
         assert!(
             checker
-                .predicate_expr(&expr, type_values::MAX_DEPTH, &mut 0)
+                .predicate_expr(&expr, 0, &mut count, &Sources::default())
+                .is_none()
+        );
+        assert_eq!(
+            checker
+                .predicate_expr(
+                    &expr,
+                    type_values::MAX_DEPTH - 1,
+                    &mut 0,
+                    &Sources::default()
+                )
+                .map(|input| (input.value, input.work)),
+            Some((Some(true), 1))
+        );
+        assert!(
+            checker
+                .predicate_expr(&expr, type_values::MAX_DEPTH, &mut 0, &Sources::default())
                 .is_none()
         );
     }
