@@ -1,4 +1,5 @@
 use super::{Checker, Input, MAX_DEPTH, Record, Sources};
+use crate::check::exports;
 use crate::hir::{self, ExprKind, Type};
 
 impl Record {
@@ -25,9 +26,9 @@ impl Checker {
         &mut self,
         id: usize,
         path: &'a [usize],
-    ) -> Option<(usize, &'a [usize])> {
+    ) -> Option<(exports::Input, &'a [usize])> {
         let Some(module) = self.exports.get(&id) else {
-            return Some((id, path));
+            return Some((exports::Input { id, work: 0 }, path));
         };
         let (index, path) = path.split_first()?;
         let Type::Record { fields, .. } = self.locals.get(id)? else {
@@ -37,7 +38,9 @@ impl Checker {
         if !self.flow.spend(field.name.len() + module.inputs.len() + 1) {
             return None;
         }
-        Some((*module.inputs.get(&field.name)?, path))
+        let mut input = *module.inputs.get(&field.name)?;
+        input.work = input.work.saturating_add(1);
+        Some((input, path))
     }
 
     pub(crate) fn field_input(
@@ -50,13 +53,13 @@ impl Checker {
         let mut input = if tail.is_empty() {
             locals
                 .integers
-                .get(&source)
-                .or_else(|| self.inputs.get(&source))?
+                .get(&source.id)
+                .or_else(|| self.inputs.get(&source.id))?
                 .clone()
         } else {
-            self.source_record(source, locals)?.field(tail)?
+            self.source_record(source.id, locals)?.field(tail)?
         };
-        input.work = input.work.saturating_add(path.len() - tail.len());
+        input.work = input.work.saturating_add(source.work);
         Some(input)
     }
 

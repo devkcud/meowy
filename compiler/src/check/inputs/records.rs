@@ -102,9 +102,9 @@ impl Checker {
         }
         if matches!(expr.kind, ExprKind::Field { .. }) {
             let (id, path) = self.record_path(expr)?;
-            let (id, tail) = self.input_path(id, &path)?;
-            let mut record = self.source_record(id, locals)?.project(tail)?;
-            record.input.work = record.input.work.saturating_add(path.len() - tail.len());
+            let (source, tail) = self.input_path(id, &path)?;
+            let mut record = self.source_record(source.id, locals)?.project(tail)?;
+            record.input.work = record.input.work.saturating_add(source.work);
             return Some(record);
         }
         let ExprKind::Block(block) = &expr.kind else {

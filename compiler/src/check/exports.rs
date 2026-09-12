@@ -10,8 +10,14 @@ pub(crate) struct Module {
     pub(crate) depth: usize,
     pub(crate) values: BTreeMap<String, Value>,
     pub(crate) types: BTreeMap<String, Spec>,
-    pub(crate) inputs: BTreeMap<String, usize>,
+    pub(crate) inputs: BTreeMap<String, Input>,
     pub(crate) primary: Option<(hir::EmitId, super::inputs::Input)>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Input {
+    pub(crate) id: usize,
+    pub(crate) work: usize,
 }
 
 impl Checker {
@@ -80,11 +86,15 @@ impl Checker {
         }
         if let Some(input) = self.integer_input(value) {
             self.inputs.insert(id, input);
-            self.module.inputs.insert(name.into(), id);
+            self.module
+                .inputs
+                .insert(name.into(), Input { id, work: 0 });
         }
         if let Some(input) = self.record_input(value, &value.ty) {
             self.record_inputs.insert(id, input);
-            self.module.inputs.insert(name.into(), id);
+            self.module
+                .inputs
+                .insert(name.into(), Input { id, work: 0 });
         }
     }
 

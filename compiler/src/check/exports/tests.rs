@@ -5,9 +5,9 @@ pub(crate) fn exported_inputs_retain_declaration_ids_and_private_dependencies() 
     let checker = check("private<uint8>:2;->width:private+2;->row:{->nested:{->n:width}}");
     assert_eq!(checker.module.inputs.len(), 2);
     assert!(!checker.module.inputs.contains_key("private"));
-    let width = checker.module.inputs["width"];
+    let width = checker.module.inputs["width"].id;
     assert_eq!(checker.inputs[&width].value, Some(4));
-    let row = checker.module.inputs["row"];
+    let row = checker.module.inputs["row"].id;
     assert_eq!(
         checker.record_inputs[&row].field(&[0, 0]).unwrap().value,
         Some(4)
@@ -38,7 +38,7 @@ pub(crate) fn exported_inputs_exclude_mutable_conditional_and_composed_emissions
 #[test]
 pub(crate) fn exported_inputs_preserve_complete_record_work() {
     let checker = check("row:{->nested:{->n:4};unused:2};->copy:row.nested");
-    let id = checker.module.inputs["copy"];
+    let id = checker.module.inputs["copy"].id;
     let record = &checker.record_inputs[&id];
     assert_eq!(record.field(&[0]).unwrap().value, Some(4));
     assert!(record.input.work > 10);
@@ -69,7 +69,7 @@ pub(crate) fn primary_inputs_keep_private_dependencies_tail_work_and_file_effect
     assert!(input.work > 6);
     assert_eq!(checker.module.inputs.len(), 1);
     assert_eq!(
-        checker.inputs[&checker.module.inputs["named"]].value,
+        checker.inputs[&checker.module.inputs["named"].id].value,
         Some(7)
     );
 }

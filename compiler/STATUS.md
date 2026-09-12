@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Mixed-record primary inputs passed the complete compiler gate.
-No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Record-composing module re-export work is in progress.
+The previous mixed-primary compiler gate passed; no current failures are known. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -145,14 +145,36 @@ resolution, full required evaluation and generic specialization, public FFI, wid
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
+## Active commit plan
+
+Investigation: `statements.rs::emit` lowers record composition to one temporary bind
+and primary/field emissions. It does not retain export eligibility. Only a checked
+local registered in `Checker.exports` will qualify for this slice; ordinary records,
+inline blocks and conditional compositions remain gated. Compile-time function/type
+exports are not runtime record fields and must not be implicitly re-exported.
+
+1. Represent named export evidence as its original local ID plus retained forwarding
+   work in `exports.rs`. Update integer/subrecord path reads to charge that work.
+   This prerequisite preserves existing acceptance, HIR and direct-export costs;
+   run the complete Rust tests and inspect its staged diff before committing.
+2. Preserve named and integer-primary evidence when a direct top-level composition
+   reads a registered module local. Reuse the checked emitted fields and primary ID,
+   charge copy/projection work per hop, and retain privacy and whole-record gates.
+   Include focused native acceptance, width/effect/capture and metadata tests.
+3. Add independent integration cases for startup ordering, silent checks/builds,
+   transitive work, record ancestor evidence and dependency failures.
+4. Update supported guides and root handoff; run the complete compiler gate and
+   commit the documentation slice. Keep runtime implementation and fixtures unchanged.
+
 ## Next steps
 
-1. Plan record-composing module re-export evidence separately. Trace
-   `src/check/statements.rs` composition emissions and `src/check/exports.rs`
-   export identity, then `inputs.rs`/`inputs/records/paths.rs` lookups. A facade
-   using `-> source` must preserve each selected export's original evidence,
-   privacy, complete type, work and initialization order without qualifying the
-   entire synthetic module record. Record dependency-ordered slices before editing;
-   verify with `tests/native/mixed_primary_inputs.rs` and existing file-module tests.
-2. Keep conditional exports, helper purity, borrowed storage and packages separate.
-   Keep STATUS concise and current; never recreate STEP logs.
+1. Export metadata now pairs the original local ID with retained forwarding work.
+   `inputs/records/paths.rs` and `inputs/records.rs` charge it for integer and
+   subrecord reads; direct-export costs remain unchanged. Formatting passed;
+   all 731 library/692 native Rust tests passed. Log:
+   `/tmp/meowy-composed-input-paths.log`. Inspect/stage and commit this prerequisite
+   before implementing composition metadata transfer.
+2. Complete the composition and integration slices in order, updating this handoff
+   after meaningful steps and committing each validated slice.
+3. Keep conditional exports, helper purity, borrowed storage and packages separate.
+   Keep STATUS concise and current; never recreate STEP logs or push.
