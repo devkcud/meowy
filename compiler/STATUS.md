@@ -33,8 +33,11 @@ mixed-module scratch and bare mixed-module extents remain unavailable. Function-
 required reads work; ordinary runtime captures retain B001. Runtime HIR, constant
 folding, storage and initialization order are unchanged.
 
-`Module.inputs` maps eligible direct immutable named exports to their original checked
-local IDs. Existing integer/record evidence retains source failures, values and work;
+`Module.inputs` maps eligible immutable named exports to their original checked
+local IDs and retained forwarding work. Direct top-level compositions of registered
+file modules forward each eligible named input and integer primary independently.
+Each hop retains two extra work visits for its copy/projection; runtime HIR stays
+unchanged, and compile-time function/type exports are not implicitly forwarded. Existing integer/record evidence retains source failures, values and work;
 synthetic module bindings remain ineligible as whole-record inputs. Private initializer
 dependencies stay private. Ordinary module shape and initialization checks still run.
 
@@ -50,7 +53,7 @@ initialization; ordinary storage, captures and dependency initialization order r
 unchanged. Required imported leaves can be used inside functions; ordinary runtime
 module-data capture remains B001.
 
-Composed/conditional emissions and inline required import roots remain unavailable
+Nonmodule/conditional compositions and inline required import roots remain unavailable
 as computed inputs. Helper purity, non-integer/mutable scratch and full required
 evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
 
@@ -139,7 +142,7 @@ Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
 
 ## Still outside this compiler
 
-Whole-record module inputs, composed/conditional export inputs, helper
+Whole-record module inputs, nonmodule/conditional composition inputs, helper
 initializer eligibility, module-data captures, borrowed module storage, package/manifest
 resolution, full required evaluation and generic specialization, public FFI, wider
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
@@ -168,12 +171,16 @@ exports are not runtime record fields and must not be implicitly re-exported.
 
 ## Next steps
 
-1. Export metadata now pairs the original local ID with retained forwarding work.
-   `inputs/records/paths.rs` and `inputs/records.rs` charge it for integer and
-   subrecord reads; direct-export costs remain unchanged. Formatting passed;
-   all 731 library/692 native Rust tests passed. Log:
-   `/tmp/meowy-composed-input-paths.log`. Inspect/stage and commit this prerequisite
-   before implementing composition metadata transfer.
+1. Prerequisite committed as `eb3840e`; all 1423 Rust tests passed. Composition now
+   transfers only a registered module's eligible named inputs and integer primary,
+   retaining source IDs and adding two work visits for the copy/projection. Runtime
+   HIR is unchanged. New native groups cover chains, exact widths, privacy, captures,
+   per-initializer rejection, conditional/nonmodule gates and static export privacy.
+   All four native groups and the library metadata test passed. The metadata test
+   confirms original source IDs, complete module type, unchanged bind/projection HIR,
+   and no new whole-record eligibility. All 732 library/696 native tests passed;
+   log: `/tmp/meowy-composed-inputs-tests.log`. Complete fmt/Clippy and staged
+   checks, then commit this behavior slice before integration coverage.
 2. Complete the composition and integration slices in order, updating this handoff
    after meaningful steps and committing each validated slice.
 3. Keep conditional exports, helper purity, borrowed storage and packages separate.

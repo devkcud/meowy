@@ -98,6 +98,52 @@ impl Checker {
         }
     }
 
+    pub(crate) fn composed_inputs(&mut self, target: usize, stmts: &[hir::Stmt]) -> Result<()> {
+        if !self.input_export(target) {
+            return Ok(());
+        }
+        let Some(hir::Stmt::Bind { value, .. }) = stmts.first() else {
+            return Ok(());
+        };
+        let hir::ExprKind::Local(id) = value.kind else {
+            return Ok(());
+        };
+        let Some(source) = self.exports.get(&id) else {
+            return Ok(());
+        };
+        for stmt in stmts {
+            let hir::Stmt::Emit {
+                id, field, value, ..
+            } = stmt
+            else {
+                continue;
+            };
+            if !self
+                .flow
+                .spend(field.as_ref().map_or(0, String::len) + source.inputs.len() + 1)
+            {
+                return Err(Diagnostic::unsupported(
+                    "module input composition budget exhausted",
+                    value.span,
+                ));
+            }
+            if let Some(name) = field {
+                if let Some(input) = source.inputs.get(name) {
+                    let mut input = *input;
+                    input.work = input.work.saturating_add(2);
+                    self.module.inputs.insert(name.clone(), input);
+                }
+            } else if matches!(value.ty, Type::Int { .. })
+                && let Some((_, input)) = &source.primary
+            {
+                let mut input = input.clone();
+                input.work = input.work.saturating_add(2);
+                self.module.primary = Some((*id, input));
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn export_function(
         &mut self,
         label: Option<&str>,

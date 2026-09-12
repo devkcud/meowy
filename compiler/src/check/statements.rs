@@ -525,6 +525,7 @@ impl Checker {
                     },
                 ));
             }
+            self.composed_inputs(target, &stmts)?;
         } else if let Some(name) = name {
             let ty = value.ty.clone();
             let id = self.local(ty.clone());

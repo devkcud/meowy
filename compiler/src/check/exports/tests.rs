@@ -89,3 +89,67 @@ pub(crate) fn primary_inputs_exclude_effects_mutable_sources_conditionals_and_no
         assert!(check(source).module.primary.is_none(), "{source}");
     }
 }
+
+#[test]
+pub(crate) fn composed_inputs_keep_source_ids_without_changing_runtime_emissions() {
+    use crate::ast::{Expr, ExprKind};
+    use crate::check::{Checker, Value};
+    use crate::hir;
+    let block = |source| {
+        let parsed = crate::parser::parse_documented(source).unwrap();
+        Expr {
+            span: parsed.block.span,
+            kind: ExprKind::Block(parsed.block),
+        }
+    };
+    let mut checker = Checker::new();
+    let (value, source) = checker
+        .module_value(
+            &block(
+                "private<uint8>:2;->private;->width:private;->row:{->n:private};->label:\"ready\"",
+            ),
+            None,
+        )
+        .unwrap();
+    let width = source.inputs["width"];
+    let row = source.inputs["row"];
+    let primary = source.primary.as_ref().unwrap().1.clone();
+    let id = checker.local(value.ty.clone());
+    checker.exports.insert(id, source);
+    checker
+        .declare(
+            "source",
+            Value::FileModule {
+                id,
+                ty: value.ty.clone(),
+            },
+            value.span,
+        )
+        .unwrap();
+    let locals = checker.locals.len();
+    let (facade, exports) = checker.module_value(&block("->source"), None).unwrap();
+    assert_eq!(facade.ty, value.ty);
+    assert_eq!(checker.locals.len(), locals + 1);
+    assert_eq!(exports.inputs.len(), 2);
+    assert_eq!(exports.inputs["width"].id, width.id);
+    assert_eq!(exports.inputs["row"].id, row.id);
+    assert_eq!(exports.inputs["width"].work, width.work + 2);
+    assert_eq!(exports.inputs["row"].work, row.work + 2);
+    assert!(!checker.inputs.contains_key(&id));
+    assert!(!checker.record_inputs.contains_key(&id));
+    assert!(!checker.record_inputs.contains_key(&locals));
+    let (emitted, input) = exports.primary.unwrap();
+    assert_eq!(input.value, primary.value);
+    assert_eq!(input.work, primary.work + 2);
+    let hir::ExprKind::Block(body) = facade.kind else {
+        panic!("module block")
+    };
+    assert_eq!(body.stmts.len(), 5);
+    assert!(
+        matches!(&body.stmts[0], hir::Stmt::Bind { value, .. } if matches!(value.kind, hir::ExprKind::Local(source) if source == id))
+    );
+    assert!(
+        matches!(&body.stmts[1], hir::Stmt::Emit { id, field: None, value, .. } if *id == emitted && matches!(value.kind, hir::ExprKind::Primary(_)))
+    );
+    assert!(body.stmts[2..].iter().all(|stmt| matches!(stmt, hir::Stmt::Emit { field: Some(_), value, .. } if matches!(value.kind, hir::ExprKind::Field { .. }))));
+}
