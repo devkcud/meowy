@@ -105,8 +105,9 @@ Target-dependent properties, such as pointer width and C layout, must be supplie
 by the selected build target. No sample module version or performance measurement
 is implied by a code listing.
 
-The documentation generally uses four-space indentation and omits semicolons at
-line ends; compact examples demonstrate other legal presentations. Gatostyle's
+Follow the [documentation conventions](guide/documentation-style.md): four-space
+indentation, readable punctuation spacing and lowercase `meowy`. Compact examples
+are reserved for explicitly labeled syntax or formatter demonstrations. Gatostyle's
 layout engine preserves structure, while optional coding-style fixes require
 proof that their rewrites preserve behavior. Spaces never select language meaning.
 
