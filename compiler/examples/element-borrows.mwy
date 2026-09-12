@@ -1,15 +1,15 @@
-debug:@"debug"
+debug : @"debug"
 
-values<int32[3]>:=[10,20]
-first:&(values[1])
-same:&(values[1])
-second:&(values[2])
-debug.print(first==same)
-debug.print(first==second)
+values <int32[3]> := [10, 20]
+first : &(values[1])
+same : &(values[1])
+second : &(values[2])
+debug.print(first == same)
+debug.print(first == second)
 debug.print(*second)
 
-pick<&int32>:(items<&int32[3]>,position<usize>){->&(items[position])}
-copy:*(pick(&values,1))
+pick <&int32> : (items <&int32[3]>, position <usize>) { -> &(items[position]) }
+copy : *(pick(&values, 1))
 debug.print(copy)
-values=[30]
+values = [30]
 debug.print(values[1])

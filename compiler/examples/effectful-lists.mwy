@@ -1,11 +1,11 @@
-debug:@"debug"
+debug : @"debug"
 
-count:=0
-values<int8[1]><int16[1]>:[{debug.print("value");count=count+1;->127+1}]
-|values<int16[1]>|debug.print(values[1])
+count := 0
+values <int8[1]><int16[1]> : [{ debug.print("value"); count = count + 1; -> 127 + 1 }]
+| values <int16[1]> | debug.print(values[1])
 debug.print(count)
 
-<Small>:<{value<uint8>}>
-<Wide>:<{value<uint16>}>
-rows<Small[1]><Wide[1]>:[{debug.print("row");->value:300}]
-|rows<Wide[1]>|debug.print(rows[1].value)
+<Small> : <{ value <uint8> }>
+<Wide> : <{ value <uint16> }>
+rows <Small[1]><Wide[1]> : [{ debug.print("row"); -> value : 300 }]
+| rows <Wide[1]> | debug.print(rows[1].value)

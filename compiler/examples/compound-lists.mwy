@@ -1,13 +1,13 @@
-debug:@"debug"
+debug : @"debug"
 
-sum<int8[1]><uint8[1]>:[127+1]
-|sum<uint8[1]>|debug.print(sum[1])
+sum <int8[1]><uint8[1]> : [127 + 1]
+| sum <uint8[1]> | debug.print(sum[1])
 
-negative<int8[1]><int16[1]>:[-(128)]
-|negative<int16[1]>|debug.print(negative[1])
+negative <int8[1]><int16[1]> : [-(128)]
+| negative <int16[1]> | debug.print(negative[1])
 
-flags<boolean[1]><int32[1]>:[false&&(1/0==0)]
-|flags<boolean[1]>|debug.print(flags[1])
+flags <boolean[1]><int32[1]> : [false && (1 / 0 == 0)]
+| flags <boolean[1]> | debug.print(flags[1])
 
-nested<uint8[1][1]><uint16[1][1]>:[[250+10]]
-|nested<uint16[1][1]>|debug.print(nested[1][1])
+nested <uint8[1][1]><uint16[1][1]> : [[250 + 10]]
+| nested <uint16[1][1]> | debug.print(nested[1][1])
