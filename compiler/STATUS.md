@@ -8,11 +8,11 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active commit plan
 
-1. Retain explicit named-export input identities in `check/exports.rs` and
+1. `edcce7e` retains explicit named-export input identities in `check/exports.rs` and
    `check/statements.rs`, reusing integer/record evidence and checked HIR bindings.
    Only direct immutable module emissions qualify; private bindings and synthetic
    module records remain distinct. Verify metadata, effects and conditional gates.
-2. Resolve imported field evidence in `inputs` and `type_values/fields.rs`, including
+2. Implemented imported field evidence in `inputs` and `type_values/fields.rs`, including
    copied integers, projected records and re-exports. Keep ancestor errors/work,
    checked field identities, original file spans and runtime capture gates. Verify
    accepted native execution and relevant rejected inputs together.
@@ -26,10 +26,12 @@ Eligibility belongs to each initializer, so unrelated module initialization effe
 must still run exactly once at runtime but do not disqualify independent exports.
 Primary/composed/conditional exports and helper purity remain separate.
 
-Metadata prerequisite now records only eligible direct immutable named module
-emissions, keyed by exported name and original checked local ID. Existing integer/
-record evidence retains complete initializer work and diagnostic spans. Four focused
-metadata tests passed; all 728 library and 668 native tests passed before commit.
+The metadata prerequisite passed 728 library and 668 native tests. Imported field
+lookup is now implemented through explicit exported IDs, never synthetic module
+record evidence. Copied integers, subrecords, re-exports and function-local required
+reads passed all ten native computed-field groups in both execution profiles.
+Effects, conditional exports, private names and ordinary captures remain rejected.
+The lookup slice passed all 728 library and 669 native tests, plus Clippy.
 
 ## Current compiler slice
 
@@ -151,11 +153,12 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Implement plan slice 2 in `inputs/records/paths.rs`, `inputs.rs`,
-   `inputs/records.rs` and `type_values/fields.rs`. Resolve a module field to its
-   explicit exported input ID; support required leaves and ordinary copies without
-   making synthetic module records eligible. Validate native reads, copies,
-   re-exports, privacy, effects, conditional exports and capture refusal.
-2. Complete integration scenarios and documentation in plan slice 3, then run the
-   full compiler gate and local links. Keep unsupported cases distinct, commit
-   reviewable slices, never push or recreate STEP logs.
+1. Add independent native integration coverage for imported input initialization,
+   original dependency diagnostic spans, ancestor work on each read, and transitive
+   initializer-effect refusal in `tests/native/computed_fields.rs` or a focused
+   companion. Verify check/build produce no initializer output and runtime keeps
+   dependency order and once-only initialization in both profiles.
+2. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs with the
+   bounded named-export capability. Run the full compiler gate and local links.
+   Keep unsupported cases distinct, commit reviewable slices, never push or recreate
+   STEP logs.

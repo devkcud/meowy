@@ -45,13 +45,8 @@ pub(crate) fn computed_fields_do_not_execute_effectful_record_initializers() {
 }
 
 #[test]
-pub(crate) fn computed_fields_keep_imported_data_and_runtime_captures_gated() {
+pub(crate) fn computed_fields_keep_primary_imports_and_runtime_captures_gated() {
     for (source, code) in [
-        ("m:@\"./data.mwy\";<T>:{n:m.width;-><int32>}", "B001"),
-        (
-            "m:@\"./data.mwy\";copy:m.width;<T>:{n:copy;-><int32>}",
-            "E211",
-        ),
         (
             "m:@\"./scalar.mwy\";copy:m+0;<T>:{n:copy;-><int32>}",
             "B001",
@@ -135,18 +130,64 @@ pub(crate) fn nested_records_cannot_drop_ancestor_effects_or_work() {
 }
 
 #[test]
-pub(crate) fn nested_records_keep_imported_values_and_runtime_captures_gated() {
-    for (source, code) in [
-        ("m:@\"./data.mwy\";<T>:{n:m.nested.n;-><int32>}", "B001"),
+pub(crate) fn imported_inputs_support_fields_copies_reexports_and_function_types() {
+    case(
+        "m:@\"./facade.mwy\";alias:m;copy:alias.row.nested;leaf:copy.n;d:@\"debug\";<T>:{n:m.width+leaf;-><int32[n]>};v<T>:[3,7];d.print(v[2]);d.print(m.get());d.print(m.row.nested.n)",
+        &[
+            ("data.mwy", "base<uint8>:2;->width:base*2;->row:{->unused:3;->nested:{->n:width}}"),
+            ("facade.mwy", "m:@\"./data.mwy\";->width:m.width;->row:m.row;->get<int32>:(){<T>:{n:m.row.nested.n;-><int32[n]>};v<T>:[9];->v[1]}"),
+        ],
+    ).runs(b"7\n9\n4\n");
+}
+
+#[test]
+pub(crate) fn imported_inputs_reject_effects_private_names_and_runtime_captures() {
+    for (source, module, code) in [
         (
-            "m:@\"./data.mwy\";alias:m.nested;<T>:{n:alias.n;-><int32>}",
+            "m:@\"./data.mwy\";<T>:{n:m.width;-><int32>}",
+            "d:@\"debug\";->width:{->4;d.print(1)}",
             "E211",
         ),
-        ("row:{->nested:{->n:4}};f<int32>:(){->row.nested.n}", "B001"),
+        (
+            "m:@\"./data.mwy\";copy:m.width;<T>:{n:copy;-><int32>}",
+            "d:@\"debug\";->width:{->4;d.print(1)}",
+            "E211",
+        ),
+        (
+            "m:@\"./data.mwy\";<T>:{n:m.width;-><int32>}",
+            "|true|->width:4",
+            "E211",
+        ),
+        (
+            "m:@\"./data.mwy\";<T>:{n:m.hidden;-><int32>}",
+            "hidden:4;->width:hidden",
+            "E201",
+        ),
+        (
+            "m:@\"./data.mwy\";alias:m.row;<T>:{n:alias.n;-><int32>}",
+            "d:@\"debug\";->row:{->n:4;d.print(1)}",
+            "E211",
+        ),
+        (
+            "m:@\"./data.mwy\";f<int32>:(){->m.row.n}",
+            "->row:{->n:4}",
+            "B001",
+        ),
+        (
+            "m:@\"./data.mwy\";alias:m.row;f<int32>:(){->alias.n}",
+            "->row:{->n:4}",
+            "B001",
+        ),
+        (
+            "row:{->nested:{->n:4}};f<int32>:(){->row.nested.n}",
+            "->width:4",
+            "B001",
+        ),
     ] {
-        let case = case(source, &[("data.mwy", "->nested:{->n:4}")]);
+        let case = case(source, &[("data.mwy", module)]);
         let output = case.command("check", &["--json"]);
         assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
         let error = String::from_utf8_lossy(&output.stderr);
         assert!(
             error.contains(&format!("\"code\":\"{code}\"")),

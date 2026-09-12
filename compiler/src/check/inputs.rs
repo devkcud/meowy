@@ -91,8 +91,8 @@ impl Checker {
                 }
             }
             ExprKind::Field { .. } => {
-                let (id, path) = Self::record_path(expr)?;
-                let source = self.source_record(id, locals)?.field(&path)?;
+                let (id, path) = self.record_path(expr)?;
+                let source = self.field_input(id, &path, locals)?;
                 input.add(&source);
                 source.literal(expr).kind
             }
