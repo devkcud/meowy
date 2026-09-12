@@ -1,11 +1,11 @@
-d:@"debug"
-x:=7
-y:9
-r:={->view:=&x;->count:=0}
+d : @"debug"
+x := 7
+y : 9
+r := { -> view := &x; -> count := 0 }
 d.print(r.*view)
-r.view=&y
-x=8
-r.count=r.count+1
+r.view = &y
+x = 8
+r.count = r.count + 1
 d.print(r.*view)
 d.print(x)
 d.print(r.count)

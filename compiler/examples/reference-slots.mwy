@@ -1,13 +1,13 @@
-debug:@"debug"
+debug : @"debug"
 
-forward<&int32>:(input<&int32>){holder:{->view:input};->holder.view}
-owner:7
-result:'target{
-    scalar:{'target->holder:{->view:&owner;->count:3};->holder.&count}
+forward <&int32> : (input <&int32>) { holder : { -> view : input }; -> holder.view }
+owner : 7
+result : 'target {
+    scalar : { 'target -> holder : { -> view : &owner; -> count : 3 }; -> holder.&count }
     debug.print(*scalar)
 }
 debug.print(result.holder.*view)
-copy:forward(result.holder.view)
+copy : forward(result.holder.view)
 debug.print(*copy)
-scalar:result.holder.&count
+scalar : result.holder.&count
 debug.print(*scalar)
