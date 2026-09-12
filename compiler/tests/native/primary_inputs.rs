@@ -58,11 +58,6 @@ pub(crate) fn primary_inputs_keep_module_records_and_runtime_captures_gated() {
             "->4;->width:2",
             "B001",
         ),
-        (
-            "m:@\"./data.mwy\";copy:m+0;<T>:{n:copy;-><int32>}",
-            "->4;->width:2",
-            "E211",
-        ),
         ("row:{->width:4};f<int32>:(){->row.width}", "->4", "B001"),
     ] {
         let output = case(source, &[("data.mwy", data)]).command("check", &["--json"]);

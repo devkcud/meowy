@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Scalar primary imports passed the complete compiler gate.
-No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Mixed-record primary input work is in progress.
+The previous scalar-primary compiler gate passed; no current failures are known. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -148,16 +148,30 @@ resolution, full required evaluation and generic specialization, public FFI, wid
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
+## Active commit plan
+
+Investigation: mixed modules already retain direct integer emission evidence in
+`Module.primary`. Ordinary arithmetic and integer annotations produce HIR `Primary`
+projections, but input lookup currently rejects record-typed module locals. Required
+materialization also only accepts scalar modules. Type queries must retain the complete
+record; an unannotated record identity is not an implicit scalar scratch value.
+
+1. Extend `inputs.rs` to consume explicit module-primary evidence through checked HIR
+   projections. Include native copied-input, width, effect and capture regressions;
+   preserve ordinary runtime HIR and whole-record ineligibility.
+2. Extend required scalar validation/routing and context-sensitive materialization in
+   `type_values.rs`, `type_values/scalars.rs` and `expressions.rs`. Cover arithmetic,
+   integer annotations, aliases, function-local required reads and record type queries.
+3. Add independent multi-file integration coverage for startup order, silent checking,
+   failures and repeated work, then update the supported compiler guides and root tracker.
+
 ## Next steps
 
-1. Plan integer primary projections of record-valued file modules separately. Start
-   with `inputs.rs::module_integer`, `type_values/scalars.rs`, `type_values.rs` and
-   `expressions.rs` primary projection handling. Reuse explicit primary emission
-   evidence while preserving the complete record type for ordinary values/queries;
-   never treat all module fields as a pure record. Keep named-field effects separate
-   from the primary initializer and preserve exact widths, work and runtime captures.
-   Record reviewable lookup/materialization/native slices before editing. Verify
-   arithmetic/annotated required reads, mixed-field privacy, failures and startup order.
-2. Keep composed/conditional emissions, helper purity, borrowed storage and packages
-   separate. Run focused checks per slice and the full compiler gate for behavior;
-   commit reviewable slices, never push or recreate STEP logs.
+1. Slice 1 passed all 12 primary native groups in debug/release execution cases.
+   Copies preserve widths and named exports; effectful initializers, local-record
+   copies and runtime captures remain rejected. Inspect/stage and commit this slice,
+   then implement required scalar validation and materialization in slice 2.
+2. Complete slices 2 and 3 in order, with focused tests per commit and the complete
+   `python3 -B tools/verify.py --compiler` gate across the series.
+3. Keep composed/conditional emissions, helper purity, borrowed storage and packages
+   separate. Do not push or recreate STEP logs.

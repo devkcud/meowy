@@ -56,6 +56,7 @@ pub(crate) mod leave_references;
 pub(crate) mod list_contexts;
 pub(crate) mod lists;
 pub(crate) mod mixed_headers;
+pub(crate) mod mixed_primary_inputs;
 pub(crate) mod mixed_writes;
 pub(crate) mod mutable_carriers;
 pub(crate) mod mutable_references;

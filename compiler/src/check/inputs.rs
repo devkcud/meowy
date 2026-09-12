@@ -38,7 +38,7 @@ impl Input {
 
 impl Checker {
     pub(crate) fn module_integer(&self, id: usize) -> Option<&Input> {
-        if !matches!(self.locals.get(id), Some(Type::Int { .. })) {
+        if !matches!(Self::primary_type(self.locals.get(id)?), Type::Int { .. }) {
             return None;
         }
         self.exports
@@ -81,6 +81,14 @@ impl Checker {
                     .get(id)
                     .or_else(|| self.inputs.get(id))
                     .or_else(|| self.module_integer(*id))?;
+                input.add(source);
+                source.literal(expr).kind
+            }
+            ExprKind::Primary(value) => {
+                let ExprKind::Local(id) = value.kind else {
+                    return None;
+                };
+                let source = self.module_integer(id)?;
                 input.add(source);
                 source.literal(expr).kind
             }
