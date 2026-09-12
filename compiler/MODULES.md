@@ -181,7 +181,11 @@ widths and complete record ancestor evidence through copies, projections and re-
 Private dependencies stay private. Unrelated module effects do not disqualify a pure
 export, but effects within its initializer do. Check/build never execute initialization;
 ordinary startup ordering, definite initialization and runtime capture gates remain.
-Primary, composed and conditional export inputs remain separate. See
+Scalar integer modules additionally expose eligible direct primary emissions as
+required inputs through the module name. Aliases, arithmetic copies and primary/named
+re-exports retain their original emission evidence. Runtime HIR and constant folding
+remain unchanged. Integer primaries of record-valued modules, composed and conditional
+export inputs remain separate. See
 [the supported input rules](COMPUTED_TYPES.md#imported-immutable-inputs).
 
 ## Source identity and output protection

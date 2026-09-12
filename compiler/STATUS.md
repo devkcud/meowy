@@ -1,42 +1,34 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Named imported immutable inputs passed the complete compiler
-gate. No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Scalar primary imports passed the complete compiler gate.
+No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Active commit plan
+## Commit series
 
-1. `fa3336d` records eligible direct integer primary emissions in `check/exports.rs` and
-   `check/statements.rs`. Retain each checked emission ID and initializer
-   evidence without changing runtime HIR or constant folding. Verify scalar metadata,
-   source errors/work, named exports and conditional/effectful gates.
-2. `c6e13c7` resolves primary inputs through `inputs.rs`, `type_values/scalars.rs` and required
-   materialization in `expressions.rs`. Support named module aliases, arithmetic
-   copies and primary/named re-exports while preserving widths, work charging and
-   runtime capture refusal. Keep implementation and native regressions together.
-3. Add independent native initialization, dependency span and work-budget scenarios.
-4. Update supported-slice documentation and both handoffs; run the full compiler gate.
+1. `fa3336d` — retain scalar primary emission identity and initializer evidence.
+2. `c6e13c7` — resolve scalar primary imports, copies and required materialization.
+3. `10ae3e6` — verify staging, runtime failure and repeated evidence costs.
+4. This documentation handoff records the complete gate and next bounded slice.
 
-Primary metadata now pairs the existing HIR emission ID with its integer evidence.
-Runtime HIR and constant folding are unchanged. The three focused metadata tests and
-all 731 library/673 native tests passed; no failures remain. Only scalar integer
-module values will consume primary metadata. Whole module records, composed/conditional
-primaries, inline roots and helper purity remain separate.
-
-Primary lookup now consumes evidence only for scalar integer module identities.
-The four native primary-input groups and all 731 library/676 native tests passed,
-along with fmt and Clippy. Aliases, re-exports, required function-local types and
-exact-width errors work; runtime captures and mixed module record inputs remain
-rejected. Existing mixed-record copy rejection remains E211. No failures remain.
-
-All nine focused primary-input groups passed, including five new integration groups.
-Check/build remain silent, shared imports initialize once, scoped required extents
-work, transitive effects reject without execution, original dependency E107 spans
-survive, and repeated reads charge full tail work. Runtime startup failures still
-stop the entry in both profiles. No failing checks remain.
+Each implementation/test slice passed focused checks and staged diff inspection
+before commit. Retaining the existing emission identity preserves runtime HIR and
+constant folding.
 
 ## Current compiler slice
+
+`Module.primary` pairs a direct integer emission ID with its checked initializer
+`Input`. Only a module whose complete runtime type is integer can consume this
+metadata. `inputs.rs::module_integer` supplies both ordinary integer-copy evidence
+and required reads. Module aliases and primary/named re-exports keep exact widths,
+errors and work without making a synthetic module record eligible.
+
+`type_values/scalars.rs::required_primary` checks availability; `Work::input` shares
+work/error validation with local and named-field inputs. `expressions.rs` materializes
+a proven primary only inside required roots. Function-local required imports work;
+ordinary runtime module-data captures remain gated. Runtime HIR, constant folding,
+module storage and initialization order are unchanged.
 
 `Module.inputs` maps eligible direct immutable named exports to their original checked
 local IDs. Existing integer/record evidence retains source failures, values and work;
@@ -55,9 +47,9 @@ initialization; ordinary storage, captures and dependency initialization order r
 unchanged. Required imported leaves can be used inside functions; ordinary runtime
 module-data capture remains B001.
 
-Primary/composed/conditional exports and inline import roots remain unavailable as
-computed inputs. Helper purity, non-integer/mutable scratch and full required evaluation
-remain separate. See [COMPUTED_TYPES.md](COMPUTED_TYPES.md#imported-immutable-inputs).
+Integer primaries of record-valued modules, composed/conditional emissions and inline
+required import roots remain unavailable as computed inputs. Helper purity,
+non-integer/mutable scratch and full required evaluation remain separate. See [COMPUTED_TYPES.md](COMPUTED_TYPES.md#imported-immutable-inputs).
 
 Nested records retain unit primaries, immutable integer/record fields, 256 total fields
 and 32 record levels. Declared record aliases retain known errors on unreachable paths;
@@ -68,20 +60,22 @@ computed roots retain their existing profile.
 
 ## Actual validation
 
-- Metadata prerequisite: four focused tests plus all 728 library/668 native tests.
-- Lookup slice: ten native computed-field groups, all 728 library/669 native tests,
-  fmt and Clippy passed. Accepted execution uses debug and release.
-- Integration: all six imported-input groups passed. Check/build are silent; diamond
-  dependencies initialize once in source order. Transitive ancestor effects reject
-  without execution; one retained-work read passes while repeated reads exhaust the
-  bootstrap budget. Dependency E107 spans and imported integer widths remain exact.
+- Metadata: three focused tests and all 731 library/673 native tests passed. Existing
+  HIR emission identity, integer width, tail work and constant folding are preserved.
+- Lookup: four native primary groups and all 731 library/676 native tests passed,
+  alongside fmt and Clippy. Aliases/copies/re-exports/function types work; exact-width
+  arithmetic and ineligible initializer/capture boundaries remain checked.
+- Integration: all nine primary groups passed, including silent check/build, direct
+  required extents and scoped imports, shared dependency initialization once, transitive
+  effect refusal, dependency E107 spans, repeated cached-work charging, and preserved
+  runtime initializer failure before entry. Runtime execution uses both profiles.
 - The dependency-span probe checks ordinary dependency diagnostics; existing local
-  record evidence tests separately cover retained-error provenance.
-- `python3 -B tools/verify.py --compiler`: all 10 checks passed, including fmt,
-  Clippy, build, 728 library/673 native Rust tests (1401 total), 16 tooling/four
+  record/integer tests separately cover retained-error provenance.
+- `python3 -B tools/verify.py --compiler`: all ten checks passed, including fmt,
+  Clippy, build, 731 library/681 native Rust tests (1412 total), 16 tooling/four
   harness Python tests, and existing standalone/multi-file examples in both profiles.
-  Log: `/tmp/meowy-imported-inputs-gate.log`.
-- Conformance: 10 passed, 13 unsupported, 0 failed in debug and release. Unsupported
+  Log: `/tmp/meowy-primary-inputs-gate.log`.
+- Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Unsupported
   cases do not count as language rejections. Local links, 23 catalog records,
   7 schemas/6 examples and whitespace checks passed; external links were not fetched.
 - Backend/runtime code, reference fixtures and dependencies are unchanged. Editor
@@ -143,17 +137,22 @@ Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
 
 ## Still outside this compiler
 
-Primary/composed/conditional export inputs, helper initializer eligibility, module-data
-captures, borrowed module storage, package/manifest resolution, full required evaluation
-and generic
-specialization, public FFI, wider ownership/cleanup, executable networking, public
-artifacts/replay and LSP remain separate. Host execution does not qualify minimum
+Record-valued module primary inputs, composed/conditional export inputs, helper
+initializer eligibility, module-data captures, borrowed module storage, package/manifest
+resolution, full required evaluation and generic specialization, public FFI, wider
+ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
 ## Next steps
 
-1. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs for scalar
-   primary imports. Keep module-record primaries, composed/conditional emissions,
-   inline roots and runtime captures explicitly separate.
-2. Run the complete compiler gate and local links, then commit the documentation
-   handoff. Record the next bounded capability; never push or recreate STEP logs.
+1. Plan integer primary projections of record-valued file modules separately. Start
+   with `inputs.rs::module_integer`, `type_values/scalars.rs`, `type_values.rs` and
+   `expressions.rs` primary projection handling. Reuse explicit primary emission
+   evidence while preserving the complete record type for ordinary values/queries;
+   never treat all module fields as a pure record. Keep named-field effects separate
+   from the primary initializer and preserve exact widths, work and runtime captures.
+   Record reviewable lookup/materialization/native slices before editing. Verify
+   arithmetic/annotated required reads, mixed-field privacy, failures and startup order.
+2. Keep composed/conditional emissions, helper purity, borrowed storage and packages
+   separate. Run focused checks per slice and the full compiler gate for behavior;
+   commit reviewable slices, never push or recreate STEP logs.

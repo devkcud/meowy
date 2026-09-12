@@ -143,10 +143,29 @@ Checking and building never execute these effects. Known failures retain origina
 source spans, and every required read charges retained transitive work again.
 
 Eligible imported leaves can supply required types inside functions without enabling
-ordinary runtime module-data captures. Primary exports, record-composing emissions,
-conditional exports and inline import roots remain outside this input slice. Existing
-module export shape/initialization/privacy checks still apply; mutable or borrowed
-exports, package resolution and helper purity remain separate capabilities.
+ordinary runtime module-data captures. Existing module export shape/initialization/
+privacy checks still apply; mutable or borrowed exports, package resolution and helper
+purity remain separate capabilities.
+
+### Scalar primary imports
+
+A file whose complete runtime value is an integer can also supply its eligible direct
+primary emission. For example, a file containing `base<uint8>:2;->base*2` can be imported
+as `capacity:@"./capacity.mwy"` and read by `<Items>:{-><int32[capacity]>}`. Module aliases,
+arithmetic copies and primary/named re-exports preserve its exact integer width,
+initializer failures and transitive work. Required scratch may read the module name
+itself, including inside functions or after a function-local import.
+
+The checker retains the original primary emission identity and evidence without
+rewriting its runtime HIR or changing constant folding. Each required read charges
+cached initializer work again, including unused statements after the primary inside
+an initializer block. Independent module effects still run once at startup, and
+initializer failure still stops dependent/entry execution. Checking never runs them.
+
+Integer primaries of record-valued modules, record-composing emissions, conditional
+exports and inline required import roots remain outside this slice. Annotated or
+mutable module-identity aliases retain their existing restrictions. Ordinary runtime
+captures remain unavailable; a type-only use does not grant runtime access.
 
 ## Explicit limits
 

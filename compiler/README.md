@@ -36,9 +36,10 @@ list capacity from an eligible immutable integer initializer and constructs reco
 types. Eligibility is tracked separately from constant folding and includes straight-line
 integer blocks and bounded nested immutable integer records. Field paths and subrecord
 aliases retain complete ancestor evidence in computed scratch/extents. Eligible named
-integer/record file exports retain that evidence through imports, copies and re-exports;
-checking never runs module initialization. Primary/composed/conditional export inputs,
-helper calls, non-integer/mutable scratch and full required evaluation remain separate.
+integer/record file exports and scalar integer primary exports retain that evidence
+through imports, copies and re-exports; checking never runs module initialization.
+Record-valued module primaries, composed/conditional export inputs, helper calls,
+non-integer/mutable scratch and full required evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
