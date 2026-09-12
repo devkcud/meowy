@@ -56,7 +56,7 @@ pointees remain unsupported; ordinary local exclusive roots in reset graphs rema
 gated. Direct field acquisition uses this qualifier instead of rejecting an entire
 containing slot because a disjoint sibling is a list. Indexed scalar paths use the
 extension below; indexed SetPath uses the
-[carried-write proof](OWNERSHIP.md#carried-indexed-writes).
+[carried-write proof](docs/OWNERSHIP.md#carried-indexed-writes).
 
 Borrow HIR and containing-slot Acquire events are unchanged. The owner must be
 active and the whole slot initialized before acquisition. Exact field projections
@@ -112,7 +112,7 @@ rejections. Native cases run in debug and release. The
 [carried-element example](examples/exclusive-carried-elements.mwy) mutates nested
 storage with ordered index effects and a disjoint shared list header.
 
-Indexed writes use the [carried-write proof](OWNERSHIP.md#carried-indexed-writes)
+Indexed writes use the [carried-write proof](docs/OWNERSHIP.md#carried-indexed-writes)
 in `loans/control.rs`. Whole-list exclusive values, reference/temporary-derived
 roots, owning elements and exclusive header carriage remain separate. Backend,
 runtime and reference fixtures are unchanged.

@@ -238,8 +238,8 @@ integer and float field borrows are supported when the loan and its descendants
 end before every restart edge; whole-record and other exclusive paths remain gated. The
 [carried record borrow example](examples/carried-record-borrows.mwy) keeps a field
 reborrow across three iterations. See
-[carried record ownership](OWNERSHIP.md#carried-reference-free-records) and
-[shared record borrowing](OWNERSHIP.md#shared-carried-record-borrows).
+[carried record ownership](docs/OWNERSHIP.md#carried-reference-free-records) and
+[shared record borrowing](docs/OWNERSHIP.md#shared-carried-record-borrows).
 The [exclusive carried record example](examples/exclusive-carried-records.mwy)
 mutates a nested field while retaining an independent old copy. Its
 [restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
@@ -254,8 +254,8 @@ and nested element projections retain their owner through inner restarts. Local
 exclusive scalar fields and indexed elements within carried records/lists use the
 restart proof. Indexed writes require whole-slot initialization at capture and
 store, retaining first-list reservations; whole-list exclusive values remain gated. See
-[carried lists](OWNERSHIP.md#carried-reference-free-lists) and
-[shared list borrowing](OWNERSHIP.md#shared-carried-list-borrows). The
+[carried lists](docs/OWNERSHIP.md#carried-reference-free-lists) and
+[shared list borrowing](docs/OWNERSHIP.md#shared-carried-list-borrows). The
 [carried list borrow example](examples/carried-list-borrows.mwy) keeps an element
 view across three iterations after its emitted alias leaves scope. The
 [exclusive list-field example](examples/exclusive-carried-list-fields.mwy) mutates
@@ -463,15 +463,15 @@ implementation work.
   Reassignment changes subsequent reads while earlier copies retain
   their original pointees and call bounds. A live borrow of the reference cell
   blocks reassignment; its final read may occur in the assignment's RHS.
-  [Fixed mutable carriers](OWNERSHIP.md#mutable-borrowed-carriers) include nullable
+  [Fixed mutable carriers](docs/OWNERSHIP.md#mutable-borrowed-carriers) include nullable
   references, records and closed unions, preserving current component activity.
-  [Mutable reference fields](OWNERSHIP.md#mutable-reference-fields) support direct
-  and nested writes on completed fixed records. [Borrowed emitted-name writes](OWNERSHIP.md#borrowed-emitted-alias-writes)
-  synchronize identical backing, an [exact union member](OWNERSHIP.md#widened-borrowed-alias-backing),
-  or [whole union views](OWNERSHIP.md#whole-union-alias-assignment) with explicit tag conversion.
+  [Mutable reference fields](docs/OWNERSHIP.md#mutable-reference-fields) support direct
+  and nested writes on completed fixed records. [Borrowed emitted-name writes](docs/OWNERSHIP.md#borrowed-emitted-alias-writes)
+  synchronize identical backing, an [exact union member](docs/OWNERSHIP.md#widened-borrowed-alias-backing),
+  or [whole union views](docs/OWNERSHIP.md#whole-union-alias-assignment) with explicit tag conversion.
   Restart supports reset or independent slots;
   written published outer result slots enclosing an inner Restart remain gated.
-  [Discarded borrowed aliases](OWNERSHIP.md#discarded-borrowed-alias-writes) retain
+  [Discarded borrowed aliases](docs/OWNERSHIP.md#discarded-borrowed-alias-writes) retain
   ordinary value versions in their transient cells, including through inner Restart.
 - Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
   Returning paths merge their possible values; skipped paths retain their incoming
@@ -707,7 +707,7 @@ conservatively overlap its writes, including views of other fields in its elemen
 Copying a record counts as a use of all its references, even if a later operation
 selects only one field. Direct projection, scalar comparison and scalar-primary
 formatting do not keep unrelated component loans alive.
-See [the storage design](OWNERSHIP.md) for the remaining analysis stages.
+See [the storage design](docs/OWNERSHIP.md) for the remaining analysis stages.
 
 Union literals receive a numeric width when the expected union has one matching
 numeric member. Multiple candidate widths require an explicitly typed value;

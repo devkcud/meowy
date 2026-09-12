@@ -94,7 +94,7 @@ Mutable records containing allocators now participate in the same version and
 restart analysis when their entire shape is free of lists, exclusive references and
 non-Copy constituents. Nested records, closed unions and shared references with
 fixed supported referents are supported. The same machinery supports
-[reference-only mutable carriers](../OWNERSHIP.md#mutable-borrowed-carriers).
+[reference-only mutable carriers](OWNERSHIP.md#mutable-borrowed-carriers).
 This does not enable bounded mutable emitted aliases during record construction.
 A record returned from a function can carry public input bounds into a mutable
 binding, and ordinary field writes can add them after construction.
@@ -162,7 +162,7 @@ synchronize them. Restart supports
 reset or independent slots; written outer result owners enclosing an inner Restart
 remain gated for published results. Discarded reference-bearing aliases retain local
 versions without a result transfer; union-view addresses/field paths and allocator-only
-alias bounds stay gated. See [reference fields](../OWNERSHIP.md#mutable-reference-fields).
+alias bounds stay gated. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
 
 Replacing a carrier releases only loans no longer demanded by its current value.
 Old copies retain their own sources. Reading a reference field keeps its pointee

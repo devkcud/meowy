@@ -4,7 +4,7 @@ The approved syntax reads selection and borrowing from left to right. This is a
 direct grammar change: there are no external users to support and no compatibility
 mode or legacy spelling warning is required. Ownership rules and capability gates
 remain unchanged. All migration stages completed on 2026-09-09;
-[STATUS.md](STATUS.md) records the passing compiler/native/editor evidence.
+[STATUS.md](../STATUS.md) records the passing compiler/native/editor evidence.
 
 ## Grammar
 

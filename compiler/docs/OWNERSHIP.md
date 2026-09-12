@@ -1,6 +1,6 @@
 # Storage and borrow implementation
 
-The language contract is `../docs/reference/memory.md`. This file describes the
+The language contract is `../../docs/reference/memory.md`. This file describes the
 implementation boundary; it does not change language rules.
 
 ## Shared references and loan liveness
@@ -301,7 +301,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   coverage, and lifetime bounds cannot substitute for it. Iteration-local expired
   sources remain terminal across subsequent initializations. The existing part,
   replay and shared-work limits apply without list-capacity expansion.
-- The [mutable-carriers example](examples/mutable-carriers.mwy) alternates an empty
+- The [mutable-carriers example](../examples/mutable-carriers.mwy) alternates an empty
   reference field and a live reference through replacement and Restart. Tests cover
   field RHS/Leave effects, old copies, nullable/nested variants, argument snapshots,
   public bounds, transitive sources, header coverage and remaining storage gates.
@@ -330,7 +330,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   active reads remain E303. Restart preserves nullable activity, required physical
   origin coverage and terminal expired sources. Public input bounds and transitive
   call-entry validation apply to each reference field as before.
-- The [reference-fields example](examples/reference-fields.mwy) changes a field's
+- The [reference-fields example](../examples/reference-fields.mwy) changes a field's
   referent, then updates its former owner. Library and native tests cover constructor
   reads, declared defaults, nested fields, old-copy/sibling loans, RHS/Leave effects,
   current tags, restart, transitive bounds and the emitted-alias write gate.
@@ -363,7 +363,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   remain B001 until surviving result snapshots participate in header merging.
   Ordinary mutable carriers and read-only aliases retain existing restart support.
   No list capacity expansion, representation, syntax or runtime changes are introduced.
-- The [alias-writes example](examples/alias-writes.mwy) replaces an emitted pointer,
+- The [alias-writes example](../examples/alias-writes.mwy) replaces an emitted pointer,
   reads an earlier copy, then updates its former owner. Library/native coverage
   includes selected result loans, branches, Leave, nullable tags, transitive/public
   bounds and exact-backing/Restart gates. All extra paths and snapshots use existing
@@ -392,7 +392,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   their order. A Restart from a RHS skips its outer store and discards the target
   iteration's result. Published result backing must match the alias or one exact
   member; broader union views and bounded allocator-only aliases remain separate work.
-- The [alias-restarts example](examples/alias-restarts.mwy) initializes a fresh
+- The [alias-restarts example](../examples/alias-restarts.mwy) initializes a fresh
   emitted pointer each iteration, changes it, and publishes only the last iteration's
   value. Library/native tests cover named outer emission targets, inner/outer resets,
   independent loops, carried input versions, old copies, expired cells and gates.
@@ -421,7 +421,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   target remains active. Reads or calls cannot bypass E302 conflicts or E303 expiry
   merely because the eventual result is discarded. No owning cleanup or runtime
   representation is added.
-- The [discarded-aliases example](examples/discarded-aliases.mwy) changes a transient
+- The [discarded-aliases example](../examples/discarded-aliases.mwy) changes a transient
   pointer to a target-local value and reads it across an inner restart before Leave.
   Tests distinguish finite, potentially published results from endless or otherwise
   non-completing paths; only proven discarded backing uses this rule. Broader union
@@ -449,7 +449,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   initialization remains gated. Views spanning a
   proper subset of a larger union use the
   whole-assignment conversion below; their addresses and field paths stay gated.
-- The [widened-aliases example](examples/widened-aliases.mwy) replaces a pointer in
+- The [widened-aliases example](../examples/widened-aliases.mwy) replaces a pointer in
   an optional emitted field and preserves the absent path. Library/native tests
   cover declared/inferred backing, heterogeneous references, record payload fields,
   nested nullable tags, old copies, cell loans, escape lifetimes and reset iterations.
@@ -476,7 +476,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   B001 because its lexical tag representation differs from backing. Publication
   reference-bearing initialization across backedges and bounded allocator-only aliases remain separate
   proof work. Type/path copies and member remapping use existing charged budgets.
-- The [union-aliases example](examples/union-aliases.mwy) alternates a nullable
+- The [union-aliases example](../examples/union-aliases.mwy) alternates a nullable
   reference while backing admits an extra string member. Library/native tests cover
   shifted indexes, nested members, old copies, branches/Leave, retained lifetimes,
   declared/inferred backing, reset iterations and address/field/type boundaries.
@@ -519,7 +519,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   an absent slot or reinterpret lexical tags as backing tags.
 - RHS loops finish before their outer store; Leave skips that store while preserving
   earlier writes. Lexical aliases may end before an inner loop while their result
-  owner remains active. The [fixed-published example](examples/fixed-published.mwy)
+  owner remains active. The [fixed-published example](../examples/fixed-published.mwy)
   preserves such a result and releases the replaced source's loan.
 - Changing preinitialized aliases use projection; completing-path aliases use late
   initialization frontiers. Missing or malformed ancestry, snapshots and budget
@@ -554,7 +554,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   remapping and existing budgets are reused. Nullable defaults, RHS evaluation and
   ownership diagnostics remain unchanged. Lists, reference-bearing initialization across backedges,
   union-view addresses/fields, exclusive carriers and owning cleanup remain open.
-- The [changing-published example](examples/changing-published.mwy) prints current
+- The [changing-published example](../examples/changing-published.mwy) prints current
   pointers across iterations, then the old copy and the completed result.
 
 ## Late published aliases
@@ -582,7 +582,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   references still obey E302/E303. Declared scalar and plain record slots can survive a backedge using
   the separate stateful proof below. Reference-bearing lists, union-view
   addresses/fields, allocator-only aliases and owning cleanup remain separate work.
-- The [late-published example](examples/late-published.mwy) runs restart prefixes
+- The [late-published example](../examples/late-published.mwy) runs restart prefixes
   three times, initializes once and preserves an old pointer copy after rebinding.
 
 ## Carried scalar initialization
@@ -609,10 +609,10 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   unproved initialization and exhausted proof remain B001; ordinary E204/E205 cases
   are preserved. Success is a proof over every explored completion, not one witness.
 - Shared address-taking uses the acquisition proof below. Local exclusive scalar
-  borrows additionally require the [restart frontier proof](EXCLUSIVE_RESTARTS.md).
+  borrows additionally require the [restart frontier proof](../EXCLUSIVE_RESTARTS.md).
   Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
   reads, storage allocations, ABI changes or dependencies are added by the analysis.
-- The [carried-scalars example](examples/carried-scalars.mwy) prints one initializer,
+- The [carried-scalars example](../examples/carried-scalars.mwy) prints one initializer,
   three iteration values and the retained field. Stateful reference-bearing
   publications, broader Boolean/value analysis and owning cleanup remain separate work.
 
@@ -635,10 +635,10 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   The extension adds no backend storage, runtime flags, payload reads or cleanup.
 - Shared borrows of original carried record storage and field projections use the
   acquisition and lifetime proof below. Exclusive scalar-field borrows use the
-  [restart frontier proof](EXCLUSIVE_RESTARTS.md#carried-record-fields); whole-record
+  [restart frontier proof](../EXCLUSIVE_RESTARTS.md#carried-record-fields); whole-record
   and non-scalar exclusive borrows remain B001. Ordinary local copies, copied
   completed results and supported scalar sibling loans retain their existing rules.
-- The [carried-records example](examples/carried-records.mwy) executes its
+- The [carried-records example](../examples/carried-records.mwy) executes its
   initializer once and retains both fields across three iterations. Native
   regressions also cover nested unit/scalar members, copies, writes, owner resets,
   Leave, partial panics and rejected incomplete or duplicate initialization in
@@ -665,13 +665,13 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - Shared direct/projected borrows of list-containing carried slots use the
   acquisition and lifetime proof below. Exclusive named Boolean/integer/float
   fields within containing records use the existing
-  [scalar-field restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields).
+  [scalar-field restart proof](../EXCLUSIVE_RESTARTS.md#carried-record-fields).
   Indexed scalar acquisition uses the
-  [carried-element proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  [carried-element proof](../EXCLUSIVE_RESTARTS.md#carried-list-elements).
   Indexed writes use the whole-slot and reservation proof below. Independent
   copies and completed-result locals keep their existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
-  The [carried-lists example](examples/carried-lists.mwy) prints one initializer,
+  The [carried-lists example](../examples/carried-lists.mwy) prints one initializer,
   the old copy's length and the retained updated list. Native output, dynamic bounds,
   owner resets, Leave, partial panics and primary rejections are checked in both
   profiles. No backend, runtime or dependency changes were needed.
@@ -706,7 +706,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   physical first-list regions, capture/store events, phase demand, typed scalar and
   aggregate stores, mutability, captured indices, bounds, final use, owner reset,
   cancellation and shared/exclusive conflicts. Native cases run in both profiles.
-  The [carried-writes example](examples/carried-writes.mwy) combines ordered writes,
+  The [carried-writes example](../examples/carried-writes.mwy) combines ordered writes,
   an independent old copy, a shared header and an exclusive scalar sibling. No
   backend, runtime, dependency or reference-fixture changes were required.
 
@@ -735,14 +735,14 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - Known shared list headers can coexist with supported local exclusive scalar
   sibling loans under the existing complete-header certificate. Genuine call/input
   opacity and exclusive descendants retain their restart gates. Local exclusive
-  scalar list elements use the [restart proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  scalar list elements use the [restart proof](../EXCLUSIVE_RESTARTS.md#carried-list-elements).
   Indexed SetPath uses the [write proof](#carried-indexed-writes). Whole-list exclusive
   values remain separate; nullable, union, reference-bearing and owning carried
   slots retain their shape gates.
 - Ten source/proof groups and seven native groups cover initialization, physical
   paths, parent identity, bounds, cancellation, old copies, final use, owner resets,
   Leave, calls and capability gates in both profiles where applicable. The
-  [carried-list-borrows example](examples/carried-list-borrows.mwy) retains an element
+  [carried-list-borrows example](../examples/carried-list-borrows.mwy) retains an element
   view across three iterations. No backend, runtime or dependency changes were needed.
 
 ## Shared carried record borrows
@@ -767,7 +767,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   calls retain their public input bounds. Exclusive whole-record and non-scalar
   projected borrows remain B001; nullable, union and reference-bearing carried
   shapes are still outside this slice.
-- The [carried-record-borrows example](examples/carried-record-borrows.mwy) retains
+- The [carried-record-borrows example](../examples/carried-record-borrows.mwy) retains
   a field reborrow across three iterations after its alias and parent view leave
   scope. Source/proof tests cover early and inactive acquisition; debug/release
   tests cover whole records, nested projections, address identity, old copies,
@@ -787,7 +787,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   the same static slot cannot revive an old view; reads remain E303. Replacing an
   expired reference before reading it uses the existing overwrite rule. Shared
   last-use checks still reject conflicting slot mutation with E302.
-- The [carried-borrows example](examples/carried-borrows.mwy) retains a view across
+- The [carried-borrows example](../examples/carried-borrows.mwy) retains a view across
   three iterations and replaces it after owner completion. Source and native cases
   cover owner resets, function bounds, Leave, scalar widths and storage identity.
   Exclusive loans that cross backedges, nullable/reference-bearing initialization
@@ -1142,7 +1142,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - The graph enforces shared loans and scalar exclusive permissions. Exclusive
   reference headers, owned payload moves/temporaries, indirect/capturing contracts
   and generated cleanup remain unimplemented. Ordinary scalar/record reads may
-  overlap shared references. See [the scalar design](EXCLUSIVE_REFERENCES.md).
+  overlap shared references. See [the scalar design](../EXCLUSIVE_REFERENCES.md).
 
 ## Loan access records
 
@@ -1432,7 +1432,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 
 ## Next analysis stages
 
-The [exclusive-reference implementation design](EXCLUSIVE_REFERENCES.md) defines
+The [exclusive-reference implementation design](../EXCLUSIVE_REFERENCES.md) defines
 the first scalar slice, required access/authority/initialization facts, retained
 B001 boundaries and future execution criteria. It does not enable `&!` support.
 
@@ -1492,7 +1492,7 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
 
 ## Scalar exclusive function inputs
 
-The [function argument contract](EXCLUSIVE_FUNCTIONS.md) restricts exclusive
+The [function argument contract](../EXCLUSIVE_FUNCTIONS.md) restricts exclusive
 signatures to primitive or bare scalar-reference results and primitive/scalar-reference arguments.
 
 - Caller evaluation captures argument values once, left to right. After every
@@ -1517,7 +1517,7 @@ signatures to primitive or bare scalar-reference results and primitive/scalar-re
 
 ## Guarded scalar reference results
 
-The [result contract](REFERENCE_RETURNS.md) explicitly records candidate argument
+The [result contract](../REFERENCE_RETURNS.md) explicitly records candidate argument
 indexes and guards in `Facts.returns`. Actual origins and captured-parent copy links
 use the same choice. Exclusive results accept only compatible exclusive inputs;
 shared results may use shared or exclusive inputs. Callee-root lifetime and mode
@@ -1537,7 +1537,7 @@ emissions. Carriers and generated destruction remain separate contracts.
 
 ## Anonymous scalar-reference blocks
 
-The [block-result contract](REFERENCE_BLOCKS.md) permits ordinary anonymous scalar
+The [block-result contract](../REFERENCE_BLOCKS.md) permits ordinary anonymous scalar
 reference results and known cancelled anonymous emissions. `loans/control.rs` checks
 result type or explicit cancellation evidence; dispatch BlockIds and named fields
 retain their boundaries. Missing emission/completion evidence is B001.
@@ -1556,7 +1556,7 @@ block typing and actual non-returning effects without changing the backend.
 
 ## Exclusive scalar record fields
 
-The [field contract](EXCLUSIVE_FIELDS.md) admits mutable named scalar fields on
+The [field contract](../EXCLUSIVE_FIELDS.md) admits mutable named scalar fields on
 owned reference-free Copy records. `check/references.rs` produces the original
 root/field Place; shared field lookup retains the selected slot's mutability.
 The existing Borrow HIR, source lifetimes, loan modes and backend addresses are reused.
@@ -1574,7 +1574,7 @@ pointees, owned carriers and generated cleanup remain separate capabilities.
 
 ## Exclusive mutable emitted scalars
 
-The [slot contract](EXCLUSIVE_SLOTS.md) permits direct mutable scalar aliases.
+The [slot contract](../EXCLUSIVE_SLOTS.md) permits direct mutable scalar aliases.
 `Alias.exclusive` records intent until the completed target type is known; exclusive
 backing must equal the declared local type. Shared union-member borrowing retains
 its existing compatibility rule. Proven discarded results retain their typed local
@@ -1613,7 +1613,7 @@ carriers and generated cleanup remain separate capabilities.
 
 ## Owned exclusive scalar elements
 
-The [element contract](EXCLUSIVE_ELEMENTS.md) uses ExclusivePath HIR for owned
+The [element contract](../EXCLUSIVE_ELEMENTS.md) uses ExclusivePath HIR for owned
 scalar-list paths, including named fields, nested indexes and exact-backed emitted
 aliases. The origin and loan passes independently require the existing owner/type
 proof. Private list reservations grant no authority and protect returning index
@@ -1626,7 +1626,7 @@ Lowering captures each actual list length before evaluating its index once and
 reuses initialized-length bounds and element addressing. No runtime ABI changed.
 
 Local exclusive carried scalar paths use the
-[restart extension](EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
+[restart extension](../EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
 before capture and at acquisition, exact mutable scalar source qualification and
 no live exclusive ancestry across reset. Indexed stores use the
 [write proof](#carried-indexed-writes). Element

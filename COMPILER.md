@@ -290,7 +290,7 @@ tests is not enough to qualify their interaction.
 
 ## Borrow and dereference syntax migration
 
-The [pointer syntax migration](compiler/BORROW_SYNTAX.md) completed on 2026-09-09:
+The [pointer syntax migration](compiler/docs/BORROW_SYNTAX.md) completed on 2026-09-09:
 tight prefix `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*`, migrated sources and
 compiler/native/editor checks. Existing ownership and backend representations remain
 unchanged. Resume wider carried-slot capabilities using the new grammar.
