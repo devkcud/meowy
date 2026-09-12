@@ -123,7 +123,12 @@ impl Checker {
                     ));
                 }
                 Value::FileModule { id, ty } => {
-                    if self.required && self.type_work.is_some() && matches!(ty, Type::Int { .. }) {
+                    let primary = Self::primary_type(&ty);
+                    if self.required
+                        && self.type_work.is_some()
+                        && matches!(primary, Type::Int { .. })
+                        && (ty == primary || matches!(expected, Some(Type::Int { .. })))
+                    {
                         let input = self.required_primary(id, expr.span)?;
                         if let Some(error) = input.error {
                             return Err(error);
@@ -137,7 +142,7 @@ impl Checker {
                         })?;
                         return Ok(hir::Expr {
                             kind: hir::ExprKind::Int(value),
-                            ty,
+                            ty: primary,
                             span: expr.span,
                         });
                     }
@@ -475,7 +480,7 @@ impl Checker {
             ExprKind::Name(name) => match self.value(name, expr.span).ok()? {
                 Value::Local { id, ty, .. } => Some(self.refined((id, Vec::new()), &ty)),
                 Value::Constant(value) => Some(Self::constant_expr(value, expr.span).ty),
-                Value::Static { ty, .. } => Some(ty),
+                Value::Static { ty, .. } | Value::FileModule { ty, .. } => Some(ty),
                 _ => None,
             },
             ExprKind::Group(value) => self.hint(value),

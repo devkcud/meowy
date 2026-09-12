@@ -54,9 +54,9 @@ pub(crate) fn primary_inputs_keep_module_records_and_runtime_captures_gated() {
             "B001",
         ),
         (
-            "m:@\"./data.mwy\";<T>:{n:m+0;-><int32>}",
+            "m:@\"./data.mwy\";<T>:{n:m;-><int32>}",
             "->4;->width:2",
-            "B001",
+            "E211",
         ),
         ("row:{->width:4};f<int32>:(){->row.width}", "->4", "B001"),
     ] {

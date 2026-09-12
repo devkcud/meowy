@@ -22,16 +22,16 @@ The root STATUS lists the reviewable commits and preservation audit.
 ## Current compiler slice
 
 `Module.primary` pairs a direct integer emission ID with its checked initializer
-`Input`. Only a module whose complete runtime type is integer can consume this
-metadata. `inputs.rs::module_integer` supplies both ordinary integer-copy evidence
-and required reads. Module aliases and primary/named re-exports keep exact widths,
-errors and work without making a synthetic module record eligible.
+`Input`. `inputs.rs::module_integer` accepts scalar and mixed-record module identities;
+checked HIR primary projections retain that evidence in integer copies and re-exports.
+Synthetic module records remain ineligible as whole-record inputs.
 
-`type_values/scalars.rs::required_primary` checks availability; `Work::input` shares
-work/error validation with local and named-field inputs. `expressions.rs` materializes
-a proven primary only inside required roots. Function-local required imports work;
-ordinary runtime module-data captures remain gated. Runtime HIR, constant folding,
-module storage and initialization order are unchanged.
+Required arithmetic and integer-annotated scratch can project a mixed module's integer
+primary. `expressions.rs` materializes it only with an integer context; full module
+hints preserve record identity for aliases, fields and type queries. Unannotated
+mixed-module scratch and bare mixed-module extents remain unavailable. Function-local
+required reads work; ordinary runtime captures retain B001. Runtime HIR, constant
+folding, storage and initialization order are unchanged.
 
 `Module.inputs` maps eligible direct immutable named exports to their original checked
 local IDs. Existing integer/record evidence retains source failures, values and work;
@@ -50,8 +50,8 @@ initialization; ordinary storage, captures and dependency initialization order r
 unchanged. Required imported leaves can be used inside functions; ordinary runtime
 module-data capture remains B001.
 
-Integer primaries of record-valued modules, composed/conditional emissions and inline
-required import roots remain unavailable as computed inputs. Helper purity,
+Composed/conditional emissions and inline required import roots remain unavailable
+as computed inputs. Helper purity,
 non-integer/mutable scratch and full required evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
 
 Nested records retain unit primaries, immutable integer/record fields, 256 total fields
@@ -142,7 +142,7 @@ Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
 
 ## Still outside this compiler
 
-Record-valued module primary inputs, composed/conditional export inputs, helper
+Whole-record module inputs, composed/conditional export inputs, helper
 initializer eligibility, module-data captures, borrowed module storage, package/manifest
 resolution, full required evaluation and generic specialization, public FFI, wider
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
@@ -167,11 +167,11 @@ record; an unannotated record identity is not an implicit scalar scratch value.
 
 ## Next steps
 
-1. Slice 1 passed all 12 primary native groups in debug/release execution cases.
-   Copies preserve widths and named exports; effectful initializers, local-record
-   copies and runtime captures remain rejected. Inspect/stage and commit this slice,
-   then implement required scalar validation and materialization in slice 2.
-2. Complete slices 2 and 3 in order, with focused tests per commit and the complete
-   `python3 -B tools/verify.py --compiler` gate across the series.
+1. Slice 1 is committed as `533bf22`. Slice 2 passed all 16 primary native groups
+   and the complete Rust suite (731 library/688 native tests). Commit after fmt,
+   Clippy and staged-diff checks, then add independent integration coverage.
+2. Split the remaining work into a native integration commit (startup/failures/work)
+   and a final supported-guide/root handoff commit. Run the complete compiler gate
+   across the series before the final documentation commit.
 3. Keep composed/conditional emissions, helper purity, borrowed storage and packages
    separate. Do not push or recreate STEP logs.

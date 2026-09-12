@@ -187,16 +187,15 @@ impl Checker {
             | ExprKind::Unary { .. }
             | ExprKind::Binary { .. }
             | ExprKind::Call { .. } => true,
-            ExprKind::Name(name) => matches!(
-                self.required_value(name, form.span)?,
-                Value::Static { .. }
-                    | Value::Local { .. }
-                    | Value::Constant(_)
-                    | Value::FileModule {
-                        ty: Type::Int { .. },
-                        ..
-                    }
-            ),
+            ExprKind::Name(name) => match self.required_value(name, form.span)? {
+                Value::Static { .. } | Value::Local { .. } | Value::Constant(_) => true,
+                Value::FileModule { ty, .. } => {
+                    matches!(ty, Type::Int { .. })
+                        || annotation.is_some()
+                            && matches!(Self::primary_type(&ty), Type::Int { .. })
+                }
+                _ => false,
+            },
             ExprKind::Field { .. } => {
                 let saved = std::mem::replace(&mut self.required, true);
                 let symbol = self.symbol(form);

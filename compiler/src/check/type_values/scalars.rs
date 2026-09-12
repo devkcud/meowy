@@ -36,10 +36,9 @@ impl Checker {
                     .as_mut()
                     .unwrap()
                     .input(&self.inputs[&id], expr.span),
-                Value::FileModule {
-                    id,
-                    ty: Type::Int { .. },
-                } => {
+                Value::FileModule { id, ty }
+                    if matches!(Self::primary_type(&ty), Type::Int { .. }) =>
+                {
                     let input = self.required_primary(id, expr.span)?;
                     self.type_work.as_mut().unwrap().input(&input, expr.span)
                 }
