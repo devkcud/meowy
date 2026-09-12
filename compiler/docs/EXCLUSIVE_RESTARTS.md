@@ -20,16 +20,16 @@ The [exclusive-carried example](../examples/exclusive-carried.mwy) initializes a
 result once, mutates its original cell and ends the handle before Restart:
 
 ```meowy
-d:@"debug"
-<R>:<{n<int32>:=}>
-first:=true
-r<R>:'out{
-    'loop{
-        |first|{
-            'out->n:=7
-            p:&!n
-            *p=8
-            first=false
+d : @"debug"
+<R> : <{ n <int32> := }>
+first := true
+r <R> : 'out {
+    'loop {
+        | first | {
+            'out -> n := 7
+            p : &!n
+            *p = 8
+            first = false
             'loop.restart()
         }
     }
@@ -37,7 +37,7 @@ r<R>:'out{
 d.print(r.n)
 ```
 
-Both profiles print `8` followed by a newline. Setting `first=false` after the
+Both profiles print `8` followed by a newline. Setting `first = false` after the
 indirect store is significant: indirect stores and exclusive calls conservatively
 forget Boolean knowledge. The initialization proof does not infer that a scalar
 store cannot affect another flag. Restoring the flag afterward permits proof;

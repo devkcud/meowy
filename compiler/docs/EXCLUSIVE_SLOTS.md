@@ -1,6 +1,6 @@
 # Exclusive borrows of emitted scalar storage
 
-After `->name:=value` initializes a boolean, integer or float slot, `&!name` may
+After `-> name := value` initializes a boolean, integer or float slot, `&!name` may
 borrow its actual storage exclusively. Emitted reference-free Copy records also
 permit scalar-field paths such as `row.inner.&!n`, with a mutable selected field
 even when the alias and enclosing record fields are immutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)

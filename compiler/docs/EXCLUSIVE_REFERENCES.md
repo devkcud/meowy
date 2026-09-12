@@ -34,7 +34,7 @@ local, projected, nested and emitted owners.
 
 These exclusions also apply to authority derived from an exclusive loan when the
 type contains only shared references. For example, `id(&*p)` returning a shared
-reference, `{->view:&*p}` and `s:&*p;cell:&s` need parent-authority propagation that
+reference, `{ -> view : &*p }` and `s : &*p; cell : &s` need parent-authority propagation that
 the current shared call/carrier/reference-cell paths do not supply. Keep those
 boundary crossings B001 initially. Check guarded authority facts as well as types;
 a `has_exclusive(Type)` test alone is insufficient. Flat shared-local copies of a
@@ -197,39 +197,39 @@ native regression groups in both profiles. Wider excluded shapes remain B001.
 
 | Expected after implementation | Source |
 | --- | --- |
-| Accept immutable handle, mutable referent | `x:=1;p:&!x;*p=2;v:*p;x=3` |
-| Accept move to a new holder | `x:=1;p:&!x;q:p;v:*q` |
-| E301 on moved holder | `x:=1;p:&!x;q:p;v:*p` |
-| E301 after discarded consuming use | `x:=1;p:&!x;p;v:*p` |
-| Accept reinitialization | `a:=1;b:=2;p:=&!a;q:p;v:*q;p=&!b;*p=3` |
-| E302 on direct owner read | `x:=1;p:&!x;v:x;w:*p` |
-| E302 on direct owner write | `x:=1;p:&!x;x=2;v:*p` |
-| E302 on competing exclusive acquisition | `x:=1;p:&!x;q:&!x;v:*p;w:*q` |
-| E302 even for unused acquisition | `x:=1;s:&x;p:&!x;v:*s` |
-| Accept shared child then parent write | `x:=1;p:&!x;s:&*p;v:*s;*p=2` |
-| Accept compatible parent read | `x:=1;p:&!x;s:&*p;v:*p;w:*s` |
-| E302 while shared child is needed | `x:=1;p:&!x;s:&*p;*p=2;v:*s` |
-| E302 while a shared child's copy is needed | `x:=1;p:&!x;s:&*p;t:s;*p=2;v:*t` |
-| Accept exclusive child then parent write | `x:=1;p:&!x;q:&!*p;*q=2;v:*q;*p=3` |
-| E302 while exclusive child is needed | `x:=1;p:&!x;q:&!*p;v:*p;w:*q` |
-| Accept authorized RHS read | `x:=1;p:&!x;*p=*p+1` |
-| E302 through the returning store | `x:=1;p:&!x;*p={x=2;->3}` |
-| Accept skipped final store | `'out{x:=1;p:&!x;*p={x=2;'out.leave()}}` |
-| E305 on immutable owner | `x:1;p:&!x` |
-| E303 after owner scope | `a:=1;p:=&!a;{b:=2;p=&!b};v:*p` |
-| Accept parent authority transfer when proved | `x:=1;p:&!x;s:&*p;q:p;v:*s;*q=2` |
-| Accept captured target despite handle replacement | `a:=1;b:=2;p:=&!a;*p={p=&!b;->3};v:a;w:*p` |
-| E301 through grouping | `x:=1;p:&!x;q:(p);v:*p` |
-| E301 through ascription | `x:=1;p:&!x;q:p<&!int32>;v:*p` |
+| Accept immutable handle, mutable referent | `x := 1; p : &!x; *p = 2; v : *p; x = 3` |
+| Accept move to a new holder | `x := 1; p : &!x; q : p; v : *q` |
+| E301 on moved holder | `x := 1; p : &!x; q : p; v : *p` |
+| E301 after discarded consuming use | `x := 1; p : &!x; p; v : *p` |
+| Accept reinitialization | `a := 1; b := 2; p := &!a; q : p; v : *q; p = &!b; *p = 3` |
+| E302 on direct owner read | `x := 1; p : &!x; v : x; w : *p` |
+| E302 on direct owner write | `x := 1; p : &!x; x = 2; v : *p` |
+| E302 on competing exclusive acquisition | `x := 1; p : &!x; q : &!x; v : *p; w : *q` |
+| E302 even for unused acquisition | `x := 1; s : &x; p : &!x; v : *s` |
+| Accept shared child then parent write | `x := 1; p : &!x; s : &*p; v : *s; *p = 2` |
+| Accept compatible parent read | `x := 1; p : &!x; s : &*p; v : *p; w : *s` |
+| E302 while shared child is needed | `x := 1; p : &!x; s : &*p; *p = 2; v : *s` |
+| E302 while a shared child's copy is needed | `x := 1; p : &!x; s : &*p; t : s; *p = 2; v : *t` |
+| Accept exclusive child then parent write | `x := 1; p : &!x; q : &!*p; *q = 2; v : *q; *p = 3` |
+| E302 while exclusive child is needed | `x := 1; p : &!x; q : &!*p; v : *p; w : *q` |
+| Accept authorized RHS read | `x := 1; p : &!x; *p = *p + 1` |
+| E302 through the returning store | `x := 1; p : &!x; *p = { x = 2; -> 3 }` |
+| Accept skipped final store | `'out { x := 1; p : &!x; *p = { x = 2; 'out.leave() } }` |
+| E305 on immutable owner | `x : 1; p : &!x` |
+| E303 after owner scope | `a := 1; p := &!a; { b := 2; p = &!b }; v : *p` |
+| Accept parent authority transfer when proved | `x := 1; p : &!x; s : &*p; q : p; v : *s; *q = 2` |
+| Accept captured target despite handle replacement | `a := 1; b := 2; p := &!a; *p = { p = &!b; -> 3 }; v : a; w : *p` |
+| E301 through grouping | `x := 1; p : &!x; q : (p); v : *p` |
+| E301 through ascription | `x := 1; p : &!x; q : p<&!int32>; v : *p` |
 
 Use scalar function parameters for unknown branch conditions. The first program
 reports E309; reinitializing `p` after the move inside that branch must accept:
 
 ```meowy
-f<null>:(flag<boolean>) {
-    a:=1;b:=2;p:=&!a
-    |flag|{q:p;v:*q}
-    v:*p
+f <null> : (flag <boolean>) {
+    a := 1; b := 2; p := &!a
+    | flag | { q : p; v : *q }
+    v : *p
 }
 ```
 
@@ -238,18 +238,18 @@ normal completion initializes a new value. Moving and reinitializing before an
 unconditional Leave must accept.
 
 ```meowy
-f<null>:(flag<boolean>) {
-    a:=1;b:=2;p:=&!a
+f <null> : (flag <boolean>) {
+    a := 1; b := 2; p := &!a
     'out {
-        |flag|{q:p;v:*q;'out.leave()}
-        p=&!b
+        | flag | { q : p; v : *q; 'out.leave() }
+        p = &!b
     }
-    v:*p
+    v : *p
 }
 ```
 
-Short-circuit criteria must include E309 after `flag&&{q:p;->*q>0}` when `p` is
-then read, and acceptance after `false&&{q:p;->*q>0}` because that RHS never moves
+Short-circuit criteria must include E309 after `flag && { q : p; -> *q > 0 }` when `p` is
+then read, and acceptance after `false && { q : p; -> *q > 0 }` because that RHS never moves
 it. Complementary guards must allow a move under `flag` and use of the original
 holder only under `!flag`. A child created after conditional owner replacement
 must suspend exactly the guarded parent alternatives, preserving safe writes to

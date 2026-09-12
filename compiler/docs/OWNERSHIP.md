@@ -948,15 +948,15 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   summaries transfer on demand. Calls inside the initializer still validate all
   active input origins and bounds.
 - A direct dereference copies contents while the temporary cell is alive. The copy
-  can retain a surviving owner's reference afterward: `copy:*(&(&owner));value:*copy`.
+  can retain a surviving owner's reference afterward: `copy : *(&(&owner)); value : *copy`.
   Keeping the temporary-cell
   address instead still expires at its statement boundary. Public call results
   retain their all-input bounds, so calling through a temporary reference cell does
   not gain the direct-copy lifetime exemption.
 - Materialization preserves ordinary operand typing. An unannotated integer
-  literal defaults to int32, so `view<&uint8>:&1` reports E207; an incompatible
+  literal defaults to int32, so `view <&uint8> : &1` reports E207; an incompatible
   function argument retains E212. Use a typed result such as
-  `&{byte<uint8>:1;->byte}`. Borrowing and narrowing ascriptions do not convert a
+  `&{ byte <uint8> : 1; -> byte }`. Borrowing and narrowing ascriptions do not convert a
   cell's chosen storage type.
 - Each original source statement gets a StatementId. A HIR `Statement` wrapper
   is emitted only when that statement materializes a temporary. Generated
@@ -970,8 +970,8 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   reports E303. Storing a borrow does not extend the owner's lifetime.
 - An outer statement's temporary can be used by a nested call or dispatch chain.
   A temporary created in an inner binding/emission statement cannot escape that
-  statement through the block's completed result. In particular, `*(&{->1})` is
-  valid, while `*({->&{->1}})` and `*({p:&1;->p})` report E303.
+  statement through the block's completed result. In particular, `*(&{ -> 1 })` is
+  valid, while `*({ -> &{ -> 1 } })` and `*({ p : &1; -> p })` report E303.
 - Field and index borrows keep the entire computed temporary root, then project
   its actual storage. Static known list lengths retain E101; dynamic bounds keep
   P001 and evaluate before address formation. Named places and shared-reference

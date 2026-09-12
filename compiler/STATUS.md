@@ -7,8 +7,9 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active documentation consistency work
 
-Latest validated formatting group: Space compiler module and computed type documentation. Tokens, literal/comment contents and
+Latest validated formatting group: Space compiler borrowing documentation examples. Tokens, literal/comment contents and
 statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+
 
 The root handoff tracks lowercase project naming and spaced reader examples. The
 API renderer title/header/footer now use `meowy`; its existing rendering regression
