@@ -85,6 +85,8 @@ pub(crate) fn mixed_primary_required_reads_preserve_widths_privacy_and_capture_g
         ("<T>:{n<int32>:m;-><int32>}", "E207"),
         ("<T>:{n:m+wide;-><int32>}", "E213"),
         ("<T>:{n:m;-><int32>}", "E211"),
+        ("<T>:{-><int32[m]>}", "E104"),
+        ("<T>:{n<(m<>)>:m;-><int32>}", "B001"),
         ("<T>:{n:m.private;-><int32>}", "E201"),
         ("<T>:{n:m.label;-><int32>}", "B001"),
         ("f<uint8>:(){<T>:{n<uint8>:m;-><int32>};->m+0}", "B001"),
@@ -120,5 +122,144 @@ pub(crate) fn mixed_primary_required_reads_reject_unproven_initializers() {
             let error = String::from_utf8_lossy(&output.stderr);
             assert!(error.contains("\"code\":\"E211\""), "{data}: {error}");
         }
+    }
+}
+
+#[test]
+pub(crate) fn mixed_primary_imports_separate_named_effects_and_initialize_diamonds_once() {
+    let case = case(
+        "a:@\"./a.mwy\";b:@\"./b.mwy\";d:@\"debug\";<T>:{n<uint8>:a;-><int32[n+b.width]>};v<T>:[7];d.print(\"entry\");d.print(v[1]);d.print(a.label)",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";d.print(\"data\");base<uint8>:4;->base;->label:{d.print(\"label\");->\"ready\"};d.print(\"tail\")",
+            ),
+            (
+                "a.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";d.print(\"a\");->m+0;->label:m.label",
+            ),
+            (
+                "b.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";d.print(\"b\");->width:m+0",
+            ),
+        ],
+    );
+    for action in ["check", "build"] {
+        for profile in ["debug", "release"] {
+            let output = case.command(action, &["--profile", profile]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+        }
+    }
+    case.runs(b"data\nlabel\ntail\na\nb\nentry\n7\nready\n");
+}
+
+#[test]
+pub(crate) fn mixed_primary_imports_charge_original_tail_work_through_reexports() {
+    let tail = (1..40)
+        .map(|id| format!("v{id}:v{}+1;", id - 1))
+        .collect::<String>();
+    let data = format!("->{{->4;v0:1;{tail}}};->label:\"ready\"");
+    let files = [
+        ("data.mwy", data.as_str()),
+        ("facade.mwy", "m:@\"./data.mwy\";->m+0;->label:m.label"),
+    ];
+    let output = case(
+        "m:@\"./facade.mwy\";<T>:{n<int32>:m;-><int32[n]>};<U>:{-><int32[m+0]>}",
+        &files,
+    )
+    .command("check", &["--json"]);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for values in ["a:m+0;b:m+0", "a<int32>:m;b<int32>:m", "a:copy;b:copy"] {
+        let source = format!("m:@\"./facade.mwy\";copy:m+0;<T>:{{{values};-><int32>}}");
+        let output = case(&source, &files).command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"B001\""), "{error}");
+        assert!(error.contains("computed type bootstrap budget"), "{error}");
+    }
+}
+
+#[test]
+pub(crate) fn mixed_primary_imports_preserve_dependency_errors_and_refuse_transitive_effects() {
+    for (data, code) in [
+        (
+            "#é🙂#\nbase<uint8>:255;->{->4;unused<uint8>:base+1};->label:\"ready\"",
+            "E107",
+        ),
+        (
+            "d:@\"debug\";->{->4;d.print(\"must not run\")};->label:\"ready\"",
+            "E211",
+        ),
+    ] {
+        let case = case(
+            "m:@\"./facade.mwy\";<T>:{n<int32>:m;-><int32[n]>}",
+            &[
+                ("data.mwy", data),
+                (
+                    "facade.mwy",
+                    "m:@\"./data.mwy\";copy:m+0;->copy;->label:m.label",
+                ),
+            ],
+        );
+        for action in ["check", "build", "run"] {
+            let output = case.command(action, &["--json"]);
+            assert_eq!(output.status.code(), Some(1));
+            assert!(output.stdout.is_empty());
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(error.contains(&format!("\"code\":\"{code}\"")), "{error}");
+            if code == "E107" {
+                assert!(
+                    error.contains(&format!(
+                        "\"path\":\"{}\"",
+                        case.path.join("data.mwy").display()
+                    )),
+                    "{error}"
+                );
+                assert!(
+                    error.contains(&format!("\"start\":{}", data.find("base+1").unwrap())),
+                    "{error}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+pub(crate) fn mixed_primary_imports_keep_runtime_failure_before_dependent_initialization() {
+    let case = case(
+        "m:@\"./facade.mwy\";<T>:{n<int32>:m;-><int32[n]>};d:@\"debug\";d.print(\"entry must not run\")",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";->4;->label:{stop<boolean>:(){->true};d.print(\"init\");|stop()|d.panic(\"stop\");->\"ready\"}",
+            ),
+            (
+                "facade.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";d.print(\"facade must not run\");->m+0;->label:m.label",
+            ),
+        ],
+    );
+    for profile in ["debug", "release"] {
+        let checked = case.command("check", &["--profile", profile]);
+        assert!(
+            checked.status.success(),
+            "{}",
+            String::from_utf8_lossy(&checked.stderr)
+        );
+        assert!(checked.stdout.is_empty());
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(output.stdout, b"init\n");
+        assert!(String::from_utf8_lossy(&output.stderr).starts_with("panic[P006]: stop"));
     }
 }

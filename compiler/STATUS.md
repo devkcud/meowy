@@ -167,9 +167,13 @@ record; an unannotated record identity is not an implicit scalar scratch value.
 
 ## Next steps
 
-1. Slice 1 is committed as `533bf22`. Slice 2 passed all 16 primary native groups
-   and the complete Rust suite (731 library/688 native tests). Commit after fmt,
-   Clippy and staged-diff checks, then add independent integration coverage.
+1. Slices 1/2 are committed as `533bf22`/`fdc2cd7`; all 16 primary groups,
+   731 library/688 native tests, fmt and Clippy passed. Four new integration groups
+   now cover named initializer effects, startup diamonds, cached tail work,
+   dependency diagnostics, transitive effect refusal and startup panic. Run these
+   focused checks and all 20 primary groups passed, including explicit
+   bare-extent/record-scratch rejection boundaries. Formatting passed; inspect/stage
+   and commit slice 3, then update guides and run the final compiler gate.
 2. Split the remaining work into a native integration commit (startup/failures/work)
    and a final supported-guide/root handoff commit. Run the complete compiler gate
    across the series before the final documentation commit.
