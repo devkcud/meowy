@@ -146,14 +146,14 @@ sender and receiver configuration plus a concrete service; it is not a runnable
 bootstrap program:
 
 ```meowy
-net:@"net"
+net : @"net"
 
-spec:net.peer()
+spec : net.peer()
     .transport(net.tcp(transport))
     .sender(net.http.sender(outgoing))
-    .receiver(net.http.receiver(service,incoming))
+    .receiver(net.http.receiver(service, incoming))
 
-started:spec.start(allocator,limits)
+started : spec.start(allocator, limits)
 ```
 
 The caller must handle the startup result before using the active peer. Omitting

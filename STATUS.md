@@ -7,8 +7,9 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Active documentation work
 
-Latest validated formatting group: Space language syntax and type documentation. Tokens, literal/comment contents and
+Latest validated formatting group: Space standard library documentation examples. Tokens, literal/comment contents and
 statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+
 
 
 Standardize the project name as `meowy` and use the existing spaced gatostyle

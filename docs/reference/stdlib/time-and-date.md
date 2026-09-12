@@ -8,7 +8,7 @@ Both are foundational modules. Their names, units, months, and policy values are
 ordinary bindings; neither module adds syntax or reserved words.
 
 The ergonomics take inspiration from [Go's time package](https://pkg.go.dev/time).
-Meowy keeps monotonic instants and civil timestamps in separate types, with
+meowy keeps monotonic instants and civil timestamps in separate types, with
 explicit storage and typed failures. Duration operations are ordinary calls,
 so they also compose through dispatch without adding operator overloading.
 
@@ -75,7 +75,7 @@ retention : time.Week.scale(2)
 deadline : time.after(time.Second)
 ```
 
-Meowy has no implicit operator overloading. `time.Hour.scale(2)` keeps a duration
+meowy has no implicit operator overloading. `time.Hour.scale(2)` keeps a duration
 typed as a duration; `2 * time.Hour` is not numeric multiplication. Each duration
 member has an equivalent module function: `time.scale(time.Hour, 2)` and
 `time.Hour.(time.scale, 2)` call the same operation. Aliasing those functions or

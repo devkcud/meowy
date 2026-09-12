@@ -57,7 +57,7 @@ with explicit fixtures, failure expectations, and case-process budgets.
 
 In API tables, `T` is a compile-time type parameter and `N` is a compile-time
 capacity. Names such as `K` and `V` are independent type parameters, as in
-`collections.Map<K,V>`; [generic declarations](../types.md#multiple-type-parameters)
+`collections.Map<K, V>`; [generic declarations](../types.md#multiple-type-parameters)
 explain how to declare your own types and functions with several parameters.
 `T or Error` denotes a concrete union, written `<T><Error>` in source.
 `&T` borrows and `&!T` borrows exclusively. An unborrowed non-copyable argument

@@ -215,7 +215,7 @@ server/client feature of this API.
 | `net.http.json<T>()` | Existing typed JSON schema and a `json.Document<T>` on decode |
 | `net.http.form<T>()` | Bounded URL-encoded fields through declared scalar parsers |
 | `net.http.multipart(spec)` | Bounded streaming parts with explicit per-part descriptors |
-| `net.http.map_codec<T,U>(base, encode, decode)` | Checked mappings between domain T and the base codec's declared wire type U |
+| `net.http.map_codec<T, U>(base, encode, decode)` | Checked mappings between domain T and the base codec's declared wire type U |
 
 Only supported [JSON schemas](json.md#typed-schemas-and-numbers) are accepted by
 `net.http.json<T>()`. HTTP does not add arbitrary JSON union decoding, annotations or
@@ -247,30 +247,30 @@ is inferred by constructing a router.
 The following is source using the specified API, not a bootstrap-executable example:
 
 ```meowy
-net:@"net"
+net : @"net"
 
 #| A public user representation. |#
-<User>:<{id<uint64>;name<string>}>
-<Missing>:<{code<string>;message<string>}>
-<UserPath>:<{id<uint64>}>
+<User> : <{ id <uint64>; name <string> }>
+<Missing> : <{ code <string>; message <string> }>
+<UserPath> : <{ id <uint64> }>
 
-find:net.http.route({
-    ->method:net.http.Get
-    ->path:"/users/{id}"
-    ->params:net.http.fields<UserPath>()
-    ->responses:{
-        ->found:net.http.reply(200,net.http.json<User>())
-        ->missing:net.http.reply(404,net.http.json<Missing>())
+find : net.http.route({
+    -> method : net.http.Get
+    -> path : "/users/{id}"
+    -> params : net.http.fields<UserPath>()
+    -> responses : {
+        -> found : net.http.reply(200, net.http.json<User>())
+        -> missing : net.http.reply(404, net.http.json<Missing>())
     }
 })
 
 #| Finds a user from a decoded, validated identifier. |#
-handle<find.Reply>:(request<&find.Request>){
-    ->find.reply.found({->id:request.params.id;->name:"Mochi"})
+handle <find.Reply> : (request <&find.Request>) {
+    -> find.reply.found({ -> id : request.params.id; -> name : "Mochi" })
 }
 
-app:net.http.router({->routes:{->get_user:find}})
-service:app.bind({->get_user:handle})
+app : net.http.router({ -> routes : { -> get_user : find } })
+service : app.bind({ -> get_user : handle })
 ```
 
 `net.http.route`, codec descriptors and `net.http.router` are pure compile-time constructors

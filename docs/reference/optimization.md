@@ -192,7 +192,7 @@ Useful source-level changes are concrete:
   destructors. Allocator selection does not waive the borrow checker.
 
 The system allocator may retain freed blocks or thread caches for reuse. Releasing
-an owner therefore need not immediately reduce RSS. Meowy's `memory.heap` does not
+an owner therefore need not immediately reduce RSS. meowy's `memory.heap` does not
 name a particular libc allocator or promise its tuning knobs. Backend-specific
 policies must be documented and recorded by the selected runtime. For an example
 of such policies, see [glibc allocation tunables](https://sourceware.org/glibc/manual/latest/html_node/Memory-Allocation-Tunables.html).
@@ -320,7 +320,7 @@ worker settings affect the application, not these compiler jobs.
 [ThinLTO and backend parallelism](https://clang.llvm.org/docs/ThinLTO.html#controlling-backend-parallelism)
 
 Identical-code folding merges equivalent machine-code sections only when identity
-is unobservable and relocations/behavior agree. Meowy permits safe folding; it
+is unobservable and relocations/behavior agree. meowy permits safe folding; it
 does not offer a mode that changes observable function-pointer equality or native
 callback identity. Missing address-significance information must be treated
 conservatively. Identical bytes alone are insufficient proof.
@@ -395,7 +395,7 @@ without proof that it cannot fail.
 resolution. `static` requires a self-contained executable with respect to native
 loader/shared-library dependencies; if the target or an explicit native input
 cannot satisfy that, the build fails. `shared` uses the selected target's shared
-runtime dependencies and records their loader/ABI requirements. Meowy package
+runtime dependencies and records their loader/ABI requirements. meowy package
 code still follows reachability; this option does not introduce a monolithic
 shared standard-library dependency containing every package.
 
@@ -502,7 +502,7 @@ after owners are released. [Linux process-memory measurements](https://docs.kern
 
 ## Under severe memory pressure
 
-Meowy can report an allocator's refusal as `memory.AllocationFailure`, preserve
+meowy can report an allocator's refusal as `memory.AllocationFailure`, preserve
 the rejected value where the API promises it, and unwind a recoverable panic.
 It cannot guarantee that an operating system will deliver memory pressure as a
 recoverable allocation result. Linux can accept a reservation and fail when pages
@@ -564,7 +564,7 @@ ENTRYPOINT ["/app"]
 
 Use that only after verifying the installed closure: `scratch` supplies neither
 a dynamic loader nor system libraries, certificate bundles, configuration files,
-or other application data. Meowy's bundled zone/calendar rules follow the
+or other application data. meowy's bundled zone/calendar rules follow the
 reachability rules above; that does not satisfy unrelated foreign-library data
 dependencies. A shared-linked executable instead needs a compatible runtime base
 or an explicitly assembled loader/library tree.

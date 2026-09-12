@@ -304,8 +304,8 @@ argv borrows cannot be sent as non-static external borrows through a channel.
 The grant does not make those views static. These errors have no ordinary
 equality unless their own chapter explicitly grants it; inspect promised facts.
 
-`collections.Full<T,N>`, `Missing<T,N>`, `PushFailure<T>`, `Duplicate<K,V>`,
-`InsertFailure<K,V>`, `channel.Rejected<T>`, `channel.Full<T>`,
+`collections.Full<T, N>`, `Missing<T, N>`, `PushFailure<T>`, `Duplicate<K, V>`,
+`InsertFailure<K, V>`, `channel.Rejected<T>`, `channel.Full<T>`,
 `dynamic.BoxFailure<T>`, and `errors.BoxFailure<E>` derive each of these three
 capabilities from every retained type argument. Their additional numeric facts
 and allocation-failure causes impose no further restriction. Retained owners

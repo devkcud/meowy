@@ -62,7 +62,7 @@ binding's access promise; C `const` does not create a separate ABI representatio
 | Raw data pointer `*T` or `*!T`, for an admissible native object type `T` | Yes                               | Yes              | Yes                   |
 | `*null`, `*!null`                                                        | Yes, as `const void *` / `void *` | Yes              | Yes                   |
 | Type constructed by `ffi.record("C", fields)`                            | Yes, by value                     | Yes, by value    | Yes, inline           |
-| `collections.Array<T,N>` with native element type and positive `N`       | No                                | No               | Yes, inline C array   |
+| `collections.Array<T, N>` with native element type and positive `N`       | No                                | No               | Yes, inline C array   |
 | `null`                                                                   | No                                | Yes, as C `void` | No                    |
 | Every other type                                                         | No                                | No               | No                    |
 
@@ -78,7 +78,7 @@ void-pointer type, not a safe reference or a `null` literal coercion. The
 [raw-pointer operations](memory.md#raw-pointer-values) explicitly construct null
 pointers, expose borrowed data addresses, test for null, and reinterpret raw
 pointer types. The admissibility table does not manufacture a valid address.
-Meowy code cannot treat a `*null` pointer as an initialized zero-sized object.
+meowy code cannot treat a `*null` pointer as an initialized zero-sized object.
 Native function-pointer types and C callbacks are outside this profile.
 
 `ffi.record` requires at least one uniquely named field. The ordered field list
