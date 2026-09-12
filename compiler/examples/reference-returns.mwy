@@ -1,21 +1,21 @@
-debug:@"debug"
+debug : @"debug"
 
-choose<&!int32>:(left<&!int32>,right<&!int32>,flag<boolean>){
-    |flag|->left
-    |!flag|->right
+choose <&!int32> : (left <&!int32>, right <&!int32>, flag <boolean>) {
+    | flag | -> left
+    | !flag | -> right
 }
-shared<&int32>:(view<&int32>){->view}
+shared <&int32> : (view <&int32>) { -> view }
 
-left:=7
-right:=9
-first:&!left
-second:&!right
-selected:choose(&!*first,&!*second,false)
-*selected=10
+left := 7
+right := 9
+first : &!left
+second : &!right
+selected : choose(&!*first, &!*second, false)
+*selected = 10
 debug.print(*selected)
-*first=8
+*first = 8
 debug.print(*first)
-view:shared(second)
+view : shared(second)
 debug.print(*view)
-*second=11
+*second = 11
 debug.print(*second)

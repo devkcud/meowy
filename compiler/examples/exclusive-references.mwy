@@ -1,21 +1,21 @@
-debug:@"debug"
-value:=7
-view:&!value
-*view=*view+1
-shared:&*view
+debug : @"debug"
+value := 7
+view : &!value
+*view = *view + 1
+shared : &*view
 debug.print(*shared)
-next:view
-child:&!*next
-*child=9
+next : view
+child : &!*next
+*child = 9
 debug.print(*child)
-*next=10
+*next = 10
 debug.print(*next)
-other:=20
-pointer:=&!value
-*pointer={pointer=&!other;->11}
+other := 20
+pointer := &!value
+*pointer = { pointer = &!other; -> 11 }
 debug.print(value)
 debug.print(*pointer)
-'out{
-    *pointer={other=21;'out.leave()}
+'out {
+    *pointer = { other = 21; 'out.leave() }
 }
 debug.print(other)

@@ -1,19 +1,19 @@
-debug:@"debug"
-owner:=7
-parent:&!owner
-shared:{->&*parent}
+debug : @"debug"
+owner := 7
+parent : &!owner
+shared : { -> &*parent }
 debug.print(*shared)
-result:'pick{
-    child:&!*parent
-    ->child
+result : 'pick {
+    child : &!*parent
+    -> child
     debug.print("ready")
     'pick.leave()
 }
-*result=8
+*result = 8
 debug.print(*result)
-*parent=9
+*parent = 9
 debug.print(*parent)
-'abort{
-    discarded:{->parent;owner=10;'abort.leave()}
+'abort {
+    discarded : { -> parent; owner = 10; 'abort.leave() }
 }
 debug.print(owner)
