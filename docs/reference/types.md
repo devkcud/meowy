@@ -156,7 +156,7 @@ other <(name<>)> : "Ada"
 
 The `<(expression)>` form evaluates a type-producing compile-time expression
 inside an explicit annotation delimiter. The example can therefore also be
-written `other<(name<>)>:"Ada"`. It does not evaluate `name` at runtime. Type
+written `other <(name<>)> : "Ada"`. It does not evaluate `name` at runtime. Type
 subtraction can appear inside the same form, as in `<(value<>!<null>)>`.
 
 A query at a refined program point observes the refined type. Queries cannot be
@@ -307,8 +307,8 @@ generic type. Use a type alias when supplying a union:
 <OptionalStatusRecord> : <D<string, uint32, boolean, MaybeStatus>>
 ```
 
-`D<K,V,Y,Z>` describes four parameter positions; `<K><V><Y><Z>` instead describes
-one union. A union argument occupies one position. `<D<K,V,Y,Z>>` remains a
+`D<K, V, Y, Z>` describes four parameter positions; `<K><V><Y><Z>` instead describes
+one union. A union argument occupies one position. `<D<K, V, Y, Z>>` remains a
 structural alias after substitution: its parameter list does not add a hidden
 nominal tag, erase fields, introduce variance, or perform conversions.
 
@@ -319,7 +319,7 @@ declaration with a private alias and no spaces:
 <D<:K,:V,:Y,:Z>>:<{key<K>;value<V>;context<Y>;status<Z>}>
 ```
 
-These are **type** binders. Library APIs such as `collections.Array<T,N>` also
+These are **type** binders. Library APIs such as `collections.Array<T, N>` also
 accept a compile-time capacity in their documented `N` position; a declaration
 `:N` would introduce a type parameter, not an integer capacity parameter.
 
@@ -347,7 +347,7 @@ count <uint32> : 3
 inferred : make_d("attempts", count, true, "ready")
 ```
 
-Both results have type `<D<string,uint32,boolean,string>>`. In the first call,
+Both results have type `<D<string, uint32, boolean, string>>`. In the first call,
 the explicit `<uint32>` argument gives `3` its expected type. In the second,
 the already typed `count` supplies that information. Each concrete specialization
 keeps normal inline storage, moves, borrows, and cleanup; constructing a generic
@@ -365,9 +365,9 @@ must provide an explicit result annotation.
 | `identity<:T> :`                    | `T`                | Shorthand result `<T>`.                                    |
 | `consume<:T><null> :`               | `T`                | Explicit result `<null>`.                                  |
 | `maybe<:T><T><null> :`              | `T`                | Explicit union result `<T><null>`.                         |
-| `second<:K,:V><V> :`                | `K`, `V`           | Explicit result `<V>`.                                     |
-| `make_d<:K,:V,:Y,:Z><D<K,V,Y,Z>> :` | `K`, `V`, `Y`, `Z` | Explicit constructed result.                               |
-| `local_pair<:K,:V> :`               | `K`, `V`           | Inferred local result; incomplete at an exported boundary. |
+| `second<:K, :V><V> :`                | `K`, `V`           | Explicit result `<V>`.                                     |
+| `make_d<:K, :V, :Y, :Z><D<K, V, Y, Z>> :` | `K`, `V`, `Y`, `Z` | Explicit constructed result.                               |
+| `local_pair<:K, :V> :`               | `K`, `V`           | Inferred local result; incomplete at an exported boundary. |
 
 For example, a nullable result needs its success type after the binder list too:
 
@@ -410,7 +410,7 @@ applies; explicitly supplying a named union permits its members as normal.
 
 Structural matching uses only uniquely determined information. A parameter
 `<T><null>` receiving `<string><null>` does not alone distinguish `T = string`
-from `T = string|null`; both substitutions fit. Defer that ambiguity until other
+from `T = string | null`; both substitutions fit. Defer that ambiguity until other
 arguments determine `T`, or require an explicit list. For example,
 `fallback(null, "Dev")` determines `T = string` from its plain `<T>` alternative,
 then checks that the first argument fits `<string><null>`.
@@ -456,7 +456,7 @@ capabilities from them. In the constructor above, all four inputs may be owners
 because each is moved once. A helper copying only the key constrains only `K`:
 
 ```meowy
--> copy_key<:K : memory.Copy, :V, :Y, :Z><K> : (source <&D<K,V,Y,Z>>) {
+-> copy_key<:K : memory.Copy, :V, :Y, :Z><K> : (source <&D<K, V, Y, Z>>) {
     -> source.key
 }
 ```
@@ -507,7 +507,7 @@ at creation, not at first invocation. Consuming an environment field makes the
 closure callable once; mutating it requires exclusive access on every call.
 
 The following well-known capabilities express callable requirements. `S` is one
-concrete function signature, for example `(int32)->int32`; it can also include
+concrete function signature, for example `(int32) -> int32`; it can also include
 the existing `!` safety requirement. They inspect a callable's actual signature
 and capture behavior, never invoke it, and never allocate a dictionary.
 
@@ -528,13 +528,13 @@ binding borrows it. These rules also apply to statically typed direct closures.
 A `!` signature still requires an unchecked block at the eventual call site.
 
 ```meowy
-core:@"core"
-apply<:F:core.Call<(int32)->int32>><int32>:(f<&F>,value<int32>){
-    ->f(value)
+core : @"core"
+apply<:F : core.Call<(int32) -> int32>><int32> : (f <&F>, value <int32>) {
+    -> f(value)
 }
-offset:7
-add_offset:(value<int32>){->value+offset}
-answer:apply(&add_offset,3) # 10; concrete capture, no box #
+offset : 7
+add_offset : (value <int32>) { -> value + offset }
+answer : apply(&add_offset, 3) # 10; concrete capture, no box #
 ```
 
 An unconstrained `F` cannot be called (`E210`). Signatures are invariant: no implicit
@@ -550,7 +550,7 @@ access; `file.read` cannot be selected twice while those borrows overlap. Ordina
 record function fields remain ordinary fields and receive no implicit receiver.
 
 Generic functions are templates, not first-class runtime values. To pass a
-specialization, use a wrapper such as `f:(x<int32>){->identity<int32>(x)}`; `identity<int32>`
+specialization, use a wrapper such as `f : (x <int32>) { -> identity<int32>(x) }`; `identity<int32>`
 without call parentheses remains an ascription. No hidden specialization or
 boxing is inferred from an expected callback type. Public functions accepting
 closures use the capability constraints above; local adapter results may preserve

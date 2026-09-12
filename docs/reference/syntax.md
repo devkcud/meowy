@@ -98,8 +98,8 @@ subnormal or signed zero is allowed.
 
 Unary `-` immediately applied to an integer literal, with only whitespace or
 comments between them, checks the **negated mathematical value** against the
-expected signed type. Thus `x<int8>:-128` is valid. `128` alone as `int8` and
-`x<int8>:-(128)` are `E216`; parentheses end this literal rule. Negating an
+expected signed type. Thus `x <int8> : -128` is valid. `128` alone as `int8` and
+`x <int8> : -(128)` are `E216`; parentheses end this literal rule. Negating an
 already typed signed minimum is checked arithmetic (`E107` or runtime panic).
 Unsigned negation is not defined, including a negated literal with an unsigned
 expected type. A leading sign remains an operator, never part of the token.
@@ -147,7 +147,7 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `-> name := value`                      | Mutable named emission                                           |
 | `(x <T>) { ... }`                       | Function value                                                   |
 | `f <R> : (x <T>) { ... }`               | Function declaration with result type `R`                        |
-| `f <(T)->R>;`                           | Forward signature, completed by the following definition group   |
+| `f <(T) -> R>;`                           | Forward signature, completed by the following definition group   |
 | `f(value)`                              | Function call                                                    |
 | `value.name`                            | Field selection                                                  |
 | `value.&name`, `value.&!name`            | Shared or exclusive borrow of the selected field                 |
@@ -159,10 +159,10 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `'scope -> value`                       | Primary emission into a named enclosing block                    |
 | `'scope.leave()`                        | Finish that named block                                          |
 | `'scope.restart()`                      | Clean up and restart that named block                            |
-| `\| value<T> \| statement`              | Type predicate in a matcher condition                            |
+| `\| value <T> \| statement`              | Type predicate in a matcher condition                            |
 | `value<>`                               | Compile-time type query                                          |
 | `value<T>`                              | Proven type ascription in a value expression; no conversion      |
-| `name<(expression)> : value`            | Binding annotated by a computed type                             |
+| `name <(expression)> : value`            | Binding annotated by a computed type                             |
 | `@"name"`                               | Module import                                                    |
 | `&value`, `&!value`                     | Shared or exclusive borrow                                       |
 | `&(value[index])`, `&!(value[index])`   | Shared or exclusive borrow of the selected element               |
@@ -173,8 +173,8 @@ literal contents retain their own bytes regardless of the surrounding layout.
 | `!{ ... }`                              | Block permitting operations with caller-proven safety conditions |
 | `(x <T>) !{ ... }`                      | Function whose callers must establish those conditions           |
 | `<:T : memory.Copy>`                    | Generic type binder constrained by a capability value            |
-| `<D<:K,:V,:Y,:Z>> : <{...}>`            | Generic type alias with four independent type parameters         |
-| `f<:K,:V><V> : (key<K>,value<V>) {...}` | Generic function with an explicit result type                    |
+| `<D<:K, :V, :Y, :Z>> : <{ ... }>`            | Generic type alias with four independent type parameters         |
+| `f<:K, :V><V> : (key <K>, value <V>) { ... }` | Generic function with an explicit result type                    |
 
 The escaped pipes in the table stand for literal `|` characters. Spaces around
 angle brackets do not change their role: `value<T>` and `value <T>` have the same
@@ -182,22 +182,22 @@ meaning in the same grammatical position. See the contextual rules below.
 
 `<T><U>` is a union in a type position, and `!<U>` subtracts members from a type.
 Generic arguments name types without an extra pair of angle brackets:
-`<task<int32>>` or `<D<string,uint32,boolean,string>>`. Use a type alias for a
+`<task<int32>>` or `<D<string, uint32, boolean, string>>`. Use a type alias for a
 union inside a generic argument. Declaration lists introduce each type binder
-with `:`, as in `<:K,:V>`; argument lists omit those markers, as in `<K,V>`.
+with `:`, as in `<:K, :V>`; argument lists omit those markers, as in `<K, V>`.
 Parameters are positional, and an explicit list supplies every argument.
 See [multiple type parameters](types.md#multiple-type-parameters) for complete
 type declarations, functions, inference, and constraints.
 
 A function's leading binder list is separate from its result annotations.
-`f<:K,:V><V>` declares two parameters and result `<V>`; the binders are not union
+`f<:K, :V><V>` declares two parameters and result `<V>`; the binders are not union
 alternatives. The existing `f<:T>` shorthand declares `T` and result `<T>` when
 no separate result is written. `f<:T><T><null>` explicitly returns their union.
 These forms retain the same meaning without spaces.
 
 ## Angle brackets in context
 
-Declarations establish an annotation position: `name<T>:value` annotates the
+Declarations establish an annotation position: `name <T> : value` annotates the
 binding, including inside a matcher body. Elsewhere, parse a complete type form
 after an expression by these rules, independently of spacing:
 
@@ -206,9 +206,9 @@ after an expression by these rules, independently of spacing:
    `accepts<T>(value)`. This rule also applies in a matcher condition.
 3. In a matcher condition, a nonempty type suffix is a type predicate, taking
    precedence over the ascription interpretation. It has comparison precedence.
-   `|value<T><U>|use(value)` tests membership in the union `<T><U>`.
+   `| value <T><U> | use(value)` tests membership in the union `<T><U>`.
 4. In an ordinary value expression, that suffix is a proven ascription, with
-   postfix precedence. `copy:value<T>` requests no conversion or runtime check.
+   postfix precedence. `copy : value<T>` requests no conversion or runtime check.
 
 Grouping parentheses in a condition retain its condition context. Boolean
 operands of `&&`, `||`, and `!` do too. Call arguments, index expressions, and
@@ -218,17 +218,17 @@ expressed through a matcher, not inferred from its distance to an outer `|`.
 
 | Form                              | Interpretation                                 |
 | --------------------------------- | ---------------------------------------------- |
-| `\|value<T>\|use(value)`          | Test `value` and refine it in the arm          |
-| `\|!(value<T>)\|reject()`         | Negate the type test                           |
-| `\|accepts<T>(value)\|use(value)` | Call a specialized boolean function            |
-| `\|accepts(value<T>)\|use(value)` | Pass a proven ascription to a boolean function |
-| `\|flag\|copy:value<T>`           | Test `flag`; the body contains an ascription   |
-| `copy:value <T>`                  | Ascription, even with a space                  |
+| `\| value <T> \| use(value)`          | Test `value` and refine it in the arm          |
+| `\| !(value<T>) \| reject()`         | Negate the type test                           |
+| `\| accepts<T>(value) \| use(value)` | Call a specialized boolean function            |
+| `\| accepts(value<T>) \| use(value)` | Pass a proven ascription to a boolean function |
+| `\| flag \| copy : value<T>`           | Test `flag`; the body contains an ascription   |
+| `copy : value <T>`                  | Ascription, even with a space                  |
 
 The contexts compose through dispatch too:
 
 ```meowy
-|t.{->self<MyCoolType>}<MyCoolType>|matched()
+| t.{ -> self<MyCoolType> } <MyCoolType> | matched()
 ```
 
 The dispatched block is an ordinary value context: `self<MyCoolType>` is an
@@ -245,15 +245,15 @@ Because unary operators bind more tightly than predicates, write `!(value<T>)`
 to negate a test; `!value<T>` tests the result of `!value`.
 
 A complete type form wins over a relational interpretation, without consulting
-whether a name resolves to a type. `age<18` is a comparison: it has no closing
-type delimiter. `left<limit&&other>0` is two comparisons joined by `&&`; the
+whether a name resolves to a type. `age < 18` is a comparison: it has no closing
+type delimiter. `left < limit && other > 0` is two comparisons joined by `&&`; the
 intervening operator cannot belong to the putative type form. Chained relational
 comparisons are invalid; parentheses must express the intended grouping.
 
 `<(expression)>` evaluates a compile-time expression that produces a type. It
-allows computed annotations such as `other<(name<>)>:value` without using a space
+allows computed annotations such as `other <(name<>)> : value` without using a space
 to separate two identifiers. A function type instead contains an arrow after its
-parameter list: `<(T)->R>`. Bare computed annotations such as `other name<>:value`
+parameter list: `<(T) -> R>`. Bare computed annotations such as `other name<> : value`
 are not part of the grammar. See [type queries](types.md#type-queries).
 
 A computed type atom accepts ordinary extent suffixes before the final type
@@ -353,7 +353,7 @@ requiring a safety proof; it does not disable type checking.
 
 ### Forward function groups
 
-An annotation-only statement `name<(Parameters)->Result>;` reserves an immutable,
+An annotation-only statement `name<(Parameters) -> Result>;` reserves an immutable,
 non-capturing function in the current value scope. It is recognized at statement
 start when an identifier and a complete function-type annotation reach a statement
 terminator without a binding operator. It is not an ascription expression statement;
@@ -369,15 +369,15 @@ called or escape. A definition may use `->` to export its completed function.
 This fulfills the reservation rather than redeclaring the name.
 
 ```meowy
-even<(uint32)->boolean>;
-odd<(uint32)->boolean>;
-even<boolean>:(n<uint32>) 'answer {
-    |n==0|{'answer->true;'answer.leave()}
-    ->odd(n-1)
+even<(uint32) -> boolean>;
+odd<(uint32) -> boolean>;
+even <boolean> : (n <uint32>) 'answer {
+    | n == 0 | { 'answer -> true; 'answer.leave() }
+    -> odd(n - 1)
 }
-odd<boolean>:(n<uint32>) 'answer {
-    |n==0|{'answer->false;'answer.leave()}
-    ->even(n-1)
+odd <boolean> : (n <uint32>) 'answer {
+    | n == 0 | { 'answer -> false; 'answer.leave() }
+    -> even(n - 1)
 }
 ```
 

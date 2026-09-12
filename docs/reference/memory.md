@@ -306,8 +306,8 @@ a borrowed owner's lifetime:
   without dereferencing it. A false result proves neither validity nor alignment.
 - `memory.readonly<T>(pointer <*!T>)` returns `<*T>` with unchanged address and
   provenance. It grants no new access rights and does not release an owner.
-- `memory.cast<T,U>(pointer <*T>)` returns `<*U>`; its writable counterpart
-  `memory.cast_mut<T,U>(pointer <*!T>)` returns `<*!U>`. Both require `!{ ... }`
+- `memory.cast<T, U>(pointer <*T>)` returns `<*U>`; its writable counterpart
+  `memory.cast_mut<T, U>(pointer <*!T>)` returns `<*!U>`. Both require `!{ ... }`
   and preserve address and allocation provenance. They establish no bounds,
   alignment, initialization, lifetime, or permission for `U`. Null remains null;
   a resulting misaligned pointer can exist but cannot be dereferenced as `U`.

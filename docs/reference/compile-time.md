@@ -24,13 +24,13 @@ type literals compose unions/subtraction as in the type reference. These
 operations have no runtime `core.Type` counterpart.
 
 ```meowy
-core:@"core"
--> optional<core.Type>:(element<core.Type>){-><(element)><null>}
--> bounded<core.Type>:(element<core.Type>,capacity<usize>){
-    -><(element)[capacity]>
+core : @"core"
+-> optional <core.Type> : (element <core.Type>) { -> <(element)><null> }
+-> bounded <core.Type> : (element <core.Type>, capacity <usize>) {
+    -> <(element)[capacity]>
 }
-<MaybeCount>:optional(<uint32>)
-<Counters>:bounded(<uint32>,8)
+<MaybeCount> : optional(<uint32>)
+<Counters> : bounded(<uint32>, 8)
 ```
 
 A computed type atom `(expression)` takes the same extent suffix as a named

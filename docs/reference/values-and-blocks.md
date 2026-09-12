@@ -93,7 +93,7 @@ nullable field omitted on a path is initialized to `null`.
 Without an expected record type, the block's shape contains every named slot
 emitted on any reachable normally completing path. Infer each slot's type as the
 normalized union of its emitted expression types, adding `null` when a completing
-path omits it. Thus `{|flag|->name:"hello"}` has `name<string><null>` and a null
+path omits it. Thus `{ | flag | -> name : "hello" }` has `name<string><null>` and a null
 primary; the field exists on both paths. The same join rule applies to the primary.
 There is no numeric widening between different already typed values. A slot's
 mutability must agree at all of its emissions (`E206` otherwise).

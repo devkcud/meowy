@@ -89,14 +89,14 @@ Type regions nest, so `>>` inside a generic type closes two type arguments while
 `>>` in an expression denotes task submission. A function type's `->` does not
 close its angle brackets. A comparison such as `count < limit` does not start a
 multiline type region. Unrecognized string escapes are highlighted as errors.
-Comma-separated specializations such as `make_d<string,uint32,boolean,string>(...)`
-also retain type highlighting; `call(x<limit,other>0)` keeps its comparison
+Comma-separated specializations such as `make_d<string, uint32, boolean, string>(...)`
+also retain type highlighting; `call(x < limit, other > 0)` keeps its comparison
 operators.
 
-Spaced and unspaced types share highlighting. In `|value<T>|statement`, the type
+Spaced and unspaced types share highlighting. In `| value <T> | statement`, the type
 is a matcher predicate; outside a condition it is an ascription. The highlighter
 does not use a space to distinguish these roles. Computed annotations such as
-`other<(value<>)>:value` retain explicit type delimiters too.
+`other <(value<>)> : value` retain explicit type delimiters too.
 
 Blocks, record types, and multiline comments also expose syntax folds. Enable
 those explicitly with `:setlocal foldmethod=syntax` if desired.
