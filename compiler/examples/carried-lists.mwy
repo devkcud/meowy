@@ -1,18 +1,18 @@
-d:@"debug"
-<R>:<{items<int32[4]>:=}>
-first:=true
-i:=0
-r<R>:'out{
-    'loop{
-        |first|{
-            'out->items:={d.print("init");->[1,2]}
-            old:items
-            items=items.add(3)
+d : @"debug"
+<R> : <{ items <int32[4]> := }>
+first := true
+i := 0
+r <R> : 'out {
+    'loop {
+        | first | {
+            'out -> items := { d.print("init"); -> [1, 2] }
+            old : items
+            items = items.add(3)
             d.print(old.size())
-            first=false
+            first = false
         }
-        i=i+1
-        |i<3|'loop.restart()
+        i = i + 1
+        | i < 3 | 'loop.restart()
     }
 }
 d.print(r.items.size())
