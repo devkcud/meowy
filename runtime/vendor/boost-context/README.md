@@ -32,4 +32,4 @@ GitHub or prove the release tag mapping without an upstream fetch.
 
 For an update, verify the official tag revision again, review source/ABI/license
 changes, copy the exact files, update the manifest, and run every native and
-sanitizer profile. Keep the primitive replaceable behind the Meowy wrapper.
+sanitizer profile. Keep the primitive replaceable behind the meowy wrapper.

@@ -3,9 +3,9 @@
 [generated.hpp](include/meowy/generated.hpp) exposes scalar C-linkage calls over the
 existing cleanup Stack, Owned payloads and owning Panic snapshot. [generated.cpp](src/generated.cpp)
 is linked into the compiler's native archive. The interface is private to the pinned
-Linux x86-64 bootstrap; it is not a release ABI or a new Meowy language feature.
+Linux x86-64 bootstrap; it is not a release ABI or a new meowy language feature.
 
-Normal Meowy code generation still has no owning resource type or cleanup calls.
+Normal meowy code generation still has no owning resource type or cleanup calls.
 Compiler backend tests generate LLVM callbacks and explicit cleanup edges, emit native
 objects and link the actual archive. They prove this boundary can be called correctly;
 they do not prove automatic scope lowering, task cancellation or DWARF unwinding.
@@ -160,6 +160,6 @@ rejected short destination and an owned cleanup panic with its original cause in
 
 Next define initialized-state/drop schedules for a contract-supported owning HIR value
 and lower normal/Leave/Restart exits, retaining emitted ownership. The bridge and LLVM
-fixtures are executable infrastructure; ordinary Meowy programs still do not use it.
+fixtures are executable infrastructure; ordinary meowy programs still do not use it.
 Panic/task support additionally needs retained outcomes, child-close progress,
 cancellation and the pinned unwind mechanism.

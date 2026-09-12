@@ -13,7 +13,7 @@
   Failed joins must retain result ownership until context release and transfer
   succeed. Keep descriptor lifetime static and move/drop callbacks non-suspending.
 - Use explicit cleanup edges and initialized-state tracking. Host destructors or
-  exceptions cannot supply Meowy ownership or cancellation semantics.
+  exceptions cannot supply meowy ownership or cancellation semantics.
 - Preserve fatal cleanup-panic probes as subprocesses with exact evidence. Do not
   count arbitrary crashes, missing tools or unsupported sanitizer runs as passes.
 - Guard probes must verify the fault address, protection code and isolated process

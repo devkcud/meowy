@@ -13,7 +13,7 @@ python3 tools/verify.py --all --list
 The default checks tooling regressions, local documentation links, the existing
 [conformance catalog validator](../docs/conformance/README.md), and the existing
 [artifact schema validator](../docs/schemas/README.md). It does not compile or
-execute Meowy source. Python 3.10 or newer, `jsonschema`, and `referencing` are
+execute meowy source. Python 3.10 or newer, `jsonschema`, and `referencing` are
 required. The runner never installs dependencies or fetches documentation links.
 
 `--editor vim`, `--editor nvim`, or `--editor both` runs the existing

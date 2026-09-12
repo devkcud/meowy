@@ -4,7 +4,7 @@ This directory exercises explicit cleanup, owned payloads, guarded stack allocat
 and pinned context switching with bounded scheduling independently of the compiler. It uses C++20 and
 Clang 22.1.8 with exceptions and RTTI disabled. The
 compiler still emits its existing scalar runtime calls. Its archive now also includes
-an explicitly tested [private cleanup bridge](GENERATED_CLEANUP.md); normal Meowy
+an explicitly tested [private cleanup bridge](GENERATED_CLEANUP.md); normal meowy
 code generation does not yet emit those calls or support owning resource/task syntax.
 
 ```sh
@@ -66,7 +66,7 @@ storage; it is separate from the cleanup stack's obligation-only transfer.
   the destination and ends the source object's lifetime without releasing the
   transferred resource. Drop is non-suspending and ends the object's lifetime;
   returning a panic takes the existing fatal P008 cleanup path. Neither callback
-  may rely on automatic C++ destructors to implement Meowy ownership.
+  may rely on automatic C++ destructors to implement meowy ownership.
 - `reserve(ops)` validates empty storage before construction. The caller explicitly
   constructs the object and then calls `commit()`. A failed or cancelled constructor
   leaves the token reserved, and `release()` skips destruction of that uninitialized
@@ -184,7 +184,7 @@ foundation for future generated scope-exit code, not automatic joining or unwind
   automatic diagnostic attachment and richer diagnostic payloads are not provided.
   The caller must handle child failures explicitly. `ok` means scope closing
   finished, not that all children succeeded; close does not automatically raise a
-  Meowy panic or propagate cancellation. Keep the report/Panic value alive while
+  meowy panic or propagate cancellation. Keep the report/Panic value alive while
   using its `message()` view. Children manually joined elsewhere are
   already observed and do not contribute to a later close's counts.
 - A body or cleanup callback must close all its marks before returning. An open
@@ -205,7 +205,7 @@ cleanup itself panics.
 
 [include/meowy/scheduler.hpp](include/meowy/scheduler.hpp) adds one explicitly
 driven worker over the pinned context wrapper. This is an experimental runtime
-API; it does not implement the complete Meowy task or group contract.
+API; it does not implement the complete meowy task or group contract.
 
 - Construct `Scheduler` on its owning worker with a caller-owned `TaskSlot` array
   and fixed per-context usable stack bytes. The array is also the bounded runnable
@@ -235,7 +235,7 @@ API; it does not implement the complete Meowy task or group contract.
   slot and unpublished outcome until it finishes. Cleanup receives the same
   caller-owned data, and must not reference body-local storage whose function has
   already returned. Owners local to a C++ body need explicit cleanup inside that
-  body before return. Compiler-generated Meowy ownership edges are still pending.
+  body before return. Compiler-generated meowy ownership edges are still pending.
 - `Task::spawn(body, data, cleanup)` admits a direct child in the same fixed slot
   pool, recording the parent's complete ticket. Roots, descendants, waiting tasks
   and settled tasks all share that capacity. Failed context admission returns a
@@ -251,7 +251,7 @@ API; it does not implement the complete Meowy task or group contract.
 - **Join children before their borrowed locals leave scope.** Returning from a
   body or cleanup with any unjoined child is a private fatal protocol violation,
   checked before more work is scheduled or the task settles. It is not P008 and
-  is not recoverable Meowy cancellation. Automatically joining after a C++ body
+  is not recoverable meowy cancellation. Automatically joining after a C++ body
   returns would access expired local storage; this prototype requires explicit
   joins while that storage is alive. Compiler-inserted scope-exit joins, including
   exceptional exits, remain future work.
@@ -335,7 +335,7 @@ not a stable runtime ABI or a scheduler.
 - Callback type is `void (Context &, void *) noexcept`. Callback data/results are
   caller-owned; there is no automatic capture allocation or typed task outcome.
   Callbacks explicitly run their cleanup before returning. C++ exceptions and
-  destructor-driven continuation unwinding are not Meowy panic or cancellation.
+  destructor-driven continuation unwinding are not meowy panic or cancellation.
 
 The preserved machine state is the x86-64 calling-convention state: stack pointer,
 continuation, callee-saved integer registers and floating-point control state.
@@ -418,7 +418,7 @@ runtime implementation or a future production library.
 The experimental C++ interface is
 [include/meowy/cleanup.hpp](include/meowy/cleanup.hpp), in
 `meowy::prototype::v0`. Its name is a revision marker; it is **not** a stable C ABI,
-compiler bridge, public FFI or qualified private Meowy runtime ABI.
+compiler bridge, public FFI or qualified private meowy runtime ABI.
 
 - A noncopyable `Stack` borrows a caller-provided `Entry` array. Arrays must not
   overlap between live stacks. The array and stack must remain at stable addresses.
@@ -436,7 +436,7 @@ compiler bridge, public FFI or qualified private Meowy runtime ABI.
   C++ exceptions are not the panic protocol.
 - `mark()` records a boundary. `unwind()` releases armed entries after that mark
   in reverse order and removes all reservations after it. Scope exits are explicit
-  calls; C++ destructors perform no Meowy cleanup. Tokens and nonempty marks carry
+  calls; C++ destructors perform no meowy cleanup. Tokens and nonempty marks carry
   generation identifiers, rejecting stale references after a slot is reused.
 - `disarm()` consumes one armed cleanup obligation after an explicit successful
   release or transfer outside this protocol. It does not call the callback or
@@ -556,7 +556,7 @@ coverage. It does not qualify a full task runtime, native stack unwinding or the
 documented v0.0.1 release. The bounded scheduler supplies one worker, explicit
 parent/child ownership and waiting child joins. There is no automatic scope-exit
 join, cancellation unwinding, timer, channel or multi-worker executor.
-There is no LLVM landing pad, Meowy personality function or pinned unwind library.
+There is no LLVM landing pad, meowy personality function or pinned unwind library.
 Panic messages are bounded owning snapshots; source spans and diagnostic
 attachment are absent. Tickets provide prototype task identity, not a recorded
 runtime-event identity. Cancellation is an explicit cleanup edge only.
@@ -569,7 +569,7 @@ Nothing promotes owners or borrows into arbitrary heap storage.
    payload and explicit task-scope primitives while locals are still alive. Keep
    context release behind terminal cleanup and child completion; preserve worker,
    admission and sanitizer invariants.
-3. Add LLVM landing pads, a Meowy personality and task-root outcomes using a pinned
+3. Add LLVM landing pads, a meowy personality and task-root outcomes using a pinned
    unwind library; preserve P008 and cleanup ordering across nested calls.
 4. Exercise a suspended child borrowing a parent local, cancellation while joining,
    and cleanup that waits for children before releasing their borrowed storage.
