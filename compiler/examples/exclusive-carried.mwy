@@ -1,13 +1,13 @@
-d:@"debug"
-<R>:<{n<int32>:=}>
-first:=true
-r<R>:'out{
-    'loop{
-        |first|{
-            'out->n:=7
-            p:&!n
-            *p=8
-            first=false
+d : @"debug"
+<R> : <{ n <int32> := }>
+first := true
+r <R> : 'out {
+    'loop {
+        | first | {
+            'out -> n := 7
+            p : &!n
+            *p = 8
+            first = false
             'loop.restart()
         }
     }

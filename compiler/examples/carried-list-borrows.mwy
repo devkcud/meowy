@@ -1,25 +1,25 @@
-d:@"debug"
-<R>:<{items<int32[3]>}>
-seed<int32[3]>:[0]
-x:0
-p:=&seed
-q:=&x
-first:=true
-i:=0
-r<R>:'out{
-    'loop{
-        |first|{
-            'out->items:{d.print("init");->[7,8]}
-            p=&items
-            q=&(p[2])
-            first=false
+d : @"debug"
+<R> : <{ items <int32[3]> }>
+seed <int32[3]> : [0]
+x : 0
+p := &seed
+q := &x
+first := true
+i := 0
+r <R> : 'out {
+    'loop {
+        | first | {
+            'out -> items : { d.print("init"); -> [7, 8] }
+            p = &items
+            q = &(p[2])
+            first = false
         }
         d.print(*q)
-        i=i+1
-        |i<3|'loop.restart()
+        i = i + 1
+        | i < 3 | 'loop.restart()
     }
 }
-p=&seed
-q=&x
+p = &seed
+q = &x
 d.print(r.items.size())
 d.print(p[1])
