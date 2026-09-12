@@ -1,5 +1,5 @@
 use crate::ast::{self, ExprKind, Span};
-use crate::check::{Checker, Constant, Result, Value};
+use crate::check::{Checker, Constant, Result, Value, inputs::Input};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
 
@@ -9,6 +9,16 @@ impl Checker {
         let result = self.value(name, span);
         self.required = saved;
         result
+    }
+
+    pub(crate) fn required_primary(&self, id: usize, span: Span) -> Result<Input> {
+        self.module_integer(id).cloned().ok_or_else(|| {
+            Self::error(
+                "E211",
+                "primary initializer is unavailable during required type evaluation",
+                span,
+            )
+        })
     }
 
     pub(crate) fn scalar_input(&mut self, expr: &ast::Expr) -> Result<()> {
@@ -21,17 +31,17 @@ impl Checker {
                     ..
                 }
                 | Value::Constant(Constant::Int(_)) => Ok(()),
-                Value::Local { id, .. } if self.inputs.contains_key(&id) => {
-                    let input = &self.inputs[&id];
-                    let work = self.type_work.as_mut().unwrap();
-                    work.visits = work.visits.saturating_add(input.work);
-                    if work.visits > super::MAX_WORK {
-                        return Err(super::Work::budget(expr.span));
-                    }
-                    match &input.error {
-                        Some(error) => Err(error.clone()),
-                        None => Ok(()),
-                    }
+                Value::Local { id, .. } if self.inputs.contains_key(&id) => self
+                    .type_work
+                    .as_mut()
+                    .unwrap()
+                    .input(&self.inputs[&id], expr.span),
+                Value::FileModule {
+                    id,
+                    ty: Type::Int { .. },
+                } => {
+                    let input = self.required_primary(id, expr.span)?;
+                    self.type_work.as_mut().unwrap().input(&input, expr.span)
                 }
                 Value::Local { constant: None, .. } => Err(Self::error(
                     "E211",
@@ -51,15 +61,7 @@ impl Checker {
             },
             ExprKind::Field { .. } => {
                 let (_, input) = self.required_field(expr)?;
-                let work = self.type_work.as_mut().unwrap();
-                work.visits = work.visits.saturating_add(input.work);
-                if work.visits > super::MAX_WORK {
-                    return Err(super::Work::budget(expr.span));
-                }
-                match input.error {
-                    Some(error) => Err(error),
-                    None => Ok(()),
-                }
+                self.type_work.as_mut().unwrap().input(&input, expr.span)
             }
             ExprKind::Group(value) => self.scalar_input(value),
             ExprKind::Unary { op, value } if matches!(op.as_str(), "-" | "~") => {

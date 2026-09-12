@@ -123,6 +123,24 @@ impl Checker {
                     ));
                 }
                 Value::FileModule { id, ty } => {
+                    if self.required && self.type_work.is_some() && matches!(ty, Type::Int { .. }) {
+                        let input = self.required_primary(id, expr.span)?;
+                        if let Some(error) = input.error {
+                            return Err(error);
+                        }
+                        let value = input.value.ok_or_else(|| {
+                            Self::error(
+                                "E211",
+                                "required primary has no checked integer value",
+                                expr.span,
+                            )
+                        })?;
+                        return Ok(hir::Expr {
+                            kind: hir::ExprKind::Int(value),
+                            ty,
+                            span: expr.span,
+                        });
+                    }
                     if self.owner != 0 {
                         return Err(Diagnostic::unsupported(
                             "file-module values in function bodies",

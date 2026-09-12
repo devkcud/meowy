@@ -1,7 +1,7 @@
 mod fields;
 mod scalars;
 
-use super::{Checker, Result, Scope, Spec, Value};
+use super::{Checker, Result, Scope, Spec, Value, inputs::Input};
 use crate::ast::{self, ExprKind, Span, StmtKind};
 use crate::diagnostic::Diagnostic;
 use crate::hir::Type;
@@ -37,6 +37,17 @@ impl Work {
         }
         self.depth += 1;
         Ok(())
+    }
+
+    pub(crate) fn input(&mut self, input: &Input, span: Span) -> Result<()> {
+        self.visits = self.visits.saturating_add(input.work);
+        if self.visits > MAX_WORK {
+            return Err(Self::budget(span));
+        }
+        match &input.error {
+            Some(error) => Err(error.clone()),
+            None => Ok(()),
+        }
     }
 
     pub(crate) fn materialize(&mut self, ty: &Type, span: Span) -> Result<()> {
@@ -178,7 +189,13 @@ impl Checker {
             | ExprKind::Call { .. } => true,
             ExprKind::Name(name) => matches!(
                 self.required_value(name, form.span)?,
-                Value::Static { .. } | Value::Local { .. } | Value::Constant(_)
+                Value::Static { .. }
+                    | Value::Local { .. }
+                    | Value::Constant(_)
+                    | Value::FileModule {
+                        ty: Type::Int { .. },
+                        ..
+                    }
             ),
             ExprKind::Field { .. } => {
                 let saved = std::mem::replace(&mut self.required, true);

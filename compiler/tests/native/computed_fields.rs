@@ -45,26 +45,6 @@ pub(crate) fn computed_fields_do_not_execute_effectful_record_initializers() {
 }
 
 #[test]
-pub(crate) fn computed_fields_keep_primary_imports_and_runtime_captures_gated() {
-    for (source, code) in [
-        (
-            "m:@\"./scalar.mwy\";copy:m+0;<T>:{n:copy;-><int32>}",
-            "B001",
-        ),
-        ("row:{->width:4};f<int32>:(){->row.width}", "B001"),
-    ] {
-        let case = case(source, &[("data.mwy", "->width:4"), ("scalar.mwy", "->4")]);
-        let output = case.command("check", &["--json"]);
-        assert_eq!(output.status.code(), Some(1));
-        let error = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            error.contains(&format!("\"code\":\"{code}\"")),
-            "{source}: {error}"
-        );
-    }
-}
-
-#[test]
 pub(crate) fn computed_fields_charge_the_whole_record_work_on_every_read() {
     let tail = (1..110)
         .map(|id| format!("v{id}:v{}+1;", id - 1))

@@ -37,6 +37,17 @@ impl Input {
 }
 
 impl Checker {
+    pub(crate) fn module_integer(&self, id: usize) -> Option<&Input> {
+        if !matches!(self.locals.get(id), Some(Type::Int { .. })) {
+            return None;
+        }
+        self.exports
+            .get(&id)?
+            .primary
+            .as_ref()
+            .map(|(_, input)| input)
+    }
+
     pub(crate) fn integer_input(&mut self, expr: &hir::Expr) -> Option<Input> {
         self.input_expr(expr, 0, &mut 0, &Sources::default())
     }
@@ -65,7 +76,11 @@ impl Checker {
         let kind = match &expr.kind {
             ExprKind::Int(value) => ExprKind::Int(*value),
             ExprKind::Local(id) => {
-                let source = locals.integers.get(id).or_else(|| self.inputs.get(id))?;
+                let source = locals
+                    .integers
+                    .get(id)
+                    .or_else(|| self.inputs.get(id))
+                    .or_else(|| self.module_integer(*id))?;
                 input.add(source);
                 source.literal(expr).kind
             }

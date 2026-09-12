@@ -7,7 +7,7 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active commit plan
 
-1. Record eligible direct integer primary emissions in `check/exports.rs` and
+1. `fa3336d` records eligible direct integer primary emissions in `check/exports.rs` and
    `check/statements.rs`. Retain each checked emission ID and initializer
    evidence without changing runtime HIR or constant folding. Verify scalar metadata,
    source errors/work, named exports and conditional/effectful gates.
@@ -23,6 +23,12 @@ Runtime HIR and constant folding are unchanged. The three focused metadata tests
 all 731 library/673 native tests passed; no failures remain. Only scalar integer
 module values will consume primary metadata. Whole module records, composed/conditional
 primaries, inline roots and helper purity remain separate.
+
+Primary lookup now consumes evidence only for scalar integer module identities.
+The four native primary-input groups and all 731 library/676 native tests passed,
+along with fmt and Clippy. Aliases, re-exports, required function-local types and
+exact-width errors work; runtime captures and mixed module record inputs remain
+rejected. Existing mixed-record copy rejection remains E211. No failures remain.
 
 ## Current compiler slice
 
@@ -140,9 +146,9 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Implement primary lookup in `inputs.rs`, `type_values/scalars.rs`,
-   `type_values.rs` and `expressions.rs`. Consume emission evidence only for scalar
-   integer modules, share required work/error checks, and materialize only in a
-   required root. Include native acceptance, widths, effects and capture regressions.
-2. Complete independent integration scenarios and documentation, then run the full
-   compiler gate. Commit reviewable slices; never push or recreate STEP logs.
+1. Add independent primary integration groups in `tests/native/primary_inputs.rs`:
+   check/build silence and once-only startup, transitive effect refusal, dependency
+   diagnostic spans, and repeated-read work accounting. Exercise both profiles.
+2. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs. Run the
+   complete compiler gate and local links; record the next bounded input capability.
+   Commit reviewable slices; never push or recreate STEP logs.
