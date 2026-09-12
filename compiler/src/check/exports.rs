@@ -11,6 +11,7 @@ pub(crate) struct Module {
     pub(crate) values: BTreeMap<String, Value>,
     pub(crate) types: BTreeMap<String, Spec>,
     pub(crate) inputs: BTreeMap<String, usize>,
+    pub(crate) primary: Option<(hir::EmitId, super::inputs::Input)>,
 }
 
 impl Checker {
@@ -33,6 +34,7 @@ impl Checker {
                 values: BTreeMap::new(),
                 types: BTreeMap::new(),
                 inputs: BTreeMap::new(),
+                primary: None,
             },
         );
         let docs = self.file_docs.remove(&value.span.start);
@@ -47,12 +49,33 @@ impl Checker {
         Ok((result, module))
     }
 
+    pub(crate) fn input_export(&self, target: usize) -> bool {
+        target == self.module.block
+            && self.owner == 0
+            && self.scopes.len() == self.module.depth
+            && self.reach != crate::flow::FALSE
+    }
+
+    pub(crate) fn primary_input(&mut self, stmt: &hir::Stmt) {
+        let hir::Stmt::Emit {
+            id,
+            target,
+            field: None,
+            value,
+        } = stmt
+        else {
+            return;
+        };
+        if !self.input_export(*target) || !matches!(value.ty, Type::Int { .. }) {
+            return;
+        }
+        if let Some(input) = self.integer_input(value) {
+            self.module.primary = Some((*id, input));
+        }
+    }
+
     pub(crate) fn export_input(&mut self, target: usize, name: &str, id: usize, value: &hir::Expr) {
-        if target != self.module.block
-            || self.owner != 0
-            || self.scopes.len() != self.module.depth
-            || self.reach == crate::flow::FALSE
-        {
+        if !self.input_export(target) {
             return;
         }
         if let Some(input) = self.integer_input(value) {

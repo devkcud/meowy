@@ -7,6 +7,11 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Primary integer export work is underway; the compiler handoff records the ordered
+metadata, lookup, integration and documentation slices. Primary metadata passed
+all 1404 Rust tests; the complete gate below is the prior named-export baseline.
+
+
 Eligible immutable named file exports now supply computed-type inputs through imported
 fields, copied integers, subrecord aliases and re-exports. Reads preserve exact integer
 widths and complete ancestor evidence. Checking/building never executes initializers;

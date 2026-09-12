@@ -5,15 +5,24 @@ gate. No failing checks or unfinished code remain. Full v0.0.1 remains incomplet
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Active commit plan
 
-1. `edcce7e` — retain checked initializer identities for direct named exports.
-2. `85c3b17` — resolve imported field evidence, copies and re-exports.
-3. `91d130e` — verify initialization, dependency spans and retained work boundaries.
-4. This separate documentation handoff records the final gate and next slice.
+1. Record eligible direct integer primary emissions in `check/exports.rs` and
+   `check/statements.rs`. Retain each checked emission ID and initializer
+   evidence without changing runtime HIR or constant folding. Verify scalar metadata,
+   source errors/work, named exports and conditional/effectful gates.
+2. Resolve primary inputs through `inputs.rs`, `type_values/scalars.rs` and required
+   materialization in `expressions.rs`. Support named module aliases, arithmetic
+   copies and primary/named re-exports while preserving widths, work charging and
+   runtime capture refusal. Keep implementation and native regressions together.
+3. Add independent native initialization, dependency span and work-budget scenarios.
+4. Update supported-slice documentation and both handoffs; run the full compiler gate.
 
-Each implementation/test slice passed focused checks and staged diff inspection
-before commit. The integration tests and documentation were split for reviewability.
+Primary metadata now pairs the existing HIR emission ID with its integer evidence.
+Runtime HIR and constant folding are unchanged. The three focused metadata tests and
+all 731 library/673 native tests passed; no failures remain. Only scalar integer
+module values will consume primary metadata. Whole module records, composed/conditional
+primaries, inline roots and helper purity remain separate.
 
 ## Current compiler slice
 
@@ -131,13 +140,9 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Plan primary immutable integer file-export eligibility separately from named fields.
-   Start with `check/exports.rs`, unnamed emission handling in `check/statements.rs`,
-   and `type_values/scalars.rs`. Preserve a checked primary identity and initializer
-   evidence without admitting a whole synthetic module as a pure record. Keep copies,
-   original widths/spans, work charging and function runtime-capture refusal explicit.
-   Record metadata/lookup/native slices before editing. Verify check/build silence,
-   once-only startup, ineligible initializers and unchanged named-export behavior.
-2. Leave composed/conditional exports, helper purity, borrowed storage and packages
-   separate. Run focused checks per slice and the full compiler gate for behavior;
-   commit reviewable slices, never push or recreate STEP logs.
+1. Implement primary lookup in `inputs.rs`, `type_values/scalars.rs`,
+   `type_values.rs` and `expressions.rs`. Consume emission evidence only for scalar
+   integer modules, share required work/error checks, and materialize only in a
+   required root. Include native acceptance, widths, effects and capture regressions.
+2. Complete independent integration scenarios and documentation, then run the full
+   compiler gate. Commit reviewable slices; never push or recreate STEP logs.

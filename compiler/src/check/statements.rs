@@ -578,7 +578,9 @@ impl Checker {
                 self.list_fact(&value),
                 span,
             )?;
-            stmts.push(self.emission(target, None, value));
+            let emission = self.emission(target, None, value);
+            self.primary_input(&emission);
+            stmts.push(emission);
         }
         Ok(stmts)
     }
