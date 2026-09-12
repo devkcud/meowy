@@ -5,38 +5,19 @@ No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Active documentation consistency work
+## Documentation conventions and layout
 
-Latest validated formatting group: documented and computed type examples. Executable
-tokens and newlines are preserved. The nested documentation example also uses spaced
-code; its attributes, output and surrounding prose are unchanged. Its doc execution
-check passed. Final compiler gate is pending.
+[README.md](README.md), `AGENTS.md` and this handoff stay at the compiler root;
+the 16 detailed guides live in `docs/`. Cargo and links use this layout.
+[Documentation conventions](../docs/guide/documentation-style.md) require lowercase
+`meowy` and readable example spacing. Tests, tooling and generated source keep their
+own layouts. Intentional compact demonstrations and reference fixtures are preserved.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-The root handoff tracks lowercase project naming and spaced reader examples. The
-API renderer title/header/footer now use `meowy`; its existing rendering regression
-checks the visible spelling. Compiler source formatting and reference fixtures are
-outside the documentation layout convention. The focused rendering regression and
-all four repository checks passed.
-
-## Documentation layout
-
-[README.md](README.md), `AGENTS.md` and this handoff stay at the compiler root.
-The 16 detailed guides/design pages live in `docs/`. The README was restored to
-this location at the user's request; links, working instructions and Cargo metadata
-follow that layout. Page contents and headings are preserved apart from relative paths.
+All 82 reformatted standalone examples retain executable tokens, literal contents,
+ordinary comments and statement newlines. The nested documentation example also
+retains its code tokens/attributes/output and passed `doc check --run-examples`.
+Generated API-page branding is lowercase and covered by the renderer regression.
+The root STATUS lists the reviewable commits and preservation audit.
 
 ## Current compiler slice
 
@@ -96,12 +77,14 @@ computed roots retain their existing profile.
 - `python3 -B tools/verify.py --compiler`: all ten checks passed, including fmt,
   Clippy, build, 731 library/681 native Rust tests (1412 total), 16 tooling/four
   harness Python tests, and existing standalone/multi-file examples in both profiles.
-  Latest gate log: `/tmp/meowy-docs-relocation-gate.log`.
+  Latest gate log: `/tmp/meowy-doc-style-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Unsupported
   cases do not count as language rejections. Local links, 23 catalog records,
   7 schemas/6 examples and whitespace checks passed; external links were not fetched.
-- Backend/runtime code, reference fixtures and dependencies are unchanged. Editor
-  and separate runtime/sanitizer gates were not rerun; release qualification is open.
+- Documentation formatting, lowercase generated-page labels and README location
+  passed focused checks and the complete gate. Compiler language behavior, runtime
+  implementation, reference fixtures and dependencies are unchanged. Editor and
+  separate runtime/sanitizer gates were not rerun; release qualification is open.
 
 ## Prior capabilities and other areas
 

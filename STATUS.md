@@ -5,31 +5,32 @@ Updated: 2026-09-12. This is the current project handoff; Git retains prior work
 [compiler/STATUS.md](compiler/STATUS.md) the detailed compiler handoff.
 Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete.
 
-## Active documentation work
+## Documentation conventions
 
-Latest validated formatting group: Use lowercase meowy in runtime documentation. Tokens, literal/comment contents and
-statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+Write the project name as `meowy`. Reader examples follow
+[the documentation conventions](docs/guide/documentation-style.md), including
+linked standalone examples. Tests, internal tooling and generated source retain
+independent layouts. Explicit compact-syntax demonstrations and exact identifiers,
+protocol bytes, output text and reference fixtures remain preserved.
 
+Documentation and 82 standalone examples were standardized. The compiler lexer
+verified unchanged tokens, strings, ordinary comments and statement newlines;
+the embedded documentation example also keeps its code tokens and expected output.
+The final audit checked 107 fences in changed Markdown pages and 111 changed inline
+fragments. Audit: `/tmp/meowy-doc-style-audit.json`. No formatter was added to the repo.
 
+Current commit series (each slice was checked before commit):
 
+| Scope | Commits |
+| --- | --- |
+| Convention, schema titles, visible labels, README location | `fe4b40e`, `07e5cb3`, `3f85f56`, `6ac39cd` |
+| Introductory, language, library and compiler guides | `fa99c10`, `44af745`, `f41ae28`, `cccbdb5`, `dd2d704`, `efe7fcf` |
+| Reference, storage, lifetime and list examples | `7669847`, `ccee0d6`, `14ed656`, `70d23fb` |
+| Alias, carried and exclusive examples | `b2af393`, `db4e3a1`, `71a6560`, `37b6648`, `acfb6b1` |
+| Module and documented examples | `7325f2f`, `a9dfeea`, `e9b41c4` |
 
-Standardize the project name as `meowy` and use the existing spaced gatostyle
-baseline for documentation. Preserve tokens, literal/comment contents, newlines,
-intentional compact-syntax demonstrations, exact diagnostics and reference fixtures.
-Baseline repository verification passed all four checks. The convention guide and
-AGENTS rules passed local-link checks; standalone reader examples are included. Compiler implementation
-work remains at the handoff below while this documentation task is active.
-
-Commit plan:
-1. `fe4b40e` adds the documentation conventions and AGENTS rules.
-2. `07e5cb3` normalizes schema titles; lowercase generated/API and tool labels
-   passed the renderer regression and repository checks.
-3. Format introductory/guide, language-reference, library, cookbook and compiler
-   documentation in related reviewable groups, including their inline code fragments.
-4. Apply the same presentation to linked standalone examples as requested;
-   preserve tests/tooling/generated source and explicit compact fixtures.
-5. Verify lexical preservation, links, repository checks and the compiler gate;
-   update both handoffs with actual validation and the implementation next step.
+This final handoff records the complete validation and resumes the implementation
+next steps below. Git retains the earlier compiler feature and documentation moves.
 
 ## Current milestone
 
@@ -53,12 +54,13 @@ release qualification remains incomplete.
 
 - `python3 -B tools/verify.py --compiler`: all ten checks passed, including 1412 Rust
   tests, 20 Python tests, and existing examples in debug/release.
-- Nine native primary-input groups passed, including silent checking/building,
-  once-only initialization, runtime failure, source spans and repeated-read work.
+- Formatting preservation, lowercase labels, the restored README/Cargo path and
+  embedded documentation example execution passed. Latest compiler gate log:
+  `/tmp/meowy-doc-style-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed. Local links, catalog/schema and
   whitespace checks passed; full release qualification remains open.
-- Backend/runtime code, reference fixtures and dependencies are unchanged. Editor
-  and separate runtime/sanitizer gates were not rerun.
+- Compiler language behavior, runtime implementation, reference fixtures and
+  dependencies are unchanged. Editor and separate runtime/sanitizer gates were not rerun.
 
 ## Area handoff
 

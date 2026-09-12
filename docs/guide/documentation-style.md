@@ -15,8 +15,10 @@ syntax or impose a repository-wide source formatter.
 
 Examples that specifically explain compact syntax, token boundaries, formatter
 presets or exact diagnostic source may retain their required presentation. Label
-those examples explicitly. Preserve strings, comments, output transcripts and fixtures;
-formatting must not change the program or its statement boundaries.
+those examples explicitly. Preserve strings, comment prose, output transcripts and
+fixtures; formatting must not change the program or its statement boundaries. Code
+fences inside documentation comments follow the same spacing convention while their
+attributes and expected output stay intact.
 
 ## Spaced examples
 

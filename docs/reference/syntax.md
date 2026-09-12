@@ -219,7 +219,7 @@ expressed through a matcher, not inferred from its distance to an outer `|`.
 | Form                              | Interpretation                                 |
 | --------------------------------- | ---------------------------------------------- |
 | `\| value <T> \| use(value)`          | Test `value` and refine it in the arm          |
-| `\| !(value<T>) \| reject()`         | Negate the type test                           |
+| `\| !(value <T>) \| reject()`         | Negate the type test                           |
 | `\| accepts<T>(value) \| use(value)` | Call a specialized boolean function            |
 | `\| accepts(value<T>) \| use(value)` | Pass a proven ascription to a boolean function |
 | `\| flag \| copy : value<T>`           | Test `flag`; the body contains an ascription   |
@@ -353,7 +353,7 @@ requiring a safety proof; it does not disable type checking.
 
 ### Forward function groups
 
-An annotation-only statement `name<(Parameters) -> Result>;` reserves an immutable,
+An annotation-only statement `name <(Parameters) -> Result>;` reserves an immutable,
 non-capturing function in the current value scope. It is recognized at statement
 start when an identifier and a complete function-type annotation reach a statement
 terminator without a binding operator. It is not an ascription expression statement;
@@ -369,8 +369,8 @@ called or escape. A definition may use `->` to export its completed function.
 This fulfills the reservation rather than redeclaring the name.
 
 ```meowy
-even<(uint32) -> boolean>;
-odd<(uint32) -> boolean>;
+even <(uint32) -> boolean>;
+odd <(uint32) -> boolean>;
 even <boolean> : (n <uint32>) 'answer {
     | n == 0 | { 'answer -> true; 'answer.leave() }
     -> odd(n - 1)
