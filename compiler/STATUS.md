@@ -7,8 +7,9 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active documentation consistency work
 
-Latest validated formatting group: Space compiler borrowing documentation examples. Tokens, literal/comment contents and
+Latest validated formatting group: Space reference and pointer examples. Tokens, literal/comment contents and
 statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+
 
 
 The root handoff tracks lowercase project naming and spaced reader examples. The

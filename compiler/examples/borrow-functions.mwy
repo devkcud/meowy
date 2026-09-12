@@ -1,12 +1,12 @@
 debug : @"debug"
 
-identity<&int32> : (value<&int32>) { -> value }
-choose<&int32> : (flag<boolean>, left<&int32>, right<&int32>) {
-    |flag| -> left
-    |!flag| -> right
+identity <&int32> : (value <&int32>) { -> value }
+choose <&int32> : (flag <boolean>, left <&int32>, right <&int32>) {
+    | flag | -> left
+    | !flag | -> right
 }
-read<int32> : (value<&int32>) { -> *value }
-packet<{view<&int32>;count<int32>}> : (value<&int32>) {
+read <int32> : (value <&int32>) { -> *value }
+packet <{ view <&int32>; count <int32> }> : (value <&int32>) {
     -> view : value
     -> count : *value
 }

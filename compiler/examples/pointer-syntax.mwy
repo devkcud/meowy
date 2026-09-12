@@ -1,20 +1,20 @@
-d:@"debug"
-object:={->field:=7}
-copy<int32>:&object.field
-shared<&int32>:object.&field
+d : @"debug"
+object := { -> field := 7 }
+copy <int32> : &object.field
+shared <&int32> : object.&field
 d.print(copy)
 d.print(*shared)
-exclusive:object.&!field
-*exclusive=8
+exclusive : object.&!field
+*exclusive = 8
 d.print(object.field)
-items:[10,20]
-selected<int32>:&items[2]
-element<&int32>:&(items[2])
+items : [10, 20]
+selected <int32> : &items[2]
+element <&int32> : &(items[2])
 d.print(selected)
 d.print(*element)
-stored:{->reference:element}
-record:&stored
-picked<&int32>:*record.reference
-value<int32>:record.*reference
-d.print(picked==element)
+stored : { -> reference : element }
+record : &stored
+picked <&int32> : *record.reference
+value <int32> : record.*reference
+d.print(picked == element)
 d.print(value)

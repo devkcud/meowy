@@ -1,14 +1,14 @@
-debug:@"debug"
+debug : @"debug"
 
-first:=7
-second:9
-view:=&first
-original:view
-view=&second
+first := 7
+second : 9
+view := &first
+original : view
+view = &second
 debug.print(*original)
 debug.print(*view)
 
-first=8
-cell:&view
-view={debug.print(**cell);->&first}
+first = 8
+cell : &view
+view = { debug.print(**cell); -> &first }
 debug.print(*view)

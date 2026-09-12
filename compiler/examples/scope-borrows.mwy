@@ -1,10 +1,10 @@
 debug : @"debug"
 
-read<int32> : (value<int32>) {
+read <int32> : (value <int32>) {
     view : &value
     -> *view
 }
-same<boolean> : (value<int32>, original<&int32>) { -> &value == original }
+same <boolean> : (value <int32>, original <&int32>) { -> &value == original }
 
 owner := 7
 debug.print(same(owner, &owner))

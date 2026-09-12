@@ -1,15 +1,15 @@
-debug:@"debug"
+debug : @"debug"
 
-choose<int32>:(flag<boolean>){
-    first:=7
-    second:=9
-    view:=&first
-    original:view
-    |flag|view=&second
+choose <int32> : (flag <boolean>) {
+    first := 7
+    second := 9
+    view := &first
+    original : view
+    | flag | view = &second
     debug.print(*original)
-    |flag|first=8
-    |!flag|second=10
-    ->*view
+    | flag | first = 8
+    | !flag | second = 10
+    -> *view
 }
 
 debug.print(choose(false))
