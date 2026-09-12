@@ -1,14 +1,14 @@
-debug:@"debug"
+debug : @"debug"
 
-first:7
-second:9
-view:=&first
-original:view
-count:=0
-'loop{
+first : 7
+second : 9
+view := &first
+original : view
+count := 0
+'loop {
     debug.print(*view)
-    view=&second
-    count=count+1
-    |count<2|'loop.restart()
+    view = &second
+    count = count + 1
+    | count < 2 | 'loop.restart()
 }
 debug.print(*original)

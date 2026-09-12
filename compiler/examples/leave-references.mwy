@@ -1,14 +1,14 @@
-debug:@"debug"
+debug : @"debug"
 
-choose<int32>:(flag<boolean>){
-    first:7
-    second:9
-    last:11
-    view:=&first
-    'target{
-        view={view=&second;|flag|'target.leave();->&last}
+choose <int32> : (flag <boolean>) {
+    first : 7
+    second : 9
+    last : 11
+    view := &first
+    'target {
+        view = { view = &second; | flag | 'target.leave(); -> &last }
     }
-    ->*view
+    -> *view
 }
 
 debug.print(choose(false))

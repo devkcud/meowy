@@ -1,12 +1,12 @@
-debug:@"debug"
+debug : @"debug"
 
-owner:7
-copied:*(&(&owner))
-debug.print(copied==&owner)
+owner : 7
+copied : *(&(&owner))
+debug.print(copied == &owner)
 debug.print(*copied)
 
-<Holder>:<{view<&int32>;count<int32>}>
-make<Holder>:(value<&int32>){debug.print("owner");->view:value;->count:3}
-holder:*(&(make(&owner)))
+<Holder> : <{ view <&int32>; count <int32> }>
+make <Holder> : (value <&int32>) { debug.print("owner"); -> view : value; -> count : 3 }
+holder : *(&(make(&owner)))
 debug.print(holder.*view)
 debug.print(holder.count)
