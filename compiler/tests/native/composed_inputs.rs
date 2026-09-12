@@ -250,7 +250,7 @@ pub(crate) fn local_composed_inputs_keep_ancestor_effects_shapes_and_widths() {
             "E211",
         ),
         (
-            "row:{->n:4};copy:{|true|->row};<T>:{n:copy.n;-><int32>}",
+            "flag:true;row:{->n:4};copy:{|flag|->row};<T>:{n:copy.n;-><int32>}",
             "E211",
         ),
         (

@@ -144,7 +144,7 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 ## Active plan and next steps
 
 Inspection: matchers lower to `hir::Stmt::If` with lexical branch scope and explicit
-statement lists. Record input checking currently rejects every If. Constant folding
+statement lists. Record input checking now follows only proven literal branches. Constant folding
 alone cannot prove eligibility because it may hide runtime reads or effects.
 
 Bound this slice to conditions built from checked boolean literals, `!`, `&&` and
@@ -157,10 +157,15 @@ Dependency-ordered commits:
 1. Complete: record statement accumulation lives in `inputs/records/build.rs`.
    All 735 library/708 native tests, fmt and Clippy passed with unchanged behavior.
    Log: `/tmp/meowy-record-builder-tests.log`.
-2. Add bounded literal-condition proof and selected-branch accumulation. Include
-   native acceptance, selected effects/errors, skipped effects and runtime-read gates.
+2. Complete: bounded literal-condition proof selects branches with scoped locals,
+   retained condition/statement work and unchanged HIR. Full Rust tests passed
+   (736 library/712 native), plus the added 31/32 branch-depth boundary test.
+   Selected effects and runtime reads reject; skipped effects/operands do not run.
+   Retained selected sibling/tail errors keep E107 source spans. Fmt/Clippy passed.
+   Log: `/tmp/meowy-conditional-record-tests.log`.
 3. Add independent work/staging/forwarding regressions and document supported
    conditions. Run the complete compiler gate and update both handoffs.
 
-Next: implement bounded branch proof and validate selected/skipped execution.
+Next: prove repeated branch work, skipped work and module staging/forwarding;
+update guides and run the complete compiler gate.
 Keep helper purity, packages, borrowed storage and whole-module inputs separate.

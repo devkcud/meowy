@@ -18,6 +18,9 @@ impl Checker {
         count: &mut usize,
         build: &mut Build<'_>,
     ) -> Option<()> {
+        if depth >= super::MAX_DEPTH {
+            return None;
+        }
         let mut types = BTreeMap::new();
         for stmt in stmts {
             if !self.flow.spend(1) {
@@ -126,6 +129,18 @@ impl Checker {
                         .input
                         .add(&self.source_record(id, &build.locals)?.input);
                     build.record.input.work = build.record.input.work.saturating_add(2);
+                }
+                hir::Stmt::If {
+                    condition,
+                    then,
+                    otherwise,
+                } => {
+                    let (value, work) = self.literal_condition(condition, depth + 1, count)?;
+                    build.record.input.work = build.record.input.work.saturating_add(work);
+                    let locals = build.locals.clone();
+                    let branch = if value { then } else { otherwise };
+                    self.record_stmts(branch, depth + 1, count, build)?;
+                    build.locals = locals;
                 }
                 hir::Stmt::SlotAlias {
                     id,
