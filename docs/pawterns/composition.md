@@ -3,7 +3,7 @@
 [Pawterns](README.md) · Previous: [Your first project](first-project.md) · Next: [Borrow the bytes, keep the owner](ownership.md)
 
 A number is useful. A number that remembers which sensor produced it is easier
-to debug at midnight. Meowy's blocks can carry both without making you choose.
+to debug at midnight. meowy's blocks can carry both without making you choose.
 
 The first three recipes each supply an independent complete `main.mwy`. Use the
 minimal manifest from [your first project](first-project.md#print-a-greeting-from-a-project).
@@ -131,7 +131,7 @@ pipeline : 20.(increment).(double)
 debug.print(ordinary == pipeline)
 
 value <int32><null> : 42
-|value<int32>|debug.print(value.{->self<int32>})
+| value <int32> | debug.print(value.{ -> self<int32> })
 ```
 
 The output is `true` followed by `42`. The matcher's `value<int32>` tests the

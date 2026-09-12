@@ -38,7 +38,7 @@ working version works.
 | How do I document APIs without repeating their types?       | [Checked documentation comments](reference/documentation.md)                                         |
 | Does `->` return? Does `{ ... }` create a function?         | [Values and blocks](reference/values-and-blocks.md)                                                 |
 | Can a mutable binding change type?                          | [Types](reference/types.md)                                                                         |
-| How do I declare `D<K,V,Y,Z>` or a generic function?        | [Multiple type parameters](reference/types.md#multiple-type-parameters)                             |
+| How do I declare `D<K, V, Y, Z>` or a generic function?        | [Multiple type parameters](reference/types.md#multiple-type-parameters)                             |
 | How do I construct types or check pure helpers?             | [Compile-time evaluation](reference/compile-time.md)                                                |
 | How do I accept capturing callbacks without boxing?         | [Callable capabilities](reference/types.md#callable-environments)                                   |
 | How do errors and nullable values narrow?                   | [Types](reference/types.md#unions-and-narrowing)                                                    |

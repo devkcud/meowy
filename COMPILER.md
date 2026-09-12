@@ -31,7 +31,7 @@ development milestones toward that full v0.0.1 release.
 Rust's enums and exhaustive matching fit syntax and intermediate representations.
 Use owned arenas, interned names, and typed integer IDs for compiler graphs. This
 keeps graph lifetimes manageable without making every node a reference-counted
-object. Rust checks the compiler's memory use; **Meowy's borrow checker is a
+object. Rust checks the compiler's memory use; **meowy's borrow checker is a
 separate analysis we must write**.
 
 C++ gives the backend direct access to LLVM and Clang internals. Keep it behind
@@ -42,7 +42,7 @@ Explicitly selected native artifacts retain their own declared dependency closur
 
 The implementation language does not define the output's memory model. Compiler
 processes may allocate while analyzing a program. Generated programs must follow
-Meowy's explicit allocation, borrowing, and cleanup rules, with no tracing GC.
+meowy's explicit allocation, borrowing, and cleanup rules, with no tracing GC.
 
 ## Tools worth bringing along
 
@@ -52,12 +52,12 @@ Add dependencies when their component starts. Pin the exact dependency graph in
 | Tool or library                                                                                                                              | Use it for                                                 | Boundary                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Cargo, rustfmt, Clippy                                                                                                                       | Build, test, and maintain Rust components                  | Pin Rust in `rust-toolchain.toml`; release builds use the lockfile                     |
-| [rowan](https://github.com/rust-analyzer/rowan)                                                                                              | Lossless concrete syntax trees                             | Write Meowy's lexer and parser; rowan stores their output                              |
+| [rowan](https://github.com/rust-analyzer/rowan)                                                                                              | Lossless concrete syntax trees                             | Write meowy's lexer and parser; rowan stores their output                              |
 | [serde / serde_json](https://github.com/serde-rs/json)                                                                                       | Typed tool messages and artifact structures                | Implement the specified canonical encoding and strict reader validation separately     |
-| [clap](https://docs.rs/clap/latest/clap/)                                                                                                    | The compiler's CLI argument handling                       | Follow the existing command contract; Meowy's `cli` package remains a separate library |
+| [clap](https://docs.rs/clap/latest/clap/)                                                                                                    | The compiler's CLI argument handling                       | Follow the existing command contract; meowy's `cli` package remains a separate library |
 | [lsp-server](https://github.com/rust-lang/rust-analyzer/tree/master/lib/lsp-server) and [lsp-types](https://github.com/gluon-lang/lsp-types) | LSP transport and protocol types                           | Share the compiler analysis; negotiate only supported protocol features                |
 | [object](https://github.com/gimli-rs/object)                                                                                                 | Inspect ELF files, symbols, sections, and relocations      | LLD does the linking; this supports verification and build reports                     |
-| [RustCrypto sha2](https://github.com/RustCrypto/hashes)                                                                                      | SHA-256 input and artifact identities                      | Hash the exact bytes required by each Meowy format                                     |
+| [RustCrypto sha2](https://github.com/RustCrypto/hashes)                                                                                      | SHA-256 input and artifact identities                      | Hash the exact bytes required by each meowy format                                     |
 | CMake and Ninja                                                                                                                              | LLVM, the bridge, and the native runtime                   | Keep native build configuration in checked-in presets                                  |
 | LLVM tools                                                                                                                                   | Inspect IR, assembly, debug information, and linked output | Bundle matching tools when a user-facing command or capsule needs them                 |
 | [lit and FileCheck](https://releases.llvm.org/22.1.0/docs/TestingGuide.html)                                                                 | Small backend and native ABI regression tests              | Assert relevant properties, rather than whole optimized IR dumps                       |
@@ -71,7 +71,7 @@ to inspect instructions, and `llvm-size` for section totals. Use
 addresses. Their interfaces are collected in the
 [LLVM command guide](https://releases.llvm.org/22.1.0/docs/CommandGuide/index.html).
 Use [LLDB](https://lldb.llvm.org/use/tutorial.html) for native debugging; emitting
-DWARF is the first step, while readable Meowy values also need language-aware
+DWARF is the first step, while readable meowy values also need language-aware
 type descriptions and debugger tests.
 
 Keep the first analysis engine ordinary: immutable source snapshots, explicit
@@ -85,7 +85,7 @@ Adopt more elaborate incremental machinery when measurements justify it.
 
 Use **LLVM 22.1.8** as the initial backend candidate, with Clang, LLD, compiler-rt,
 and libunwind from the same `llvmorg-22.1.8` source release. This is a proposed
-baseline to qualify, not a claim that a complete Meowy distribution has passed
+baseline to qualify, not a claim that a complete meowy distribution has passed
 qualification. Record the resolved revision, archive checksums, build options,
 patches, and resulting payload digests. The upstream
 [release](https://github.com/llvm/llvm-project/releases/tag/llvmorg-22.1.8)
@@ -102,7 +102,7 @@ Use a Cargo workspace for Rust and CMake presets for native code, with one small
 Rust `xtask` build driver coordinating them. Its jobs are preparing the pinned
 toolchain, building components, running suites, and assembling a distribution.
 Cargo build scripts may integrate these maintained native components; dependency
-source does not gain access to Meowy application build hooks.
+source does not gain access to meowy application build hooks.
 
 The LLVM developer preset should select `clang;lld`, the `X86` target, a release
 build with LLVM assertions, and bounded compile/link parallelism. Build the
@@ -126,7 +126,7 @@ a target triple on a modern workstation does not establish the minimum glibc
 requirement; inspect the final versioned symbols and test the distribution on
 the minimum supported environment.
 
-Maintainers need bootstrap tools. A Meowy user needs the assembled distribution:
+Maintainers need bootstrap tools. A meowy user needs the assembled distribution:
 compiler, backend, linker, runtime, standard library and rule data, sysroot, and
 descriptor. The driver resolves tools by exact distribution paths. Ambient
 `CC`, `CFLAGS`, `LDFLAGS`, host headers, and same-name native libraries are not
@@ -216,12 +216,12 @@ phase so an error in a specialization can explain both definition and use.
 storage and ordinary loads/stores where that keeps the lowering simple; LLVM
 can promote suitable locals. Emit arithmetic and bounds checks in every profile.
 Do not attach `nsw`, `nuw`, `inbounds`, `noalias`, or fast-math promises unless
-Meowy's analysis proves the particular promise. Optimization must preserve
+meowy's analysis proves the particular promise. Optimization must preserve
 defined failures, aliasing, float behavior, and cleanup.
 
 ## Three native interfaces, three jobs
 
-The Rust-to-C++ bridge, Meowy's private runtime ABI, and the public C FFI are
+The Rust-to-C++ bridge, meowy's private runtime ABI, and the public C FFI are
 different interfaces. Give each a versioned internal contract and tests.
 
 The **compiler bridge** takes checked lowering requests and exposes opaque
@@ -240,11 +240,11 @@ to drive frontend actions, but parsing a C declaration alone does not implement
 its calling convention. Compare generated adapters against separately compiled
 C fixtures, especially small mixed-field aggregates and indirect returns.
 Follow [native ABI](docs/reference/native-abi.md): `ffi.extern` produces a
-Meowy-callable adapter, not a raw C function pointer.
+meowy-callable adapter, not a raw C function pointer.
 
 For **runtime calls**, define ownership of every argument, allocation behavior,
 failure result, suspension permission, and unwind behavior. Use status returns
-for OS operations and resource admission. Compiler-generated Meowy frames turn
+for OS operations and resource admission. Compiler-generated meowy frames turn
 statuses into the documented values or panic paths. Keep native allocations
 fallible and accounted for; avoid implicit C++ container growth and exception
 translation in these paths.
@@ -259,11 +259,11 @@ and cleans up before that parent local disappears.
 Use pthread workers and pinned stackful task contexts. Prototype the stack
 switch using a vendored, revision-pinned
 [Boost.Context](https://github.com/boostorg/context) primitive behind a private
-wrapper. It supports suspension within nested calls; Meowy's scheduler must
+wrapper. It supports suspension within nested calls; meowy's scheduler must
 impose worker pinning, admission limits, and structured lifetimes. Qualify that
 wrapper before committing the runtime ABI to it: stack allocation, guard pages,
 register preservation, sanitizer hooks, and unwind behavior need executable
-tests. High-level C++ continuation destruction must not become Meowy cancellation.
+tests. High-level C++ continuation destruction must not become meowy cancellation.
 Keep the context-switch dependency replaceable without changing language rules.
 
 The runtime owns scheduling, channel queues, timers, and OS readiness integration.
@@ -273,10 +273,10 @@ budget and allocator; allocation failure becomes an admission outcome. The
 [task contract](docs/reference/tasks-and-channels.md) determines when a task can
 start, suspend, finish, and release its captures.
 
-Use LLVM's DWARF exception-handling support with a Meowy personality routine,
+Use LLVM's DWARF exception-handling support with a meowy personality routine,
 generated landing pads, and the pinned unwind library. Panic payloads and
-cancellation states belong to Meowy. A generated task-root handler finishes
-Meowy cleanup and produces an outcome before returning to scheduler frames.
+cancellation states belong to meowy. A generated task-root handler finishes
+meowy cleanup and produces an outcome before returning to scheduler frames.
 Foreign adapters cannot allow exceptions to cross the public C boundary. A
 second panic during cleanup takes the documented fatal path. These are explicit
 runtime rules; host C++ destructors or Rust panics cannot supply them by accident.
@@ -379,7 +379,7 @@ Parser, socket, cancellation, wire-version and schema gates remain separate from
 documentation checks. The current change is a specification migration, not a
 network runtime implementation or a newly qualified compiler capability.
 
-Build ordinary algorithms in Meowy: errors, inline collections, formatting,
+Build ordinary algorithms in meowy: errors, inline collections, formatting,
 duration arithmetic, then allocated collections and I/O wrappers. Add tasks and
 channels once the runtime passes its gates. Layer testing, JSON, CLI composition,
 date/time, and calendar modules on those foundations. Intrinsic identities and
@@ -389,7 +389,7 @@ registry. A standard-library filename or familiar binding name grants no magic.
 Use the [stdlib reference](docs/reference/stdlib/README.md) as the API contract.
 Pin Unicode, time-zone, and calendar rule data as distribution inputs; keep their
 modules independently reachable. Any third-party algorithm or native library
-needs an adapter that preserves Meowy's allocation, error, and data-version
+needs an adapter that preserves meowy's allocation, error, and data-version
 contracts. Importing `time` must not retain a calendar database simply because
 both were implemented in one enormous native translation unit.
 
@@ -458,7 +458,7 @@ driver/                    meowy command, package graph, builds, and sessions
 tools/                     LSP, gatostyle, shared diagnostic rendering
 backend/llvm/              C++ bridge and native ABI lowering
 runtime/                   allocation, stacks, scheduling, unwinding, recording
-stdlib/                    Meowy library sources and pinned rule data
+stdlib/                    meowy library sources and pinned rule data
 bootstrap/                 source inventories, sysroot recipe, CMake presets
 xtask/                     maintained build and distribution orchestration
 tests/                     compiler, backend, ABI, runtime, replay, and tool tests
@@ -466,7 +466,7 @@ docs/conformance/          language contract fixtures
 docs/schemas/              public format schemas and examples
 ```
 
-Rust/CMake bootstrap configuration builds Meowy itself. Application configuration
+Rust/CMake bootstrap configuration builds meowy itself. Application configuration
 continues to live in `mod.mwy`. Internal IR and runtime ABI versions are tied to
 the distribution; public artifact versions follow their explicit compatibility
 rules. Do not silently turn an internal serialization format into a public API.
@@ -485,7 +485,7 @@ v0.0.1 language profile.
 | 3. Own values        | Aggregates, moves, borrows, captures, initialization tracking, and generated cleanup                     | Use-after-move/borrow violations reject; each initialized owner is destroyed exactly once             |
 | 4. Construct types   | Required evaluator, effects, constrained generics, specialization, and foundational intrinsics           | Budgets and purity reject consistently; generic errors retain useful source evidence                  |
 | 5. Run owned work    | Qualified stack/unwind prototype, task lifecycle, channels, timers, and recording hooks                  | One-worker waits make progress; cancellation joins children; panic preserves cleanup order            |
-| 6. Build projects    | Imports/aliases, locked packages, native adapters, Meowy library layers, and build reports               | Offline builds use the locked graph; C ABI fixtures agree; unused library code stays out              |
+| 6. Build projects    | Imports/aliases, locked packages, native adapters, meowy library layers, and build reports               | Offline builds use the locked graph; C ABI fixtures agree; unused library code stays out              |
 | 7. Use the ecosystem | Test runner, LSP, gatostyle, isolated failure capsules, recording and replay                             | Shared diagnostics agree; repairs recheck; a capsule reproduces away from its source tree             |
 | 8. Qualify v0.0.1    | Complete documented initial language, library, CLI, and distribution profile                             | All required coverage, target/link/LTO/debug combinations, format readers, and deployment checks pass |
 

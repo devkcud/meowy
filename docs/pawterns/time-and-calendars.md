@@ -3,7 +3,7 @@
 [Pawterns](README.md) · Previous: [CLI apps and files](cli-and-files.md) · Next: [Tasks and channels](tasks-and-channels.md)
 
 "Wait a second" is easy. "Same time tomorrow" is where the calendar starts
-asking follow-up questions. Meowy gives elapsed time, civil time, zones, and
+asking follow-up questions. meowy gives elapsed time, civil time, zones, and
 calendars different values so those questions stay visible in your code.
 
 Each complete entry below belongs in its own [small project](first-project.md).

@@ -180,7 +180,7 @@ context, including generic calls, parentheses, and call arguments.
 The same distinction composes through a dispatched block:
 
 ```meowy
-|t.{->self<MyCoolType>}<MyCoolType>|matched()
+| t.{ -> self<MyCoolType> } <MyCoolType> | matched()
 ```
 
 Inside the block, `self<MyCoolType>` is a proven ascription. Outside it, the

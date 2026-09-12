@@ -19,7 +19,8 @@ meeting_length : time.Hour.add(time.Minute.scale(30))
 
 `time.Day` is exactly 24 hours and `time.Week` is exactly seven such days. All units
 are ordinary Duration values, so `scale`, `add`, and dispatch compose without
-special numeric operators. Even `budget:time.Hour.scale(2)` needs no spaces.
+special numeric operators. Documentation uses `budget : time.Hour.scale(2)` with
+spaces for readability.
 The [duration reference](../reference/stdlib/time-and-date.md#fixed-durations)
 defines checked arithmetic and text such as `"2h30m"` or `"250ms"`.
 
