@@ -1,9 +1,9 @@
-d:@"debug"
+d : @"debug"
 d.print("ops")
-->version:1
-->first<&int32>:(items<&int32[2]>){->&(items[1])}
-->bump<null>:(value<&!int32>){*value=*value+1}
-->sum<int32>:(n<int32>)'result{
-    |n==0|{'result->0;'result.leave()}
-    ->n+sum(n-1)
+-> version : 1
+-> first <&int32> : (items <&int32[2]>) { -> &(items[1]) }
+-> bump <null> : (value <&!int32>) { *value = *value + 1 }
+-> sum <int32> : (n <int32>) 'result {
+    | n == 0 | { 'result -> 0; 'result.leave() }
+    -> n + sum(n - 1)
 }

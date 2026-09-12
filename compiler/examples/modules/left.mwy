@@ -1,4 +1,4 @@
-d:@"debug"
-shared:@"./shared.mwy"
+d : @"debug"
+shared : @"./shared.mwy"
 d.print("left")
-->n:shared.n+1
+-> n : shared.n + 1

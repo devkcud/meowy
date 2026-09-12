@@ -1,5 +1,5 @@
-d:@"debug"
+d : @"debug"
 d.print("entry")
-left:@"./left.mwy"
-right:@"./right.mwy"
-d.print(left.n+right.n)
+left : @"./left.mwy"
+right : @"./right.mwy"
+d.print(left.n + right.n)

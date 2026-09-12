@@ -1,7 +1,7 @@
-ops:@"./ops.mwy"
-d:@"debug"
+ops : @"./ops.mwy"
+d : @"debug"
 d.print("api")
-->version:ops.version
-->first<(&int32[2])->&int32>:ops.first
-->bump<(&!int32)->null>:ops.bump
-->sum<(int32)->int32>:ops.sum
+-> version : ops.version
+-> first <(&int32[2]) -> &int32> : ops.first
+-> bump <(&!int32) -> null> : ops.bump
+-> sum <(int32) -> int32> : ops.sum
