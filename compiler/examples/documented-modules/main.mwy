@@ -1,7 +1,7 @@
 #!| Use [[counter.inc]] with [[<counter.Count>]]. |!#
-counter:@"./facade.mwy"
-direct:@"./counter.mwy"
-debug:@"debug"
+counter : @"./facade.mwy"
+direct : @"./counter.mwy"
+debug : @"debug"
 #| Starting value from [[counter.start]]. |#
-start<counter.Count>:counter.start
+start <counter.Count> : counter.start
 debug.print(counter.inc(start))

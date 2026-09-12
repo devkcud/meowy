@@ -1,8 +1,8 @@
 #!| Public counter facade: [[inc]] and [[<Count>]]. |!#
-counter:@"./counter.mwy"
+counter : @"./counter.mwy"
 #| Counter type from [[<counter.Count>]]. |#
--><Count>:<counter.Count>
+-> <Count> : <counter.Count>
 #| Increment through [[counter.inc]]. |#
-->inc<(int32)->int32>:counter.inc
+-> inc <(int32) -> int32> : counter.inc
 #| Initial value from [[counter.defaults.start]]. |#
-->start:counter.defaults.start
+-> start : counter.defaults.start

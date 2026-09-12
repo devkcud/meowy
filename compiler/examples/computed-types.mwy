@@ -1,23 +1,23 @@
 #!| Build [[<Counts>]] and [[<Row>]] before runtime storage exists. |!#
-debug:@"debug"
+debug : @"debug"
 #| Immutable settings eligible for required type evaluation. |#
-settings:{->limits:{->base<uint8>:{offset<uint8>:1;->offset+1}}}
+settings : { -> limits : { -> base <uint8> : { offset <uint8> : 1; -> offset + 1 } } }
 #| A bounded list of signed counts. |#
-<Counts>:{
+<Counts> : {
     #| Element type used by the list constructor. |#
-    element:<int32>
+    element : <int32>
     #| Base capacity. |#
-    base<uint8>:settings.limits.base
+    base <uint8> : settings.limits.base
     #| Capacity calculated from [[base]]. |#
-    capacity:base*2
-    -><(element)[capacity]>
+    capacity : base * 2
+    -> <(element)[capacity]>
 }
 #| A record built from a local type alias. |#
-<Row>:{
-    <Count>:<int32>
-    -><{count<Count>;label<string>}>
+<Row> : {
+    <Count> : <int32>
+    -> <{ count <Count>; label <string> }>
 }
-counts<Counts>:[3,7]
-row<Row>:{->count:counts[2];->label:"computed"}
+counts <Counts> : [3, 7]
+row <Row> : { -> count : counts[2]; -> label : "computed" }
 debug.print(row.label)
 debug.print(row.count)

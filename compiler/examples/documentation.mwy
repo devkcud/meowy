@@ -1,25 +1,25 @@
 #!| A small checked API for [[add]]. |!#
-d:@"debug"
+d : @"debug"
 
 #||
 Adds [[left]] and [[right]] as [[<int32>]] values.
 
 ```meowy run
-d:@"debug"
-d.print(2+3)
+d : @"debug"
+d.print(2 + 3)
 ```
 
 ```output
 5
 ```
 ||#
-add<int32>:(
+add <int32> : (
     #| First count. |#
-    left<int32>,
+    left <int32>,
     #| Second count. |#
-    right<int32>
-){
-    ->left+right
+    right <int32>
+) {
+    -> left + right
 }
 
-d.print(add(2,3))
+d.print(add(2, 3))

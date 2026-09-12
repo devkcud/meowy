@@ -7,8 +7,11 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active documentation consistency work
 
-Latest validated formatting group: Space typed and scoped module examples. Tokens, literal/comment contents and
-statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+Latest validated formatting group: documented and computed type examples. Executable
+tokens and newlines are preserved. The nested documentation example also uses spaced
+code; its attributes, output and surrounding prose are unchanged. Its doc execution
+check passed. Final compiler gate is pending.
+
 
 
 
