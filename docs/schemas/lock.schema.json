@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:meowy:schema:lock:1",
-  "title": "Meowy lock schema 1",
+  "title": "meowy lock schema 1",
   "type": "object",
   "properties": {
     "schema": {

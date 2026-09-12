@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:meowy:schema:diagnostic:1",
-  "title": "Meowy diagnostic schema 1",
+  "title": "meowy diagnostic schema 1",
   "type": "object",
   "properties": {
     "schema": {

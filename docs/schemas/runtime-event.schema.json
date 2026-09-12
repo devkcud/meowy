@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:meowy:schema:runtime-event:1",
-  "title": "Meowy runtime-event schema 1",
+  "title": "meowy runtime-event schema 1",
   "type": "object",
   "properties": {
     "schema": {

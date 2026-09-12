@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:meowy:schema:common:1",
-  "title": "Meowy common schema 1",
+  "title": "meowy common schema 1",
   "$defs": {
     "digest": {
       "type": "string",
