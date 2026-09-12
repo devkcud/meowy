@@ -233,10 +233,49 @@ Composition retains ordinary field/primary collision checks, record identity,
 startup order and runtime capture gates. Checking/building never execute source or
 facade initialization. Runtime failures still stop dependent and entry execution.
 
-Nonmodule record compositions, conditional exports and inline required import roots
-remain outside this slice. Annotated or mutable ordinary module-identity aliases
-retain their existing restrictions. Ordinary runtime captures remain unavailable;
-a type-only use does not grant runtime access.
+### Local record composition
+
+Eligible unit-primary records can also be composed into local records or directly
+into a file's exports. Named sources, inline initializers and projected subrecords
+retain all ancestor work and failures. For example, `settings.mwy` can contain:
+
+```meowy
+settings : {
+    -> limits : { -> width <uint8> : 4 }
+    unused : 2
+}
+copy : { -> settings.limits }
+-> copy
+```
+
+Its importer can use the composed field in a required type:
+
+```meowy
+settings : @"./settings.mwy"
+<Items> : { -> <int32[settings.width]> }
+items <Items> : [3, 7]
+debug : @"debug"
+debug.print(items[2])
+```
+
+This prints `7`. Each exported field retains a path into the complete eligible
+source record. Further module compositions and subrecord copies preserve that path
+and its evidence. Effects, mutation or unsupported values anywhere in the source
+initializer, including unselected siblings and unused tail statements, prevent
+eligibility for every composed field. Unrelated file initialization remains allowed.
+Composing a module namespace into a local record does not make the namespace eligible
+as a whole record; constructing a record from individually eligible exports works.
+
+The existing unit-primary, immutable-field, depth and total-field bounds still apply.
+Required reads charge retained work again, including copies and projections. Large
+valid shapes may encounter other bootstrap work or ownership-analysis limits before
+native execution. Declared shapes retain source errors on unreachable paths;
+unannotated unreachable shapes can still lose field identity.
+
+Conditional compositions/exports and inline required import roots remain outside
+this slice. Annotated or mutable ordinary module-identity aliases retain their
+existing restrictions. Ordinary runtime captures remain unavailable; a type-only
+use does not grant runtime access.
 
 ## Explicit limits
 

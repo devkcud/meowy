@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Local-record composition evidence is being implemented.
-The prior module composition gate passed. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Local-record composition inputs are implemented.
+All ten compiler gate checks passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -21,70 +21,61 @@ Git preserves that documentation series; the root STATUS links its preservation 
 
 ## Current compiler slice
 
-`Module.primary` pairs a direct integer emission ID with its checked initializer
-`Input`. `inputs.rs::module_integer` accepts scalar and mixed-record module identities;
-checked HIR primary projections retain that evidence in integer copies and re-exports.
-Synthetic module records remain ineligible as whole-record inputs.
+Eligible unit-primary local records now preserve computed-input evidence through
+composition, including inline sources, aliases, projected subrecords and extensions
+with named fields. `inputs/records.rs` recognizes the checked temporary Bind plus
+unit-primary/field projection HIR and retains complete ancestor eligibility, errors
+and work. The runtime HIR and evaluation order are unchanged.
 
-Required arithmetic and integer-annotated scratch can project a mixed module's integer
-primary. `expressions.rs` materializes it only with an integer context; full module
-hints preserve record identity for aliases, fields and type queries. Unannotated
-mixed-module scratch and bare mixed-module extents remain unavailable. Function-local
-required reads work; ordinary runtime captures retain B001. Runtime HIR, constant
-folding, storage and initialization order are unchanged.
+Direct top-level local-record compositions export fields through a shared checked
+record ID and a bounded field path. `exports.rs::composed_record_inputs` records the
+source evidence; `inputs/records/paths.rs::input_path` combines the retained path with
+an importer projection. Subsequent module compositions preserve that identity/path
+and add forwarding work. Every required read charges all retained work again.
 
-`Module.inputs` maps eligible immutable named exports to their original checked
-local IDs and retained forwarding work. Direct top-level compositions of registered
-file modules forward each eligible named input and integer primary independently.
-Each hop retains two extra work visits for its copy/projection; runtime HIR stays
-unchanged, and compile-time function/type exports are not implicitly forwarded. Existing integer/record evidence retains source failures, values and work;
-synthetic module bindings remain ineligible as whole-record inputs. Private initializer
-dependencies stay private. Ordinary module shape and initialization checks still run.
+File-module namespace eligibility stays distinct: direct module composition forwards
+individually eligible exports and an eligible integer primary. It never grants
+whole-record eligibility to a synthetic namespace. A local record constructed from
+individual eligible exports can qualify. Mutable, effectful or unsupported siblings
+and tails inside an ordinary record prevent eligibility for all composed fields;
+unrelated file initialization does not. Privacy, exact widths, ordinary collision
+checks, startup order, runtime captures and borrowed-export gates remain intact.
 
-`inputs/records/paths.rs` resolves a checked module field to the explicit export ID.
-Required leaves, copied integers, projected records and named re-exports preserve exact
-widths and complete ancestor evidence, including unselected siblings and unused tail
-work. Each required read charges that retained work again. Path bounds allow one extra
-module namespace segment; record and file-export shape bounds remain unchanged.
-
-Unrelated module initialization effects do not disqualify a pure export. Every effect
-inside its initializer or ancestor still prevents eligibility. Check/build never execute
-initialization; ordinary storage, captures and dependency initialization order remain
-unchanged. Required imported leaves can be used inside functions; ordinary runtime
-module-data capture remains B001.
-
-Nonmodule/conditional compositions and inline required import roots remain unavailable
-as computed inputs. Helper purity, non-integer/mutable scratch and full required
-evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
+Required integer primary projections of scalar/mixed modules retain their prior
+context rules: explicit integer scratch/arithmetic works; unannotated mixed-module
+scratch and bare mixed-module extents remain unavailable. Required reads inside
+functions work without granting ordinary runtime captures.
 
 Nested records retain unit primaries, immutable integer/record fields, 256 total fields
-and 32 record levels. Declared record aliases retain known errors on unreachable paths;
-inline unreachable emissions whose HIR loses field identity remain unavailable.
-Other bootstrap limits remain 4096 visits, 64 active resolver/validation levels and
-16384 traversed type nodes. These are not language E220 counters. Direct extents outside
-computed roots retain their existing profile.
+and 32 record levels. Declared record shapes preserve known E107 source spans on
+unreachable paths; unannotated unreachable shapes can lose field identity and remain
+B001. Other bootstrap limits remain 4096 visits, 64 resolver/validation levels and
+16384 type nodes; these are not language E220 counters. Native ownership analysis
+may exhaust its own budget before a shape reaches its input-field limit.
+
+Conditional composition/export evidence, helper purity, non-integer/mutable scratch
+and full required evaluation remain separate. See
+[COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#local-record-composition).
 
 ## Actual validation
 
-- `eb3840e`: export source IDs and forwarding work; all 731 library/692 native tests
-  passed with unchanged direct-export behavior.
-- `0a3dd81`: module composition evidence; all 732 library/696 native tests, fmt and
-  Clippy passed. Metadata coverage verifies source IDs, complete type, unchanged
-  bind/projection HIR and absence of synthetic whole-record input evidence.
-- `36cf2c2`: all nine native composition groups and the library identity test passed.
-  Native cases run debug/release and cover primary/named/subrecord forwarding,
-  widths, privacy, capture/conditional/nonmodule gates, silent check/build, startup
-  diamonds, repeated work, ancestor effects and failure before facade execution.
-- Dependency E107 probes check ordinary dependency diagnostics. Existing local
-  integer/record tests separately cover retained-error provenance.
-- The facade guide example passed debug/release with output `7`/`ready`. Extracted
-  files: `/tmp/meowy-composed-input-doc-zu94l07n`. Updated guides and root handoff.
-- `python3 -B tools/verify.py --compiler`: all ten checks passed, including fmt,
-  Clippy, build, 732 library/701 native Rust tests (1433 total), 20 Python tests,
-  and existing examples. Log: `/tmp/meowy-composed-inputs-gate.log`.
+- `f763ee8`: retained export paths; nine export/path library tests and nine existing
+  native composition groups passed with unchanged runtime HIR.
+- `cc8337f`: local composition evidence; 733 library/704 native tests, fmt and Clippy
+  passed. Log: `/tmp/meowy-local-compose-tests.log`.
+- `3e97948`: top-level local-record exports; 734 library/706 native tests, fmt and
+  Clippy passed. Log: `/tmp/meowy-record-export-tests.log`.
+- Final integration probes passed: repeated ancestor work versus separate roots in
+  debug/release; silent check/build; startup diamonds initialized once. Checker-only
+  coverage verifies the 256/257 field evidence boundary. The 256-field native probe
+  hit B001 borrow-origin budget exhaustion, so it is not claimed as native support.
+- The new guide example passed debug/release, printing `7`. Extracted files:
+  `/tmp/meowy-local-compose-doc-cnm3qnoe`.
+- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 735
+  library/708 native Rust tests (1443 total), 20 Python tests, fmt, Clippy and build.
+  Log: `/tmp/meowy-local-record-inputs-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links,
-  catalog/schema and whitespace checks passed. Unsupported cases do not count as
-  successful language rejections; full release qualification remains open.
+  catalog/schema and whitespace checks passed; full release qualification is open.
 - Runtime implementation, reference fixtures and dependencies are unchanged. Editor
   and separate runtime/sanitizer gates were not rerun; release qualification is open.
 
@@ -144,35 +135,18 @@ Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
 
 ## Still outside this compiler
 
-Whole-record module inputs, nonmodule/conditional composition inputs, helper
+Whole-record module inputs, conditional composition inputs, helper
 initializer eligibility, module-data captures, borrowed module storage, package/manifest
 resolution, full required evaluation and generic specialization, public FFI, wider
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
-## Active plan and next steps
+## Next steps
 
-Composition lowers to one temporary Bind followed by primary/field projections.
-Export identities now retain bounded record paths (`f763ee8`). Local record
-evidence accepts these projections, preserving complete ancestor evidence.
-
-Dependency-ordered commits:
-
-1. Complete: export input identity now includes a bounded record path. All nine
-   export/path library tests and all nine native composition groups passed; fmt
-   passed. Existing module behavior and runtime HIR remain unchanged.
-2. Complete: eligible local compositions retain projected field and unit-primary
-   evidence. All 733 library/704 native tests, fmt and Clippy passed. Log:
-   `/tmp/meowy-local-compose-tests.log`. Retained sibling/tail errors keep E107
-   source spans with declared shapes; unannotated unreachable shapes retain B001.
-3. Complete: top-level local composition exports retain a shared record ID and
-   field path. All 734 library/706 native tests, fmt and Clippy passed; log:
-   `/tmp/meowy-record-export-tests.log`. Inline/projected/copied execution, unchanged
-   HIR, widths, privacy, ancestor effects and conditional gates passed. Mutable
-   module fields retain the earlier B001 file-export rejection.
-4. Add independent staging/work integration coverage and update the supported guide
-   and root handoff. Run `python3 -B tools/verify.py --compiler` across the series.
-
-Keep unit primaries, immutable integer/record fields and existing shape bounds.
-Synthetic module namespaces remain ineligible as whole records. Conditional exports,
-helper purity, borrowed storage and packages stay separate. Do not push.
+1. Plan conditional local-record evidence separately in `inputs/records.rs` and
+   `inputs/blocks.rs`, following `../docs/reference/compile-time.md`. Establish which
+   checked branch/flow facts can prove evaluation order and complete initializer
+   eligibility before changing the gate. Cover selected/unselected effects, retained
+   errors and repeated work; preserve the distinction from conditional module exports.
+2. Keep helper purity, borrowed storage, packages and whole-module record inputs
+   separate. Record reviewable commit slices before edits; never push or create STEP logs.

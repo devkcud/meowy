@@ -203,3 +203,27 @@ pub(crate) fn composed_record_exports_share_complete_evidence_and_keep_runtime_h
     );
     assert!(block.stmts[3..].iter().all(|stmt| matches!(stmt, Stmt::Emit { field: Some(_), value, .. } if matches!(value.kind, ExprKind::Field { .. }))));
 }
+
+#[test]
+pub(crate) fn composed_record_exports_bound_retained_field_paths() {
+    for count in [256, 257] {
+        let fields = (0..count)
+            .map(|id| format!("->n{id}:1;"))
+            .collect::<String>();
+        let checker = check(&format!("row:{{{fields}}};->row"));
+        assert_eq!(
+            checker.module.inputs.len(),
+            if count == 256 { 256 } else { 0 }
+        );
+        if count == 256 {
+            let input = &checker.module.inputs["n0"];
+            assert_eq!(
+                checker.record_inputs[&input.id]
+                    .field(&input.path)
+                    .unwrap()
+                    .value,
+                Some(1)
+            );
+        }
+    }
+}

@@ -351,3 +351,83 @@ pub(crate) fn composed_record_exports_keep_ancestor_eligibility_and_widths() {
         );
     }
 }
+
+#[test]
+pub(crate) fn composed_record_exports_charge_ancestor_work_again_at_each_read() {
+    let tail = (1..12)
+        .map(|id| format!("v{id}:v{}+1;", id - 1))
+        .collect::<String>();
+    for (export, value) in [
+        ("->row", "m.part.n"),
+        ("->row.part", "m.n"),
+        ("copy:{->row.part};->copy", "m.n"),
+        ("->part:row.part", "part.n"),
+    ] {
+        let data = format!("row:{{->part:{{->n:4}};v0:1;{tail}}};{export}");
+        let files = [
+            ("data.mwy", data.as_str()),
+            ("facade.mwy", "m:@\"./data.mwy\";->m"),
+            ("outer.mwy", "m:@\"./facade.mwy\";->m"),
+        ];
+        let prefix = if value == "part.n" {
+            "m:@\"./outer.mwy\";part:m.part;"
+        } else {
+            "m:@\"./outer.mwy\";"
+        };
+        let separate = (0..20)
+            .map(|id| format!("<T{id}>:{{n:{value};-><int32[n]>}};"))
+            .collect::<String>();
+        let repeated = (0..20)
+            .map(|id| format!("n{id}:{value};"))
+            .collect::<String>();
+        for profile in ["debug", "release"] {
+            let output = case(&format!("{prefix}{separate}"), &files)
+                .command("check", &["--profile", profile, "--json"]);
+            assert!(
+                output.status.success(),
+                "{export}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let output = case(&format!("{prefix}<T>:{{{repeated}-><int32>}}"), &files)
+                .command("check", &["--profile", profile, "--json"]);
+            assert_eq!(output.status.code(), Some(1));
+            let error = String::from_utf8_lossy(&output.stderr);
+            assert!(error.contains("\"code\":\"B001\""), "{export}: {error}");
+            assert!(
+                error.contains("computed type bootstrap budget"),
+                "{export}: {error}"
+            );
+        }
+    }
+}
+
+#[test]
+pub(crate) fn composed_record_exports_check_silently_and_initialize_once() {
+    let case = case(
+        "a:@\"./a.mwy\";b:@\"./b.mwy\";d:@\"debug\";<T>:{-><int32[a.n+b.n]>};v<T>:[7];d.print(\"entry\");d.print(v[1])",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";d.print(\"data\");row:{->part:{->n:4};unused:1};->row.part;d.print(\"ready\")",
+            ),
+            (
+                "a.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";copy:{->n:m.n};->copy;d.print(\"a\")",
+            ),
+            ("b.mwy", "m:@\"./data.mwy\";d:@\"debug\";->m;d.print(\"b\")"),
+        ],
+    );
+    for action in ["check", "build"] {
+        for profile in ["debug", "release"] {
+            let output = case.command(action, &["--profile", profile]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+        }
+    }
+    case.runs(b"data\nready\na\nb\nentry\n7\n");
+}
