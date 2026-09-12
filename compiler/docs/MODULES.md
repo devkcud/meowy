@@ -6,15 +6,15 @@ discovered throughout the parsed AST. An immutable, unannotated binding can name
 an exact relative `.mwy` module:
 
 ```meowy
-settings:@"./settings.mwy"
-d:@"debug"
+settings : @"./settings.mwy"
+d : @"debug"
 d.print(settings.port)
 ```
 
 ```meowy
-private:7
-->port:8080
-->label:"local"
+private : 7
+-> port : 8080
+-> label : "local"
 ```
 
 The second file exports only `port` and `label`. Ordinary bindings remain private.
@@ -30,7 +30,7 @@ exported Copy value retains normal value-copy semantics.
 Named top-level function emissions now export the existing checked function identity:
 
 ```meowy
-->increment<int32>:(n<int32>){->n+1}
+-> increment <int32> : (n <int32>) { -> n + 1 }
 ```
 
 Parameters and results must be annotated. Missing result/signature annotations
@@ -42,8 +42,8 @@ A facade can re-export an existing function under a fresh name with its complete
 function-type annotation:
 
 ```meowy
-ops:@"./ops.mwy"
-->increase<(int32)->int32>:ops.increment
+ops : @"./ops.mwy"
+-> increase <(int32) -> int32> : ops.increment
 ```
 
 The annotation must match all parameter and result types exactly (E207 otherwise).
@@ -68,14 +68,14 @@ retain the callee's file and local span, including through facade aliases.
 
 ## Exported type aliases
 
-`-><Name>:` declares a top-level exported alias in the separate type namespace:
+`-> <Name> :` declares a top-level exported alias in the separate type namespace:
 
 ```meowy
--><Point>:<{x<int32>;y<int32>}>
+-> <Point> : <{ x <int32>; y <int32> }>
 ```
 
 Importers use `<geometry.Point>` in type positions. A facade can re-export the
-same type with `-><Point>:<geometry.Point>`. Private aliases can define the underlying
+same type with `-> <Point> : <geometry.Point>`. Private aliases can define the underlying
 type without making their private names visible. Missing or private imported type
 names report E202; type declarations do not create values in the value namespace.
 A type and a data/function export may intentionally use the same name.
@@ -88,7 +88,7 @@ is introduced. Supported callable-signature aliases can annotate function re-exp
 this does not enable stored function pointers.
 
 Existing computed type values still work, for example
-`token:<geometry.Point>;-><PublicPoint>:token`. Qualified type references use the
+`token : <geometry.Point>; -> <PublicPoint> : token`. Qualified type references use the
 angle-bracket type context. [Straight-line computed type blocks](COMPUTED_TYPES.md)
 can also construct an exported alias using local type bindings and a primary emission.
 General helper evaluation remains unsupported. Type lookup and copied signatures

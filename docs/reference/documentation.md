@@ -82,7 +82,7 @@ insert a space after its opening `#` if documentation was not intended.
 The first matching closer ends the block; quotes inside it are not source strings.
 
 Documentation remains a token separator. Newlines inside it do not terminate a
-Meowy statement. UTF-8 and source offsets follow the ordinary syntax contract.
+meowy statement. UTF-8 and source offsets follow the ordinary syntax contract.
 The source snapshot retains exact bytes, including CRLF, delimiters and indentation.
 Rendering may normalize line endings and strip one common indentation prefix from
 nonblank payload lines, but every transformed byte range must retain a source map.
@@ -92,13 +92,13 @@ Tabs are not silently expanded into guessed source columns.
 
 ```meowy
 #| Adds an amount to a count. Arithmetic overflow panics. |#
-add<int32>:(
+add <int32> : (
     #| Starting count. |#
-    count<int32>,
+    count <int32>,
     #| Amount to add. |#
-    amount<int32>
+    amount <int32>
 ) {
-    ->count+amount
+    -> count + amount
 }
 ```
 
@@ -155,7 +155,7 @@ rename rather than producing a partly updated documentation graph.
 
 Payloads use [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) with the
 semantic links and code-fence attributes defined here. Attributes are documentation
-syntax, not Meowy keywords. Unknown attributes are errors, not silently ignored tags.
+syntax, not meowy keywords. Unknown attributes are errors, not silently ignored tags.
 Raw HTML is escaped; generated pages permit no embedded script or active content.
 Authored assets are not copied by default. `doc build --assets DIR` explicitly
 permits PNG, JPEG, GIF and WebP assets from that directory; resolved paths must stay
@@ -170,7 +170,7 @@ Builds do not download remote images, include remote source or execute Markdown 
 | `output` | Expected UTF-8 stdout for the immediately preceding run example |
 | `text` or another display language | Render only; make no compiler-validation claim |
 
-Every Meowy example is a complete source unit with explicit imports and setup.
+Every meowy example is a complete source unit with explicit imports and setup.
 There are no hidden `main` wrappers, implicit enclosing locals or erased setup
 lines. Imports use the selected project's dependency graph without exposing
 otherwise private declarations. Library helpers in a project can reduce repeated
@@ -203,7 +203,7 @@ The bootstrap implements their standalone forms under the profile above:
 
 | Command | Work performed |
 | --- | --- |
-| `meowy doc check PATH` | Check source, attachments, links and all Meowy example check expectations |
+| `meowy doc check PATH` | Check source, attachments, links and all meowy example check expectations |
 | `meowy doc check PATH --require-public` | Also require nonempty documentation on exported declarations and named exported record members |
 | `meowy doc check PATH --run-examples` | Additionally build/run explicitly runnable examples using the test runner |
 | `meowy doc build PATH --output DIR` | Check documentation and render a local API site without executing examples |

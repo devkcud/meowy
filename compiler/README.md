@@ -1,7 +1,7 @@
-# Meowy compiler bootstrap
+# meowy compiler bootstrap
 
 This directory contains a working Rust compiler with a C++20 LLVM backend.
-It checks standalone Meowy source and bounded relative file modules, and produces
+It checks standalone meowy source and bounded relative file modules, and produces
 Linux x86-64 native executables.
 It implements scalar programs, record composition, nullable unions, branch
 narrowing and shared references to local and emitted storage, including guarded
@@ -327,7 +327,7 @@ in the native archive and tested by LLVM callback probes, including static paylo
 descriptors, real relocation, failure-preserving ownership transfer and owned-drop
 panic snapshots. The [owning-HIR design](docs/OWNING_HIR.md) defines initialized state,
 result retention, bounded cleanup schedules and the prerequisites for strings.Owned.
-Automatic Meowy owner cleanup, task cancellation and DWARF unwinding remain
+Automatic meowy owner cleanup, task cancellation and DWARF unwinding remain
 implementation work.
 
 ## Implemented language
@@ -412,7 +412,7 @@ implementation work.
   Named field paths on owned locals support assignment when the selected field
   is mutable; immutable enclosing bindings/record fields do not freeze descendants. Writes preserve other fields and copies; disjoint shared views
   may stay live, and overlapping views must finish before the store.
-- Mutable emitted names backed by result fields. After `->count:=1`, `count=2`
+- Mutable emitted names backed by result fields. After `-> count := 1`, `count = 2`
   updates the returned field; scalar reads and mixed field/index writes use that
   storage. Initializers still run once. Wider final field types, nullable fields,
   named enclosing targets and restarts preserve the alias's declared type.
@@ -459,7 +459,7 @@ implementation work.
   cell when their pointees survive; public call bounds remain attached. Materializing
   a value reads its directly contained references, while deeper pointee summaries
   are followed only when later operations need them.
-- Mutable ordinary locals with a fixed shared-reference type, such as `view:=&owner`.
+- Mutable ordinary locals with a fixed shared-reference type, such as `view := &owner`.
   Reassignment changes subsequent reads while earlier copies retain
   their original pointees and call bounds. A live borrow of the reference cell
   blocks reassignment; its final read may occur in the assignment's RHS.
@@ -571,7 +571,7 @@ to a smaller capacity or a default numeric width. Pure contextual literals may w
 for typed elements; other expressions are checked once in source order.
 Pure scalar unary/binary expressions can also constrain candidates, including
 grouped negation, arithmetic, bitwise operations and Boolean comparisons. Their
-intermediate values use each candidate's exact width: `(127+1)-1` cannot select
+intermediate values use each candidate's exact width: `(127 + 1) - 1` cannot select
 `int8` merely because its final mathematical result is 127. Immutable scalar
 constants retain their declared types. Short circuits and the expression's original
 reach determine whether arithmetic executes; later effects are never replayed.

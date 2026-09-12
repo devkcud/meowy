@@ -342,7 +342,7 @@ omitted. The legend is fixed for a connection; tokens are non-overlapping and
 split at line boundaries, including multiline literals. See the
 [semantic token wire format](https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.17/language/semanticTokens.md).
 
-For an expression such as `|t.{->self<MyCoolType>}<MyCoolType>|matched()`, hover
+For an expression such as `| t.{ -> self<MyCoolType> } <MyCoolType> | matched()`, hover
 must identify the inner proven ascription and the outer predicate separately.
 The outer predicate cannot supply an earlier proof. Ownership explanations can
 show why a borrow ends at a scope, where an owner moves, or which task remains

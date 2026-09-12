@@ -4,20 +4,20 @@ The bootstrap supports straight-line blocks in required type expressions, using
 existing type construction and lexical scopes from the checker:
 
 ```meowy
-settings:{->limits:{->base<uint8>:{offset<uint8>:1;->offset+1}}}
-<Counts>:{
-    element:<int32>
-    base:settings.limits.base
-    capacity:base*2
-    -><(element)[capacity]>
+settings : { -> limits : { -> base <uint8> : { offset <uint8> : 1; -> offset + 1 } } }
+<Counts> : {
+    element : <int32>
+    base : settings.limits.base
+    capacity : base * 2
+    -> <(element)[capacity]>
 }
-values<Counts>:[3,7]
+values <Counts> : [3, 7]
 ```
 
 Local immutable, unannotated bindings hold supported type values. Immutable integer
-bindings may have an explicit integer annotation, such as `base<uint8>:2`.
+bindings may have an explicit integer annotation, such as `base <uint8> : 2`.
 Local type aliases
-such as `<Count>:<int32>` use the separate type namespace. Nested blocks may produce
+such as `<Count> : <int32>` use the separate type namespace. Nested blocks may produce
 types for these bindings or for computed annotations. Parenthesized expressions and
 supported type queries retain their existing behavior. Symbolic type members such as
 `core.int32`, foundation type aliases and imported types preserve their identities.
@@ -150,8 +150,8 @@ purity remain separate capabilities.
 ### Scalar primary imports
 
 A file whose complete runtime value is an integer can also supply its eligible direct
-primary emission. For example, a file containing `base<uint8>:2;->base*2` can be imported
-as `capacity:@"./capacity.mwy"` and read by `<Items>:{-><int32[capacity]>}`. Module aliases,
+primary emission. For example, a file containing `base <uint8> : 2; -> base * 2` can be imported
+as `capacity : @"./capacity.mwy"` and read by `<Items> : { -> <int32[capacity]> }`. Module aliases,
 arithmetic copies and primary/named re-exports preserve its exact integer width,
 initializer failures and transitive work. Required scratch may read the module name
 itself, including inside functions or after a function-local import.

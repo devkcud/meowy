@@ -222,7 +222,7 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
    source cells; no publication before cleanup. Cover nested argument exits,
    alternating union branches, repeated fresh iterations and rejected accumulating
    ancestor transfers. A later replacement slice must prove bounded entry reuse.
-5. Enable the coherent source path and add ordinary Meowy execution/rejection
+5. Enable the coherent source path and add ordinary meowy execution/rejection
    cases. Test module aliases/shadowing, failure results, moves, retained emissions,
    temporary views and calls. Run the compiler gate and combined repository gate
    for this compiler/runtime integration. Keep unsupported conformance and host

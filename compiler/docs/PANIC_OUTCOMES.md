@@ -69,7 +69,7 @@ after an abandoned message, primitive/union/primary formatting and UTF-8 truncat
 with full stderr preservation. A recursive source regression verifies that failure
 skips later arguments and caller effects.
 
-These callbacks and cleanup frames are native fixtures. Ordinary Meowy programs
+These callbacks and cleanup frames are native fixtures. Ordinary meowy programs
 still have no destructible resource type or automatically armed cleanup frame.
 Task cancellation, child settlement, DWARF landing pads, rich source identities,
 release replay and minimum-host qualification remain unimplemented.
