@@ -17,9 +17,9 @@ writes, and shared/exclusive reborrows of those scalars. Include conditional pat
 short-circuit evaluation, nested blocks and named `leave`.
 An immutable reference binding can mutate its referent through `&!T`; changing the
 reference value itself still requires a mutable binding.
-[Bare scalar-reference returns](../REFERENCE_RETURNS.md) preserve guarded input authority. Direct scalar-reference
+[Bare scalar-reference returns](REFERENCE_RETURNS.md) preserve guarded input authority. Direct scalar-reference
 arguments with primitive results are supported by the
-[function argument contract](../EXCLUSIVE_FUNCTIONS.md).
+[function argument contract](EXCLUSIVE_FUNCTIONS.md).
 
 Keep exclusive-bearing records, unions, lists, reference cells, widened record storage,
 temporary owners, dispatch blocks, wider result contracts and captures B001

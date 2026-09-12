@@ -295,15 +295,15 @@ holder. Shared/exclusive children preserve their parent authority through last u
 
 The [exclusive functions example](examples/exclusive-functions.mwy) passes moved
 and reborrowed scalar handles through nested direct calls. The bounded
-[argument contract](EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
+[argument contract](docs/EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
 wider-result restrictions.
 The [reference returns example](examples/reference-returns.mwy) carries a selected
 exclusive loan through a call and resumes its parent after the returned view ends.
-The [return contract](REFERENCE_RETURNS.md) keeps guarded input authority separate
+The [return contract](docs/REFERENCE_RETURNS.md) keeps guarded input authority separate
 from conservative lifetime bounds.
 The [reference blocks example](examples/reference-blocks.mwy) moves an emitted
 child, completes through Leave and cancels another result without undoing its move.
-The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and scope.
+The [block-result contract](docs/REFERENCE_BLOCKS.md) describes retained demand and scope.
 The [exclusive fields example](examples/exclusive-fields.mwy) mutates disjoint scalar
 fields while reading a primary value. The [field contract](docs/EXCLUSIVE_FIELDS.md)
 describes mutable paths, owner lifetimes and remaining root restrictions.

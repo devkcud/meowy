@@ -17,7 +17,7 @@ verification passed all four checks, including 1143 links and 16 tooling tests.
 2. Moved ownership and pointer syntax pages; all links and preserved content pass.
 3. Moved exclusive reference, field and slot pages; links and preservation pass.
 4. Moved exclusive element and restart pages; links and preservation pass.
-5. Move reference block/return and exclusive function pages.
+5. Moved reference block/return and exclusive function pages; checks pass.
 6. Move computed types, module guide and README; update the working instructions.
 
 Each group includes its inbound/outbound link fixes and this handoff, stays within

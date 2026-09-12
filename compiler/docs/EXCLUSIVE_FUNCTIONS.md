@@ -1,8 +1,8 @@
 # Scalar exclusive function arguments
 
-This extends [scalar exclusive references](docs/EXCLUSIVE_REFERENCES.md) using the existing
-[memory contract](../docs/reference/memory.md) and
-[reference conversion rules](../docs/reference/types.md#inference-and-assignment).
+This extends [scalar exclusive references](EXCLUSIVE_REFERENCES.md) using the existing
+[memory contract](../../docs/reference/memory.md) and
+[reference conversion rules](../../docs/reference/types.md#inference-and-assignment).
 The bounded argument contract is implemented and covered by native execution and
 exact-code rejection tests. [Bare scalar-reference results](REFERENCE_RETURNS.md)
 now also retain explicit guarded argument-to-result authority.
@@ -91,6 +91,6 @@ restart callees and no-return entry/argument effects. The existing scalar-local
 matrix and reference fixtures remain enabled. The compiler gate passes 626 Rust
 tests and 20 Python tests; full conformance still has 13 unsupported cases.
 
-The [exclusive functions example](examples/exclusive-functions.mwy) demonstrates
+The [exclusive functions example](../examples/exclusive-functions.mwy) demonstrates
 shared argument reborrowing, nested mutation, a consumed holder and receiver syntax.
 Generated cleanup and wider result shapes remain distinct work.

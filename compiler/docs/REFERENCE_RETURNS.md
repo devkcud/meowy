@@ -2,7 +2,7 @@
 
 This implements bare scalar-reference results for the direct flat signatures in
 [exclusive function arguments](EXCLUSIVE_FUNCTIONS.md), following the existing
-[memory contract](../docs/reference/memory.md). A result may be shared or exclusive
+[memory contract](../../docs/reference/memory.md). A result may be shared or exclusive
 and point to a boolean, integer or float. Arguments remain primitive values or
 shared/exclusive references to those scalars. Wider signatures keep their existing
 shared behavior and opaque result ancestry; exclusive ancestry cannot cross them.
@@ -80,7 +80,7 @@ Three graph groups validate shared guards, distinct equal-address parents and
 missing/incomplete evidence. The existing shared, scalar-local and argument matrices
 remain enabled, and reference fixtures are unchanged.
 
-The [reference returns example](examples/reference-returns.mwy) demonstrates guarded
+The [reference returns example](../examples/reference-returns.mwy) demonstrates guarded
 exclusive selection, parent resumption and shared returned children. The compiler
 gate passes; full language conformance still has 13 unsupported cases. The next
 bounded extension is projected/emitted scalar list-element borrowing with canonical

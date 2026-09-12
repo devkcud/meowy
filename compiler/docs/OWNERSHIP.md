@@ -1492,7 +1492,7 @@ fixture depending on `bytes` becomes supported just from pointer lowering.
 
 ## Scalar exclusive function inputs
 
-The [function argument contract](../EXCLUSIVE_FUNCTIONS.md) restricts exclusive
+The [function argument contract](EXCLUSIVE_FUNCTIONS.md) restricts exclusive
 signatures to primitive or bare scalar-reference results and primitive/scalar-reference arguments.
 
 - Caller evaluation captures argument values once, left to right. After every
@@ -1517,7 +1517,7 @@ signatures to primitive or bare scalar-reference results and primitive/scalar-re
 
 ## Guarded scalar reference results
 
-The [result contract](../REFERENCE_RETURNS.md) explicitly records candidate argument
+The [result contract](REFERENCE_RETURNS.md) explicitly records candidate argument
 indexes and guards in `Facts.returns`. Actual origins and captured-parent copy links
 use the same choice. Exclusive results accept only compatible exclusive inputs;
 shared results may use shared or exclusive inputs. Callee-root lifetime and mode
@@ -1537,7 +1537,7 @@ emissions. Carriers and generated destruction remain separate contracts.
 
 ## Anonymous scalar-reference blocks
 
-The [block-result contract](../REFERENCE_BLOCKS.md) permits ordinary anonymous scalar
+The [block-result contract](REFERENCE_BLOCKS.md) permits ordinary anonymous scalar
 reference results and known cancelled anonymous emissions. `loans/control.rs` checks
 result type or explicit cancellation evidence; dispatch BlockIds and named fields
 retain their boundaries. Missing emission/completion evidence is B001.

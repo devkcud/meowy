@@ -2,8 +2,8 @@
 
 Ordinary blocks may produce one bare shared or exclusive reference to a boolean,
 integer or float. This extends [guarded reference returns](REFERENCE_RETURNS.md)
-using the existing [emission rules](../docs/reference/values-and-blocks.md) and
-[memory contract](../docs/reference/memory.md). No new syntax, allocation, runtime
+using the existing [emission rules](../../docs/reference/values-and-blocks.md) and
+[memory contract](../../docs/reference/memory.md). No new syntax, allocation, runtime
 ABI or generated cleanup is introduced.
 
 ## Emission and transfer
@@ -63,7 +63,7 @@ boundaries, short circuits and panic in debug/release. Two graph groups prove
 identity preservation across guarded same-address acquisitions and rejection of
 missing cancellation evidence. Reference fixtures remain unchanged.
 
-The [reference blocks example](examples/reference-blocks.mwy) demonstrates an emitted
+The [reference blocks example](../examples/reference-blocks.mwy) demonstrates an emitted
 child, continued execution, parent resumption and cancellation preserving a move.
 
 The short-circuit matrix also exposed an independent operator bug: a skipped block
