@@ -173,6 +173,17 @@ avoid claiming module resource cleanup or borrowed static exports. The
 [diamond example](examples/modules/main.mwy) prints shared, left, right, entry, 17;
 the shared module initializes once in both profiles.
 
+## Required integer inputs
+
+Eligible immutable named data exports can supply computed-type scratch and extents.
+Public field lookup retains the original checked initializer identity, exact integer
+widths and complete record ancestor evidence through copies, projections and re-exports.
+Private dependencies stay private. Unrelated module effects do not disqualify a pure
+export, but effects within its initializer do. Check/build never execute initialization;
+ordinary startup ordering, definite initialization and runtime capture gates remain.
+Primary, composed and conditional export inputs remain separate. See
+[the supported input rules](COMPUTED_TYPES.md#imported-immutable-inputs).
+
 ## Source identity and output protection
 
 Every file retains its original bytes and a disjoint range of internal span offsets.

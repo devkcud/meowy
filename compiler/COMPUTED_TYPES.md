@@ -62,8 +62,9 @@ Required reads can use eligible lexical inputs across function scopes. This does
 enable runtime captures or expose private names from another file. Original runtime
 bindings and application effects remain in the program; checking/building does not
 execute them. Runtime parameters, mutable state and effectful results remain unavailable
-(E211). Blocks with effects, mutation or control flow, imported-data reads and helper
-calls remain unproven; unsupported folded inputs retain B001.
+(E211). Blocks with effects, mutation or control flow and helper calls remain
+unproven; unsupported folded inputs retain B001. Named imported inputs follow the
+[export eligibility rules](#imported-immutable-inputs) below.
 
 Evidence retains integer failures from unreachable runtime paths. A required read
 reports E107 at the original failing expression, even through aliases. Dependency
@@ -116,15 +117,36 @@ failing sibling lies outside the projected subrecord. No partial record is admit
 Unreachable inline record emissions whose field identity was erased from HIR remain
 unavailable; declared record aliases can retain known error evidence.
 
-Direct required paths have a named local record root, optionally grouped. Nested paths
-and copied subrecords preserve checked type/member identity. Eligible lexical leaves
+Direct required paths have a named local record or file-module root, optionally grouped.
+Nested paths and copied subrecords preserve checked type/member identity. Eligible lexical leaves
 may be used inside functions without enabling ordinary runtime captures. Qualified
 type identities such as `core.int32` retain their separate behavior.
 
 Reference projections, inline roots, non-integer leaves, empty records and non-unit
-primaries remain outside this slice. Imported data remains gated, including indirect
-copies through internal module bindings. Checking never runs initializers; ordinary
+primaries remain outside this record slice. Checking never runs initializers; ordinary
 record reads and runtime initialization remain unchanged.
+
+## Imported immutable inputs
+
+Direct immutable named file exports retain the checked local identity of their eligible
+integer or record initializer. Required reads such as `m.width` and `m.row.nested.n`
+resolve the public field to that identity. Module aliases, copied integers, projected
+subrecords and named re-exports preserve the original integer widths and complete
+ancestor evidence. Private dependencies can supply an exported initializer without
+making their names public. Synthetic module bindings do not receive record evidence.
+
+Eligibility applies to each exported initializer. Unrelated file initialization effects
+may appear before or after a pure export; they still execute once in dependency order
+at runtime. Effects anywhere inside the selected initializer or its ancestor prevent
+eligibility, including effects after emissions and outside projected subrecords.
+Checking and building never execute these effects. Known failures retain original
+source spans, and every required read charges retained transitive work again.
+
+Eligible imported leaves can supply required types inside functions without enabling
+ordinary runtime module-data captures. Primary exports, record-composing emissions,
+conditional exports and inline import roots remain outside this input slice. Existing
+module export shape/initialization/privacy checks still apply; mutable or borrowed
+exports, package resolution and helper purity remain separate capabilities.
 
 ## Explicit limits
 
