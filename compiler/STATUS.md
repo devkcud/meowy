@@ -11,7 +11,7 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
    `check/statements.rs`. Retain each checked emission ID and initializer
    evidence without changing runtime HIR or constant folding. Verify scalar metadata,
    source errors/work, named exports and conditional/effectful gates.
-2. Resolve primary inputs through `inputs.rs`, `type_values/scalars.rs` and required
+2. `c6e13c7` resolves primary inputs through `inputs.rs`, `type_values/scalars.rs` and required
    materialization in `expressions.rs`. Support named module aliases, arithmetic
    copies and primary/named re-exports while preserving widths, work charging and
    runtime capture refusal. Keep implementation and native regressions together.
@@ -29,6 +29,12 @@ The four native primary-input groups and all 731 library/676 native tests passed
 along with fmt and Clippy. Aliases, re-exports, required function-local types and
 exact-width errors work; runtime captures and mixed module record inputs remain
 rejected. Existing mixed-record copy rejection remains E211. No failures remain.
+
+All nine focused primary-input groups passed, including five new integration groups.
+Check/build remain silent, shared imports initialize once, scoped required extents
+work, transitive effects reject without execution, original dependency E107 spans
+survive, and repeated reads charge full tail work. Runtime startup failures still
+stop the entry in both profiles. No failing checks remain.
 
 ## Current compiler slice
 
@@ -146,9 +152,8 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Add independent primary integration groups in `tests/native/primary_inputs.rs`:
-   check/build silence and once-only startup, transitive effect refusal, dependency
-   diagnostic spans, and repeated-read work accounting. Exercise both profiles.
-2. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs. Run the
-   complete compiler gate and local links; record the next bounded input capability.
-   Commit reviewable slices; never push or recreate STEP logs.
+1. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs for scalar
+   primary imports. Keep module-record primaries, composed/conditional emissions,
+   inline roots and runtime captures explicitly separate.
+2. Run the complete compiler gate and local links, then commit the documentation
+   handoff. Record the next bounded capability; never push or recreate STEP logs.
