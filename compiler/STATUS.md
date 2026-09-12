@@ -12,12 +12,15 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
    `check/statements.rs`, reusing integer/record evidence and checked HIR bindings.
    Only direct immutable module emissions qualify; private bindings and synthetic
    module records remain distinct. Verify metadata, effects and conditional gates.
-2. Implemented imported field evidence in `inputs` and `type_values/fields.rs`, including
+2. `85c3b17` implements imported field evidence in `inputs` and `type_values/fields.rs`, including
    copied integers, projected records and re-exports. Keep ancestor errors/work,
    checked field identities, original file spans and runtime capture gates. Verify
    accepted native execution and relevant rejected inputs together.
-3. Add independent multi-file initialization/provenance/budget scenarios and update
-   supported-slice documentation. Run the complete compiler gate and local links.
+3. Implemented four independent native initialization/provenance/budget groups.
+   All six imported-input groups passed, including both runtime profiles.
+4. Update supported-slice documentation and both handoffs; run the complete compiler
+   gate and local links. Splitting tests from the documentation handoff keeps each
+   review focused and below the size threshold.
 
 Investigation: the existing checker intentionally omits synthetic module evidence.
 Named emissions already have unique checked local IDs; retaining those identities
@@ -32,6 +35,11 @@ record evidence. Copied integers, subrecords, re-exports and function-local requ
 reads passed all ten native computed-field groups in both execution profiles.
 Effects, conditional exports, private names and ordinary captures remain rejected.
 The lookup slice passed all 728 library and 669 native tests, plus Clippy.
+Four added integration groups passed: silent check/build, diamond initialization
+once in source order, transitive ancestor-effect refusal, original dependency E107
+spans/exact widths, and charging retained ancestor work on repeated projected reads.
+The diagnostic-span probe validates ordinary dependency checking; retained-error
+provenance also remains covered by the existing local record evidence tests.
 
 ## Current compiler slice
 
@@ -153,12 +161,7 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Add independent native integration coverage for imported input initialization,
-   original dependency diagnostic spans, ancestor work on each read, and transitive
-   initializer-effect refusal in `tests/native/computed_fields.rs` or a focused
-   companion. Verify check/build produce no initializer output and runtime keeps
-   dependency order and once-only initialization in both profiles.
-2. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs with the
+1. Update `COMPUTED_TYPES.md`, `MODULES.md`, `README.md` and both handoffs with the
    bounded named-export capability. Run the full compiler gate and local links.
    Keep unsupported cases distinct, commit reviewable slices, never push or recreate
    STEP logs.
