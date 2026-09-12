@@ -187,8 +187,11 @@ re-exports retain their original emission evidence. Runtime HIR and constant fol
 remain unchanged. Modules with named fields also supply direct integer primaries
 through arithmetic and integer-annotated required scratch. Ordinary aliases and type
 queries preserve their complete record type; named initializer effects remain separate
-from primary eligibility. Whole-record inputs and composed/conditional export inputs
-remain separate. See
+from primary eligibility. Direct top-level compositions such as `-> source` preserve
+each eligible runtime export's original evidence through facade chains. Each hop
+adds retained work; projected records keep complete ancestor evidence. Function/type
+exports still require explicit re-exports. Whole-record inputs, nonmodule compositions
+and conditional export inputs remain separate. See
 [the supported input rules](COMPUTED_TYPES.md#imported-immutable-inputs).
 
 ## Source identity and output protection

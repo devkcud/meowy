@@ -202,10 +202,41 @@ the primary initializer does, even through copies or re-exports. Checking/buildi
 never run either initializer. At runtime, every module still initializes once in
 source dependency order, and failures stop dependent and entry execution.
 
-Record-composing emissions such as `-> capacity` from a mixed module, conditional
-exports and inline required import roots remain outside this slice. Annotated or
-mutable ordinary module-identity aliases retain their existing restrictions. Ordinary
-runtime captures remain unavailable; a type-only use does not grant runtime access.
+### Module composition
+
+A direct top-level composition can forward a file module's eligible integer primary
+and named integer/record inputs. For example, `facade.mwy` can compose the
+`capacity.mwy` above:
+
+```meowy
+source : @"./capacity.mwy"
+-> source
+```
+
+The importer above can load `@"./facade.mwy"` instead. Its required integer read and
+runtime `label` lookup keep the same results. Module aliases and parentheses also
+preserve this forwarding through chains of facades.
+
+Each eligible named export retains its original checked source identity. Integer
+primaries retain their value, width and failure evidence. Every composition adds
+copy/projection work, charged on each required read along with all retained initializer
+work. Projecting a forwarded record or re-exporting its subrecord keeps complete
+ancestor evidence, including unused siblings and tail work.
+
+Eligibility remains separate for each original module export. An unrelated effectful
+export does not disqualify a pure one, while a selected record cannot hide effects in
+its ancestors. The complete module never becomes an eligible whole-record input.
+Private locals stay private; compile-time function/type exports need their existing
+explicit re-export forms because they are not runtime record fields.
+
+Composition retains ordinary field/primary collision checks, record identity,
+startup order and runtime capture gates. Checking/building never execute source or
+facade initialization. Runtime failures still stop dependent and entry execution.
+
+Nonmodule record compositions, conditional exports and inline required import roots
+remain outside this slice. Annotated or mutable ordinary module-identity aliases
+retain their existing restrictions. Ordinary runtime captures remain unavailable;
+a type-only use does not grant runtime access.
 
 ## Explicit limits
 
