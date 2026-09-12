@@ -23,7 +23,7 @@ installed editors. Missing executables and dependencies fail verification.
 `--compiler` runs Cargo formatting, Clippy, Rust and native tests, compiler-harness
 tests, a compiler build, and the existing
 [compiler conformance harness](../compiler/tests/conformance.py). It requires the
-[compiler toolchain](../compiler/docs/README.md#build-and-run). Unsupported cases remain
+[compiler toolchain](../compiler/README.md#build-and-run). Unsupported cases remain
 visible and fail if they were already required by the bootstrap harness.
 Cargo receives explicit `x86_64-unknown-linux-gnu` and `compiler/target` paths;
 the harness executes that build's binary even when Cargo environment defaults

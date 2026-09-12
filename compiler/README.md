@@ -8,30 +8,30 @@ narrowing and shared references to local and emitted storage, including guarded
 block results, fixed mutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
-The [foundation values](FOUNDATION.md) include static heap handles and nominal
-allocation-failure transport. [Allocator return bounds](ALLOCATOR_BOUNDS.md) track
+The [foundation values](docs/FOUNDATION.md) include static heap handles and nominal
+allocation-failure transport. [Allocator return bounds](docs/ALLOCATOR_BOUNDS.md) track
 public input lifetimes through immutable values, mutable handles/tagged records,
 field writes, shared-reference members, restart headers and shared snapshots. Owning-string
 storage and constructors remain gated.
-Read [STATUS.md](../STATUS.md) for gaps, validation evidence, and the next work,
-and [AGENTS.md](../AGENTS.md) before changing the implementation.
+Read [STATUS.md](STATUS.md) for gaps, validation evidence, and the next work,
+and [AGENTS.md](AGENTS.md) before changing the implementation.
 
-[Relative file modules](MODULES.md) discover literal imports in parsed expressions,
+[Relative file modules](docs/MODULES.md) discover literal imports in parsed expressions,
 function bodies and type operands. They support immutable reference-free data, annotated
 functions, typed function re-exports and exported type aliases with preserved
 identities and ordered initialization. Package manifests and borrowed module storage
-remain gated. The [facade example](../examples/function-modules/main.mwy) exercises
+remain gated. The [facade example](examples/function-modules/main.mwy) exercises
 recursive functions and shared/exclusive calls across files. The
-[typed geometry example](../examples/type-modules/main.mwy) adds a re-exported record
+[typed geometry example](examples/type-modules/main.mwy) adds a re-exported record
 type used by callers and public function signatures. The
-[scoped-import example](../examples/scoped-imports/main.mwy) demonstrates function-local
+[scoped-import example](examples/scoped-imports/main.mwy) demonstrates function-local
 identities and eager initialization of inactive/unused imports. The
-[documented facade](../examples/documented-modules/main.mwy) checks per-file module,
+[documented facade](examples/documented-modules/main.mwy) checks per-file module,
 export and parameter documentation with links through imported types/functions.
 
-[Computed type blocks](COMPUTED_TYPES.md) now construct supported types using local
+[Computed type blocks](docs/COMPUTED_TYPES.md) now construct supported types using local
 immutable type bindings, aliases, checked integer calculations and primary emissions,
-without runtime storage. The [example](../examples/computed-types.mwy) computes a local
+without runtime storage. The [example](examples/computed-types.mwy) computes a local
 list capacity from an eligible immutable integer initializer and constructs record/list
 types. Eligibility is tracked separately from constant folding and includes straight-line
 integer blocks and bounded nested immutable integer records. Field paths and subrecord
@@ -41,11 +41,11 @@ through imports, copies and re-exports; checking never runs module initializatio
 Record-valued module primaries, composed/conditional export inputs, helper calls,
 non-integer/mutable scratch and full required evaluation remain separate.
 
-The [pointer syntax example](../examples/pointer-syntax.mwy) demonstrates tight prefix
+The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the
-[grammar](../../docs/reference/syntax.md#operators-and-evaluation-order) for the binding rules.
+[grammar](../docs/reference/syntax.md#operators-and-evaluation-order) for the binding rules.
 
-The [binding and field example](../examples/binding-fields.mwy) mutates a `:=` field
+The [binding and field example](examples/binding-fields.mwy) mutates a `:=` field
 inside and after construction of an object bound with `:`. Binding immutability
 prevents whole-value replacement; each owned field has its own permission. Shared
 references remain read-only. Indexed replacement inherits the containing list
@@ -128,106 +128,106 @@ compiler/build/sum
 ```
 
 The examples print a greeting, `3628800`, and `5050`. The
-[records example](../examples/records.mwy) demonstrates primary values, named fields,
-interpolation, and dispatch. The [nullable example](../examples/nullable.mwy) exercises
+[records example](examples/records.mwy) demonstrates primary values, named fields,
+interpolation, and dispatch. The [nullable example](examples/nullable.mwy) exercises
 absent fields and a fallback function that narrows a value after an early exit.
-The [references example](../examples/references.mwy) compares storage addresses and
-copies values through shared references. The [borrowed results example](../examples/borrow-results.mwy)
+The [references example](examples/references.mwy) compares storage addresses and
+copies values through shared references. The [borrowed results example](examples/borrow-results.mwy)
 selects between surviving owners and discards an iteration-local borrow on restart.
-The [borrow liveness example](../examples/borrow-liveness.mwy) updates scalar and record
+The [borrow liveness example](examples/borrow-liveness.mwy) updates scalar and record
 owners after the final use of their shared references, including loop iterations.
-The [borrowed records example](../examples/borrowed-records.mwy) copies nested reference
+The [borrowed records example](examples/borrowed-records.mwy) copies nested reference
 fields, projects selected fields and a primary reference, and releases each loan
 after that component's last use.
-The [optional borrows example](../examples/optional-borrows.mwy) narrows nullable
+The [optional borrows example](examples/optional-borrows.mwy) narrows nullable
 reference fields and unions of different reference types before dereferencing.
-The [function borrows example](../examples/borrow-functions.mwy) returns borrowed
+The [function borrows example](examples/borrow-functions.mwy) returns borrowed
 views through direct calls and releases their input loans after the final use.
-The [reborrows example](../examples/reborrows.mwy) takes references to original
+The [reborrows example](examples/reborrows.mwy) takes references to original
 record fields through shared references and returns them through functions.
-The [scope borrows example](../examples/scope-borrows.mwy) contrasts local parameter
+The [scope borrows example](examples/scope-borrows.mwy) contrasts local parameter
 and receiver copies with shared receivers that keep the original owner alive.
-The [bounded lists example](../examples/bounded-lists.mwy) preserves an original list
+The [bounded lists example](examples/bounded-lists.mwy) preserves an original list
 while appending to its copy, checks one-based positions and compares initialized
 elements within an unchanged inline capacity.
-The [list unions example](../examples/list-unions.mwy) chooses list alternatives by
+The [list unions example](examples/list-unions.mwy) chooses list alternatives by
 element type, literal range and capacity while preserving concrete element widths.
-The [compound lists example](../examples/compound-lists.mwy) selects element widths
+The [compound lists example](examples/compound-lists.mwy) selects element widths
 using checked intermediate values, grouped negation and short-circuit expressions.
-The [element borrows example](../examples/element-borrows.mwy) takes checked references
+The [element borrows example](examples/element-borrows.mwy) takes checked references
 into original list storage, returns an element through a function and replaces the
 owner after the references' final uses.
-The [element writes example](../examples/element-writes.mwy) replaces initialized
+The [element writes example](examples/element-writes.mwy) replaces initialized
 elements after the final use of a shared view, preserving the list's length and copies.
-The [nested writes example](../examples/nested-writes.mwy) updates a selected matrix
+The [nested writes example](examples/nested-writes.mwy) updates a selected matrix
 element while preserving other rows and retaining the indices chosen before the RHS.
-The [effectful lists example](../examples/effectful-lists.mwy) selects numeric and
+The [effectful lists example](examples/effectful-lists.mwy) selects numeric and
 record element widths after checking each block's effects once in source order.
-The [dynamic lists example](../examples/dynamic-lists.mwy) selects element types from
+The [dynamic lists example](examples/dynamic-lists.mwy) selects element types from
 returned and mutable primitive locals while using their actual values at runtime.
-The [mutable fields example](../examples/mutable-fields.mwy) updates a declared mutable
+The [mutable fields example](examples/mutable-fields.mwy) updates a declared mutable
 field after its final shared read while preserving an earlier record copy.
-The [mixed writes example](../examples/mixed-writes.mwy) updates fields inside a list
+The [mixed writes example](examples/mixed-writes.mwy) updates fields inside a list
 held by a record, preserving copies and allowing changes to a separate holder field.
-The [emitted slots example](../examples/emitted-slots.mwy) mutates named fields during
+The [emitted slots example](examples/emitted-slots.mwy) mutates named fields during
 construction; later reads and the returned record observe the same updated storage.
-The [emitted borrows example](../examples/emitted-borrows.mwy) reads those fields through
+The [emitted borrows example](examples/emitted-borrows.mwy) reads those fields through
 shared references and writes after their last use. An inner block can pass out a
 reference when its emitted owner belongs to a still-active outer result.
-The [immutable slots example](../examples/immutable-slots.mwy) borrows immutable emitted
+The [immutable slots example](examples/immutable-slots.mwy) borrows immutable emitted
 fields and list elements while preserving constant and initialized-length facts.
-The [reference slots example](../examples/reference-slots.mwy) distinguishes a borrowed
+The [reference slots example](examples/reference-slots.mwy) distinguishes a borrowed
 field inside a result from a stored reference copied out of it. Each follows its
 own storage lifetime.
-The [transitive borrows example](../examples/transitive-borrows.mwy) borrows a whole
+The [transitive borrows example](examples/transitive-borrows.mwy) borrows a whole
 reference-carrying record and a reference-valued cell, then copies their contents
 while preserving the original pointee lifetimes.
-The [temporary borrows example](../examples/temporary-borrows.mwy) borrows computed
+The [temporary borrows example](examples/temporary-borrows.mwy) borrows computed
 values within one statement, preserving evaluation order and distinct owner cells.
-The [reference temporaries example](../examples/reference-temporaries.mwy) copies
+The [reference temporaries example](examples/reference-temporaries.mwy) copies
 contained references out of temporary cells while keeping their original owners.
-The [mutable references example](../examples/mutable-references.mwy) reassigns a shared
+The [mutable references example](examples/mutable-references.mwy) reassigns a shared
 reference while preserving an earlier copy and reads a borrowed reference cell
 for the last time before replacing its contents.
-The [guarded references example](../examples/guarded-references.mwy) selects a reference
+The [guarded references example](examples/guarded-references.mwy) selects a reference
 in a matcher and updates only the owner that the selected view no longer borrows.
-The [leave references example](../examples/leave-references.mwy) keeps an earlier RHS
+The [leave references example](examples/leave-references.mwy) keeps an earlier RHS
 reassignment when leaving the target skips the unfinished outer assignment.
-The [restart references example](../examples/restart-references.mwy) carries a new
+The [restart references example](examples/restart-references.mwy) carries a new
 reference into the next iteration while a copy made before the loop keeps its target.
-The [transitive restarts example](../examples/transitive-restarts.mwy) carries pointers
+The [transitive restarts example](examples/transitive-restarts.mwy) carries pointers
 to reference-bearing records through a loop while preserving an earlier record copy.
-The [header activity example](../examples/header-activity.mwy) carries null and active
+The [header activity example](examples/header-activity.mwy) carries null and active
 reference variants through successive iterations without inventing a null-path loan.
 
-The [fixed published result example](../examples/fixed-published.mwy) updates an emitted
+The [fixed published result example](examples/fixed-published.mwy) updates an emitted
 pointer before an inner loop and preserves the result after its alias leaves scope.
-The [changing published result example](../examples/changing-published.mwy) updates
+The [changing published result example](examples/changing-published.mwy) updates
 an alias initialized before the loop while an older copy keeps its original target.
-The [late published result example](../examples/late-published.mwy) initializes and
+The [late published result example](examples/late-published.mwy) initializes and
 updates an alias on the completing iteration. Explicit frontier proofs keep such
 emissions off restart edges. Declared scalar and reference-free record/list slots can
 also retain initialization across an edge using the separate proof below;
 other carried initialization remains gated.
 
-The [carried scalar example](../examples/carried-scalars.mwy) initializes a declared
+The [carried scalar example](examples/carried-scalars.mwy) initializes a declared
 result field on the first iteration and retains it across inner restarts. A bounded
 Boolean-state proof checks exactly-once initialization and every completing path.
-The [carried borrow example](../examples/carried-borrows.mwy) acquires a shared view
+The [carried borrow example](examples/carried-borrows.mwy) acquires a shared view
 after initialization and keeps it across inner restarts while the result owner lives.
 Acquisition checks active, initialized storage; owner expiry and last-use rules
-remain unchanged. The [exclusive carried example](../examples/exclusive-carried.mwy)
+remain unchanged. The [exclusive carried example](examples/exclusive-carried.mwy)
 mutates a carried scalar through a local exclusive handle whose loan ends before
-Restart. The [frontier proof](EXCLUSIVE_RESTARTS.md) also checks shared descendants;
+Restart. The [frontier proof](docs/EXCLUSIVE_RESTARTS.md) also checks shared descendants;
 exclusive or opaque ancestry crossing a backedge remains unsupported.
-The [mixed header example](../examples/mixed-headers.mwy) retains shared-reference
+The [mixed header example](examples/mixed-headers.mwy) retains shared-reference
 versions alongside those local exclusive loans. Every header predecessor must
 cover its active paths before header-only opacity can be excluded from the frontier
 proof; unknown call/input ancestry and physical conflicts remain checked.
 Reference-bearing, nullable or inferred carried slots remain unavailable;
 effectful Boolean results may prevent proof.
 
-The [carried record example](../examples/carried-records.mwy) initializes a record
+The [carried record example](examples/carried-records.mwy) initializes a record
 once and retains its fields across inner restarts. Nested records with scalar or
 unit members use the same whole-slot initialization proof, within bounded shape
 and work limits. Copies, mutable fields and whole-record replacement keep their
@@ -236,16 +236,16 @@ the result owner's storage across inner restarts, including after the alias leav
 scope. Owner completion/reset still expires those references. Exclusive Boolean,
 integer and float field borrows are supported when the loan and its descendants
 end before every restart edge; whole-record and other exclusive paths remain gated. The
-[carried record borrow example](../examples/carried-record-borrows.mwy) keeps a field
+[carried record borrow example](examples/carried-record-borrows.mwy) keeps a field
 reborrow across three iterations. See
-[carried record ownership](OWNERSHIP.md#carried-reference-free-records) and
-[shared record borrowing](OWNERSHIP.md#shared-carried-record-borrows).
-The [exclusive carried record example](../examples/exclusive-carried-records.mwy)
+[carried record ownership](docs/OWNERSHIP.md#carried-reference-free-records) and
+[shared record borrowing](docs/OWNERSHIP.md#shared-carried-record-borrows).
+The [exclusive carried record example](examples/exclusive-carried-records.mwy)
 mutates a nested field while retaining an independent old copy. Its
-[restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
+[restart proof](docs/EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
 initialization, exact storage identity and local loan authority.
 
-The [carried list example](../examples/carried-lists.mwy) initializes once, preserves
+The [carried list example](examples/carried-lists.mwy) initializes once, preserves
 an independent old copy and retains the updated length/payload across inner restarts.
 Nested reference-free lists/records and empty lists use the same bounded whole-slot
 proof. Reads, whole-list replacement/addition and completed-result borrowing retain
@@ -254,28 +254,28 @@ and nested element projections retain their owner through inner restarts. Local
 exclusive scalar fields and indexed elements within carried records/lists use the
 restart proof. Indexed writes require whole-slot initialization at capture and
 store, retaining first-list reservations; whole-list exclusive values remain gated. See
-[carried lists](OWNERSHIP.md#carried-reference-free-lists) and
-[shared list borrowing](OWNERSHIP.md#shared-carried-list-borrows). The
-[carried list borrow example](../examples/carried-list-borrows.mwy) keeps an element
+[carried lists](docs/OWNERSHIP.md#carried-reference-free-lists) and
+[shared list borrowing](docs/OWNERSHIP.md#shared-carried-list-borrows). The
+[carried list borrow example](examples/carried-list-borrows.mwy) keeps an element
 view across three iterations after its emitted alias leaves scope. The
-[exclusive list-field example](../examples/exclusive-carried-list-fields.mwy) mutates
+[exclusive list-field example](examples/exclusive-carried-list-fields.mwy) mutates
 a scalar field beside a replaced list and retains a shared list header. The
-[carried-element example](../examples/exclusive-carried-elements.mwy) mutates nested
+[carried-element example](examples/exclusive-carried-elements.mwy) mutates nested
 list storage with ordered index effects and a disjoint shared header. The
-[carried-writes example](../examples/carried-writes.mwy) combines indexed stores with
+[carried-writes example](examples/carried-writes.mwy) combines indexed stores with
 a shared header and an exclusive scalar sibling.
 
 The compiler requires Rust **1.98.1** and LLVM, Clang, LLD, and LLVM ar **22.1.8**.
-Standalone [documentation tooling](../../docs/reference/documentation.md#implemented-bootstrap-profile)
+Standalone [documentation tooling](../docs/reference/documentation.md#implemented-bootstrap-profile)
 now supports structural attachment, checked links, derived signatures, doc check/build,
 safe local API pages and checked/opt-in examples. Ordinary CLI check/build/run
-also validate [documentation in relative file graphs](MODULES.md#documentation-in-source-graphs);
+also validate [documentation in relative file graphs](docs/MODULES.md#documentation-in-source-graphs);
 multi-file doc commands and site/index generation remain unsupported. Use the CLI or `meowy::compile`
 for complete source/documentation checks; the low-level AST checker does not invent
 documentation metadata. E801-E805 identify documentation failures; E002 still marks
 unclosed fences. Full LSP/rename, assets, package documentation and public index
-formats remain separate. [Networking peers](../../docs/reference/stdlib/net.md),
-[net.http](../../docs/reference/stdlib/http.md) and [TLS](../../docs/reference/stdlib/tls.md)
+formats remain separate. [Networking peers](../docs/reference/stdlib/net.md),
+[net.http](../docs/reference/stdlib/http.md) and [TLS](../docs/reference/stdlib/tls.md)
 remain specifications, not executable libraries. HTTP belongs to the net package;
 peer capabilities and startup are not implemented by the bootstrap yet.
 
@@ -289,43 +289,43 @@ must remain available. It uses the host libc development files at link time.
 It is not yet a portable compiler distribution with a bundled sysroot, and has
 not qualified the reference's Linux 5.4/glibc 2.31 baseline.
 
-The [exclusive references example](../examples/exclusive-references.mwy) moves a scalar
+The [exclusive references example](examples/exclusive-references.mwy) moves a scalar
 reference, reborrows it and captures an indirect store target before replacing the
 holder. Shared/exclusive children preserve their parent authority through last use.
 
-The [exclusive functions example](../examples/exclusive-functions.mwy) passes moved
+The [exclusive functions example](examples/exclusive-functions.mwy) passes moved
 and reborrowed scalar handles through nested direct calls. The bounded
-[argument contract](EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
+[argument contract](docs/EXCLUSIVE_FUNCTIONS.md) describes entry validation and remaining
 wider-result restrictions.
-The [reference returns example](../examples/reference-returns.mwy) carries a selected
+The [reference returns example](examples/reference-returns.mwy) carries a selected
 exclusive loan through a call and resumes its parent after the returned view ends.
-The [return contract](REFERENCE_RETURNS.md) keeps guarded input authority separate
+The [return contract](docs/REFERENCE_RETURNS.md) keeps guarded input authority separate
 from conservative lifetime bounds.
-The [reference blocks example](../examples/reference-blocks.mwy) moves an emitted
+The [reference blocks example](examples/reference-blocks.mwy) moves an emitted
 child, completes through Leave and cancels another result without undoing its move.
-The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and scope.
-The [exclusive fields example](../examples/exclusive-fields.mwy) mutates disjoint scalar
-fields while reading a primary value. The [field contract](EXCLUSIVE_FIELDS.md)
+The [block-result contract](docs/REFERENCE_BLOCKS.md) describes retained demand and scope.
+The [exclusive fields example](examples/exclusive-fields.mwy) mutates disjoint scalar
+fields while reading a primary value. The [field contract](docs/EXCLUSIVE_FIELDS.md)
 describes mutable paths, owner lifetimes and remaining root restrictions.
-The [exclusive slots example](../examples/exclusive-slots.mwy) borrows initialized
+The [exclusive slots example](examples/exclusive-slots.mwy) borrows initialized
 emitted scalars beyond their alias scope while their target block remains alive.
-The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
-The [projected slots example](../examples/exclusive-slot-fields.mwy) keeps nested-field
+The [slot contract](docs/EXCLUSIVE_SLOTS.md) requires exact backing types.
+The [projected slots example](examples/exclusive-slot-fields.mwy) keeps nested-field
 identity and target lifetime while accessing disjoint primary and sibling storage.
-The [exclusive elements example](../examples/exclusive-elements.mwy) reserves a local
+The [exclusive elements example](examples/exclusive-elements.mwy) reserves a local
 list during index evaluation and mutates its scalar element. The
-[element contract](EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
-The [projected elements example](../examples/exclusive-projected-elements.mwy) preserves
+[element contract](docs/EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
+The [projected elements example](examples/exclusive-projected-elements.mwy) preserves
 emitted target lifetime while reserving one list and mutating a sibling.
-The [nested elements example](../examples/exclusive-nested-elements.mwy) checks indexes
+The [nested elements example](examples/exclusive-nested-elements.mwy) checks indexes
 in order and retains enclosing reservations only through their required uses.
-The [indexed fields example](../examples/exclusive-indexed-fields.mwy) borrows a scalar
+The [indexed fields example](examples/exclusive-indexed-fields.mwy) borrows a scalar
 field inside an emitted list and carries it beyond the lexical alias scope.
 
-The [private generated cleanup bridge](../../runtime/GENERATED_CLEANUP.md) is available
+The [private generated cleanup bridge](../runtime/GENERATED_CLEANUP.md) is available
 in the native archive and tested by LLVM callback probes, including static payload
 descriptors, real relocation, failure-preserving ownership transfer and owned-drop
-panic snapshots. The [owning-HIR design](OWNING_HIR.md) defines initialized state,
+panic snapshots. The [owning-HIR design](docs/OWNING_HIR.md) defines initialized state,
 result retention, bounded cleanup schedules and the prerequisites for strings.Owned.
 Automatic Meowy owner cleanup, task cancellation and DWARF unwinding remain
 implementation work.
@@ -463,15 +463,15 @@ implementation work.
   Reassignment changes subsequent reads while earlier copies retain
   their original pointees and call bounds. A live borrow of the reference cell
   blocks reassignment; its final read may occur in the assignment's RHS.
-  [Fixed mutable carriers](OWNERSHIP.md#mutable-borrowed-carriers) include nullable
+  [Fixed mutable carriers](docs/OWNERSHIP.md#mutable-borrowed-carriers) include nullable
   references, records and closed unions, preserving current component activity.
-  [Mutable reference fields](OWNERSHIP.md#mutable-reference-fields) support direct
-  and nested writes on completed fixed records. [Borrowed emitted-name writes](OWNERSHIP.md#borrowed-emitted-alias-writes)
-  synchronize identical backing, an [exact union member](OWNERSHIP.md#widened-borrowed-alias-backing),
-  or [whole union views](OWNERSHIP.md#whole-union-alias-assignment) with explicit tag conversion.
+  [Mutable reference fields](docs/OWNERSHIP.md#mutable-reference-fields) support direct
+  and nested writes on completed fixed records. [Borrowed emitted-name writes](docs/OWNERSHIP.md#borrowed-emitted-alias-writes)
+  synchronize identical backing, an [exact union member](docs/OWNERSHIP.md#widened-borrowed-alias-backing),
+  or [whole union views](docs/OWNERSHIP.md#whole-union-alias-assignment) with explicit tag conversion.
   Restart supports reset or independent slots;
   written published outer result slots enclosing an inner Restart remain gated.
-  [Discarded borrowed aliases](OWNERSHIP.md#discarded-borrowed-alias-writes) retain
+  [Discarded borrowed aliases](docs/OWNERSHIP.md#discarded-borrowed-alias-writes) retain
   ordinary value versions in their transient cells, including through inner Restart.
 - Guarded shared-reference assignments in matcher arms and `&&`/`||` right operands.
   Returning paths merge their possible values; skipped paths retain their incoming
@@ -541,7 +541,7 @@ panic[P002]: int8 + overflow (left 127, right 1; range -128..127) at bytes 14..1
 Explicit `debug.panic` streams its supplied message once, then appends its P006
 call-site byte span. If message evaluation itself panics or leaves the scope,
 the outer panic does not append a misleading site or terminator. A completed panic
-propagates through [explicit call outcomes](PANIC_OUTCOMES.md) to root exit status 1.
+propagates through [explicit call outcomes](docs/PANIC_OUTCOMES.md) to root exit status 1.
 A caller-owned bounded snapshot retains the panic after failing functions return;
 pending outer messages do not replace nested failures. Native probes pass these
 outcomes through cleanup, including original-cause P008. Automatic resource cleanup,
@@ -556,7 +556,7 @@ through proper-subset union views,
 mutable primary slots and alias
 views requiring union retagging. String interpolation
 outside an output call requires the future formatting/storage implementation.
-The [tracker](../STATUS.md#still-outside-this-compiler) covers the full remaining scope.
+The [tracker](STATUS.md#still-outside-this-compiler) covers the full remaining scope.
 
 List capacities accept non-negative integer constants and checked scalar
 expressions. General required evaluation through blocks or calls remains
@@ -626,7 +626,7 @@ terminal expired identities. Overwriting such a reference before reading it is
 accepted; actual expired use is E303. Reinitializing a Local, emitted slot or
 Temporary site never revives an old reference. An ancestor statement's temporary
 survives an inner restart while that statement remains active. The
-[expired restarts example](../examples/expired-restarts.mwy) exercises fresh iteration
+[expired restarts example](examples/expired-restarts.mwy) exercises fresh iteration
 storage, overwrite after loop exit and a surviving outer temporary.
 The analysis forgets header-entry and iteration guards, and may widen correlations
 between independent union fields or owners. Programs needing finer correlations may
@@ -707,7 +707,7 @@ conservatively overlap its writes, including views of other fields in its elemen
 Copying a record counts as a use of all its references, even if a later operation
 selects only one field. Direct projection, scalar comparison and scalar-primary
 formatting do not keep unrelated component loans alive.
-See [the storage design](OWNERSHIP.md) for the remaining analysis stages.
+See [the storage design](docs/OWNERSHIP.md) for the remaining analysis stages.
 
 Union literals receive a numeric width when the expected union has one matching
 numeric member. Multiple candidate widths require an explicitly typed value;
@@ -782,4 +782,4 @@ the fixture catalog and does not execute the compiler.
 | `build.rs` | Exact native-tool version checks, bridge/runtime bootstrap |
 | `tests/native.rs`, `tests/native/`, `tests/conformance.py` | Single native test target, shared harness, behavior-focused cases and catalog execution |
 
-The full architecture and release gates remain in [COMPILER.md](../../COMPILER.md).
+The full architecture and release gates remain in [COMPILER.md](../COMPILER.md).

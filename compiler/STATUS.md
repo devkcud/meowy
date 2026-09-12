@@ -15,20 +15,10 @@ all four repository checks passed.
 
 ## Documentation layout
 
-Compiler guides and design pages live in [docs/README.md](docs/README.md) and its
-sibling Markdown files. Only `AGENTS.md` and this handoff stay at the compiler root.
-The 17 moved pages retain their text/headings; relative links and the ownership
-contract path were adjusted. Working instructions and Cargo's README metadata point
-to the new location. Compiler source, runtime, fixtures and dependencies are unchanged.
-
-Relocation commits: `f111ea0` foundation/cleanup, `5af48d3` ownership/pointers,
-`2f91aa7` exclusive references/fields/slots, `fb2bd14` elements/restarts,
-`05e160f` reference blocks/functions, followed by this final guide/index move.
-Every group passed local-link, preservation and staged whitespace checks. All 17
-pages match their original content/headings apart from corrected paths, and no stale
-root-page references remain. Cargo metadata differs only in the README path.
-Final `tools/verify.py --compiler` passed all ten checks; 1145 local links pass.
-Log: `/tmp/meowy-docs-relocation-gate.log`.
+[README.md](README.md), `AGENTS.md` and this handoff stay at the compiler root.
+The 16 detailed guides/design pages live in `docs/`. The README was restored to
+this location at the user's request; links, working instructions and Cargo metadata
+follow that layout. Page contents and headings are preserved apart from relative paths.
 
 ## Current compiler slice
 

@@ -5,8 +5,8 @@ These instructions apply to this directory and all descendants.
 ## Start and handoff
 
 - Read `STATUS.md` before changing code. It records implementation state, known gaps, evidence, and next steps.
-- Read `docs/README.md` for setup and commands, then the relevant language references in `../docs/reference/`.
-- Keep compiler documentation in `docs/`; only `AGENTS.md` and `STATUS.md` remain as root Markdown files.
+- Read `README.md` for setup and commands, then the relevant language references in `../docs/reference/`.
+- Keep compiler documentation in `docs/`; `README.md`, `AGENTS.md` and `STATUS.md` remain at the compiler root.
 - Treat `../COMPILER.md` as the implementation plan and the language reference as the behavior contract.
 - Inspect the current Git changes before working. Preserve existing work and coordinate edits to shared interfaces.
 - After every compiler work step (investigation, edit, validation, or decision), update `STATUS.md` before starting the next step. Do not defer updates until the end of a task or session.

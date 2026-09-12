@@ -27,9 +27,9 @@ Commit plan:
 
 ## Current milestone
 
-Compiler documentation now lives under [compiler/docs/](compiler/docs/README.md).
-Only `AGENTS.md` and `STATUS.md` remain as Markdown files at the compiler root.
-All 17 pages retain their content with corrected links; layout and Cargo metadata checks pass.
+The compiler entry guide is [compiler/README.md](compiler/README.md); detailed
+guides live in `compiler/docs/`. The compiler root keeps `README.md`, `AGENTS.md`
+and `STATUS.md`. Links and Cargo metadata follow this layout.
 
 Eligible scalar integer primary exports now supply computed-type inputs through a
 module name, aliases, arithmetic copies and primary/named re-exports. They retain
