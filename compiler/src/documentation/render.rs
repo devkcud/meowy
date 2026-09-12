@@ -55,7 +55,7 @@ pub(crate) fn prose(entry: &Entry) -> String {
 
 pub(crate) fn page(model: &Model, name: &str) -> String {
     let mut out = format!(
-        "{MARKER}<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'\"><title>{} | Meowy API</title><style>{}</style><body><a class=\"skip\" href=\"#main\">Skip to reference</a><header><p>MEOWY / API REFERENCE</p><h1>{}</h1><p>Compiler-checked declarations. Examples report checking and execution separately.</p></header><div class=\"layout\"><nav aria-label=\"Declarations\"><h2>In this file</h2><ul>",
+        "{MARKER}<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'\"><title>{} | meowy API</title><style>{}</style><body><a class=\"skip\" href=\"#main\">Skip to reference</a><header><p>meowy / API REFERENCE</p><h1>{}</h1><p>Compiler-checked declarations. Examples report checking and execution separately.</p></header><div class=\"layout\"><nav aria-label=\"Declarations\"><h2>In this file</h2><ul>",
         escape(name),
         STYLE,
         escape(name)
@@ -95,7 +95,7 @@ pub(crate) fn page(model: &Model, name: &str) -> String {
         }
         out.push_str("</section>");
     }
-    out.push_str("</main></div><footer>Generated locally by the Meowy bootstrap. No application initialization ran during documentation generation. Full LSP and package documentation remain separate capabilities.</footer></body></html>");
+    out.push_str("</main></div><footer>Generated locally by the meowy bootstrap. No application initialization ran during documentation generation. Full LSP and package documentation remain separate capabilities.</footer></body></html>");
     out
 }
 

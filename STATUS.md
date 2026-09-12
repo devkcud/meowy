@@ -16,7 +16,8 @@ work remains at the handoff below while this documentation task is active.
 
 Commit plan:
 1. `fe4b40e` adds the documentation conventions and AGENTS rules.
-2. Normalize schema titles and generated/user-facing project labels in separate slices.
+2. `07e5cb3` normalizes schema titles; lowercase generated/API and tool labels
+   passed the renderer regression and repository checks.
 3. Format introductory/guide, language-reference, library, cookbook and compiler
    documentation in related reviewable groups, including their inline code fragments.
 4. Apply the same presentation to linked standalone examples as requested;

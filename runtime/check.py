@@ -267,7 +267,7 @@ def check(clang, directory, sanitizers=True):
         print(f"PASS runtime owned values: {name}; {OWNED_CASES} cases and 4 fatal owned-cleanup probes", flush=True)
     if not sanitizers:
         print("Sanitizers were explicitly disabled; sanitizer behavior was not checked.")
-    print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, Meowy owner lowering and DWARF unwinding remain pending; private generated cleanup ABI is tested.")
+    print("Bounded single-worker prototype only; automatic cancellation/scope-exit joins, meowy owner lowering and DWARF unwinding remain pending; private generated cleanup ABI is tested.")
 
 
 def main():

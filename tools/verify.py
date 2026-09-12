@@ -95,7 +95,7 @@ def main():
         print("Plan only; no checks were run.")
         return 0
     if not compiler:
-        print("Scope: repository contracts; no Meowy source will be compiled or executed.", flush=True)
+        print("Scope: repository contracts; no meowy source will be compiled or executed.", flush=True)
     elif not args.strict:
         print("Scope: repository contracts and compiler bootstrap; unsupported language cases remain visible.", flush=True)
     else:

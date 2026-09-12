@@ -115,6 +115,9 @@ pub(crate) fn documentation_renderer_escapes_active_content_and_keeps_source_pri
     assert!(!page.contains("<img"));
     assert!(page.contains("&lt;entry&gt;"));
     assert!(page.contains("@media"));
+    assert!(page.contains("&lt;entry&gt; | meowy API</title>"));
+    assert!(page.contains("<p>meowy / API REFERENCE</p>"));
+    assert!(page.contains("Generated locally by the meowy bootstrap."));
 }
 
 #[test]

@@ -5,6 +5,14 @@ No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
+## Active documentation consistency work
+
+The root handoff tracks lowercase project naming and spaced reader examples. The
+API renderer title/header/footer now use `meowy`; its existing rendering regression
+checks the visible spelling. Compiler source formatting and reference fixtures are
+outside the documentation layout convention. The focused rendering regression and
+all four repository checks passed.
+
 ## Documentation layout
 
 Compiler guides and design pages live in [docs/README.md](docs/README.md) and its

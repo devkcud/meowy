@@ -1,4 +1,4 @@
-"""Validate fixture metadata; deliberately does not execute Meowy source."""
+"""Validate fixture metadata; deliberately does not execute meowy source."""
 
 import json
 import re
@@ -52,7 +52,7 @@ def main():
             }
             assert anchor in anchors, (case["id"], anchor)
     assert sources == set((base / "sources").glob("*.mwy")), "Unlisted source fixture"
-    print(f"Validated {len(seen)} fixture records; no Meowy source was executed.")
+    print(f"Validated {len(seen)} fixture records; no meowy source was executed.")
 
 
 if __name__ == "__main__":
