@@ -1,15 +1,15 @@
-d:@"debug"
-x:7
-'out{
-    r:{
-        ->view:=&x
-        local:9
-        view=&local
-        n:=2
-        'loop{
+d : @"debug"
+x : 7
+'out {
+    r : {
+        -> view := &x
+        local : 9
+        view = &local
+        n := 2
+        'loop {
             d.print(*view)
-            n=n-1
-            |n>0|'loop.restart()
+            n = n - 1
+            | n > 0 | 'loop.restart()
         }
         'out.leave()
     }

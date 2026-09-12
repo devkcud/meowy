@@ -7,8 +7,9 @@ records the plan. Keep this handoff current; Git holds history. Do not recreate 
 
 ## Active documentation consistency work
 
-Latest validated formatting group: Space list and indexed write examples. Tokens, literal/comment contents and
+Latest validated formatting group: Space aggregate alias examples. Tokens, literal/comment contents and
 statement newlines are preserved; local-link checks pass. Final compiler gate is pending.
+
 
 
 

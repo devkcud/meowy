@@ -1,13 +1,13 @@
-d:@"debug"
-make:(flag<boolean>,x<&int32>,y<&int32>)'out{
-    |flag|{
-        'out->view:=x
-        view=y
+d : @"debug"
+make : (flag <boolean>, x <&int32>, y <&int32>) 'out {
+    | flag | {
+        'out -> view := x
+        view = y
     }
 }
-x:7
-y:9
-full:make(true,&x,&y)
-empty:make(false,&x,&y)
-|full.view<&int32>|d.print(full.*view)
-|empty.view<null>|d.print("empty")
+x : 7
+y : 9
+full : make(true, &x, &y)
+empty : make(false, &x, &y)
+| full.view <&int32> | d.print(full.*view)
+| empty.view <null> | d.print("empty")

@@ -1,16 +1,16 @@
-debug:@"debug"
+debug : @"debug"
 
-matrix<int32[3][2]>:=[[10],[20,30]]
-original:matrix
-view:&(matrix[1][1])
-matrix[2][1]=*view+1
+matrix <int32[3][2]> := [[10], [20, 30]]
+original : matrix
+view : &(matrix[1][1])
+matrix[2][1] = *view + 1
 debug.print(original[2][1])
 debug.print(matrix[2][1])
 debug.print(matrix.size())
 debug.print(matrix[1].size())
 debug.print(matrix[2].size())
 
-row:=2
-column:=2
-matrix[row][column]={row=1;column=1;->99}
+row := 2
+column := 2
+matrix[row][column] = { row = 1; column = 1; -> 99 }
 debug.print(matrix[2][2])

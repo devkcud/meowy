@@ -1,10 +1,10 @@
-debug:@"debug"
+debug : @"debug"
 
-<Item>:<{value<int32>:=}>
-holder:={->items<Item[3]>:=[{->value:=1},{->value:=2}];->other:=20}
-original:holder
-holder.items[1].value=8
-holder.items[2].value={holder.other=21;->holder.other}
+<Item> : <{ value <int32> := }>
+holder := { -> items <Item[3]> := [{ -> value := 1 }, { -> value := 2 }]; -> other := 20 }
+original : holder
+holder.items[1].value = 8
+holder.items[2].value = { holder.other = 21; -> holder.other }
 debug.print(original.items[1].value)
 debug.print(holder.items[1].value)
 debug.print(holder.items.size())
