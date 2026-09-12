@@ -1,12 +1,12 @@
-debug:@"debug"
-bump<null>:(view<&!int32>){*view=*view+1}
+debug : @"debug"
+bump <null> : (view <&!int32>) { *view = *view + 1 }
 
-result:'out{
-    view:{
-        'out->rows:=[{->value:=1;->other:=3}]
-        ->rows[{
+result : 'out {
+    view : {
+        'out -> rows := [{ -> value := 1; -> other := 3 }]
+        -> rows[{
             debug.print("index")
-            ->1
+            -> 1
         }].&!value
     }
     bump(&!*view)
