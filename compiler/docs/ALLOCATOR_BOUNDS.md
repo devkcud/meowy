@@ -1,7 +1,7 @@
 # Allocator return lifetime bounds
 
 Ordinary functions returning allocator values now apply the conservative
-[public lifetime contract](../docs/reference/memory.md#lifetimes). A returned handle
+[public lifetime contract](../../docs/reference/memory.md#lifetimes). A returned handle
 is bounded by every active borrow-carrying input, even when the body simply returns
 memory.heap. Copies, supported rebindings and further calls retain those bounds. The former
 blanket signature gate is removed for the supported shapes below.
@@ -46,7 +46,7 @@ copy : handle
 Both uses of the returned allocator occur while context's cell remains alive.
 Returning `select(&local)` from local's own block, or consuming a handle from
 `select(&1)` in a later statement, reports E303. The
-[allocator-bounds example](examples/allocator-bounds.mwy) executes the supported
+[allocator-bounds example](../examples/allocator-bounds.mwy) executes the supported
 case in debug/release without changing the runtime allocator representation.
 
 ## Supported shapes and explicit limits
@@ -85,7 +85,7 @@ does not revive an older handle. Overwriting the handle or pointer before readin
 its expired contents is allowed. An actual expired read reports E303. Header
 widening remains conservative and does not prove arbitrary relationships between
 iteration counters and prior assignments. The
-[mutable-allocators example](examples/mutable-allocators.mwy) exercises the supported
+[mutable-allocators example](../examples/mutable-allocators.mwy) exercises the supported
 loop and empty/bounded transitions in debug/release.
 
 ## Fixed record mutation
@@ -94,7 +94,7 @@ Mutable records containing allocators now participate in the same version and
 restart analysis when their entire shape is free of lists, exclusive references and
 non-Copy constituents. Nested records, closed unions and shared references with
 fixed supported referents are supported. The same machinery supports
-[reference-only mutable carriers](OWNERSHIP.md#mutable-borrowed-carriers).
+[reference-only mutable carriers](../OWNERSHIP.md#mutable-borrowed-carriers).
 This does not enable bounded mutable emitted aliases during record construction.
 A record returned from a function can carry public input bounds into a mutable
 binding, and ordinary field writes can add them after construction.
@@ -110,7 +110,7 @@ field therefore does not prevent reading an independent scalar/allocator sibling
 or repairing the expired field. Reading the whole record, or passing a reference
 to the whole carrier at call entry, still requires all relevant bounds to be live.
 Old copies retain their own constraints after the current record is repaired.
-The [allocator-records example](examples/allocator-records.mwy) demonstrates this
+The [allocator-records example](../examples/allocator-records.mwy) demonstrates this
 selective read and repair in debug/release.
 
 Record headers may have no physical origins when every reference path is inactive.
@@ -148,7 +148,7 @@ A tag-only observation does not consume an allocator payload. An expired allocat
 can therefore be inspected and replaced with null. A proven null branch may read
 its value; an active expired allocator read still reports E303. Copies retain their
 own variants and bounds. A reference to the mutable cell still prevents replacement
-with E302. The [tagged-allocators example](examples/tagged-allocators.mwy) demonstrates
+with E302. The [tagged-allocators example](../examples/tagged-allocators.mwy) demonstrates
 inspection and repair after the original public input bound has expired.
 
 ## Shared-reference allocator carriers
@@ -162,12 +162,12 @@ synchronize them. Restart supports
 reset or independent slots; written outer result owners enclosing an inner Restart
 remain gated for published results. Discarded reference-bearing aliases retain local
 versions without a result transfer; union-view addresses/field paths and allocator-only
-alias bounds stay gated. See [reference fields](OWNERSHIP.md#mutable-reference-fields).
+alias bounds stay gated. See [reference fields](../OWNERSHIP.md#mutable-reference-fields).
 
 Replacing a carrier releases only loans no longer demanded by its current value.
 Old copies retain their own sources. Reading a reference field keeps its pointee
 loan; copying an allocator field retains lifetime bounds without freezing the
-bound source's contents. The [allocator-carriers example](examples/allocator-carriers.mwy)
+bound source's contents. The [allocator-carriers example](../examples/allocator-carriers.mwy)
 replaces a reference to x with one to y, then changes x while retaining an allocator
 bounded by x's lifetime.
 

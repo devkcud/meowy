@@ -18,7 +18,7 @@ retagging, storage and direct calls preserve the full nominal type.
 | strings.Owned | {ptr, ptr, i64} | 24/8 | No | Required; source storage is gated |
 
 These are pinned bootstrap layouts, not public FFI layouts. The string layout
-matches the [private descriptor](../runtime/STRINGS.md); failure facts retain
+matches the [private descriptor](../../runtime/STRINGS.md); failure facts retain
 cause, requested bytes and alignment. Padding is not initialized data. No source
 record construction can forge an allocator or failure, and opaque fields are not
 exposed by ordinary field projection.
@@ -30,7 +30,7 @@ The checker rejects source storage requiring drops, and the backend rejects
 unscheduled owning storage, results and expressions rather than silently copying
 a resource payload. Constructor calls still require the later owning-HIR schedules.
 
-Opaque foundation values have no [ordinary equality](../docs/reference/types.md#ordinary-operator-domains).
+Opaque foundation values have no [ordinary equality](../../docs/reference/types.md#ordinary-operator-domains).
 This restriction applies to every constituent of full-shape record, list and
 union equality, including empty lists and unions currently holding null. Comparing
 references to their storage still compares addresses. Comparing an aggregate to a
@@ -61,7 +61,7 @@ debug.print(&first == &second)
 ```
 
 This prints false because the cells are distinct. The
-[heap-handles example](examples/heap-handles.mwy) also exercises a borrowed list
+[heap-handles example](../examples/heap-handles.mwy) also exercises a borrowed list
 element and replacement after its last use. Evaluating/copying the handle does
 not allocate resource bytes.
 
@@ -84,7 +84,7 @@ a shared borrow and return both present and null alternatives. This validates
 transport; it does not add a source error constructor or expose its private fields.
 The existing private constructor separately tests actual allocation exhaustion.
 
-AllocationFailure is Copy but [not descriptor-compatible](../docs/reference/stdlib/errors.md#choose-inline-storage-or-explicit-erasure).
+AllocationFailure is Copy but [not descriptor-compatible](../../docs/reference/stdlib/errors.md#choose-inline-storage-or-explicit-erasure).
 Its small layout must not grant implicit storage as the common error descriptor.
 Source error construction, common error predicates/metadata APIs and erasure remain
 unimplemented. The source `strings.copy` operation is still gated, as are

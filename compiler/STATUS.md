@@ -5,16 +5,25 @@ No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Documentation relocation plan
 
-1. `fa3336d` — retain scalar primary emission identity and initializer evidence.
-2. `c6e13c7` — resolve scalar primary imports, copies and required materialization.
-3. `10ae3e6` — verify staging, runtime failure and repeated evidence costs.
-4. This documentation handoff records the complete gate and next bounded slice.
+Move every root compiler Markdown page except `AGENTS.md` and `STATUS.md` into
+`docs/`, preserving content and correcting links in the same slice. Compiler behavior,
+reference fixtures, commands and dependencies stay unchanged. Baseline repository
+verification passed all four checks, including 1143 links and 16 tooling tests.
 
-Each implementation/test slice passed focused checks and staged diff inspection
-before commit. Retaining the existing emission identity preserves runtime HIR and
-constant folding.
+1. Moved foundation, allocator bounds, owning HIR and panic outcome pages;
+   all 1143 links pass and text/headings are preserved.
+2. Move ownership and pointer syntax pages.
+3. Move exclusive reference, field and slot pages.
+4. Move exclusive element and restart pages.
+5. Move reference block/return and exclusive function pages.
+6. Move computed types, module guide and README; update the working instructions.
+
+Each group includes its inbound/outbound link fixes and this handoff, stays within
+the file review limit, and must pass local-link and preservation checks before commit.
+Run repository verification and the compiler gate after the complete move. Preserve
+the compiler implementation next steps below for resumption after this layout task.
 
 ## Current compiler slice
 

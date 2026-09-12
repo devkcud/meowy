@@ -1,15 +1,15 @@
 # Owning HIR and cleanup schedules
 
 This is an implementation design, not an enabled compiler feature. The
-HIR describes nominal resource layouts but emits no automatic resource destructor. The [private bridge](../runtime/GENERATED_CLEANUP.md)
+HIR describes nominal resource layouts but emits no automatic resource destructor. The [private bridge](../../runtime/GENERATED_CLEANUP.md)
 proves relocation and destruction through generated LLVM callbacks; it does not
 yet connect source ownership to cleanup. This design guides the ownership
-stage of [COMPILER.md](../COMPILER.md#the-pipeline).
+stage of [COMPILER.md](../../COMPILER.md#the-pipeline).
 
 ## First resource
 
 Use the documented `strings.copy(text, allocator)` constructor and
-`strings.Owned` from the [text library](../docs/reference/stdlib/text-and-data.md#owned-strings-and-formatting).
+`strings.Owned` from the [text library](../../docs/reference/stdlib/text-and-data.md#owned-strings-and-formatting).
 Its result is `strings.Owned` or `memory.AllocationFailure`. Begin with the static
 `memory.heap` handle, immutable UTF-8 storage and `owned.view()`. This needs no
 generic container, builder, task or user-defined destructor. Allocation failure
@@ -39,12 +39,12 @@ uninitialized storage or padding can establish an initialized owner.
 
 | File | Current behavior | Required extension |
 | --- | --- | --- |
-| [hir.rs](src/hir.rs) | Typed tree with local, statement, block, emission and call identities | Concrete resource type, ownership operations and explicit storage/exit plan |
-| [check.rs](src/check.rs) | Resolves/types HIR, then checks origins and loans | Require a complete ownership plan before returning a buildable program |
-| [borrow/value.rs](src/borrow/value.rs) | Literal strings carry no dynamic origin | Track string-view buffer origins through copies, aggregates, calls and exits |
-| [loans.rs](src/loans.rs) | Availability and last-use graph for reference authority | Validate resource moves, replacement and destruction against live views |
-| [backend.rs](src/backend.rs) | Erases statement boundaries; copies values; branches directly on exits | Consume explicit cleanup/transfer operations and preserve statement cleanup |
-| [backend/storage.rs](src/backend/storage.rs) | Maps local/result aliases to backing storage | Map each alias to its single ownership cell, including discarded emissions |
+| [hir.rs](../src/hir.rs) | Typed tree with local, statement, block, emission and call identities | Concrete resource type, ownership operations and explicit storage/exit plan |
+| [check.rs](../src/check.rs) | Resolves/types HIR, then checks origins and loans | Require a complete ownership plan before returning a buildable program |
+| [borrow/value.rs](../src/borrow/value.rs) | Literal strings carry no dynamic origin | Track string-view buffer origins through copies, aggregates, calls and exits |
+| [loans.rs](../src/loans.rs) | Availability and last-use graph for reference authority | Validate resource moves, replacement and destruction against live views |
+| [backend.rs](../src/backend.rs) | Erases statement boundaries; copies values; branches directly on exits | Consume explicit cleanup/transfer operations and preserve statement cleanup |
+| [backend/storage.rs](../src/backend/storage.rs) | Maps local/result aliases to backing storage | Map each alias to its single ownership cell, including discarded emissions |
 
 Reuse HIR identities, resolved control targets and guarded flow machinery. Extend
 the storage/control representation described in COMPILER.md; do not reconstruct
@@ -91,7 +91,7 @@ already be moved; the destination's old live flag determines whether it is dropp
 The target address/index evaluation order remains the existing HIR order.
 
 `strings.copy` consumes source bytes during the call and retains only the
-allocator, as allowed by the [intrinsic lifetime contract](../docs/reference/memory.md#lifetimes).
+allocator, as allowed by the [intrinsic lifetime contract](../../docs/reference/memory.md#lifetimes).
 `owned.view()` creates a Copy string bounded by the owner. Last-use checking must
 reject destruction, replacement or movement while that view remains required.
 Returning a view of a local reports E303. Literal views remain static. General
@@ -99,8 +99,8 @@ user wrappers retain the documented conservative input bounds.
 
 ## Exits and result retention
 
-Use the [cleanup order](../docs/reference/memory.md#cleanup) and
-[named-scope rules](../docs/reference/values-and-blocks.md#named-scopes-and-cleanup).
+Use the [cleanup order](../../docs/reference/memory.md#cleanup) and
+[named-scope rules](../../docs/reference/values-and-blocks.md#named-scopes-and-cleanup).
 Keep one ordered cleanup region for an active block iteration and separate
 statement regions for remaining temporaries. Reserve in actual initialization
 order, not local ID, field order or CFG traversal order.
@@ -206,7 +206,7 @@ identify successful resource acquisitions; `drop(x)` records an actual release.
    diagnostic/effect tests and generated cleanup/original-cause P008 probes while
    adding actual owning-HIR cleanup edges.
 2. Implemented prerequisites: [foundational identities](FOUNDATION.md) and the
-   [private string ABI](../runtime/STRINGS.md) with static heap, typed native
+   [private string ABI](../../runtime/STRINGS.md) with static heap, typed native
    allocation failure, deterministic failure tests and allocation/release counting.
    [Nominal failure transport and static heap values](FOUNDATION.md) are now lowerable;
    [allocator-return bounds](ALLOCATOR_BOUNDS.md) now cover immutable values, direct

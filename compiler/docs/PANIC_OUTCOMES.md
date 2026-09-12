@@ -62,7 +62,7 @@ library contract.
 
 Generated native probes call actual source-lowered code, copy its returned panic,
 reset the original snapshot, then unwind armed callbacks through the
-[cleanup bridge](../runtime/GENERATED_CLEANUP.md). Debug/release cases check reverse
+[cleanup bridge](../../runtime/GENERATED_CLEANUP.md). Debug/release cases check reverse
 drop order and exact P008 diagnostics with the original P001/P002/P003/P006 cause.
 Additional probes check result publication only on success, complete-cause cleanup
 after an abandoned message, primitive/union/primary formatting and UTF-8 truncation

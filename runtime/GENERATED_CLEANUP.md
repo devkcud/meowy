@@ -133,7 +133,7 @@ implicit byte-copy move, scheduler or C++ exception mechanism implements this tr
 | Cancellation | Request cooperative child cancellation, drain/join children while parent borrows remain valid, then release parent owners |
 
 Backend `block` and Leave/Restart branches currently emit direct control flow.
-[Scalar panic outcomes](../compiler/PANIC_OUTCOMES.md) now carry owning snapshots
+[Scalar panic outcomes](../compiler/docs/PANIC_OUTCOMES.md) now carry owning snapshots
 through explicit generated failure exits while preserving streamed diagnostics.
 Native probes pass returned snapshots into this bridge with the panic cause; no
 automatic owning-value cleanup is emitted yet. Initialization/transfer metadata

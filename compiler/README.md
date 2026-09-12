@@ -8,8 +8,8 @@ narrowing and shared references to local and emitted storage, including guarded
 block results, fixed mutable records and unions carrying references, direct-function
 borrow contracts, shared reborrows, last-use checks for mutable owners, and inline
 bounded lists of copyable reference-free elements. It is not the complete v0.0.1 language.
-The [foundation values](FOUNDATION.md) include static heap handles and nominal
-allocation-failure transport. [Allocator return bounds](ALLOCATOR_BOUNDS.md) track
+The [foundation values](docs/FOUNDATION.md) include static heap handles and nominal
+allocation-failure transport. [Allocator return bounds](docs/ALLOCATOR_BOUNDS.md) track
 public input lifetimes through immutable values, mutable handles/tagged records,
 field writes, shared-reference members, restart headers and shared snapshots. Owning-string
 storage and constructors remain gated.
@@ -325,7 +325,7 @@ field inside an emitted list and carries it beyond the lexical alias scope.
 The [private generated cleanup bridge](../runtime/GENERATED_CLEANUP.md) is available
 in the native archive and tested by LLVM callback probes, including static payload
 descriptors, real relocation, failure-preserving ownership transfer and owned-drop
-panic snapshots. The [owning-HIR design](OWNING_HIR.md) defines initialized state,
+panic snapshots. The [owning-HIR design](docs/OWNING_HIR.md) defines initialized state,
 result retention, bounded cleanup schedules and the prerequisites for strings.Owned.
 Automatic Meowy owner cleanup, task cancellation and DWARF unwinding remain
 implementation work.
@@ -541,7 +541,7 @@ panic[P002]: int8 + overflow (left 127, right 1; range -128..127) at bytes 14..1
 Explicit `debug.panic` streams its supplied message once, then appends its P006
 call-site byte span. If message evaluation itself panics or leaves the scope,
 the outer panic does not append a misleading site or terminator. A completed panic
-propagates through [explicit call outcomes](PANIC_OUTCOMES.md) to root exit status 1.
+propagates through [explicit call outcomes](docs/PANIC_OUTCOMES.md) to root exit status 1.
 A caller-owned bounded snapshot retains the panic after failing functions return;
 pending outer messages do not replace nested failures. Native probes pass these
 outcomes through cleanup, including original-cause P008. Automatic resource cleanup,
