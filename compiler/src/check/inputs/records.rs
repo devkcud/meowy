@@ -177,14 +177,20 @@ impl Checker {
                         return None;
                     }
                     let index = fields.iter().position(|field| field.name == *name)?;
-                    let ExprKind::Local(id) = value.kind else {
-                        return None;
+                    let id = match value.kind {
+                        ExprKind::Local(id) => Some(id),
+                        ExprKind::Field { .. } => None,
+                        _ => return None,
                     };
                     if emitted.insert(name.clone(), id).is_some() {
                         return None;
                     }
                     if matches!(fields[index].ty, Type::Record { .. }) {
-                        let child = self.source_record(id, &locals)?;
+                        let child = if let Some(id) = id {
+                            self.source_record(id, &locals)?.clone()
+                        } else {
+                            self.record_expr(value, &fields[index].ty, depth + 1, count, &locals)?
+                        };
                         record.input.add(&child.input);
                         for (path, value) in &child.values {
                             let mut target = vec![index];
@@ -197,12 +203,27 @@ impl Checker {
                         record.values.insert(vec![index], input.value);
                     }
                 }
+                hir::Stmt::Emit {
+                    target,
+                    field: None,
+                    value,
+                    ..
+                } if *target == block.id && value.ty == Type::Null => {
+                    let ExprKind::Primary(source) = &value.kind else {
+                        return None;
+                    };
+                    let ExprKind::Local(id) = source.kind else {
+                        return None;
+                    };
+                    record.input.add(&self.source_record(id, &locals)?.input);
+                    record.input.work = record.input.work.saturating_add(2);
+                }
                 hir::Stmt::SlotAlias {
                     id,
                     target,
                     field,
                     mutable: false,
-                } if *target == block.id && emitted.get(field) == Some(id) => {}
+                } if *target == block.id && emitted.get(field) == Some(&Some(*id)) => {}
                 _ => return None,
             }
         }

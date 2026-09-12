@@ -222,3 +222,65 @@ pub(crate) fn composed_inputs_keep_runtime_failure_before_facade_execution() {
         assert!(String::from_utf8_lossy(&output.stderr).starts_with("panic[P006]: stop"));
     }
 }
+
+#[test]
+pub(crate) fn local_composed_inputs_keep_values_shapes_and_function_type_reads() {
+    super::Case::new(
+        "d:@\"debug\";row:{->z<uint8>:2;->a:{->n<uint8>:3}};copy:{->row;->extra<uint8>:1};part:{->(copy.a)};value:copy.z;<T>:{-><int32[value+part.n+copy.extra]>};v<T>:[7];f<int32>:(){<U>:{-><int32[copy.a.n]>};v<U>:[9];->v[1]};d.print(v[1]);d.print(f());d.print(copy.z);d.print(part.n)",
+    ).runs(b"7\n9\n2\n3\n");
+}
+
+#[test]
+pub(crate) fn local_composed_inputs_keep_ancestor_effects_shapes_and_widths() {
+    for (source, code) in [
+        (
+            "d:@\"debug\";row:{->a:{->n:4};->b:{->n:1;d.print(1)}};copy:{->row.a};<T>:{n:copy.n;-><int32>}",
+            "E211",
+        ),
+        (
+            "row:{->n:4};copy:{->row;unused:=1};<T>:{n:copy.n;-><int32>}",
+            "E211",
+        ),
+        ("row:{->n:=4};copy:{->row};<T>:{n:copy.n;-><int32>}", "E211"),
+        ("row:={->n:4};copy:{->row};<T>:{n:copy.n;-><int32>}", "E211"),
+        (
+            "row:{->1;->n:4};copy:{->row};<T>:{n:copy.n;-><int32>}",
+            "E211",
+        ),
+        (
+            "row:{->n:4;->label:\"x\"};copy:{->row};<T>:{n:copy.n;-><int32>}",
+            "E211",
+        ),
+        (
+            "row:{->n:4};copy:{|true|->row};<T>:{n:copy.n;-><int32>}",
+            "E211",
+        ),
+        (
+            "row:{->n<uint8>:255};copy:{->row};<T>:{n:copy.n+1;-><int32>}",
+            "E107",
+        ),
+        ("row:{->n:4};copy:{->row};f<int32>:(){->copy.n}", "B001"),
+    ] {
+        let output = super::Case::new(source).command("run", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            error.contains(&format!("\"code\":\"{code}\"")),
+            "{source}: {error}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn local_composed_inputs_retain_unreachable_sibling_error_spans() {
+    for body in [
+        "row<{good<uint8>;bad<uint8>}>:{->good<uint8>:4;->bad<uint8>:255+1};copy<{good<uint8>;bad<uint8>}>:{->row}",
+        "row<{good<uint8>}>:{->good<uint8>:4;unused<uint8>:255+1};copy<{good<uint8>}>:{->row}",
+    ] {
+        let source = format!("|false|{{{body};<T>:{{n:copy.good;-><int32>}}}}");
+        let error = meowy::compile(&source).unwrap_err().remove(0);
+        assert_eq!(error.code, "E107", "{source}: {error:?}");
+        assert_eq!(error.span.start, source.find("255+1").unwrap());
+    }
+}

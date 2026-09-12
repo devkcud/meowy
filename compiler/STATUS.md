@@ -152,18 +152,19 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Active plan and next steps
 
-Inspection: composition lowers to one temporary Bind followed by primary/field
-projections. Module exports currently retain only an ID/work pair; local records
-need a retained path so every field carries its complete ancestor evidence.
-`record_expr` also rejects projected emissions and the unit primary of composition.
+Composition lowers to one temporary Bind followed by primary/field projections.
+Export identities now retain bounded record paths (`f763ee8`). Local record
+evidence accepts these projections, preserving complete ancestor evidence.
 
 Dependency-ordered commits:
 
 1. Complete: export input identity now includes a bounded record path. All nine
    export/path library tests and all nine native composition groups passed; fmt
    passed. Existing module behavior and runtime HIR remain unchanged.
-2. Accept eligible local record compositions in `inputs/records.rs`, retaining all
-   initializer work/errors. Include focused execution, ancestor and shape tests.
+2. Complete: eligible local compositions retain projected field and unit-primary
+   evidence. All 733 library/704 native tests, fmt and Clippy passed. Log:
+   `/tmp/meowy-local-compose-tests.log`. Retained sibling/tail errors keep E107
+   source spans with declared shapes; unannotated unreachable shapes retain B001.
 3. Forward local composition fields through top-level module exports using the
    retained path. Include projected/inline sources, widths and eligibility tests.
 4. Add independent staging/work integration coverage and update the supported guide
