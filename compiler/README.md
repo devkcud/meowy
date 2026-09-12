@@ -218,7 +218,7 @@ after initialization and keeps it across inner restarts while the result owner l
 Acquisition checks active, initialized storage; owner expiry and last-use rules
 remain unchanged. The [exclusive carried example](examples/exclusive-carried.mwy)
 mutates a carried scalar through a local exclusive handle whose loan ends before
-Restart. The [frontier proof](EXCLUSIVE_RESTARTS.md) also checks shared descendants;
+Restart. The [frontier proof](docs/EXCLUSIVE_RESTARTS.md) also checks shared descendants;
 exclusive or opaque ancestry crossing a backedge remains unsupported.
 The [mixed header example](examples/mixed-headers.mwy) retains shared-reference
 versions alongside those local exclusive loans. Every header predecessor must
@@ -242,7 +242,7 @@ reborrow across three iterations. See
 [shared record borrowing](docs/OWNERSHIP.md#shared-carried-record-borrows).
 The [exclusive carried record example](examples/exclusive-carried-records.mwy)
 mutates a nested field while retaining an independent old copy. Its
-[restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
+[restart proof](docs/EXCLUSIVE_RESTARTS.md#carried-record-fields) preserves whole-slot
 initialization, exact storage identity and local loan authority.
 
 The [carried list example](examples/carried-lists.mwy) initializes once, preserves
@@ -314,7 +314,7 @@ The [projected slots example](examples/exclusive-slot-fields.mwy) keeps nested-f
 identity and target lifetime while accessing disjoint primary and sibling storage.
 The [exclusive elements example](examples/exclusive-elements.mwy) reserves a local
 list during index evaluation and mutates its scalar element. The
-[element contract](EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
+[element contract](docs/EXCLUSIVE_ELEMENTS.md) separates owner authority from reservation.
 The [projected elements example](examples/exclusive-projected-elements.mwy) preserves
 emitted target lifetime while reserving one list and mutating a sibling.
 The [nested elements example](examples/exclusive-nested-elements.mwy) checks indexes

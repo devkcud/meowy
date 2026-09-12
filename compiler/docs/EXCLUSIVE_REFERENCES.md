@@ -28,7 +28,7 @@ explicit annotations. Initial support excludes exclusive pointer equality and
 exclusive-valued carrier results. Anonymous scalar-reference blocks now transfer
 existing guarded authority and consume emitted holders. Ordinary scalar results computed through a reference remain
 supported. [Scalar record fields](EXCLUSIVE_FIELDS.md) now use mutable-path and
-canonical-region checks. [Scalar indexed storage](../EXCLUSIVE_ELEMENTS.md) uses
+canonical-region checks. [Scalar indexed storage](EXCLUSIVE_ELEMENTS.md) uses
 owned authority and collection reservations for elements and field leaves across
 local, projected, nested and emitted owners.
 

@@ -3,8 +3,8 @@
 Declared mutable carried Boolean, integer and float slots support exclusive
 borrowing when the exclusive loan and all descendants end before every reachable
 restart edge. The result cell may survive; the loan must not. This extends the
-[scalar-slot contract](docs/EXCLUSIVE_SLOTS.md) without changing the
-[memory reference](../docs/reference/memory.md) or runtime representation.
+[scalar-slot contract](EXCLUSIVE_SLOTS.md) without changing the
+[memory reference](../../docs/reference/memory.md) or runtime representation.
 
 ## Supported slice
 
@@ -16,7 +16,7 @@ backing-type, mutability, acquisition initialization and storage-lifetime checks
 remain independent. Ordinary local/parameter exclusive roots, wider pointees and
 exclusive handles in restart headers remain unsupported in this slice.
 
-The [exclusive-carried example](examples/exclusive-carried.mwy) initializes a
+The [exclusive-carried example](../examples/exclusive-carried.mwy) initializes a
 result once, mutates its original cell and ends the handle before Restart:
 
 ```meowy
@@ -56,7 +56,7 @@ pointees remain unsupported; ordinary local exclusive roots in reset graphs rema
 gated. Direct field acquisition uses this qualifier instead of rejecting an entire
 containing slot because a disjoint sibling is a list. Indexed scalar paths use the
 extension below; indexed SetPath uses the
-[carried-write proof](docs/OWNERSHIP.md#carried-indexed-writes).
+[carried-write proof](OWNERSHIP.md#carried-indexed-writes).
 
 Borrow HIR and containing-slot Acquire events are unchanged. The owner must be
 active and the whole slot initialized before acquisition. Exact field projections
@@ -66,7 +66,7 @@ The exclusive loan and all descendants must end before every reachable restart;
 certified shared sibling headers retain their independent ancestry. Indirect stores
 and exclusive calls still invalidate Boolean knowledge used by initialization proof.
 
-The [exclusive-carried-records example](examples/exclusive-carried-records.mwy)
+The [exclusive-carried-records example](../examples/exclusive-carried-records.mwy)
 mutates nested result storage, preserves an old value copy and prints 7, 8, ready.
 The same source, graph and native cases also run with a list sibling. They cover
 paths, widths, initialization, mutability, moves, children, conflicts, calls, shared
@@ -74,7 +74,7 @@ headers, owner resets, Leave, expiry and live-backedge rejection. Acquisition be
 initialization, outside the active owner and after completion fails at the borrow
 span. Corrupted root/view/owner identities and invalid/non-scalar paths remain B001.
 
-The [list-field example](examples/exclusive-carried-list-fields.mwy) replaces a list
+The [list-field example](../examples/exclusive-carried-list-fields.mwy) replaces a list
 sibling while a scalar exclusive loan lives, retains an old value copy and carries
 a separate shared list view through a restart. Conflicting whole-record access,
 list replacement under a live list view and suspended-parent use remain E302;
@@ -109,10 +109,10 @@ selected mutability, initialization before capture/acquisition, cancellation, pa
 identity, reservation expiry, source corruption, integer/Boolean/float layouts,
 current-length bounds, signed/unsigned/empty-list cases, owner resets and primary
 rejections. Native cases run in debug and release. The
-[carried-element example](examples/exclusive-carried-elements.mwy) mutates nested
+[carried-element example](../examples/exclusive-carried-elements.mwy) mutates nested
 storage with ordered index effects and a disjoint shared list header.
 
-Indexed writes use the [carried-write proof](docs/OWNERSHIP.md#carried-indexed-writes)
+Indexed writes use the [carried-write proof](OWNERSHIP.md#carried-indexed-writes)
 in `loans/control.rs`. Whole-list exclusive values, reference/temporary-derived
 roots, owning elements and exclusive header carriage remain separate. Backend,
 runtime and reference fixtures are unchanged.
@@ -164,7 +164,7 @@ runtime and reference fixtures are unchanged.
   header definition. Explicit opacity elsewhere, input/expired origins and exclusive
   ancestry still propagate through every dependency. Precise authority retains its
   original header opacity; certificates grant no new exclusive permission.
-- The [mixed-headers example](examples/mixed-headers.mwy) prints 1, 2, 8 while a
+- The [mixed-headers example](../examples/mixed-headers.mwy) prints 1, 2, 8 while a
   mutable shared reference changes independently of an iteration-local exclusive
   loan. Existing copies, physical conflicts, owner reset and Leave keep their rules.
   Shared-only restart authority is unchanged, and metadata/audit work is bounded
@@ -203,6 +203,6 @@ Six further source groups, four graph groups and five native groups cover mixed
 headers, inactive nullable paths, nested targets, owner resets, Leave, missing
 entry/backedge coverage, metadata/definition removal, explicit opacity and conflicts.
 
-The current full compiler-gate result is recorded in [STATUS.md](STATUS.md).
+The current full compiler-gate result is recorded in [STATUS.md](../STATUS.md).
 Unsupported conformance cases are not successful language rejections. The full
 v0.0.1 release remains incomplete.

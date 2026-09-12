@@ -3,8 +3,8 @@
 `&!(items[index])` and `rows[index].&!value` borrow initialized scalar storage
 through owned bounded lists: ordinary locals, named record fields, nested indexed owners and exact-backed
 emitted aliases. Elements may be boolean, integer or float. This implements a
-bounded slice of the existing [collection](../docs/reference/collections.md) and
-[memory](../docs/reference/memory.md) contracts, preserving one-based positions and
+bounded slice of the existing [collection](../../docs/reference/collections.md) and
+[memory](../../docs/reference/memory.md) contracts, preserving one-based positions and
 initialized-length checks. Whole-list exclusive references remain unavailable.
 
 ## Owner authority and reservation
@@ -101,11 +101,11 @@ mutable paths, whole-owner backing, target scopes, cancellation, bounds, guarded
 and captured stores. Reference fixtures are unchanged. Full conformance still has
 13 unsupported cases.
 
-The [exclusive elements example](examples/exclusive-elements.mwy) reads an index while
+The [exclusive elements example](../examples/exclusive-elements.mwy) reads an index while
 reserving its owner, mutates the actual element through a call and cancels a later
 acquisition without retaining the owner reservation.
 
-The [projected elements example](examples/exclusive-projected-elements.mwy) carries
+The [projected elements example](../examples/exclusive-projected-elements.mwy) carries
 an emitted list-element pointer past its lexical alias, mutates a sibling list
 during index evaluation, and writes the actual target storage through a call.
 
@@ -113,7 +113,7 @@ Fifteen nested-path native groups cover mixed fields/indexes, per-level bounds a
 cancellation, completed-index reservation demand, actual emitted layouts, guarded
 views, calls, captured stores, integer widths and empty lists. Three further graph
 groups prove reservation chains and independently checked intermediate owner paths.
-The [nested elements example](examples/exclusive-nested-elements.mwy) demonstrates
+The [nested elements example](../examples/exclusive-nested-elements.mwy) demonstrates
 ordered index effects, a disjoint outer sibling and cancellation of an inner index.
 
 Sixteen indexed-field native groups cover scalar widths, mixed paths, mutable
@@ -121,7 +121,7 @@ boundaries, collection conflicts, disjoint shared-field views, exact alias backi
 call/child/move transfer, target scope, guarded views, cancellation and prefix bounds
 spans. Three graph groups prove the exact leaf region, reservation expiry, cancelled
 acquisition demand and required field mutability in both analysis passes.
-The [indexed fields example](examples/exclusive-indexed-fields.mwy) returns an
+The [indexed fields example](../examples/exclusive-indexed-fields.mwy) returns an
 emitted field pointer across its alias scope and mutates the actual target via a call.
 
 Generated payload/diagnostic layouts and scope cleanup are the next integration

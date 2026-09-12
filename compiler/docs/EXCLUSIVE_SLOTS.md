@@ -57,7 +57,7 @@ holder does not redirect that store. A later Leave or panic can skip the final s
 while preserving earlier mutations and moves. Own-target Leave publishes an
 initialized result; ancestor Leave can discard it and retain only completed effects.
 
-Exclusive restart bodies support only the [certified carried-scalar slice](../EXCLUSIVE_RESTARTS.md):
+Exclusive restart bodies support only the [certified carried-scalar slice](EXCLUSIVE_RESTARTS.md):
 carried scalar storage may survive, but exclusive loans and all descendants must
 end before each backedge. Live opaque ancestry also fails closed. General exclusive
 restart borrowing and exclusive handles in restart headers remain gated.
@@ -91,7 +91,7 @@ a checker test rejects unrelated-field widening while preserving a shared view.
 
 The [projected slots example](../examples/exclusive-slot-fields.mwy) reads the primary
 and writes a sibling while carrying a nested-field pointer out of the alias scope.
-[Scalar list elements](../EXCLUSIVE_ELEMENTS.md) now support ordinary local,
+[Scalar list elements](EXCLUSIVE_ELEMENTS.md) now support ordinary local,
 record-field and emitted storage with exact backing, canonical regions, selected-list
 reservations and target lifetimes, including nested indexed owners and scalar field
 leaves after indexes. Whole-record exclusive pointees, non-Copy carriers and cleanup

@@ -609,7 +609,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   unproved initialization and exhausted proof remain B001; ordinary E204/E205 cases
   are preserved. Success is a proof over every explored completion, not one witness.
 - Shared address-taking uses the acquisition proof below. Local exclusive scalar
-  borrows additionally require the [restart frontier proof](../EXCLUSIVE_RESTARTS.md).
+  borrows additionally require the [restart frontier proof](EXCLUSIVE_RESTARTS.md).
   Borrowing a copied completed result uses ordinary rules. No runtime flags, payload
   reads, storage allocations, ABI changes or dependencies are added by the analysis.
 - The [carried-scalars example](../examples/carried-scalars.mwy) prints one initializer,
@@ -635,7 +635,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
   The extension adds no backend storage, runtime flags, payload reads or cleanup.
 - Shared borrows of original carried record storage and field projections use the
   acquisition and lifetime proof below. Exclusive scalar-field borrows use the
-  [restart frontier proof](../EXCLUSIVE_RESTARTS.md#carried-record-fields); whole-record
+  [restart frontier proof](EXCLUSIVE_RESTARTS.md#carried-record-fields); whole-record
   and non-scalar exclusive borrows remain B001. Ordinary local copies, copied
   completed results and supported scalar sibling loans retain their existing rules.
 - The [carried-records example](../examples/carried-records.mwy) executes its
@@ -665,9 +665,9 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - Shared direct/projected borrows of list-containing carried slots use the
   acquisition and lifetime proof below. Exclusive named Boolean/integer/float
   fields within containing records use the existing
-  [scalar-field restart proof](../EXCLUSIVE_RESTARTS.md#carried-record-fields).
+  [scalar-field restart proof](EXCLUSIVE_RESTARTS.md#carried-record-fields).
   Indexed scalar acquisition uses the
-  [carried-element proof](../EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  [carried-element proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
   Indexed writes use the whole-slot and reservation proof below. Independent
   copies and completed-result locals keep their existing rules.
 - Ten source/shape/proof groups and seven native groups cover these boundaries.
@@ -735,7 +735,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - Known shared list headers can coexist with supported local exclusive scalar
   sibling loans under the existing complete-header certificate. Genuine call/input
   opacity and exclusive descendants retain their restart gates. Local exclusive
-  scalar list elements use the [restart proof](../EXCLUSIVE_RESTARTS.md#carried-list-elements).
+  scalar list elements use the [restart proof](EXCLUSIVE_RESTARTS.md#carried-list-elements).
   Indexed SetPath uses the [write proof](#carried-indexed-writes). Whole-list exclusive
   values remain separate; nullable, union, reference-bearing and owning carried
   slots retain their shape gates.
@@ -1613,7 +1613,7 @@ carriers and generated cleanup remain separate capabilities.
 
 ## Owned exclusive scalar elements
 
-The [element contract](../EXCLUSIVE_ELEMENTS.md) uses ExclusivePath HIR for owned
+The [element contract](EXCLUSIVE_ELEMENTS.md) uses ExclusivePath HIR for owned
 scalar-list paths, including named fields, nested indexes and exact-backed emitted
 aliases. The origin and loan passes independently require the existing owner/type
 proof. Private list reservations grant no authority and protect returning index
@@ -1626,7 +1626,7 @@ Lowering captures each actual list length before evaluating its index once and
 reuses initialized-length bounds and element addressing. No runtime ABI changed.
 
 Local exclusive carried scalar paths use the
-[restart extension](../EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
+[restart extension](EXCLUSIVE_RESTARTS.md#carried-list-elements): whole-slot Acquire
 before capture and at acquisition, exact mutable scalar source qualification and
 no live exclusive ancestry across reset. Indexed stores use the
 [write proof](#carried-indexed-writes). Element
