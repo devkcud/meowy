@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Local-record composition inputs are implemented.
-All ten compiler gate checks passed. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Conditional local-record evidence is being implemented.
+The previous compiler gate passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -141,12 +141,26 @@ resolution, full required evaluation and generic specialization, public FFI, wid
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
-## Next steps
+## Active plan and next steps
 
-1. Plan conditional local-record evidence separately in `inputs/records.rs` and
-   `inputs/blocks.rs`, following `../docs/reference/compile-time.md`. Establish which
-   checked branch/flow facts can prove evaluation order and complete initializer
-   eligibility before changing the gate. Cover selected/unselected effects, retained
-   errors and repeated work; preserve the distinction from conditional module exports.
-2. Keep helper purity, borrowed storage, packages and whole-module record inputs
-   separate. Record reviewable commit slices before edits; never push or create STEP logs.
+Inspection: matchers lower to `hir::Stmt::If` with lexical branch scope and explicit
+statement lists. Record input checking currently rejects every If. Constant folding
+alone cannot prove eligibility because it may hide runtime reads or effects.
+
+Bound this slice to conditions built from checked boolean literals, `!`, `&&` and
+`||`, respecting short circuiting. Boolean locals, integer comparisons, helper calls
+when evaluated, loops and conditional module exports remain gated. Keep the existing
+record shape and required-evaluation budgets. Do not alter runtime HIR or flow analysis.
+
+Dependency-ordered commits:
+
+1. Complete: record statement accumulation lives in `inputs/records/build.rs`.
+   All 735 library/708 native tests, fmt and Clippy passed with unchanged behavior.
+   Log: `/tmp/meowy-record-builder-tests.log`.
+2. Add bounded literal-condition proof and selected-branch accumulation. Include
+   native acceptance, selected effects/errors, skipped effects and runtime-read gates.
+3. Add independent work/staging/forwarding regressions and document supported
+   conditions. Run the complete compiler gate and update both handoffs.
+
+Next: implement bounded branch proof and validate selected/skipped execution.
+Keep helper purity, packages, borrowed storage and whole-module inputs separate.

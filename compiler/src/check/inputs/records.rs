@@ -1,3 +1,4 @@
+mod build;
 mod paths;
 
 use super::{Checker, Input, Sources};
@@ -112,127 +113,27 @@ impl Checker {
         let ExprKind::Block(block) = &expr.kind else {
             return None;
         };
-        let mut record = Record {
-            input: Input {
-                work: 1,
-                error: None,
-                value: None,
+        let mut build = build::Build {
+            target: block.id,
+            fields,
+            record: Record {
+                input: Input {
+                    work: 1,
+                    error: None,
+                    value: None,
+                },
+                values: BTreeMap::new(),
             },
-            values: BTreeMap::new(),
+            locals: locals.clone(),
+            emitted: BTreeMap::new(),
         };
-        let mut locals = locals.clone();
-        let mut emitted = BTreeMap::new();
-        let mut types = BTreeMap::new();
-        for stmt in &block.stmts {
-            if !self.flow.spend(1) {
-                return None;
-            }
-            if let hir::Stmt::Emit {
-                field: Some(name),
-                value:
-                    hir::Expr {
-                        kind: ExprKind::Local(id),
-                        ..
-                    },
-                ..
-            } = stmt
-            {
-                if !self.flow.spend(fields.len()) {
-                    return None;
-                }
-                types.insert(*id, &fields.iter().find(|field| field.name == *name)?.ty);
-            }
-        }
-        for stmt in &block.stmts {
-            *count += 1;
-            if *count > super::super::type_values::MAX_WORK || !self.flow.spend(1) {
-                return None;
-            }
-            record.input.work = record.input.work.saturating_add(1);
-            match stmt {
-                hir::Stmt::Bind { id, value } if !self.proofs.mutable.contains(id) => {
-                    let ty = types
-                        .get(id)
-                        .copied()
-                        .or_else(|| self.locals.get(*id))
-                        .unwrap_or(&value.ty)
-                        .clone();
-                    if matches!(ty, Type::Record { .. }) {
-                        let child = self.record_expr(value, &ty, depth + 1, count, &locals)?;
-                        record.input.add(&child.input);
-                        locals.records.insert(*id, child);
-                    } else {
-                        let input = self.input_expr(value, depth + 1, count, &locals)?;
-                        record.input.add(&input);
-                        locals.integers.insert(*id, input);
-                    }
-                }
-                hir::Stmt::Emit {
-                    target,
-                    field: Some(name),
-                    value,
-                    ..
-                } if *target == block.id => {
-                    if !self.flow.spend(fields.len()) {
-                        return None;
-                    }
-                    let index = fields.iter().position(|field| field.name == *name)?;
-                    let id = match value.kind {
-                        ExprKind::Local(id) => Some(id),
-                        ExprKind::Field { .. } => None,
-                        _ => return None,
-                    };
-                    if emitted.insert(name.clone(), id).is_some() {
-                        return None;
-                    }
-                    if matches!(fields[index].ty, Type::Record { .. }) {
-                        let child = if let Some(id) = id {
-                            self.source_record(id, &locals)?.clone()
-                        } else {
-                            self.record_expr(value, &fields[index].ty, depth + 1, count, &locals)?
-                        };
-                        record.input.add(&child.input);
-                        for (path, value) in &child.values {
-                            let mut target = vec![index];
-                            target.extend(path);
-                            record.values.insert(target, *value);
-                        }
-                    } else {
-                        let input = self.input_expr(value, depth + 1, count, &locals)?;
-                        record.input.add(&input);
-                        record.values.insert(vec![index], input.value);
-                    }
-                }
-                hir::Stmt::Emit {
-                    target,
-                    field: None,
-                    value,
-                    ..
-                } if *target == block.id && value.ty == Type::Null => {
-                    let ExprKind::Primary(source) = &value.kind else {
-                        return None;
-                    };
-                    let ExprKind::Local(id) = source.kind else {
-                        return None;
-                    };
-                    record.input.add(&self.source_record(id, &locals)?.input);
-                    record.input.work = record.input.work.saturating_add(2);
-                }
-                hir::Stmt::SlotAlias {
-                    id,
-                    target,
-                    field,
-                    mutable: false,
-                } if *target == block.id && emitted.get(field) == Some(&Some(*id)) => {}
-                _ => return None,
-            }
-        }
-        if emitted.len() != fields.len()
-            || depth == 0 && expr.ty == Type::Never && record.input.error.is_none()
+        self.record_stmts(&block.stmts, depth, count, &mut build)?;
+        if build.emitted.len() != fields.len()
+            || depth == 0 && expr.ty == Type::Never && build.record.input.error.is_none()
         {
             return None;
         }
-        Some(record)
+        Some(build.record)
     }
 }
 
