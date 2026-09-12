@@ -184,8 +184,11 @@ ordinary startup ordering, definite initialization and runtime capture gates rem
 Scalar integer modules additionally expose eligible direct primary emissions as
 required inputs through the module name. Aliases, arithmetic copies and primary/named
 re-exports retain their original emission evidence. Runtime HIR and constant folding
-remain unchanged. Integer primaries of record-valued modules, composed and conditional
-export inputs remain separate. See
+remain unchanged. Modules with named fields also supply direct integer primaries
+through arithmetic and integer-annotated required scratch. Ordinary aliases and type
+queries preserve their complete record type; named initializer effects remain separate
+from primary eligibility. Whole-record inputs and composed/conditional export inputs
+remain separate. See
 [the supported input rules](COMPUTED_TYPES.md#imported-immutable-inputs).
 
 ## Source identity and output protection

@@ -13,24 +13,9 @@ linked standalone examples. Tests, internal tooling and generated source retain
 independent layouts. Explicit compact-syntax demonstrations and exact identifiers,
 protocol bytes, output text and reference fixtures remain preserved.
 
-Documentation and 82 standalone examples were standardized. The compiler lexer
-verified unchanged tokens, strings, ordinary comments and statement newlines;
-the embedded documentation example also keeps its code tokens and expected output.
-The final audit checked 107 fences in changed Markdown pages and 111 changed inline
-fragments. Audit: `/tmp/meowy-doc-style-audit.json`. No formatter was added to the repo.
-
-Current commit series (each slice was checked before commit):
-
-| Scope | Commits |
-| --- | --- |
-| Convention, schema titles, visible labels, README location | `fe4b40e`, `07e5cb3`, `3f85f56`, `6ac39cd` |
-| Introductory, language, library and compiler guides | `fa99c10`, `44af745`, `f41ae28`, `cccbdb5`, `dd2d704`, `efe7fcf` |
-| Reference, storage, lifetime and list examples | `7669847`, `ccee0d6`, `14ed656`, `70d23fb` |
-| Alias, carried and exclusive examples | `b2af393`, `db4e3a1`, `71a6560`, `37b6648`, `acfb6b1` |
-| Module and documented examples | `7325f2f`, `a9dfeea`, `e9b41c4` |
-
-This final handoff records the complete validation and resumes the implementation
-next steps below. Git retains the earlier compiler feature and documentation moves.
+Documentation and 82 standalone examples retain the standardized readable layout.
+The prior token/literal preservation audit is `/tmp/meowy-doc-style-audit.json`;
+Git preserves its completed commit series. Compiler guides remain in `compiler/docs/`.
 
 ## Current milestone
 
@@ -38,35 +23,38 @@ The compiler entry guide is [compiler/README.md](compiler/README.md); detailed
 guides live in `compiler/docs/`. The compiler root keeps `README.md`, `AGENTS.md`
 and `STATUS.md`. Links and Cargo metadata follow this layout.
 
-Eligible scalar integer primary exports now supply computed-type inputs through a
-module name, aliases, arithmetic copies and primary/named re-exports. They retain
-original emission evidence, exact widths and transitive work. Runtime HIR and constant
-folding remain unchanged; checking/building never executes module initialization.
+Eligible direct integer primary exports now supply computed inputs even when their
+modules also export named fields. Arithmetic, integer-annotated required reads,
+copies and scalar re-exports preserve exact widths and initializer evidence.
+Aliases and type queries keep the complete record type. Named effects remain
+independent of primary eligibility, and check/build never execute initialization.
 
-Named immutable integer/record export inputs remain supported. Integer
-primaries of record-valued modules, composed/conditional emissions, helper purity and
-full required evaluation remain separate. See [the supported slice](compiler/docs/COMPUTED_TYPES.md).
+Behavior/test commits: `533bf22` (copy evidence), `fdc2cd7` (required projections),
+`5ee7044` (staging, startup and transitive evidence). Whole-record computed inputs,
+composed/conditional export evidence and helper purity remain separate.
+See [the supported slice](compiler/docs/COMPUTED_TYPES.md).
 
 Net/HTTP/TLS still needs broader generic-type/I/O/task foundations. Full v0.0.1
 release qualification remains incomplete.
 
 ## Actual validation
 
-- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 1412 Rust
-  tests, 20 Python tests, and existing examples in debug/release.
-- Formatting preservation, lowercase labels, the restored README/Cargo path and
-  embedded documentation example execution passed. Latest compiler gate log:
-  `/tmp/meowy-doc-style-gate.log`.
-- Conformance: 10 passed, 13 unsupported, 0 failed. Local links, catalog/schema and
-  whitespace checks passed; full release qualification remains open.
-- Compiler language behavior, runtime implementation, reference fixtures and
-  dependencies are unchanged. Editor and separate runtime/sanitizer gates were not rerun.
+- All 20 primary native groups passed, including debug/release execution, silent
+  check/build, startup ordering, width/effect/capture gates and repeated work.
+- `python3 -B tools/verify.py --compiler`: all ten checks passed, including 1423
+  Rust tests, 20 Python tests, fmt, Clippy, build and existing examples.
+  Log: `/tmp/meowy-mixed-primary-gate.log`. The new guide example also passed
+  debug/release execution.
+- Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links,
+  catalog/schema and whitespace checks passed; full release qualification is open.
+- Runtime implementation, reference fixtures and dependencies are unchanged.
+  Editor and separate runtime/sanitizer gates were not rerun; release remains open.
 
 ## Area handoff
 
 | Area | Current boundary |
 | --- | --- |
-| Compiler | Named inputs and scalar integer primaries pass; mixed-record primaries remain gated. |
+| Compiler | Named inputs and direct integer primaries pass, including mixed modules. |
 | Documentation tooling | Constructed signatures and file graphs are checked; multi-file doc commands/indexes remain separate. |
 | Editor integration | Pointer syntax previously passed Vim/Neovim; unchanged here. |
 | Standard library | Net specifies peers and HTTP adapters; type/I/O/task foundations precede implementation. |
@@ -74,9 +62,8 @@ release qualification remains incomplete.
 
 ## Next steps
 
-1. Plan integer primary projections of record-valued file modules using the concrete
-   files and validation in the compiler handoff. Preserve record identity, exact widths,
-   initializer evidence, work charging and runtime capture gates.
-2. Preserve package, borrowed-export and ownership gates. Plan and commit validated
-   slices using [AGENTS.md](AGENTS.md); keep STATUS concise, never recreate STEP logs,
-   and do not push.
+1. Plan record-composing module re-export evidence using `statements.rs`, `exports.rs`
+   and input lookup paths. Preserve individual initializer evidence, record identity,
+   privacy, work and startup order; keep conditional exports and helper purity separate.
+2. Preserve package, borrowed-export and ownership gates. Commit validated slices
+   using [AGENTS.md](AGENTS.md), keep STATUS concise, and do not push.

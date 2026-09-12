@@ -162,10 +162,50 @@ cached initializer work again, including unused statements after the primary ins
 an initializer block. Independent module effects still run once at startup, and
 initializer failure still stops dependent/entry execution. Checking never runs them.
 
-Integer primaries of record-valued modules, record-composing emissions, conditional
+### Integer primaries with named exports
+
+A module with named fields can supply its eligible direct integer primary through
+arithmetic or integer-annotated required scratch. For example, `capacity.mwy`:
+
+```meowy
+base <uint8> : 4
+-> base
+-> label : "ready"
+```
+
+Its importer can construct a list type while retaining the module's named fields:
+
+```meowy
+capacity : @"./capacity.mwy"
+<Items> : {
+    count <uint8> : capacity
+    -> <int32[count]>
+}
+items <Items> : [3, 7]
+debug : @"debug"
+debug.print(items[2])
+debug.print(capacity.label)
+```
+
+Required arithmetic such as `capacity + 0`, copied integer inputs and scalar
+re-exports retain exact widths, failures and transitive work. Required reads also
+work inside functions and through function-local module identities. Each read
+charges the original initializer work again; independent required roots reset it.
+
+Unannotated ordinary aliases and `capacity<>` preserve the complete record type.
+A mixed module is not itself integer scratch: use an integer annotation or arithmetic.
+Likewise, use `<int32[capacity + 0]>` inside a computed root instead of a bare
+mixed-module extent. Whole-record computed scratch remains unavailable.
+
+Named initializer effects do not disqualify a separate pure primary. An effect inside
+the primary initializer does, even through copies or re-exports. Checking/building
+never run either initializer. At runtime, every module still initializes once in
+source dependency order, and failures stop dependent and entry execution.
+
+Record-composing emissions such as `-> capacity` from a mixed module, conditional
 exports and inline required import roots remain outside this slice. Annotated or
-mutable module-identity aliases retain their existing restrictions. Ordinary runtime
-captures remain unavailable; a type-only use does not grant runtime access.
+mutable ordinary module-identity aliases retain their existing restrictions. Ordinary
+runtime captures remain unavailable; a type-only use does not grant runtime access.
 
 ## Explicit limits
 

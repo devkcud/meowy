@@ -36,9 +36,11 @@ list capacity from an eligible immutable integer initializer and constructs reco
 types. Eligibility is tracked separately from constant folding and includes straight-line
 integer blocks and bounded nested immutable integer records. Field paths and subrecord
 aliases retain complete ancestor evidence in computed scratch/extents. Eligible named
-integer/record file exports and scalar integer primary exports retain that evidence
-through imports, copies and re-exports; checking never runs module initialization.
-Record-valued module primaries, composed/conditional export inputs, helper calls,
+integer/record file exports and direct integer primaries retain that evidence through
+imports, copies and scalar re-exports. Mixed modules support arithmetic and
+integer-annotated required reads while aliases and type queries keep their record
+identity. Checking never runs module initialization.
+Composed/conditional export inputs, helper calls,
 non-integer/mutable scratch and full required evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix

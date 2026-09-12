@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Mixed-record primary input work is in progress.
-The previous scalar-primary compiler gate passed; no current failures are known. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Mixed-record primary inputs passed the complete compiler gate.
+No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -17,7 +17,7 @@ All 82 reformatted standalone examples retain executable tokens, literal content
 ordinary comments and statement newlines. The nested documentation example also
 retains its code tokens/attributes/output and passed `doc check --run-examples`.
 Generated API-page branding is lowercase and covered by the renderer regression.
-The root STATUS lists the reviewable commits and preservation audit.
+Git preserves that documentation series; the root STATUS links its preservation audit.
 
 ## Current compiler slice
 
@@ -51,8 +51,8 @@ unchanged. Required imported leaves can be used inside functions; ordinary runti
 module-data capture remains B001.
 
 Composed/conditional emissions and inline required import roots remain unavailable
-as computed inputs. Helper purity,
-non-integer/mutable scratch and full required evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
+as computed inputs. Helper purity, non-integer/mutable scratch and full required
+evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
 
 Nested records retain unit primaries, immutable integer/record fields, 256 total fields
 and 32 record levels. Declared record aliases retain known errors on unreachable paths;
@@ -63,28 +63,25 @@ computed roots retain their existing profile.
 
 ## Actual validation
 
-- Metadata: three focused tests and all 731 library/673 native tests passed. Existing
-  HIR emission identity, integer width, tail work and constant folding are preserved.
-- Lookup: four native primary groups and all 731 library/676 native tests passed,
-  alongside fmt and Clippy. Aliases/copies/re-exports/function types work; exact-width
-  arithmetic and ineligible initializer/capture boundaries remain checked.
-- Integration: all nine primary groups passed, including silent check/build, direct
-  required extents and scoped imports, shared dependency initialization once, transitive
-  effect refusal, dependency E107 spans, repeated cached-work charging, and preserved
-  runtime initializer failure before entry. Runtime execution uses both profiles.
-- The dependency-span probe checks ordinary dependency diagnostics; existing local
-  record/integer tests separately cover retained-error provenance.
+- `533bf22`: copied module primary evidence; 12 focused native groups passed.
+- `fdc2cd7`: required projections and complete module type hints; 16 focused groups,
+  731 library/688 native tests, fmt and Clippy passed.
+- `5ee7044`: startup/evidence integration; all 20 primary groups and fmt passed.
+  Cases execute in debug/release and cover silent check/build, named effects,
+  dependency diamonds, repeated cached work, original dependency E107 spans,
+  transitive effect refusal and runtime failure before dependent initialization.
+- Dependency-span probes exercise ordinary dependency diagnostics. Existing local
+  integer/record tests separately cover retained-error provenance.
+- The new two-file guide example passed debug/release with output `7`/`ready`;
+  extracted files: `/tmp/meowy-mixed-primary-doc-il4r1eby`.
 - `python3 -B tools/verify.py --compiler`: all ten checks passed, including fmt,
-  Clippy, build, 731 library/681 native Rust tests (1412 total), 16 tooling/four
-  harness Python tests, and existing standalone/multi-file examples in both profiles.
-  Latest gate log: `/tmp/meowy-doc-style-gate.log`.
-- Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Unsupported
-  cases do not count as language rejections. Local links, 23 catalog records,
-  7 schemas/6 examples and whitespace checks passed; external links were not fetched.
-- Documentation formatting, lowercase generated-page labels and README location
-  passed focused checks and the complete gate. Compiler language behavior, runtime
-  implementation, reference fixtures and dependencies are unchanged. Editor and
-  separate runtime/sanitizer gates were not rerun; release qualification is open.
+  Clippy, build, 731 library/692 native tests (1423 total), 20 Python tests, and
+  existing examples. Log: `/tmp/meowy-mixed-primary-gate.log`.
+- Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links,
+  catalog/schema and whitespace checks passed. Unsupported cases do not count as
+  successful language rejections; full release qualification remains open.
+- Runtime implementation, reference fixtures and dependencies are unchanged. Editor
+  and separate runtime/sanitizer gates were not rerun; release qualification is open.
 
 ## Prior capabilities and other areas
 
@@ -148,34 +145,14 @@ resolution, full required evaluation and generic specialization, public FFI, wid
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
 platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LLVM ar 22.1.8.
 
-## Active commit plan
-
-Investigation: mixed modules already retain direct integer emission evidence in
-`Module.primary`. Ordinary arithmetic and integer annotations produce HIR `Primary`
-projections, but input lookup currently rejects record-typed module locals. Required
-materialization also only accepts scalar modules. Type queries must retain the complete
-record; an unannotated record identity is not an implicit scalar scratch value.
-
-1. Extend `inputs.rs` to consume explicit module-primary evidence through checked HIR
-   projections. Include native copied-input, width, effect and capture regressions;
-   preserve ordinary runtime HIR and whole-record ineligibility.
-2. Extend required scalar validation/routing and context-sensitive materialization in
-   `type_values.rs`, `type_values/scalars.rs` and `expressions.rs`. Cover arithmetic,
-   integer annotations, aliases, function-local required reads and record type queries.
-3. Add independent multi-file integration coverage for startup order, silent checking,
-   failures and repeated work, then update the supported compiler guides and root tracker.
-
 ## Next steps
 
-1. Slices 1/2 are committed as `533bf22`/`fdc2cd7`; all 16 primary groups,
-   731 library/688 native tests, fmt and Clippy passed. Four new integration groups
-   now cover named initializer effects, startup diamonds, cached tail work,
-   dependency diagnostics, transitive effect refusal and startup panic. Run these
-   focused checks and all 20 primary groups passed, including explicit
-   bare-extent/record-scratch rejection boundaries. Formatting passed; inspect/stage
-   and commit slice 3, then update guides and run the final compiler gate.
-2. Split the remaining work into a native integration commit (startup/failures/work)
-   and a final supported-guide/root handoff commit. Run the complete compiler gate
-   across the series before the final documentation commit.
-3. Keep composed/conditional emissions, helper purity, borrowed storage and packages
-   separate. Do not push or recreate STEP logs.
+1. Plan record-composing module re-export evidence separately. Trace
+   `src/check/statements.rs` composition emissions and `src/check/exports.rs`
+   export identity, then `inputs.rs`/`inputs/records/paths.rs` lookups. A facade
+   using `-> source` must preserve each selected export's original evidence,
+   privacy, complete type, work and initialization order without qualifying the
+   entire synthetic module record. Record dependency-ordered slices before editing;
+   verify with `tests/native/mixed_primary_inputs.rs` and existing file-module tests.
+2. Keep conditional exports, helper purity, borrowed storage and packages separate.
+   Keep STATUS concise and current; never recreate STEP logs.
