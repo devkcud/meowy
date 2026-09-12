@@ -171,17 +171,13 @@ exports are not runtime record fields and must not be implicitly re-exported.
 
 ## Next steps
 
-1. Prerequisite committed as `eb3840e`; all 1423 Rust tests passed. Composition now
-   transfers only a registered module's eligible named inputs and integer primary,
-   retaining source IDs and adding two work visits for the copy/projection. Runtime
-   HIR is unchanged. New native groups cover chains, exact widths, privacy, captures,
-   per-initializer rejection, conditional/nonmodule gates and static export privacy.
-   All four native groups and the library metadata test passed. The metadata test
-   confirms original source IDs, complete module type, unchanged bind/projection HIR,
-   and no new whole-record eligibility. All 732 library/696 native tests passed;
-   log: `/tmp/meowy-composed-inputs-tests.log`. Complete fmt/Clippy and staged
-   checks, then commit this behavior slice before integration coverage.
-2. Complete the composition and integration slices in order, updating this handoff
-   after meaningful steps and committing each validated slice.
+1. `eb3840e` records export IDs/work; `0a3dd81` preserves composition evidence.
+   The behavior slice passed 732 library/696 native tests, fmt and Clippy. Five
+   integration groups now cover silent check/build, diamond startup, repeated work
+   for primaries/fields/subrecords, ancestor effects after projected re-exports,
+   original dependency diagnostics and startup failure. All nine native composition
+   groups and the library identity test passed. Formatting passed; inspect/stage
+   and commit this independent integration slice before final documentation.
+2. Update supported guides and root handoff, then run the complete compiler gate.
 3. Keep conditional exports, helper purity, borrowed storage and packages separate.
    Keep STATUS concise and current; never recreate STEP logs or push.

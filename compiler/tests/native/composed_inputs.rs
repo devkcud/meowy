@@ -79,3 +79,146 @@ pub(crate) fn composed_inputs_keep_conditional_and_nonmodule_compositions_unavai
         assert!(error.contains("\"code\":\"E211\""), "{facade}: {error}");
     }
 }
+
+#[test]
+pub(crate) fn composed_inputs_check_silently_and_preserve_startup_order() {
+    let case = case(
+        "a:@\"./a.mwy\";b:@\"./b.mwy\";d:@\"debug\";<T>:{n<uint8>:a;-><int32[n+b.width]>};v<T>:[7];d.print(\"entry\");d.print(v[1]);d.print(a.label)",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";d.print(\"data\");base<uint8>:4;->base;->width:base;->label:{d.print(\"label\");->\"ready\"}",
+            ),
+            (
+                "a.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";d.print(\"a before\");->m;d.print(\"a after\")",
+            ),
+            ("b.mwy", "m:@\"./data.mwy\";d:@\"debug\";->m;d.print(\"b\")"),
+        ],
+    );
+    for action in ["check", "build"] {
+        for profile in ["debug", "release"] {
+            let output = case.command(action, &["--profile", profile]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+        }
+    }
+    case.runs(b"data\nlabel\na before\na after\nb\nentry\n7\nready\n");
+}
+
+#[test]
+pub(crate) fn composed_inputs_charge_transitive_work_for_primary_fields_and_subrecords() {
+    let tail = (1..40)
+        .map(|id| format!("v{id}:v{}+1;", id - 1))
+        .collect::<String>();
+    let integer = format!("{{->4;v0:1;{tail}}}");
+    let data = format!("->{integer};->width:{integer};->row:{{->nested:{{->n:4}};v0:1;{tail}}}");
+    let files = [
+        ("data.mwy", data.as_str()),
+        ("facade.mwy", "m:@\"./data.mwy\";->m"),
+        ("outer.mwy", "m:@\"./facade.mwy\";->m"),
+    ];
+    for value in ["m+0", "m.width", "m.row.nested.n", "part.n"] {
+        let one = format!(
+            "m:@\"./outer.mwy\";part:m.row.nested;<T>:{{n:{value};-><int32[n]>}};<U>:{{n:{value};-><int32[n]>}}"
+        );
+        let output = case(&one, &files).command("check", &["--json"]);
+        assert!(
+            output.status.success(),
+            "{value}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let two =
+            format!("m:@\"./outer.mwy\";part:m.row.nested;<T>:{{a:{value};b:{value};-><int32>}}");
+        let output = case(&two, &files).command("check", &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"B001\""), "{error}");
+        assert!(error.contains("computed type bootstrap budget"), "{error}");
+    }
+}
+
+#[test]
+pub(crate) fn composed_inputs_cannot_hide_ancestor_effects_behind_projected_reexports() {
+    let case = case(
+        "m:@\"./outer.mwy\";copy:m.part;<T>:{n:copy.n;-><int32>}",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";->row:{->nested:{->n:4};->sibling:{->n:1;d.print(\"must not run\")}}",
+            ),
+            ("facade.mwy", "m:@\"./data.mwy\";->m"),
+            ("part.mwy", "m:@\"./facade.mwy\";->part:m.row.nested"),
+            ("outer.mwy", "m:@\"./part.mwy\";->m"),
+        ],
+    );
+    for action in ["check", "build", "run"] {
+        let output = case.command(action, &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E211\""), "{error}");
+    }
+}
+
+#[test]
+pub(crate) fn composed_inputs_preserve_original_dependency_error_spans() {
+    let data = "#é🙂#\n->row:{->nested:{->n:4};->bad<uint8>:255+1}";
+    let case = case(
+        "m:@\"./facade.mwy\";part:m.row.nested;<T>:{n:part.n;-><int32>}",
+        &[("data.mwy", data), ("facade.mwy", "m:@\"./data.mwy\";->m")],
+    );
+    for action in ["check", "build", "run"] {
+        let output = case.command(action, &["--json"]);
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert!(error.contains("\"code\":\"E107\""), "{error}");
+        assert!(
+            error.contains(&format!(
+                "\"path\":\"{}\"",
+                case.path.join("data.mwy").display()
+            )),
+            "{error}"
+        );
+        assert!(
+            error.contains(&format!("\"start\":{}", data.find("255+1").unwrap())),
+            "{error}"
+        );
+    }
+}
+
+#[test]
+pub(crate) fn composed_inputs_keep_runtime_failure_before_facade_execution() {
+    let case = case(
+        "m:@\"./facade.mwy\";<T>:{n<int32>:m;-><int32[n+m.width]>};d:@\"debug\";d.print(\"entry must not run\")",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";->4;->width:2;stop<boolean>:(){->true};d.print(\"init\");|stop()|d.panic(\"stop\")",
+            ),
+            (
+                "facade.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";->m;d.print(\"facade must not run\")",
+            ),
+        ],
+    );
+    for profile in ["debug", "release"] {
+        let checked = case.command("check", &["--profile", profile]);
+        assert!(
+            checked.status.success(),
+            "{}",
+            String::from_utf8_lossy(&checked.stderr)
+        );
+        assert!(checked.stdout.is_empty());
+        let output = case.command("run", &["--profile", profile]);
+        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(output.stdout, b"init\n");
+        assert!(String::from_utf8_lossy(&output.stderr).starts_with("panic[P006]: stop"));
+    }
+}
