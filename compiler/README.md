@@ -42,10 +42,11 @@ integer-annotated required reads while aliases and type queries keep their recor
 identity. Direct top-level module compositions forward eligible primary and named
 inputs through facades while retaining source identity, ancestor evidence and work.
 Eligible local-record compositions retain that evidence too. Record initializers can
-select literal boolean branches with negation and short-circuit logic, preserving
-selected work and skipping unevaluated effects. Checking never runs module initialization.
-Boolean locals/comparisons, conditional module exports, helper calls, non-integer/mutable
-scratch and full required evaluation remain separate.
+select branches from eligible boolean locals, integer comparisons and short-circuit
+logic, preserving predicate values, errors and selected work. Immutable boolean scratch
+is supported inside record initializers. Checking never runs module initialization.
+Boolean fields/exports as predicate inputs, conditional module exports, helper calls,
+non-integer/mutable required scratch and full required evaluation remain separate.
 
 The [pointer syntax example](examples/pointer-syntax.mwy) demonstrates tight prefix
 `&`/`&!`/`*`, selected-field `.&`/`.&!`/`.*` and grouped indexed targets. See the

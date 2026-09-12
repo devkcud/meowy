@@ -55,7 +55,7 @@ Inputs may be static integers in the construction scope or immutable integer bin
 with recorded initializer eligibility. The checker tracks separate evidence over
 checked literals, aliases, supported unary/arithmetic expressions and straight-line
 integer blocks. Nested immutable integer records also carry complete initializer evidence,
-including the [literal branches](#conditional-record-initializers) below.
+including the [eligible predicates](#conditional-record-initializers) below.
 Every local value dependency must already have that evidence; a folded constant alone does not
 establish eligibility. Exact widths and source declaration identities are preserved.
 
@@ -129,29 +129,44 @@ record reads and runtime initialization remain unchanged.
 
 ### Conditional record initializers
 
-Record evidence can select matcher branches using checked boolean literals, `!`,
-`&&` and `||`. Logical operands retain short-circuit order. This is separate from
-optimizer folding: an evaluated boolean local, comparison or helper call remains
-unavailable even if its result appears constant.
+Record evidence can select matcher branches using eligible immutable boolean locals,
+checked boolean literals, `!`, `&&`, `||` and integer comparisons (`==`, `!=`, `<`,
+`<=`, `>` and `>=`). Comparison operands retain their checked integer widths and
+complete initializer evidence, including integer fields imported through modules.
+Logical operands retain short-circuit order. Optimizer folding alone does not prove
+eligibility; evaluated mutable/runtime inputs and helper calls remain unavailable.
 
 ```meowy
 debug : @"debug"
+limit <uint8> : 4
+enabled : limit >= 4
 settings : {
-    | true && !false | -> width <uint8> : 4
-    | false | debug.print("skipped")
+    selected : enabled && !false
+    | selected | -> width <uint8> : limit
+    | !selected | -> width <uint8> : 2
 }
-copy : { | true | -> settings }
+copy : { -> settings }
 <Items> : { -> <int32[copy.width]> }
 items <Items> : [3, 7]
 debug.print(items[2])
 ```
 
-This prints `7`. Selected branches use scoped locals and the same eligible integer,
-record and composition statements as straight-line record initializers. Every
-visited condition and statement contributes work, including selected unused bindings
+This prints `7`. Ordinary boolean bindings, aliases and immutable boolean scratch
+inside record initializers retain their value, source error and work. Branch-local
+shadowing does not change outer bindings. Selected branches otherwise use the same
+eligible integer, record and composition statements as straight-line initializers.
+Every visited condition and statement contributes work, including selected unused bindings
 and statements after emissions. An effect or invalid sibling in a selected branch
 cannot be hidden by reading another field. Proven skipped branches and short-circuited
 operands contribute no evaluation work or effects; ordinary source checks still apply.
+
+Failed evaluated comparisons or boolean aliases retain the original E107 span,
+including through a later subrecord projection. No branch value is invented after a
+predicate failure. Evaluated operands are inspected in order; skipped operands do
+not contribute failures. Ordinary flow checks still decide whether fields are fully
+initialized. Repeated field comparisons are not necessarily stable flow atoms;
+storing an eligible comparison in an immutable boolean gives complementary matcher
+arms an ordinary shared binding to inspect.
 
 Aliases, projections and module forwarding retain the selected evidence. Every
 required read charges it again; independent required roots start fresh. Checking and
@@ -160,10 +175,12 @@ building remain silent, and ordinary runtime conditions and effects are preserve
 Selected branch traversal shares the existing 32-level record-evidence recursion
 bound; predicate traversal shares the 64-level/4096-visit limits. Nested records and
 branches consume depth together. These bootstrap bounds do not implement E220.
-Standalone expression statements in selected branches, loops, boolean locals,
-comparisons, integer-block branches and conditional module exports remain outside
-this slice. A top-level unconditional export may still forward an eligible record
-whose own initializer contains branches.
+Boolean block initializers, boolean/float/text comparisons, boolean fields in eligible
+records, boolean module exports as predicate inputs, and boolean scratch inside required
+type blocks remain unavailable. Standalone expression statements in selected branches,
+loops, integer-block branches and conditional module exports are also separate.
+A top-level unconditional export may still forward an eligible record whose own
+initializer contains branches.
 
 ## Imported immutable inputs
 

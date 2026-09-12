@@ -293,3 +293,85 @@ pub(crate) fn boolean_record_inputs_keep_branch_scope_and_check_unused_scratch()
         assert!(error.contains("\"code\":\"E211\""), "{source}: {error}");
     }
 }
+
+#[test]
+pub(crate) fn predicate_record_inputs_charge_transitive_alias_work_only_when_evaluated() {
+    let tail = (1..18)
+        .map(|id| format!("v{id}:v{}+1;", id - 1))
+        .collect::<String>();
+    for condition in ["alias", "false&&alias", "true||alias"] {
+        let data = format!(
+            "n:{{v0:1;{tail}->4}};flag:n==4;alias:flag;row:{{|{condition}|unused:1;->width:4}};->row"
+        );
+        let files = [
+            ("data.mwy", data.as_str()),
+            ("facade.mwy", "m:@\"./data.mwy\";->m"),
+        ];
+        let separate = (0..20)
+            .map(|id| format!("<T{id}>:{{n:m.width;-><int32[n]>}};"))
+            .collect::<String>();
+        let repeated = (0..20)
+            .map(|id| format!("n{id}:m.width;"))
+            .collect::<String>();
+        for profile in ["debug", "release"] {
+            let output =
+                super::file_modules::case(&format!("m:@\"./facade.mwy\";{separate}"), &files)
+                    .command("check", &["--profile", profile, "--json"]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let output = super::file_modules::case(
+                &format!("m:@\"./facade.mwy\";<T>:{{{repeated}-><int32>}}"),
+                &files,
+            )
+            .command("check", &["--profile", profile, "--json"]);
+            let error = String::from_utf8_lossy(&output.stderr);
+            if condition == "alias" {
+                assert_eq!(output.status.code(), Some(1));
+                assert!(error.contains("\"code\":\"B001\""), "{error}");
+                assert!(error.contains("computed type bootstrap budget"), "{error}");
+            } else {
+                assert!(output.status.success(), "{error}");
+            }
+        }
+    }
+}
+
+#[test]
+pub(crate) fn predicate_record_inputs_keep_module_staging_and_boolean_export_gates() {
+    let case = super::file_modules::case(
+        "m:@\"./facade.mwy\";d:@\"debug\";<T>:{-><int32[m.width]>};v<T>:[7];d.print(v[1])",
+        &[
+            (
+                "data.mwy",
+                "d:@\"debug\";d.print(\"data\");->n<uint8>:4;->flag:true",
+            ),
+            (
+                "facade.mwy",
+                "m:@\"./data.mwy\";d:@\"debug\";flag:m.n==4;alias:flag;row:{local:alias;|local|->width:4;|!local|->width:2};->row;d.print(\"facade\")",
+            ),
+        ],
+    );
+    for action in ["check", "build"] {
+        for profile in ["debug", "release"] {
+            let output = case.command(action, &["--profile", profile]);
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            assert!(output.stdout.is_empty());
+            assert!(output.stderr.is_empty());
+        }
+    }
+    case.runs(b"data\nfacade\n7\n");
+    let output = super::file_modules::case(
+        "m:@\"./data.mwy\";flag:m.flag;row:{|flag|unused:1;->width:4};<T>:{n:row.width;-><int32>}",
+        &[("data.mwy", "->flag:true")],
+    )
+    .command("check", &["--json"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("\"code\":\"E211\""));
+}

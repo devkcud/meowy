@@ -1,7 +1,7 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-12. Boolean-local and comparison predicate evidence is in progress.
-The previous compiler gate passed. Full v0.0.1 remains incomplete.
+Updated: 2026-09-12. Boolean-local and integer-comparison predicate inputs are implemented.
+All ten compiler gate checks passed. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
@@ -21,20 +21,24 @@ Git preserves that documentation series; the root STATUS links its preservation 
 
 ## Current compiler slice
 
-Record initializers now retain eligible input evidence through matcher branches proven
-from checked boolean literals, `!`, `&&` and `||`. `inputs/records/conditions.rs` proves
-only visited operands, preserving short circuiting without using runtime constant
-folding as eligibility. Boolean locals, comparisons and evaluated helper calls remain
-gated. Original runtime HIR and ordinary flow/type/ownership checks are unchanged.
+`Input<T>` shares source-error and work accounting between integer and boolean
+values. `inputs/predicates.rs` proves literals, immutable boolean locals, negation,
+short-circuit logic and exact-width integer comparisons. `Checker.bool_inputs`
+retains ordinary binding evidence; `Sources.booleans` retains scoped record scratch.
+Runtime constant folding stays separate from eligibility.
 
-`inputs/records/build.rs` accumulates selected statements in source order and restores
-branch-local evidence after each branch. Condition/statement visits and selected
-unused bindings contribute retained work; skipped branches/operands contribute none.
-Selected sibling/tail failures retain E107 source spans even under an unreachable
-outer path with a declared record shape. Selected effects still disqualify the record.
-Branch traversal shares the existing 32-level record-evidence recursion bound;
-predicate traversal shares 64 active levels and 4096 visits. The isolated 31/32 branch
-boundary passes checker tests; nested record/branch depths consume the bound together.
+`inputs/records/build.rs` accumulates selected statements and restores branch-local
+evidence after each branch. Predicate operands and selected unused bindings retain
+work; skipped operands/branches contribute none. An evaluated predicate failure stops
+selection, and `Record::failed` keeps error-only paths for the complete checked shape.
+Aliases and subrecord projections therefore retain the first E107 source span without
+inventing a branch value. Selected effectful or mutable inputs remain unavailable.
+
+Original runtime HIR, initialization, capture gates and ordinary flow/type/ownership
+checks are unchanged. Repeated field comparisons remain unstable flow atoms; a saved
+immutable boolean can supply complementary matcher arms without changing that analysis.
+Branch traversal shares the 32-level record-evidence recursion bound; predicates share
+64 active levels and 4096 visits. Nested record/branch depths consume the bound together.
 
 Eligible unit-primary local records now preserve computed-input evidence through
 composition, including inline sources, aliases, projected subrecords and extensions
@@ -68,27 +72,31 @@ B001. Other bootstrap limits remain 4096 visits, 64 resolver/validation levels a
 16384 type nodes; these are not language E220 counters. Native ownership analysis
 may exhaust its own budget before a shape reaches its input-field limit.
 
-Conditional module exports, nonliteral predicate evidence, integer-block branches,
-helper purity, non-integer/mutable scratch and full required evaluation remain separate. See
+Boolean block initializers, boolean/float/text comparisons, boolean record-field/export
+inputs, boolean required scratch, conditional module exports and integer-block branches
+remain separate, along with helper purity and full required evaluation. See
 [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#conditional-record-initializers).
 
 ## Actual validation
 
-- `bfb9678`: behavior-preserving statement accumulator extraction; all 735 library/
-  708 native tests, fmt and Clippy passed. Log: `/tmp/meowy-record-builder-tests.log`.
-- `c4651f3`: literal-branch proof and scoped record evidence; all 736 library/712
-  native tests passed, plus the added branch-depth test. Fmt and Clippy passed.
-  Log: `/tmp/meowy-conditional-record-tests.log`.
-- Eight conditional native groups pass: named/nested/composed fields, selected
-  effects/runtime-read gates, skipped effects/errors/operands, retained E107 spans,
-  branch depth, forwarded repeated work, staging/startup and runtime-only effects.
-  Execution and work/staging integration exercise debug/release. Conditional module
-  exports still reject required reads; no unsupported case counts as conformance.
-- The conditional guide example prints `7` in debug/release. Extracted file:
-  `/tmp/meowy-conditional-record-doc-7pzni1an/main.mwy`.
+- `e6632e3`: typed input evidence and shared predicate module; 736 library/716 native
+  tests, fmt and Clippy passed. Log: `/tmp/meowy-predicate-metadata-tests.log`.
+- `6924169`: comparison inputs and failure paths; all 736 library/719 native tests,
+  fmt and Clippy passed. Log: `/tmp/meowy-comparison-input-tests.log`.
+- `5fe7946`: immutable boolean bindings; all 736 library/722 native tests, fmt and
+  Clippy passed. Log: `/tmp/meowy-boolean-binding-tests.log`.
+- `cd680d3`: scoped boolean scratch; 736 library/723 native tests passed, plus the
+  added branch-scope/unused-scratch group. Fmt and Clippy passed. Log:
+  `/tmp/meowy-scoped-boolean-tests.log`.
+- Focused integration passes in debug/release: transitive boolean alias work on every
+  evaluated read, skipped operands, separate roots, silent check/build, dependency
+  initialization and the boolean-export input gate. Native cases also cover uint64
+  comparisons, aliases, error paths, shadowing and effect/mutation/capture boundaries.
+- The updated guide example prints `7` in debug/release. Extracted file:
+  `/tmp/meowy-predicate-doc-9bzo26f6/main.mwy`.
 - `python3 -B tools/verify.py --compiler`: all ten checks passed, including 736
-  library/716 native Rust tests (1452 total), 20 Python tests, fmt, Clippy and build.
-  Log: `/tmp/meowy-conditional-record-gate.log`.
+  library/726 native Rust tests (1462 total), 20 Python tests, fmt, Clippy and build.
+  Log: `/tmp/meowy-predicate-inputs-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Local links,
   catalog/schema and whitespace checks passed. Full release qualification remains open.
 - The prior 256/257 field evidence boundary is checker-only; its 256-field native
@@ -148,11 +156,11 @@ Whole-record evidence is in `src/check/inputs/records.rs`; direct required field
 is in `src/check/type_values/fields.rs`. Native coverage is `tests/native/computed_fields.rs`.
 
 Nested paths/subrecord evidence are in `src/check/inputs/records/paths.rs`.
-`Sources` in `src/check/inputs.rs` carries scoped integer and record inputs.
+`Sources` in `src/check/inputs.rs` carries scoped integer, boolean and record inputs.
 
 ## Still outside this compiler
 
-Whole-record module inputs, conditional module exports, nonliteral predicates, helper
+Whole-record module inputs, conditional module exports, boolean-field/export inputs, helper
 initializer eligibility, module-data captures, borrowed module storage, package/manifest
 resolution, full required evaluation and generic specialization, public FFI, wider
 ownership/cleanup, executable networking, public artifacts/replay and LSP remain separate. Host execution does not qualify minimum
@@ -160,35 +168,10 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-Inspection: literal conditions return only a bool/work pair. `Input` already retains
-source errors and transitive work for integers. Reuse typed input evidence for boolean
-results; keep eligibility separate from runtime folding. Failed evaluated predicates
-must preserve their source error without inventing a branch or losing record paths.
-
-Dependency-ordered commits:
-
-1. Typed metadata and literal predicate evidence preserve existing behavior; the
-   full 736 library/716 native tests, fmt and Clippy passed. Predicate proof is
-   now in `inputs/predicates.rs` for reuse by boolean bindings; its focused test
-   and Clippy also pass after the move. Log: `/tmp/meowy-predicate-metadata-tests.log`.
-2. Complete: integer comparisons use eligible exact-width operands; failed predicates
-   retain record paths without inventing a branch. All 736 library/719 native tests
-   passed after isolating the floating-predicate gate from nullable-field checks.
-   Clippy/fmt pass; log: `/tmp/meowy-comparison-input-tests.log`.
-   Repeated field comparisons remain unstable flow atoms; the uint64 test verifies
-   a skipped effect with an unconditional field, without broadening flow inference.
-3. Split boolean work into two buildable slices: first capture/read ordinary immutable
-   boolean binding evidence and update formerly gated fixtures; then add scoped
-   boolean scratch to record accumulation with its focused tests. This keeps the
-   shared state/declaration change separate from record-local initialization behavior.
-   Global binding slice: all 736 library/722 native tests and Clippy/fmt passed.
-   Log: `/tmp/meowy-boolean-binding-tests.log`. Runtime predicate fixtures keep
-   complete shapes so they test eligibility independently of nullable-field gates.
-   Scoped record scratch now passes 736 library/723 native tests, plus the added
-   branch-scope/unused-scratch group. Fmt/Clippy pass; log:
-   `/tmp/meowy-scoped-boolean-tests.log`. Boolean fields/exports/required scratch stay gated.
-4. Add independent repeated-work/module/staging coverage and update guides/handoffs.
-   Run `python3 -B tools/verify.py --compiler` across the series.
-
-Keep integer-block branches, selected standalone expression statements, conditional
-module exports, helper purity, packages and borrowed storage separate. Do not push.
+1. Plan boolean block-initializer evidence in `inputs/predicates.rs` and
+   `inputs/blocks.rs`. Start with immutable eligible scalar bindings and one boolean
+   primary; retain tail work/errors and runtime staging. Reuse typed `Input` metadata
+   and separate behavior-preserving accumulator changes from new accepted behavior.
+2. Keep boolean record fields/module exports as predicate inputs, boolean required
+   scratch, boolean/float/text comparisons, integer-block branches, conditional module
+   exports, helper purity, packages and borrowed storage separate. Do not push.
