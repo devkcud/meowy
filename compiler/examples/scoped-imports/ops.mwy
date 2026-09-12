@@ -1,4 +1,4 @@
-d:@"debug"
+d : @"debug"
 d.print("ops")
--><Number>:<int32>
-->inc<int32>:(n<int32>){->n+1}
+-> <Number> : <int32>
+-> inc <int32> : (n <int32>) { -> n + 1 }
