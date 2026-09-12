@@ -3,7 +3,7 @@
 Declared mutable carried Boolean, integer and float slots support exclusive
 borrowing when the exclusive loan and all descendants end before every reachable
 restart edge. The result cell may survive; the loan must not. This extends the
-[scalar-slot contract](EXCLUSIVE_SLOTS.md) without changing the
+[scalar-slot contract](docs/EXCLUSIVE_SLOTS.md) without changing the
 [memory reference](../docs/reference/memory.md) or runtime representation.
 
 ## Supported slice

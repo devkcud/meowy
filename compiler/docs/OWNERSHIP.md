@@ -1142,7 +1142,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 - The graph enforces shared loans and scalar exclusive permissions. Exclusive
   reference headers, owned payload moves/temporaries, indirect/capturing contracts
   and generated cleanup remain unimplemented. Ordinary scalar/record reads may
-  overlap shared references. See [the scalar design](../EXCLUSIVE_REFERENCES.md).
+  overlap shared references. See [the scalar design](EXCLUSIVE_REFERENCES.md).
 
 ## Loan access records
 
@@ -1432,7 +1432,7 @@ permission to replace an immutable root or store a value beyond its owner lifeti
 
 ## Next analysis stages
 
-The [exclusive-reference implementation design](../EXCLUSIVE_REFERENCES.md) defines
+The [exclusive-reference implementation design](EXCLUSIVE_REFERENCES.md) defines
 the first scalar slice, required access/authority/initialization facts, retained
 B001 boundaries and future execution criteria. It does not enable `&!` support.
 
@@ -1556,7 +1556,7 @@ block typing and actual non-returning effects without changing the backend.
 
 ## Exclusive scalar record fields
 
-The [field contract](../EXCLUSIVE_FIELDS.md) admits mutable named scalar fields on
+The [field contract](EXCLUSIVE_FIELDS.md) admits mutable named scalar fields on
 owned reference-free Copy records. `check/references.rs` produces the original
 root/field Place; shared field lookup retains the selected slot's mutability.
 The existing Borrow HIR, source lifetimes, loan modes and backend addresses are reused.
@@ -1574,7 +1574,7 @@ pointees, owned carriers and generated cleanup remain separate capabilities.
 
 ## Exclusive mutable emitted scalars
 
-The [slot contract](../EXCLUSIVE_SLOTS.md) permits direct mutable scalar aliases.
+The [slot contract](EXCLUSIVE_SLOTS.md) permits direct mutable scalar aliases.
 `Alias.exclusive` records intent until the completed target type is known; exclusive
 backing must equal the declared local type. Shared union-member borrowing retains
 its existing compatibility rule. Proven discarded results retain their typed local

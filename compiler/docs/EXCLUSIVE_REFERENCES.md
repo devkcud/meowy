@@ -1,9 +1,9 @@
 # Exclusive-reference implementation design
 
 This documents the implemented first scalar slice of the existing
-[memory rules](../docs/reference/memory.md),
-[reference conversions](../docs/reference/types.md#inference-and-assignment), and
-[ownership diagnostics](../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
+[memory rules](../../docs/reference/memory.md),
+[reference conversions](../../docs/reference/types.md#inference-and-assignment), and
+[ownership diagnostics](../../docs/reference/diagnostic-codes.md#ownership-borrows-and-storage).
 Bounded access records, guarded ancestry, lifecycle events, forward availability,
 exclusive permissions and scalar indirect stores are integrated. Native execution
 and exact-code tests cover the matrix below; the wider language remains incomplete.
@@ -17,9 +17,9 @@ writes, and shared/exclusive reborrows of those scalars. Include conditional pat
 short-circuit evaluation, nested blocks and named `leave`.
 An immutable reference binding can mutate its referent through `&!T`; changing the
 reference value itself still requires a mutable binding.
-[Bare scalar-reference returns](REFERENCE_RETURNS.md) preserve guarded input authority. Direct scalar-reference
+[Bare scalar-reference returns](../REFERENCE_RETURNS.md) preserve guarded input authority. Direct scalar-reference
 arguments with primitive results are supported by the
-[function argument contract](EXCLUSIVE_FUNCTIONS.md).
+[function argument contract](../EXCLUSIVE_FUNCTIONS.md).
 
 Keep exclusive-bearing records, unions, lists, reference cells, widened record storage,
 temporary owners, dispatch blocks, wider result contracts and captures B001
@@ -28,7 +28,7 @@ explicit annotations. Initial support excludes exclusive pointer equality and
 exclusive-valued carrier results. Anonymous scalar-reference blocks now transfer
 existing guarded authority and consume emitted holders. Ordinary scalar results computed through a reference remain
 supported. [Scalar record fields](EXCLUSIVE_FIELDS.md) now use mutable-path and
-canonical-region checks. [Scalar indexed storage](EXCLUSIVE_ELEMENTS.md) uses
+canonical-region checks. [Scalar indexed storage](../EXCLUSIVE_ELEMENTS.md) uses
 owned authority and collection reservations for elements and field leaves across
 local, projected, nested and emitted owners.
 
@@ -63,7 +63,7 @@ demand both solve bounded loop fixed points.
 
 The existing CFG and budgets are shared by availability, liveness and permission
 checks. Native tests are in `tests/native/exclusive_references.rs`; the runnable
-example is [exclusive-references.mwy](examples/exclusive-references.mwy).
+example is [exclusive-references.mwy](../examples/exclusive-references.mwy).
 
 ## Storage, values and authority
 

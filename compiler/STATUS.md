@@ -15,7 +15,7 @@ verification passed all four checks, including 1143 links and 16 tooling tests.
 1. Moved foundation, allocator bounds, owning HIR and panic outcome pages;
    all 1143 links pass and text/headings are preserved.
 2. Moved ownership and pointer syntax pages; all links and preserved content pass.
-3. Move exclusive reference, field and slot pages.
+3. Moved exclusive reference, field and slot pages; links and preservation pass.
 4. Move exclusive element and restart pages.
 5. Move reference block/return and exclusive function pages.
 6. Move computed types, module guide and README; update the working instructions.

@@ -1,6 +1,6 @@
 # Scalar exclusive function arguments
 
-This extends [scalar exclusive references](EXCLUSIVE_REFERENCES.md) using the existing
+This extends [scalar exclusive references](docs/EXCLUSIVE_REFERENCES.md) using the existing
 [memory contract](../docs/reference/memory.md) and
 [reference conversion rules](../docs/reference/types.md#inference-and-assignment).
 The bounded argument contract is implemented and covered by native execution and

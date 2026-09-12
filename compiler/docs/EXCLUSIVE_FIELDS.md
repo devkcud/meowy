@@ -3,7 +3,7 @@
 `owner.&!field` now borrows a boolean, integer or float field from an ordinary
 reference-free Copy record. Its binding may be immutable; the selected field
 must be mutable. Nested named fields and grouping are supported.
-This follows the [memory contract](../docs/reference/memory.md) and extends existing
+This follows the [memory contract](../../docs/reference/memory.md) and extends existing
 [scalar exclusive references](EXCLUSIVE_REFERENCES.md). No new reference type,
 allocation, backend operation, runtime ABI or LLVM alias promise is introduced.
 
@@ -68,14 +68,14 @@ A 16-level nested field path executes; a 300-level source stops at an existing
 structural budget. A direct AST test verifies the path cap before root resolution;
 a graph test verifies primary disjointness without losing ancestor overlap.
 
-The [exclusive fields example](examples/exclusive-fields.mwy) keeps two field loans
+The [exclusive fields example](../examples/exclusive-fields.mwy) keeps two field loans
 live while reading the record's primary and mutating through a function call.
 Reference fixtures and existing checks are preserved. Full conformance still has
 13 unsupported cases; this does not qualify a complete language release.
 
 [Mutable emitted storage](EXCLUSIVE_SLOTS.md) also supports scalar-field paths with
 exact whole-record backing, mutable fields, target lifetime and canonical Slot
-projections. [Indexed storage](EXCLUSIVE_ELEMENTS.md) now supports scalar elements
+projections. [Indexed storage](../EXCLUSIVE_ELEMENTS.md) now supports scalar elements
 and mutable field leaves such as `rows[i].&!value`, including nested and emitted
 owners. It uses complete owned paths and enclosing collection reservations. Owned
 carriers and generated destruction remain separate contracts.

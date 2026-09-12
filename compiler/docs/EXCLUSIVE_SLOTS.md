@@ -4,8 +4,8 @@ After `->name:=value` initializes a boolean, integer or float slot, `&!name` may
 borrow its actual storage exclusively. Emitted reference-free Copy records also
 permit scalar-field paths such as `row.inner.&!n`, with a mutable selected field
 even when the alias and enclosing record fields are immutable. This extends the [field contract](EXCLUSIVE_FIELDS.md)
-and follows the existing [emission](../docs/reference/values-and-blocks.md) and
-[memory rules](../docs/reference/memory.md). No new HIR operation, backend addressing,
+and follows the existing [emission](../../docs/reference/values-and-blocks.md) and
+[memory rules](../../docs/reference/memory.md). No new HIR operation, backend addressing,
 allocation or runtime cleanup ABI is introduced.
 
 ## Initialization and representation
@@ -57,7 +57,7 @@ holder does not redirect that store. A later Leave or panic can skip the final s
 while preserving earlier mutations and moves. Own-target Leave publishes an
 initialized result; ancestor Leave can discard it and retain only completed effects.
 
-Exclusive restart bodies support only the [certified carried-scalar slice](EXCLUSIVE_RESTARTS.md):
+Exclusive restart bodies support only the [certified carried-scalar slice](../EXCLUSIVE_RESTARTS.md):
 carried scalar storage may survive, but exclusive loans and all descendants must
 end before each backedge. Live opaque ancestry also fails closed. General exclusive
 restart borrowing and exclusive handles in restart headers remain gated.
@@ -77,7 +77,7 @@ A graph group checks shared canonical storage with distinct guarded loans and ta
 scope ownership. A checker group verifies the strict exclusive backing error while
 retaining a valid shared union view.
 
-The [exclusive slots example](examples/exclusive-slots.mwy) returns a slot pointer
+The [exclusive slots example](../examples/exclusive-slots.mwy) returns a slot pointer
 from an inner lexical scope, passes a child through a call and mutates discarded
 storage. Reference fixtures are unchanged. Full conformance still has 13 unsupported
 cases and does not qualify a complete language release.
@@ -89,9 +89,9 @@ mixed layouts, escapes/bounds, copied records, sibling collections and panic.
 A graph test verifies canonical nested projections across distinct guarded views;
 a checker test rejects unrelated-field widening while preserving a shared view.
 
-The [projected slots example](examples/exclusive-slot-fields.mwy) reads the primary
+The [projected slots example](../examples/exclusive-slot-fields.mwy) reads the primary
 and writes a sibling while carrying a nested-field pointer out of the alias scope.
-[Scalar list elements](EXCLUSIVE_ELEMENTS.md) now support ordinary local,
+[Scalar list elements](../EXCLUSIVE_ELEMENTS.md) now support ordinary local,
 record-field and emitted storage with exact backing, canonical regions, selected-list
 reservations and target lifetimes, including nested indexed owners and scalar field
 leaves after indexes. Whole-record exclusive pointees, non-Copy carriers and cleanup

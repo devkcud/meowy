@@ -305,11 +305,11 @@ The [reference blocks example](examples/reference-blocks.mwy) moves an emitted
 child, completes through Leave and cancels another result without undoing its move.
 The [block-result contract](REFERENCE_BLOCKS.md) describes retained demand and scope.
 The [exclusive fields example](examples/exclusive-fields.mwy) mutates disjoint scalar
-fields while reading a primary value. The [field contract](EXCLUSIVE_FIELDS.md)
+fields while reading a primary value. The [field contract](docs/EXCLUSIVE_FIELDS.md)
 describes mutable paths, owner lifetimes and remaining root restrictions.
 The [exclusive slots example](examples/exclusive-slots.mwy) borrows initialized
 emitted scalars beyond their alias scope while their target block remains alive.
-The [slot contract](EXCLUSIVE_SLOTS.md) requires exact backing types.
+The [slot contract](docs/EXCLUSIVE_SLOTS.md) requires exact backing types.
 The [projected slots example](examples/exclusive-slot-fields.mwy) keeps nested-field
 identity and target lifetime while accessing disjoint primary and sibling storage.
 The [exclusive elements example](examples/exclusive-elements.mwy) reserves a local
