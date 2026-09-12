@@ -73,7 +73,7 @@ references, against the shared bootstrap bound. Independent required roots reset
 Extents within computed-type roots use the same eligibility checks as scratch bindings.
 Direct extents outside those roots retain their existing supported profile.
 
-The [example](examples/computed-types.mwy) calculates a capacity of four from an
+The [example](../examples/computed-types.mwy) calculates a capacity of four from an
 eligible immutable `uint8` record field. Scalar scratch produces no runtime locals, and documentation preserves
 its actual integer signature. Floating-point, boolean and text scratch, comparisons,
 shifts, mutable scratch and helper calls remain separate capabilities.
@@ -187,6 +187,6 @@ remain unsupported in type blocks. `core.Type` parameter/result annotations, gen
 specialization, type equality, full purity analysis, intrinsic descriptions and the
 complete required evaluator remain separate. Runtime type-value storage remains gated.
 
-See [the runnable example](examples/computed-types.mwy), [STATUS.md](STATUS.md),
-the [language contract](../docs/reference/compile-time.md), and the
-[implementation pipeline](../COMPILER.md#the-pipeline).
+See [the runnable example](../examples/computed-types.mwy), [STATUS.md](../STATUS.md),
+the [language contract](../../docs/reference/compile-time.md), and the
+[implementation pipeline](../../COMPILER.md#the-pipeline).

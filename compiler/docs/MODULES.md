@@ -1,7 +1,7 @@
 # Relative file modules
 
 The driver supports a bounded executable slice of
-[the module contract](../docs/reference/modules-and-ffi.md). Literal imports are
+[the module contract](../../docs/reference/modules-and-ffi.md). Literal imports are
 discovered throughout the parsed AST. An immutable, unannotated binding can name
 an exact relative `.mwy` module:
 
@@ -61,7 +61,7 @@ reference bounds and local-storage escape checks. A function may return a borrow
 of its input; exporting a function does not export a borrow of module storage.
 Runtime module-data captures and package policy remain separate.
 
-The [facade example](examples/function-modules/main.mwy) mixes data exports,
+The [facade example](../examples/function-modules/main.mwy) mixes data exports,
 recursive functions and shared/exclusive calls. It prints ops, api, main, 1, 7, 4,
 10, demonstrating dependency initialization before calls. Imported function panics
 retain the callee's file and local span, including through facade aliases.
@@ -104,7 +104,7 @@ owning storage remain unavailable.
 Standalone docs attach to the exported alias as a type declaration, keep its checked
 signature and enforce the existing required-doc policy. Ordinary graph compilation
 also checks documented aliases in their file scopes. The
-[typed geometry facade](examples/type-modules/main.mwy) demonstrates exported records,
+[typed geometry facade](../examples/type-modules/main.mwy) demonstrates exported records,
 data and functions and prints geometry, 10, 0.
 
 ## Documentation in source graphs
@@ -123,7 +123,7 @@ explicit exports and their exposed members/parameters are public; ordinary bindi
 and type aliases remain private. Public docs cannot expose private local targets.
 Cross-file link checking does not create public index identities or rendered URLs.
 
-The [documented facade example](examples/documented-modules/main.mwy) prints
+The [documented facade example](../examples/documented-modules/main.mwy) prints
 `counter initialized` once, then `8`, in both profiles. Documentation does not run
 initializers during checking/building or execute embedded examples. Ordinary compile
 checks example metadata; standalone `doc check`/`doc build` retain their separate
@@ -164,13 +164,13 @@ their existing gates. Inline imports can select supported members directly, such
 as `(@"./ops.mwy").increment(7)`. Discovery does not make unsupported type evaluation
 or mutable/annotated module-identity bindings valid.
 
-The [scoped-import example](examples/scoped-imports/main.mwy) prints side, ops,
+The [scoped-import example](../examples/scoped-imports/main.mwy) prints side, ops,
 entry, 8, again 9. It demonstrates initialization from an unused function and an
 inactive branch, function-local type/call use and repeated inline imports.
 
 Initializer failure stops startup before dependent/entry effects. Export restrictions
 avoid claiming module resource cleanup or borrowed static exports. The
-[diamond example](examples/modules/main.mwy) prints shared, left, right, entry, 17;
+[diamond example](../examples/modules/main.mwy) prints shared, left, right, entry, 17;
 the shared module initializes once in both profiles.
 
 ## Required integer inputs
@@ -247,4 +247,4 @@ privacy, permissions, documentation roles and the typed facade. Native
 execution runs in debug and release. Runtime-site groups additionally cover all
 four panic codes, legacy output, escaped names, retained causes, nested failures,
 source-range validation and evaluation order. The full compiler-gate result is recorded in
-[STATUS.md](STATUS.md); this is not complete language or distribution qualification.
+[STATUS.md](../STATUS.md); this is not complete language or distribution qualification.

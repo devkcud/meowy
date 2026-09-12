@@ -7,15 +7,18 @@ Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete
 
 ## Current milestone
 
+Compiler documentation now lives under [compiler/docs/](compiler/docs/README.md).
+Only `AGENTS.md` and `STATUS.md` remain as Markdown files at the compiler root.
+All 17 pages retain their content with corrected links; layout and Cargo metadata checks pass.
+
 Eligible scalar integer primary exports now supply computed-type inputs through a
 module name, aliases, arithmetic copies and primary/named re-exports. They retain
 original emission evidence, exact widths and transitive work. Runtime HIR and constant
 folding remain unchanged; checking/building never executes module initialization.
 
-Three implementation/test commits are complete, followed by this documentation
-handoff. Named immutable integer/record export inputs remain supported. Integer
+Named immutable integer/record export inputs remain supported. Integer
 primaries of record-valued modules, composed/conditional emissions, helper purity and
-full required evaluation remain separate. See [the supported slice](compiler/COMPUTED_TYPES.md).
+full required evaluation remain separate. See [the supported slice](compiler/docs/COMPUTED_TYPES.md).
 
 Net/HTTP/TLS still needs broader generic-type/I/O/task foundations. Full v0.0.1
 release qualification remains incomplete.

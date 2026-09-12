@@ -5,25 +5,22 @@ No failing checks or unfinished code remain. Full v0.0.1 remains incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Documentation relocation plan
+## Documentation layout
 
-Move every root compiler Markdown page except `AGENTS.md` and `STATUS.md` into
-`docs/`, preserving content and correcting links in the same slice. Compiler behavior,
-reference fixtures, commands and dependencies stay unchanged. Baseline repository
-verification passed all four checks, including 1143 links and 16 tooling tests.
+Compiler guides and design pages live in [docs/README.md](docs/README.md) and its
+sibling Markdown files. Only `AGENTS.md` and this handoff stay at the compiler root.
+The 17 moved pages retain their text/headings; relative links and the ownership
+contract path were adjusted. Working instructions and Cargo's README metadata point
+to the new location. Compiler source, runtime, fixtures and dependencies are unchanged.
 
-1. Moved foundation, allocator bounds, owning HIR and panic outcome pages;
-   all 1143 links pass and text/headings are preserved.
-2. Moved ownership and pointer syntax pages; all links and preserved content pass.
-3. Moved exclusive reference, field and slot pages; links and preservation pass.
-4. Moved exclusive element and restart pages; links and preservation pass.
-5. Moved reference block/return and exclusive function pages; checks pass.
-6. Move computed types, module guide and README; update the working instructions.
-
-Each group includes its inbound/outbound link fixes and this handoff, stays within
-the file review limit, and must pass local-link and preservation checks before commit.
-Run repository verification and the compiler gate after the complete move. Preserve
-the compiler implementation next steps below for resumption after this layout task.
+Relocation commits: `f111ea0` foundation/cleanup, `5af48d3` ownership/pointers,
+`2f91aa7` exclusive references/fields/slots, `fb2bd14` elements/restarts,
+`05e160f` reference blocks/functions, followed by this final guide/index move.
+Every group passed local-link, preservation and staged whitespace checks. All 17
+pages match their original content/headings apart from corrected paths, and no stale
+root-page references remain. Cargo metadata differs only in the README path.
+Final `tools/verify.py --compiler` passed all ten checks; 1145 local links pass.
+Log: `/tmp/meowy-docs-relocation-gate.log`.
 
 ## Current compiler slice
 
@@ -58,7 +55,7 @@ module-data capture remains B001.
 
 Integer primaries of record-valued modules, composed/conditional emissions and inline
 required import roots remain unavailable as computed inputs. Helper purity,
-non-integer/mutable scratch and full required evaluation remain separate. See [COMPUTED_TYPES.md](COMPUTED_TYPES.md#imported-immutable-inputs).
+non-integer/mutable scratch and full required evaluation remain separate. See [COMPUTED_TYPES.md](docs/COMPUTED_TYPES.md#imported-immutable-inputs).
 
 Nested records retain unit primaries, immutable integer/record fields, 256 total fields
 and 32 record levels. Declared record aliases retain known errors on unreachable paths;
@@ -83,7 +80,7 @@ computed roots retain their existing profile.
 - `python3 -B tools/verify.py --compiler`: all ten checks passed, including fmt,
   Clippy, build, 731 library/681 native Rust tests (1412 total), 16 tooling/four
   harness Python tests, and existing standalone/multi-file examples in both profiles.
-  Log: `/tmp/meowy-primary-inputs-gate.log`.
+  Latest gate log: `/tmp/meowy-docs-relocation-gate.log`.
 - Conformance: 10 passed, 13 unsupported, 0 failed in debug/release. Unsupported
   cases do not count as language rejections. Local links, 23 catalog records,
   7 schemas/6 examples and whitespace checks passed; external links were not fetched.
