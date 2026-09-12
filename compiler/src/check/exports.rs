@@ -10,6 +10,7 @@ pub(crate) struct Module {
     pub(crate) depth: usize,
     pub(crate) values: BTreeMap<String, Value>,
     pub(crate) types: BTreeMap<String, Spec>,
+    pub(crate) inputs: BTreeMap<String, usize>,
 }
 
 impl Checker {
@@ -31,6 +32,7 @@ impl Checker {
                 depth: self.scopes.len() + 1,
                 values: BTreeMap::new(),
                 types: BTreeMap::new(),
+                inputs: BTreeMap::new(),
             },
         );
         let docs = self.file_docs.remove(&value.span.start);
@@ -43,6 +45,24 @@ impl Checker {
             model.finish()?;
         }
         Ok((result, module))
+    }
+
+    pub(crate) fn export_input(&mut self, target: usize, name: &str, id: usize, value: &hir::Expr) {
+        if target != self.module.block
+            || self.owner != 0
+            || self.scopes.len() != self.module.depth
+            || self.reach == crate::flow::FALSE
+        {
+            return;
+        }
+        if let Some(input) = self.integer_input(value) {
+            self.inputs.insert(id, input);
+            self.module.inputs.insert(name.into(), id);
+        }
+        if let Some(input) = self.record_input(value, &value.ty) {
+            self.record_inputs.insert(id, input);
+            self.module.inputs.insert(name.into(), id);
+        }
     }
 
     pub(crate) fn export_function(
@@ -292,3 +312,6 @@ impl Checker {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests;

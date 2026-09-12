@@ -550,6 +550,9 @@ impl Checker {
                 },
                 span,
             )?;
+            if !mutable {
+                self.export_input(target, name, id, &value);
+            }
             stmts.push(hir::Stmt::Bind { id, value });
             let emission = self.emission(
                 target,

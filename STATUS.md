@@ -1,11 +1,15 @@
 # Meowy project status
 
-Updated: 2026-09-10. This is the current project handoff; Git retains prior work.
+Updated: 2026-09-12. This is the current project handoff; Git retains prior work.
 [COMPILER.md](COMPILER.md) holds the implementation plan and
 [compiler/STATUS.md](compiler/STATUS.md) the detailed compiler handoff.
 Do not recreate STEP logs. The full documented v0.0.1 release remains incomplete.
 
 ## Current milestone
+
+Imported immutable input work is underway. The compiler handoff records the ordered
+metadata, lookup and integration commits. Export metadata passed four focused tests;
+all 1396 Rust tests passed. The completed gate below is the prior baseline.
 
 Bounded nested immutable records now supply computed-type inputs through checked
 field paths and projected subrecord aliases. Every read retains the complete original

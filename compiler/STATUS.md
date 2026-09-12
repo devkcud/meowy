@@ -1,20 +1,35 @@
 # Compiler handoff and work tracker
 
-Updated: 2026-09-10. Bounded nested immutable record eligibility passed the compiler
-gate. No failing checks or unfinished code remain. Full v0.0.1 is incomplete.
+Updated: 2026-09-12. Imported immutable input work is planned below. The previous
+export metadata passed four focused tests and all 1396 Rust tests. The previous
+nested-record gate passed. Full v0.0.1 is incomplete.
 [../STATUS.md](../STATUS.md) tracks the project; [../COMPILER.md](../COMPILER.md)
 records the plan. Keep this handoff current; Git holds history. Do not recreate STEP logs.
 
-## Commit series
+## Active commit plan
 
-1. `4b49438` — checked-path leaf storage and shared scalar/record evidence scopes.
-2. `3722de3` — nested construction with complete errors/work and shared shape bounds.
-3. `bca8138` — nested HIR/required paths and ancestor-preserving projected aliases.
-4. `784efd5` — native ancestor/initialization boundaries and nested example.
-5. This separate documentation handoff records the complete gate below.
+1. Retain explicit named-export input identities in `check/exports.rs` and
+   `check/statements.rs`, reusing integer/record evidence and checked HIR bindings.
+   Only direct immutable module emissions qualify; private bindings and synthetic
+   module records remain distinct. Verify metadata, effects and conditional gates.
+2. Resolve imported field evidence in `inputs` and `type_values/fields.rs`, including
+   copied integers, projected records and re-exports. Keep ancestor errors/work,
+   checked field identities, original file spans and runtime capture gates. Verify
+   accepted native execution and relevant rejected inputs together.
+3. Add independent multi-file initialization/provenance/budget scenarios and update
+   supported-slice documentation. Run the complete compiler gate and local links.
 
-Each implementation/test slice passed focused checks before its commit and remained
-below the review threshold. Plan dependency-ordered commits before the next feature.
+Investigation: the existing checker intentionally omits synthetic module evidence.
+Named emissions already have unique checked local IDs; retaining those identities
+allows explicit export lookup without treating a file body as a pure record.
+Eligibility belongs to each initializer, so unrelated module initialization effects
+must still run exactly once at runtime but do not disqualify independent exports.
+Primary/composed/conditional exports and helper purity remain separate.
+
+Metadata prerequisite now records only eligible direct immutable named module
+emissions, keyed by exported name and original checked local ID. Existing integer/
+record evidence retains complete initializer work and diagnostic spans. Four focused
+metadata tests passed; all 728 library and 668 native tests passed before commit.
 
 ## Current compiler slice
 
@@ -136,14 +151,11 @@ platforms or bundled distributions. Toolchain: Rust 1.98.1 and LLVM/Clang/LLD/LL
 
 ## Next steps
 
-1. Plan explicit eligibility metadata for exported immutable integer/record data,
-   starting with `check/exports.rs`, emission checking in `check/statements.rs`, and
-   `type_values/fields.rs`. Re-read the module/compile-time contracts before deciding
-   export eligibility: retain declaration/ancestor provenance, definite initialization,
-   private-name boundaries and original file spans. Do not simply admit synthetic
-   module bindings as records. Keep runtime captures, borrowed exports and helper
-   purity separate. Record reviewable metadata/lookup/integration slices with native
-   checks proving imports never execute initializers during required evaluation.
-2. Preserve capture/borrowed-export and ownership/header proofs. Run focused checks
-   per slice and the complete compiler gate for new behavior; keep STATUS concise,
-   commit reviewable slices, never push or recreate STEP logs.
+1. Implement plan slice 2 in `inputs/records/paths.rs`, `inputs.rs`,
+   `inputs/records.rs` and `type_values/fields.rs`. Resolve a module field to its
+   explicit exported input ID; support required leaves and ordinary copies without
+   making synthetic module records eligible. Validate native reads, copies,
+   re-exports, privacy, effects, conditional exports and capture refusal.
+2. Complete integration scenarios and documentation in plan slice 3, then run the
+   full compiler gate and local links. Keep unsupported cases distinct, commit
+   reviewable slices, never push or recreate STEP logs.
